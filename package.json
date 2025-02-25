@@ -1,0 +1,40 @@
+{
+  "name": "flaunch-sdk",
+  "version": "0.1.0",
+  "description": "Flaunch SDK to easily interact with the Flaunch protocol",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "unpkg": "dist/index.umd.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^22.0.0",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "@rollup/plugin-typescript": "^8.3.2",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.75.6",
+    "rollup-plugin-terser": "^7.0.2",
+    "typescript": "^4.7.3",
+    "tslib": "^2.4.0"
+  },
+  "dependencies": {
+    "viem": "^2.23.2",
+    "@delvtech/drift": "^0.3.0",
+    "@uniswap/v3-sdk": "^3.24.1",
+    "react": "^19.0.0"
+  }
+}
