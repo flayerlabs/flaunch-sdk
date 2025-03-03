@@ -9,7 +9,7 @@ export const resolveIPFS = (value: string) => {
 };
 
 export interface PinataConfig {
-  pinataJWT: string;
+  jwt: string;
 }
 
 interface UploadResponse {
@@ -25,7 +25,7 @@ interface UploadResponse {
  * @returns Upload response with CID and other details
  */
 export const uploadFileToIPFS = async (params: {
-  config: PinataConfig;
+  pinataConfig: PinataConfig;
   file: File;
   name?: string;
   metadata?: Record<string, string>;
@@ -34,25 +34,34 @@ export const uploadFileToIPFS = async (params: {
     const formData = new FormData();
     formData.append("file", params.file);
 
-    if (params.name) {
-      formData.append("name", params.name);
-    }
+    const pinataMetadata = {
+      name: params.name || null,
+      keyvalues: params.metadata || {},
+    };
+    formData.append("pinataMetadata", JSON.stringify(pinataMetadata));
 
-    if (params.metadata) {
-      formData.append("keyvalues", JSON.stringify(params.metadata));
-    }
+    const pinataOptions = {
+      cidVersion: 1,
+    };
+    formData.append("pinataOptions", JSON.stringify(pinataOptions));
 
     const response = await axios.post(
-      "https://uploads.pinata.cloud/v3/files",
+      "https://api.pinata.cloud/pinning/pinFileToIPFS",
       formData,
       {
         headers: {
-          Authorization: `Bearer ${params.config.pinataJWT}`,
+          Authorization: `Bearer ${params.pinataConfig.jwt}`,
+          "Content-Type": "multipart/form-data",
         },
       }
     );
 
-    return response.data.data;
+    return {
+      IpfsHash: response.data.IpfsHash,
+      PinSize: response.data.PinSize,
+      Timestamp: response.data.Timestamp,
+      isDuplicate: response.data.isDuplicate || false,
+    };
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new Error(
@@ -71,42 +80,40 @@ export const uploadFileToIPFS = async (params: {
  * @returns Upload response with CID and other details
  */
 export const uploadJsonToIPFS = async (params: {
-  config: PinataConfig;
+  pinataConfig: PinataConfig;
   json: Record<string, any>;
   name?: string;
   metadata?: Record<string, string>;
 }): Promise<UploadResponse> => {
   try {
-    const formData = new FormData();
-
-    // Convert JSON to Blob and then to File
-    const jsonBlob = new Blob([JSON.stringify(params.json)], {
-      type: "application/json",
-    });
-    const jsonFile = new File([jsonBlob], params.name || "data.json", {
-      type: "application/json",
-    });
-    formData.append("file", jsonFile);
-
-    if (params.name) {
-      formData.append("name", params.name);
-    }
-
-    if (params.metadata) {
-      formData.append("keyvalues", JSON.stringify(params.metadata));
-    }
+    const requestBody = {
+      pinataOptions: {
+        cidVersion: 1,
+      },
+      pinataMetadata: {
+        name: params.name || null,
+        keyvalues: params.metadata || {},
+      },
+      pinataContent: params.json,
+    };
 
     const response = await axios.post(
-      "https://uploads.pinata.cloud/v3/files",
-      formData,
+      "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+      requestBody,
       {
         headers: {
-          Authorization: `Bearer ${params.config.pinataJWT}`,
+          Authorization: `Bearer ${params.pinataConfig.jwt}`,
+          "Content-Type": "application/json",
         },
       }
     );
 
-    return response.data.data;
+    return {
+      IpfsHash: response.data.IpfsHash,
+      PinSize: response.data.PinSize,
+      Timestamp: response.data.Timestamp,
+      isDuplicate: response.data.isDuplicate || false,
+    };
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new Error(
@@ -125,7 +132,7 @@ export const uploadJsonToIPFS = async (params: {
  * @returns Upload response with CID and other details
  */
 export const uploadImageToIPFS = async (params: {
-  config: PinataConfig;
+  pinataConfig: PinataConfig;
   base64Image: string;
   name?: string;
   metadata?: Record<string, string>;
@@ -161,25 +168,34 @@ export const uploadImageToIPFS = async (params: {
 
     formData.append("file", file);
 
-    if (params.name) {
-      formData.append("name", params.name);
-    }
+    const pinataMetadata = {
+      name: params.name || null,
+      keyvalues: params.metadata || {},
+    };
+    formData.append("pinataMetadata", JSON.stringify(pinataMetadata));
 
-    if (params.metadata) {
-      formData.append("keyvalues", JSON.stringify(params.metadata));
-    }
+    const pinataOptions = {
+      cidVersion: 1,
+    };
+    formData.append("pinataOptions", JSON.stringify(pinataOptions));
 
     const response = await axios.post(
-      "https://uploads.pinata.cloud/v3/files",
+      "https://api.pinata.cloud/pinning/pinFileToIPFS",
       formData,
       {
         headers: {
-          Authorization: `Bearer ${params.config.pinataJWT}`,
+          Authorization: `Bearer ${params.pinataConfig.jwt}`,
+          "Content-Type": "multipart/form-data",
         },
       }
     );
 
-    return response.data.data;
+    return {
+      IpfsHash: response.data.IpfsHash,
+      PinSize: response.data.PinSize,
+      Timestamp: response.data.Timestamp,
+      isDuplicate: response.data.isDuplicate || false,
+    };
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new Error(
@@ -195,7 +211,7 @@ export const uploadImageToIPFS = async (params: {
 export const generateTokenUri = async (name: string, params: IPFSParams) => {
   // 1. upload image to IPFS
   const imageRes = await uploadImageToIPFS({
-    config: params.pinataConfig,
+    pinataConfig: params.pinataConfig,
     base64Image: params.metadata.base64Image,
   });
 
@@ -212,7 +228,7 @@ export const generateTokenUri = async (name: string, params: IPFSParams) => {
   };
 
   const metadataRes = await uploadJsonToIPFS({
-    config: params.pinataConfig,
+    pinataConfig: params.pinataConfig,
     json: coinMetadata,
   });
 
