@@ -22,12 +22,15 @@ import {
   FastFlaunchParams,
   FastFlaunchIPFSParams,
 } from "../clients/FastFlaunchClient";
+import { ReadFlaunch } from "../clients/FlaunchClient";
+import { ReadMemecoin } from "../clients/MemecoinClient";
 import {
   FlaunchPositionManagerAddress,
   PoolManagerAddress,
   FLETHAddress,
   FairLaunchAddress,
   FastFlaunchZapAddress,
+  FlaunchAddress,
 } from "../addresses";
 import {
   getPoolId,
@@ -35,7 +38,9 @@ import {
   getValidTick,
   calculateUnderlyingTokenBalances,
 } from "../utils/univ4";
-
+import { CoinMetadata } from "types";
+import axios from "axios";
+import { resolveIPFS } from "../helpers/ipfs";
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
   "flETHIsCurrencyZero"
@@ -50,6 +55,7 @@ export class ReadFlaunchSDK {
   readPositionManager: ReadFlaunchPositionManager;
   readPoolManager: ReadPoolManager;
   readFairLaunch: ReadFairLaunch;
+  readFlaunch: ReadFlaunch;
 
   constructor(chainId: number, drift: Drift = createDrift()) {
     this.chainId = chainId;
@@ -66,10 +72,42 @@ export class ReadFlaunchSDK {
       FairLaunchAddress[this.chainId],
       drift
     );
+    this.readFlaunch = new ReadFlaunch(FlaunchAddress[this.chainId], drift);
   }
 
   isValidCoin(coinAddress: Address) {
     return this.readPositionManager.isValidCoin(coinAddress);
+  }
+
+  async getCoinNameAndSymbol(coinAddress: Address) {
+    const memecoin = new ReadMemecoin(coinAddress, this.drift);
+    return {
+      name: await memecoin.name(),
+      symbol: await memecoin.symbol(),
+    };
+  }
+
+  async getCoinMetadata(
+    coinAddress: Address
+  ): Promise<CoinMetadata & { symbol: string }> {
+    const { name, symbol } = await this.getCoinNameAndSymbol(coinAddress);
+    const tokenId = await this.readFlaunch.tokenId(coinAddress);
+    const tokenURI = await this.readFlaunch.tokenURI(tokenId);
+
+    // get metadata from tokenURI
+    const metadata = (await axios.get(resolveIPFS(tokenURI))).data;
+
+    return {
+      name,
+      symbol,
+      description: metadata.description ?? "",
+      image: metadata.image ? resolveIPFS(metadata.image) : "",
+      external_link: metadata.websiteUrl ?? "",
+      collaborators: metadata.collaborators ?? [],
+      discordUrl: metadata.discordUrl ?? "",
+      twitterUrl: metadata.twitterUrl ?? "",
+      telegramUrl: metadata.telegramUrl ?? "",
+    };
   }
 
   watchPoolCreated(params: WatchPoolCreatedParams) {

@@ -21,6 +21,11 @@ export const FairLaunchAddress: Addresses = {
   [baseSepolia.id]: "0x227Fc288aC56E169f2BfEA82e07F8635054d4136",
 };
 
+export const FlaunchAddress: Addresses = {
+  [base.id]: "0xCc7A4A00072ccbeEEbd999edc812C0ce498Fb63B",
+  [baseSepolia.id]: "0x7D375C9133721083DF7b7e5Cb0Ed8Fc78862dfe3",
+};
+
 export const FastFlaunchZapAddress: Addresses = {
   [baseSepolia.id]: "0x36831b3085fdefc576c15d6d6675d52a647a02c0",
 };
