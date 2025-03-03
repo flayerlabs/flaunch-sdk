@@ -3,7 +3,6 @@ import {
   Drift,
   ReadWriteAdapter,
   type Address,
-  type HexString,
 } from "@delvtech/drift";
 import {
   ReadFlaunchPositionManager,
@@ -11,10 +10,6 @@ import {
   WatchPoolCreatedParams,
   FlaunchParams,
   FlaunchIPFSParams,
-  PoolSwapLogs,
-  BuySwapLog,
-  SellSwapLog,
-  BaseSwapLog,
   WatchPoolSwapParams as WatchPoolSwapParamsPositionManager,
 } from "../clients/FlaunchPositionManagerClient";
 import {
