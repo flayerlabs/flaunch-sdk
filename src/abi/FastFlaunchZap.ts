@@ -57,4 +57,4 @@ export const FastFlaunchZapAbi = [
     stateMutability: "view",
     type: "function",
   },
-];
+] as const;

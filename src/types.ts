@@ -1,4 +1,5 @@
 import { Address } from "viem";
+import { PinataConfig } from "helpers/ipfs";
 
 export interface Addresses {
   [chainId: number]: Address;
@@ -10,4 +11,27 @@ export interface PoolKey {
   fee: number;
   tickSpacing: number;
   hooks: Address;
+}
+
+export interface CoinMetadata {
+  name: string;
+  description: string;
+  image: string;
+  external_link: string;
+  collaborators: string[];
+  discordUrl: string;
+  twitterUrl: string;
+  telegramUrl: string;
+}
+
+export interface IPFSParams {
+  metadata: {
+    base64Image: string;
+    description: string;
+    websiteUrl?: string;
+    discordUrl?: string;
+    twitterUrl?: string;
+    telegramUrl?: string;
+  };
+  pinataConfig: PinataConfig;
 }

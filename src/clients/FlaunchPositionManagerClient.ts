@@ -9,6 +9,8 @@ import {
 } from "@delvtech/drift";
 import { FlaunchPositionManagerAbi } from "../abi/FlaunchPositionManager";
 import { encodeAbiParameters, parseUnits } from "viem";
+import { IPFSParams } from "../types";
+import { generateTokenUri } from "helpers/ipfs";
 
 export type FlaunchPositionManagerABI = typeof FlaunchPositionManagerAbi;
 export type PoolCreatedLog = EventLog<
@@ -32,10 +34,14 @@ export interface FlaunchParams {
   fairLaunchPercent: number;
   initialMarketCapUSD: number;
   creator: Address;
-  creatorFeeAllocation: number;
+  creatorFeeAllocationPercent: number;
   flaunchAt?: bigint;
   premineAmount?: bigint;
 }
+
+export interface FlaunchIPFSParams
+  extends Omit<FlaunchParams, "tokenUri">,
+    IPFSParams {}
 
 export class ReadFlaunchPositionManager {
   contract: ReadContract<FlaunchPositionManagerABI>;
@@ -141,7 +147,7 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
     fairLaunchPercent,
     initialMarketCapUSD,
     creator,
-    creatorFeeAllocation,
+    creatorFeeAllocationPercent,
     flaunchAt,
     premineAmount,
   }: FlaunchParams) {
@@ -156,6 +162,7 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
     );
 
     const fairLaunchInBps = BigInt(fairLaunchPercent * 100);
+    const creatorFeeAllocationInBps = creatorFeeAllocationPercent * 100;
 
     return this.contract.write(
       "flaunch",
@@ -168,7 +175,7 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
             (this.TOTAL_SUPPLY * fairLaunchInBps) / 10_000n,
           premineAmount: premineAmount ?? 0n,
           creator,
-          creatorFeeAllocation,
+          creatorFeeAllocation: creatorFeeAllocationInBps,
           flaunchAt: flaunchAt ?? 0n,
           initialPriceParams,
           feeCalculatorParams: "0x",
@@ -183,5 +190,37 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
         },
       }
     );
+  }
+
+  async flaunchIPFS({
+    flaunchingETHFees,
+    name,
+    symbol,
+    fairLaunchPercent,
+    initialMarketCapUSD,
+    creator,
+    creatorFeeAllocationPercent,
+    flaunchAt,
+    premineAmount,
+    metadata,
+    pinataConfig,
+  }: FlaunchIPFSParams) {
+    const tokenUri = await generateTokenUri(name, {
+      metadata,
+      pinataConfig,
+    });
+
+    return this.flaunch({
+      flaunchingETHFees,
+      name,
+      symbol,
+      tokenUri,
+      fairLaunchPercent,
+      initialMarketCapUSD,
+      creator,
+      creatorFeeAllocationPercent,
+      flaunchAt,
+      premineAmount,
+    });
   }
 }

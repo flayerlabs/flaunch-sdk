@@ -5,6 +5,7 @@ import {
   ReadWriteFlaunchPositionManager,
   WatchPoolCreatedParams,
   FlaunchParams,
+  FlaunchIPFSParams,
 } from "../clients/FlaunchPositionManagerClient";
 import {
   ReadPoolManager,
@@ -12,10 +13,16 @@ import {
 } from "../clients/PoolManagerClient";
 import { ReadFairLaunch } from "../clients/FairLaunchClient";
 import {
+  ReadWriteFastFlaunchZap,
+  FastFlaunchParams,
+  FastFlaunchIPFSParams,
+} from "../clients/FastFlaunchClient";
+import {
   FlaunchPositionManagerAddress,
   PoolManagerAddress,
   FLETHAddress,
   FairLaunchAddress,
+  FastFlaunchZapAddress,
 } from "../addresses";
 import {
   getPoolId,
@@ -165,6 +172,7 @@ export class ReadFlaunchSDK {
 
 export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   readWritePositionManager: ReadWriteFlaunchPositionManager;
+  readWriteFastFlaunchZap: ReadWriteFastFlaunchZap;
 
   constructor(chainId: number, drift: Drift<ReadWriteAdapter> = createDrift()) {
     super(chainId, drift);
@@ -172,9 +180,25 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       FlaunchPositionManagerAddress[this.chainId],
       drift
     );
+    this.readWriteFastFlaunchZap = new ReadWriteFastFlaunchZap(
+      FastFlaunchZapAddress[this.chainId],
+      drift
+    );
   }
 
   flaunch(params: FlaunchParams) {
     return this.readWritePositionManager.flaunch(params);
+  }
+
+  flaunchIPFS(params: FlaunchIPFSParams) {
+    return this.readWritePositionManager.flaunchIPFS(params);
+  }
+
+  fastFlaunch(params: FastFlaunchParams) {
+    return this.readWriteFastFlaunchZap.fastFlaunch(params);
+  }
+
+  fastFlaunchIPFS(params: FastFlaunchIPFSParams) {
+    return this.readWriteFastFlaunchZap.fastFlaunchIPFS(params);
   }
 }
