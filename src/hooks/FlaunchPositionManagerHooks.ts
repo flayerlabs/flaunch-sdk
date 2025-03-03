@@ -1,16 +1,26 @@
 import { useState, useEffect } from "react";
-import { PoolCreatedLogs } from "../clients/FlaunchPositionManagerClient";
+import {
+  PoolCreatedLogs,
+  PoolSwapLogs,
+} from "../clients/FlaunchPositionManagerClient";
 import { ReadFlaunchSDK } from "../sdk/FlaunchSDK";
+import { Address } from "viem";
 
-export function usePoolCreatedEvents(flaunch: ReadFlaunchSDK) {
+export function usePoolCreatedEvents(
+  flaunch: ReadFlaunchSDK,
+  startBlockNumber?: bigint
+) {
   const [logs, setLogs] = useState<PoolCreatedLogs>([]);
+  const [isFetchingFromStart, setIsFetchingFromStart] = useState(false);
 
   useEffect(() => {
     const setupWatcher = async () => {
       const cleanup = await flaunch.watchPoolCreated({
-        onPoolCreated: (newLogs) => {
+        onPoolCreated: ({ logs: newLogs, isFetchingFromStart }) => {
+          setIsFetchingFromStart(isFetchingFromStart);
           setLogs((prevLogs) => [...newLogs, ...prevLogs]);
         },
+        startBlockNumber,
       });
       return cleanup;
     };
@@ -20,7 +30,7 @@ export function usePoolCreatedEvents(flaunch: ReadFlaunchSDK) {
     return () => {
       cleanupPromise.then(({ cleanup }) => cleanup());
     };
-  }, [flaunch]);
+  }, [flaunch, startBlockNumber]);
 
   // Add effect to update times
   useEffect(() => {
@@ -32,5 +42,46 @@ export function usePoolCreatedEvents(flaunch: ReadFlaunchSDK) {
     return () => clearInterval(timer);
   }, []);
 
-  return logs;
+  return { logs, isFetchingFromStart };
+}
+
+export function usePoolSwapEvents(
+  flaunch: ReadFlaunchSDK,
+  coinAddress: Address,
+  startBlockNumber?: bigint
+) {
+  const [logs, setLogs] = useState<PoolSwapLogs>([]);
+  const [isFetchingFromStart, setIsFetchingFromStart] = useState(false);
+
+  useEffect(() => {
+    const setupWatcher = async () => {
+      const cleanup = await flaunch.watchPoolSwap({
+        onPoolSwap: ({ logs: newLogs, isFetchingFromStart }) => {
+          setIsFetchingFromStart(isFetchingFromStart);
+          setLogs((prevLogs) => [...newLogs, ...prevLogs]);
+        },
+        filterByCoin: coinAddress,
+        startBlockNumber,
+      });
+      return cleanup;
+    };
+
+    const cleanupPromise = setupWatcher();
+
+    return () => {
+      cleanupPromise.then(({ cleanup }) => cleanup());
+    };
+  }, [flaunch, coinAddress, startBlockNumber]);
+
+  // Add effect to update times
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // Force re-render to update relative times
+      setLogs((prev) => [...prev]);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return { logs, isFetchingFromStart };
 }

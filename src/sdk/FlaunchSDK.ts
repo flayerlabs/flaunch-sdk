@@ -1,11 +1,17 @@
-import { createDrift, ReadWriteAdapter } from "@delvtech/drift";
-import { Drift, type Address } from "@delvtech/drift";
+import {
+  createDrift,
+  Drift,
+  ReadWriteAdapter,
+  type Address,
+  type HexString,
+} from "@delvtech/drift";
 import {
   ReadFlaunchPositionManager,
   ReadWriteFlaunchPositionManager,
   WatchPoolCreatedParams,
   FlaunchParams,
   FlaunchIPFSParams,
+  PoolSwapLogs,
 } from "../clients/FlaunchPositionManagerClient";
 import {
   ReadPoolManager,
@@ -32,7 +38,8 @@ import {
 } from "../utils/univ4";
 
 export class ReadFlaunchSDK {
-  chainId: number;
+  public readonly drift: Drift;
+  public readonly chainId: number;
   TICK_SPACING = 60;
   readPositionManager: ReadFlaunchPositionManager;
   readPoolManager: ReadPoolManager;
@@ -40,6 +47,7 @@ export class ReadFlaunchSDK {
 
   constructor(chainId: number, drift: Drift = createDrift()) {
     this.chainId = chainId;
+    this.drift = drift;
     this.readPositionManager = new ReadFlaunchPositionManager(
       FlaunchPositionManagerAddress[this.chainId],
       drift
@@ -60,6 +68,26 @@ export class ReadFlaunchSDK {
 
   watchPoolCreated(params: WatchPoolCreatedParams) {
     return this.readPositionManager.watchPoolCreated(params);
+  }
+
+  watchPoolSwap(params: {
+    onPoolSwap: ({
+      logs,
+      isFetchingFromStart,
+    }: {
+      logs: PoolSwapLogs;
+      isFetchingFromStart: boolean;
+    }) => void;
+    startBlockNumber?: bigint;
+    filterByCoin?: Address;
+  }) {
+    return this.readPositionManager.watchPoolSwap({
+      ...params,
+      filterByPoolId: params.filterByCoin
+        ? this.poolId(params.filterByCoin)
+        : undefined,
+      flETHIsCurrencyZero: this.flETHIsCurrencyZero(params.filterByCoin),
+    });
   }
 
   positionInfo(params: PositionInfoParams) {
