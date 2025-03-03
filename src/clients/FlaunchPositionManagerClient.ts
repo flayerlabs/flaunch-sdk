@@ -300,11 +300,12 @@ export class ReadFlaunchPositionManager {
                   type: swapType,
                   delta: {
                     coinsBought: flETHIsCurrencyZero
-                      ? absCurrency1Delta
-                      : absCurrency0Delta,
+                      ? absCurrency1Delta - (!fees.isInFLETH ? fees.amount : 0n)
+                      : absCurrency0Delta -
+                        (!fees.isInFLETH ? fees.amount : 0n),
                     flETHSold: flETHIsCurrencyZero
-                      ? absCurrency0Delta
-                      : absCurrency1Delta,
+                      ? absCurrency0Delta - (fees.isInFLETH ? fees.amount : 0n)
+                      : absCurrency1Delta - (fees.isInFLETH ? fees.amount : 0n),
                     fees,
                   },
                 };
@@ -315,11 +316,12 @@ export class ReadFlaunchPositionManager {
                   type: swapType,
                   delta: {
                     coinsSold: flETHIsCurrencyZero
-                      ? absCurrency1Delta
-                      : absCurrency0Delta,
+                      ? absCurrency1Delta - (!fees.isInFLETH ? fees.amount : 0n)
+                      : absCurrency0Delta -
+                        (!fees.isInFLETH ? fees.amount : 0n),
                     flETHBought: flETHIsCurrencyZero
-                      ? absCurrency0Delta
-                      : absCurrency1Delta,
+                      ? absCurrency0Delta - (fees.isInFLETH ? fees.amount : 0n)
+                      : absCurrency1Delta - (fees.isInFLETH ? fees.amount : 0n),
                     fees,
                   },
                 };
