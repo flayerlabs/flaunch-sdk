@@ -1,4 +1,5 @@
 import {
+  type Contract,
   type ReadContract,
   type Address,
   type Drift,
@@ -50,9 +51,11 @@ export class ReadPoolManager {
     let res = { sqrtPriceX96: 0n, tick: 0, protocolFee: 0, lpFee: 0 };
 
     try {
-      const data = (await this.contract.read("extsload", {
+      const result = await this.contract.read("extsload", {
         slot: stateSlot,
-      })) as HexString;
+      });
+
+      const data = (Array.isArray(result) ? result[0] : result) as HexString;
 
       // Convert the input hex to a BigInt for bitwise operations
       const dataAsBigInt = BigInt(data);
@@ -138,5 +141,14 @@ export class ReadPoolManager {
       feeGrowthInside0LastX128,
       feeGrowthInside1LastX128,
     };
+  }
+
+  async getStateSlot(stateSlot: HexString): Promise<HexString> {
+    const result = await this.contract.read("extsload", {
+      slot: stateSlot,
+    });
+    // Cast through unknown first to avoid type checking issues
+    const firstResult = Array.isArray(result) ? result[0] : result;
+    return firstResult as unknown as HexString;
   }
 }
