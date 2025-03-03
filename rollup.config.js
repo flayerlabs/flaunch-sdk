@@ -52,7 +52,9 @@ export default [
       format: "umd",
       sourcemap: true,
       globals: {
-        // Add any globals here if needed
+        "@delvtech/drift": "drift",
+        viem: "viem",
+        "@uniswap/v3-sdk": "v3Sdk",
       },
     },
     plugins: [

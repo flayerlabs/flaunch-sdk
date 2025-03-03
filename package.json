@@ -6,11 +6,38 @@
   "module": "dist/index.esm.js",
   "unpkg": "dist/index.umd.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs.js"
+    },
+    "./abi": {
+      "types": "./dist/abi/index.d.ts",
+      "import": "./dist/abi/index.js",
+      "require": "./dist/abi/index.cjs"
+    },
+    "./addresses": {
+      "types": "./dist/addresses.d.ts",
+      "import": "./dist/addresses.js",
+      "require": "./dist/addresses.cjs"
+    },
+    "./helpers": {
+      "types": "./dist/helpers/index.d.ts",
+      "import": "./dist/helpers/index.js",
+      "require": "./dist/helpers/index.cjs"
+    },
+    "./hooks": {
+      "types": "./dist/hooks/index.d.ts",
+      "import": "./dist/hooks/index.js",
+      "require": "./dist/hooks/index.cjs"
+    }
+  },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c",
+    "build": "tsc --emitDeclarationOnly && rollup -c && cp package.json dist/",
     "dev": "rollup -c -w",
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
@@ -20,21 +47,23 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
+  "packageManager": "pnpm@8.15.4",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^22.0.0",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.3.0",
     "@rollup/plugin-typescript": "^8.3.2",
+    "@types/react": "^19.0.10",
     "rimraf": "^3.0.2",
     "rollup": "^2.75.6",
     "rollup-plugin-terser": "^7.0.2",
-    "typescript": "^4.7.3",
-    "tslib": "^2.4.0"
+    "tslib": "^2.4.0",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
-    "viem": "^2.23.2",
     "@delvtech/drift": "^0.3.0",
     "@uniswap/v3-sdk": "^3.24.1",
-    "react": "^19.0.0"
+    "react": "^19.0.0",
+    "viem": "^2.23.2"
   }
 }
