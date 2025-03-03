@@ -169,6 +169,11 @@ export class ReadFlaunchPositionManager {
               logs: logsWithTimestamps,
               isFetchingFromStart: false,
             });
+          } else {
+            onPoolCreated({
+              logs: [],
+              isFetchingFromStart: false,
+            });
           }
 
           lastBlockNumber = currentBlockNumber;
@@ -334,6 +339,11 @@ export class ReadFlaunchPositionManager {
               logs: logsWithTimestamps as T extends boolean
                 ? (BuySwapLog | SellSwapLog)[]
                 : BaseSwapLog[],
+              isFetchingFromStart: false,
+            });
+          } else {
+            onPoolSwap({
+              logs: [],
               isFetchingFromStart: false,
             });
           }
