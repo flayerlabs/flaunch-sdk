@@ -1,8 +1,6 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { PoolCreatedLogs } from "../clients/FlaunchPositionManagerClient";
-import { ReadFlaunchSDK } from "../index";
+import { ReadFlaunchSDK } from "../sdk/FlaunchSDK";
 
 export function usePoolCreatedEvents(flaunch: ReadFlaunchSDK) {
   const [logs, setLogs] = useState<PoolCreatedLogs>([]);
