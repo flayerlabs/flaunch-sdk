@@ -64,15 +64,19 @@ export type SellSwapLog = BaseSwapLog & {
 export type PoolSwapLog = BuySwapLog | SellSwapLog | BaseSwapLog;
 export type PoolSwapLogs = PoolSwapLog[];
 
-export interface WatchPoolSwapParams {
+export interface WatchPoolSwapParams<
+  TFLETHIsCurrencyZero extends boolean | undefined = undefined
+> {
   onPoolSwap: ({
     logs,
     isFetchingFromStart,
   }: {
-    logs: PoolSwapLogs;
+    logs: TFLETHIsCurrencyZero extends boolean
+      ? (BuySwapLog | SellSwapLog)[]
+      : BaseSwapLog[];
     isFetchingFromStart: boolean;
   }) => void;
-  flETHIsCurrencyZero?: boolean;
+  flETHIsCurrencyZero?: TFLETHIsCurrencyZero;
   startBlockNumber?: bigint;
   filterByPoolId?: HexString;
 }
@@ -191,12 +195,12 @@ export class ReadFlaunchPositionManager {
     };
   }
 
-  async watchPoolSwap({
+  async watchPoolSwap<T extends boolean | undefined = undefined>({
     onPoolSwap,
     flETHIsCurrencyZero,
     startBlockNumber,
     filterByPoolId,
-  }: WatchPoolSwapParams) {
+  }: WatchPoolSwapParams<T>) {
     let intervalId: ReturnType<typeof setInterval>;
 
     if (startBlockNumber !== undefined) {
@@ -325,7 +329,9 @@ export class ReadFlaunchPositionManager {
 
           if (logsWithTimestamps.length > 0) {
             onPoolSwap({
-              logs: logsWithTimestamps,
+              logs: logsWithTimestamps as T extends boolean
+                ? (BuySwapLog | SellSwapLog)[]
+                : BaseSwapLog[],
               isFetchingFromStart: false,
             });
           }

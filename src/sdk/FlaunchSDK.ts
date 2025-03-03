@@ -12,6 +12,10 @@ import {
   FlaunchParams,
   FlaunchIPFSParams,
   PoolSwapLogs,
+  BuySwapLog,
+  SellSwapLog,
+  BaseSwapLog,
+  WatchPoolSwapParams as WatchPoolSwapParamsPositionManager,
 } from "../clients/FlaunchPositionManagerClient";
 import {
   ReadPoolManager,
@@ -36,6 +40,13 @@ import {
   getValidTick,
   calculateUnderlyingTokenBalances,
 } from "../utils/univ4";
+
+type WatchPoolSwapParams = Omit<
+  WatchPoolSwapParamsPositionManager<boolean>,
+  "flETHIsCurrencyZero"
+> & {
+  filterByCoin?: Address;
+};
 
 export class ReadFlaunchSDK {
   public readonly drift: Drift;
@@ -70,18 +81,8 @@ export class ReadFlaunchSDK {
     return this.readPositionManager.watchPoolCreated(params);
   }
 
-  watchPoolSwap(params: {
-    onPoolSwap: ({
-      logs,
-      isFetchingFromStart,
-    }: {
-      logs: PoolSwapLogs;
-      isFetchingFromStart: boolean;
-    }) => void;
-    startBlockNumber?: bigint;
-    filterByCoin?: Address;
-  }) {
-    return this.readPositionManager.watchPoolSwap({
+  watchPoolSwap(params: WatchPoolSwapParams) {
+    return this.readPositionManager.watchPoolSwap<boolean>({
       ...params,
       filterByPoolId: params.filterByCoin
         ? this.poolId(params.filterByCoin)
