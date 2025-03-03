@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import {
+  BuySwapLog,
   PoolCreatedLogs,
-  PoolSwapLogs,
+  SellSwapLog,
 } from "../clients/FlaunchPositionManagerClient";
 import { ReadFlaunchSDK } from "../sdk/FlaunchSDK";
 import { Address } from "viem";
@@ -50,7 +51,7 @@ export function usePoolSwapEvents(
   coinAddress: Address,
   startBlockNumber?: bigint
 ) {
-  const [logs, setLogs] = useState<PoolSwapLogs>([]);
+  const [logs, setLogs] = useState<(BuySwapLog | SellSwapLog)[]>([]);
   const [isFetchingFromStart, setIsFetchingFromStart] = useState(false);
 
   useEffect(() => {
