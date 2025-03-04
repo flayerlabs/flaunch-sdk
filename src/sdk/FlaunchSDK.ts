@@ -328,6 +328,12 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     return this.readWriteFastFlaunchZap.fastFlaunchIPFS(params);
   }
 
+  async coinBalance(coinAddress: Address) {
+    const user = await this.drift.getSignerAddress();
+    const memecoin = new ReadMemecoin(coinAddress, this.drift);
+    return memecoin.balanceOf(user);
+  }
+
   async buyCoin(params: BuyCoinParams) {
     const sender = await this.drift.getSignerAddress();
 
