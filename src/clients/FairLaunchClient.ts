@@ -31,4 +31,17 @@ export class ReadFairLaunch {
       _poolId: poolId,
     });
   }
+
+  async isFairLaunchActive({ poolId }: { poolId: HexString }) {
+    const { closed, endsAt } = await this.fairLaunchInfo({ poolId });
+    if (closed) {
+      return false;
+    }
+
+    if (new Date().getTime() / 1000 > endsAt) {
+      return false;
+    }
+
+    return true;
+  }
 }
