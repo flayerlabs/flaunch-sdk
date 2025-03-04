@@ -10,6 +10,19 @@ const external = [
   ...Object.keys(pkg.peerDependencies || {}),
 ];
 
+// Custom onwarn function to ignore circular dependency warnings from viem
+const onwarn = (warning, warn) => {
+  // Ignore circular dependency warnings from viem
+  if (
+    warning.code === "CIRCULAR_DEPENDENCY" &&
+    warning.message.includes("viem")
+  ) {
+    return;
+  }
+  // Use default warning for everything else
+  warn(warning);
+};
+
 export default [
   // ESM build
   {
@@ -18,6 +31,7 @@ export default [
       file: pkg.module,
       format: "esm",
       sourcemap: true,
+      exports: "named",
     },
     plugins: [
       typescript({ tsconfig: "./tsconfig.json" }),
@@ -26,6 +40,7 @@ export default [
       json(),
     ],
     external,
+    onwarn,
   },
   // CommonJS build
   {
@@ -34,6 +49,7 @@ export default [
       file: pkg.main,
       format: "cjs",
       sourcemap: true,
+      exports: "named",
     },
     plugins: [
       typescript({ tsconfig: "./tsconfig.json" }),
@@ -42,6 +58,7 @@ export default [
       json(),
     ],
     external,
+    onwarn,
   },
   // UMD build (minified)
   {
@@ -51,10 +68,13 @@ export default [
       file: pkg.unpkg,
       format: "umd",
       sourcemap: true,
+      exports: "named",
       globals: {
         "@delvtech/drift": "drift",
         viem: "viem",
         "@uniswap/v3-sdk": "v3Sdk",
+        axios: "axios",
+        react: "React",
       },
     },
     plugins: [
@@ -65,5 +85,6 @@ export default [
       terser(),
     ],
     external,
+    onwarn,
   },
 ];
