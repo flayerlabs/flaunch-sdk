@@ -7,7 +7,7 @@ export * from "./hooks";
 
 export { ReadFlaunchSDK, ReadWriteFlaunchSDK };
 
-export default {
+export const FlaunchSDK = {
   ReadFlaunchSDK,
   ReadWriteFlaunchSDK,
 };
