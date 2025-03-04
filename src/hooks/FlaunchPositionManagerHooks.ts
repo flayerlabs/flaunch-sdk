@@ -31,7 +31,7 @@ export function usePoolCreatedEvents(
     return () => {
       cleanupPromise.then(({ cleanup }) => cleanup());
     };
-  }, [flaunch, startBlockNumber]);
+  }, [flaunch.chainId, startBlockNumber]);
 
   // Add effect to update times
   useEffect(() => {
@@ -72,7 +72,7 @@ export function usePoolSwapEvents(
     return () => {
       cleanupPromise.then(({ cleanup }) => cleanup());
     };
-  }, [flaunch, coinAddress, startBlockNumber]);
+  }, [flaunch.chainId, coinAddress, startBlockNumber]);
 
   // Add effect to update times
   useEffect(() => {
