@@ -33,4 +33,8 @@ export class ReadMemecoin {
   symbol() {
     return this.contract.read("symbol");
   }
+
+  tokenURI() {
+    return this.contract.read("tokenURI");
+  }
 }
