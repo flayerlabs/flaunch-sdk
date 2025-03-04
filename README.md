@@ -22,6 +22,8 @@ A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap 
   - [Write Operations](#write-operations)
   - [Selling with Permit2](#selling-with-permit2)
   - [Launching a Memecoin](#launching-a-memecoin)
+  - [All SDK functions](#all-sdk-functions)
+  - [React Hooks](#react-hooks)
 - [API Reference](#api-reference)
 - [Contributing](#contributing)
 - [License](#license)
@@ -222,6 +224,53 @@ const hash = await flaunchWrite.fastFlaunchIPFS({
     jwt: pinataJWT,
   },
 });
+```
+
+### All SDK functions
+
+For a list of all the functions in the SDK, refer to: [FlaunchSDK.ts](./src/sdk/FlaunchSDK.ts)
+
+### React Hooks
+
+The package also has hooks to listen for new Flaunches and new Coin Swaps. Refer to: [hooks](./src/hooks/FlaunchPositionManagerHooks.ts)
+
+```ts
+import { usePoolCreatedEvents, usePoolSwapEvents } from "flaunch-sdk/hooks";
+
+const { logs: poolCreatedLogs } = usePoolCreatedEvents(flaunchRead);
+const { logs: poolSwapLogs } = usePoolSwapEvents(flaunchRead, coinAddress);
+
+/**
+ * The `poolSwapLogs` calculates & returns the net swapped amount:
+ *
+ * type BuySwapLog = {
+ *  ...eventLog,
+ *  timestamp: number;
+ *  type: "BUY";
+ *   delta: {
+ *     coinsBought: bigint;
+ *     flETHSold: bigint;
+ *     fees: {
+ *       isInFLETH: boolean;
+ *       amount: bigint;
+ *     };
+ *   };
+ * };
+ *
+ * type SellSwapLog = {
+ *  ...eventLog,
+ *  timestamp: number;
+ *  type: "SELL";
+ *   delta: {
+ *     coinsSold: bigint;
+ *     flETHBought: bigint;
+ *     fees: {
+ *       isInFLETH: boolean;
+ *       amount: bigint;
+ *     };
+ *   };
+ * };
+ */
 ```
 
 ## Flaunch Reference
