@@ -178,7 +178,7 @@ if (allowance < parseEther(coinAmount)) {
   );
   signTypedData(typedData);
 
-  // then call when signature is not undefined
+  // then call this when signature is not undefined
   const hash = await flaunchWrite.sellCoin({
     coinAddress,
     amountIn: parseEther(coinAmount),
