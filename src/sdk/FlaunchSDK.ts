@@ -79,20 +79,13 @@ export class ReadFlaunchSDK {
     return this.readPositionManager.isValidCoin(coinAddress);
   }
 
-  async getCoinNameAndSymbol(coinAddress: Address) {
-    const memecoin = new ReadMemecoin(coinAddress, this.drift);
-    return {
-      name: await memecoin.name(),
-      symbol: await memecoin.symbol(),
-    };
-  }
-
   async getCoinMetadata(
     coinAddress: Address
   ): Promise<CoinMetadata & { symbol: string }> {
-    const { name, symbol } = await this.getCoinNameAndSymbol(coinAddress);
-    const tokenId = await this.readFlaunch.tokenId(coinAddress);
-    const tokenURI = await this.readFlaunch.tokenURI(tokenId);
+    const memecoin = new ReadMemecoin(coinAddress, this.drift);
+    const name = await memecoin.name();
+    const symbol = await memecoin.symbol();
+    const tokenURI = await memecoin.tokenURI();
 
     // get metadata from tokenURI
     const metadata = (await axios.get(resolveIPFS(tokenURI))).data;
