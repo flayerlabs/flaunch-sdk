@@ -22,6 +22,7 @@ A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap 
   - [Write Operations](#write-operations)
   - [Selling with Permit2](#selling-with-permit2)
   - [Launching a Memecoin](#launching-a-memecoin)
+    - [How to generate Base64Image from file upload](#how-to-generate-base64image-from-user-uploaded-file)
   - [All SDK functions](#all-sdk-functions)
   - [React Hooks](#react-hooks)
 - [API Reference](#api-reference)
@@ -120,13 +121,12 @@ import { ReadWriteFlaunchSDK } from "flaunch-sdk";
 import { createDrift } from "@delvtech/drift";
 import { viemAdapter } from "@delvtech/drift-viem";
 import { base } from "viem/chains";
-import { useWalletClient, useAccount } from "wagmi";
+import { useWalletClient } from "wagmi";
 import { useMemo } from "react";
 
 // ... your React component ...
 
 const { data: walletClient } = useWalletClient();
-const { address } = useAccount();
 
 const flaunchWrite = useMemo(() => {
   if (walletClient) {
@@ -210,7 +210,7 @@ const hash = await flaunchWrite.fastFlaunchIPFS({
   creator: address,
   creatorFeeAllocationPercent: 30,
   metadata: {
-    base64Image: imageData,
+    base64Image: imageData, // refer to the code below, on how to generate this base64Image
     description: "Your memecoin description",
     // optional:
     websiteUrl: "https://example.com/",
@@ -226,6 +226,38 @@ const hash = await flaunchWrite.fastFlaunchIPFS({
 });
 ```
 
+#### How to generate `base64Image` from User uploaded file
+
+```tsx
+// handle image file input and convert into base64
+const handleImageChange = useCallback(
+  (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+
+      // read the file as base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+
+        // this can be passed to the flaunch function call
+        handleFlaunch({ imageData: base64String });
+      };
+      reader.readAsDataURL(file);
+    }
+  },
+  [setStoredImagePreview]
+);
+
+// File upload input
+<input
+  type="file"
+  accept="image/*"
+  onchange="handleImageChange(event)"
+  id="image-upload"
+/>;
+```
+
 ### All SDK functions
 
 For a list of all the functions in the SDK, refer to: [FlaunchSDK.ts](./src/sdk/FlaunchSDK.ts)
@@ -234,7 +266,7 @@ For a list of all the functions in the SDK, refer to: [FlaunchSDK.ts](./src/sdk/
 
 The package also has hooks to listen for new Flaunches and new Coin Swaps. Refer to: [hooks](./src/hooks/FlaunchPositionManagerHooks.ts)
 
-```ts
+```tsx
 import { usePoolCreatedEvents, usePoolSwapEvents } from "flaunch-sdk/hooks";
 
 const { logs: poolCreatedLogs } = usePoolCreatedEvents(flaunchRead);
