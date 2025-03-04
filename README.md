@@ -244,6 +244,9 @@ const handleImageChange = useCallback(
 
         // this can be passed to the flaunch function call
         handleFlaunch({ imageData: base64String });
+
+        // use `storedImagePreview` to display the uploaded image with <image src={storedImagePreview} />
+        setStoredImagePreview(base64String);
       };
       reader.readAsDataURL(file);
     }
