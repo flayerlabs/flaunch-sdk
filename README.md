@@ -25,9 +25,7 @@ A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap 
     - [How to generate Base64Image from file upload](#how-to-generate-base64image-from-user-uploaded-file)
   - [All SDK functions](#all-sdk-functions)
   - [React Hooks](#react-hooks)
-- [API Reference](#api-reference)
-- [Contributing](#contributing)
-- [License](#license)
+- [Flaunch Docs](#flaunch-reference)
 
 ## Installation
 
