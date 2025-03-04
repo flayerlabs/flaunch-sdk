@@ -52,6 +52,7 @@
     "@rollup/plugin-commonjs": "^22.0.0",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.3.0",
+    "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^8.3.2",
     "@types/react": "^19.0.10",
     "rimraf": "^6.0.1",
@@ -60,11 +61,13 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@delvtech/drift": "^0.3.0",
-    "@rollup/plugin-terser": "^0.4.4",
+    "@delvtech/drift": "0.3.0",
     "@uniswap/v3-sdk": "^3.24.1",
     "axios": "^1.8.1",
     "react": "^19.0.0",
     "viem": "^2.23.2"
+  },
+  "peerDependencies": {
+    "@delvtech/drift": "0.3.0"
   }
 }
