@@ -220,6 +220,10 @@ export class ReadFlaunchSDK {
     return this.readFairLaunch.fairLaunchInfo({ poolId });
   }
 
+  fairLaunchDuration() {
+    return 30 * 60; // 30 minutes
+  }
+
   async initialTick(coinAddress: Address) {
     const poolId = this.poolId(coinAddress);
 
