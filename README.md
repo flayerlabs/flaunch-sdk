@@ -203,6 +203,8 @@ if (allowance < parseEther(coinAmount)) {
 - $10k starting market cap
 - 60% of the total supply goes to the fair launch
 
+_**Fast Flaunch doesn't incur any protocol fees!**_
+
 ```ts
 const hash = await flaunchWrite.fastFlaunchIPFS({
   name: "Test",
