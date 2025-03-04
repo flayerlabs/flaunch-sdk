@@ -5,6 +5,8 @@
 
 A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap V4.
 
+![](./.github/flaunch-header.png)
+
 ## Features
 
 - 🚀 Flaunch new memecoins
