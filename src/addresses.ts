@@ -1,5 +1,6 @@
 import { base, baseSepolia } from "viem/chains";
 import { Addresses } from "./types";
+import { zeroAddress } from "viem";
 
 export const FlaunchPositionManagerAddress: Addresses = {
   [base.id]: "0x51Bba15255406Cfe7099a42183302640ba7dAFDC",
@@ -27,6 +28,7 @@ export const FlaunchAddress: Addresses = {
 };
 
 export const FastFlaunchZapAddress: Addresses = {
+  [base.id]: zeroAddress, // FIXME: update with real address when deployed
   [baseSepolia.id]: "0x36831b3085fdefc576c15d6d6675d52a647a02c0",
 };
 

@@ -55,6 +55,7 @@ import {
 } from "utils/universalRouter";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
 import { ReadPermit2 } from "clients/Permit2Client";
+import { zeroAddress } from "viem";
 
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
@@ -325,10 +326,22 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   fastFlaunch(params: FastFlaunchParams) {
+    if (this.readWriteFastFlaunchZap.contract.address === zeroAddress) {
+      throw new Error(
+        `FastFlaunchZap is not deployed at chainId: ${this.chainId}`
+      );
+    }
+
     return this.readWriteFastFlaunchZap.fastFlaunch(params);
   }
 
   fastFlaunchIPFS(params: FastFlaunchIPFSParams) {
+    if (this.readWriteFastFlaunchZap.contract.address === zeroAddress) {
+      throw new Error(
+        `FastFlaunchZap is not deployed at chainId: ${this.chainId}`
+      );
+    }
+
     return this.readWriteFastFlaunchZap.fastFlaunchIPFS(params);
   }
 
