@@ -293,7 +293,7 @@ export const memecoinToEthWithPermit2 = (params: {
   memecoin: Address;
   amountIn: bigint;
   ethOutMin: bigint;
-  permitSingle: PermitSingle;
+  permitSingle: PermitSingle | undefined;
   signature: Hex | undefined;
   referrer: Address | null;
 }) => {
@@ -373,7 +373,7 @@ export const memecoinToEthWithPermit2 = (params: {
     [v4Actions, [v4ExactInputParams, settleParams, takeParams]]
   );
 
-  if (params.signature) {
+  if (params.signature && params.permitSingle) {
     const urCommands = ("0x" +
       URCommands.PERMIT2_PERMIT +
       URCommands.V4_SWAP) as Hex;

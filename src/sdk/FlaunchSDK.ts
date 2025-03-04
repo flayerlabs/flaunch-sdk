@@ -90,8 +90,8 @@ type SellCoinParams = {
   slippagePercent: number;
   ethOutMin?: bigint;
   referrer?: Address;
-  permitSingle: PermitSingle;
-  signature: HexString | undefined;
+  permitSingle?: PermitSingle;
+  signature?: HexString;
 };
 
 export class ReadFlaunchSDK {
