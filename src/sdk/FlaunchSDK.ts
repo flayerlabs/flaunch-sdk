@@ -221,6 +221,11 @@ export class ReadFlaunchSDK {
     return this.readFairLaunch.fairLaunchInfo({ poolId });
   }
 
+  isFairLaunchActive(coinAddress: Address) {
+    const poolId = this.poolId(coinAddress);
+    return this.readFairLaunch.isFairLaunchActive({ poolId });
+  }
+
   fairLaunchDuration() {
     return 30 * 60; // 30 minutes
   }
