@@ -37,4 +37,10 @@ export class ReadMemecoin {
   tokenURI() {
     return this.contract.read("tokenURI");
   }
+
+  balanceOf(user: Address) {
+    return this.contract.read("balanceOf", {
+      account: user,
+    });
+  }
 }
