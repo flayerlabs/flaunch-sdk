@@ -11,9 +11,9 @@ export const FLETHAddress: Addresses = {
   [baseSepolia.id]: "0x79FC52701cD4BE6f9Ba9aDC94c207DE37e3314eb",
 };
 
-export const PoolManagerAddress: Addresses = {
-  [base.id]: "0x498581fF718922c3f8e6A244956aF099B2652b2b",
-  [baseSepolia.id]: "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+export const FLETHHooksAddress: Addresses = {
+  [base.id]: "0x9E433F32bb5481a9CA7DFF5b3af74A7ed041a888",
+  [baseSepolia.id]: "0x4bd2ca15286c96e4e731337de8b375da6841e888",
 };
 
 export const FairLaunchAddress: Addresses = {
@@ -28,4 +28,24 @@ export const FlaunchAddress: Addresses = {
 
 export const FastFlaunchZapAddress: Addresses = {
   [baseSepolia.id]: "0x36831b3085fdefc576c15d6d6675d52a647a02c0",
+};
+
+export const PoolManagerAddress: Addresses = {
+  [base.id]: "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+  [baseSepolia.id]: "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+};
+
+export const UniversalRouterAddress: Addresses = {
+  [base.id]: "0x6fF5693b99212Da76ad316178A184AB56D299b43",
+  [baseSepolia.id]: "0x492E6456D9528771018DeB9E87ef7750EF184104",
+};
+
+export const QuoterAddress: Addresses = {
+  [base.id]: "0x0d5e0f971ed27fbff6c2837bf31316121532048d",
+  [baseSepolia.id]: "0x4a6513c898fe1b2d0e78d3b0e0a4a151589b1cba",
+};
+
+export const Permit2Address: Addresses = {
+  [base.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+  [baseSepolia.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
 };
