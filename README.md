@@ -1,11 +1,11 @@
 # Flaunch SDK
 
-[![npm version](https://badge.fury.io/js/flaunch-sdk.svg)](https://badge.fury.io/js/flaunch-sdk)
+[![npm version](https://badge.fury.io/js/@flaunch/sdk.svg)](https://npmjs.com/package/@flaunch/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap V4.
 
-![](./.github/flaunch-header.png)
+![Flaunch Header](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/.github/flaunch-header.png)
 
 ## Features
 
@@ -34,19 +34,19 @@ A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap 
 Using pnpm (recommended):
 
 ```bash
-pnpm add flaunch-sdk @delvtech/drift
+pnpm add @flaunch/sdk @delvtech/drift
 ```
 
 Using npm:
 
 ```bash
-npm install flaunch-sdk @delvtech/drift
+npm install @flaunch/sdk @delvtech/drift
 ```
 
 Using yarn:
 
 ```bash
-yarn add flaunch-sdk @delvtech/drift
+yarn add @flaunch/sdk @delvtech/drift
 ```
 
 ## Quick Start
@@ -54,7 +54,7 @@ yarn add flaunch-sdk @delvtech/drift
 Here's a simple example to get started with reading token metadata:
 
 ```ts
-import { ReadFlaunchSDK } from "flaunch-sdk";
+import { ReadFlaunchSDK } from "@flaunch/sdk";
 import { createDrift } from "@delvtech/drift";
 import { viemAdapter } from "@delvtech/drift-viem";
 import { base } from "viem/chains";
@@ -91,7 +91,7 @@ pnpm add @delvtech/drift-viem
 2. Initialize the SDK for read operations:
 
 ```ts
-import { ReadFlaunchSDK } from "flaunch-sdk";
+import { ReadFlaunchSDK } from "@flaunch/sdk";
 import { createDrift } from "@delvtech/drift";
 import { viemAdapter } from "@delvtech/drift-viem";
 import { base, baseSepolia } from "viem/chains";
@@ -117,7 +117,7 @@ const { symbol, name, image } = await flaunchRead.getCoinMetadata(coinAddress);
 For write operations, you'll need both Viem and Wagmi. Here's how to set it up in a React component:
 
 ```ts
-import { ReadWriteFlaunchSDK } from "flaunch-sdk";
+import { ReadWriteFlaunchSDK } from "@flaunch/sdk";
 import { createDrift } from "@delvtech/drift";
 import { viemAdapter } from "@delvtech/drift-viem";
 import { base } from "viem/chains";
@@ -272,7 +272,7 @@ For a list of all the functions in the SDK, refer to: [FlaunchSDK.ts](./src/sdk/
 The package also has hooks to listen for new Flaunches and new Coin Swaps. Refer to: [hooks](./src/hooks/FlaunchPositionManagerHooks.ts)
 
 ```tsx
-import { usePoolCreatedEvents, usePoolSwapEvents } from "flaunch-sdk/hooks";
+import { usePoolCreatedEvents, usePoolSwapEvents } from "@flaunch/sdk/hooks";
 
 const { logs: poolCreatedLogs } = usePoolCreatedEvents(flaunchRead);
 const { logs: poolSwapLogs } = usePoolSwapEvents(flaunchRead, coinAddress);
