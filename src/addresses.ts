@@ -29,7 +29,7 @@ export const FlaunchAddress: Addresses = {
 
 export const FastFlaunchZapAddress: Addresses = {
   [base.id]: zeroAddress, // FIXME: update with real address when deployed
-  [baseSepolia.id]: "0x36831b3085fdefc576c15d6d6675d52a647a02c0",
+  [baseSepolia.id]: "0x251e97446a7019E5DA4860d4CF47291321C693D0",
 };
 
 export const PoolManagerAddress: Addresses = {

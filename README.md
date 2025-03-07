@@ -202,6 +202,7 @@ if (allowance < parseEther(coinAmount)) {
 
 - $10k starting market cap
 - 60% of the total supply goes to the fair launch
+- 80% dev / 20% community split
 
 _**Fast Flaunch doesn't incur any protocol fees!**_
 
@@ -210,7 +211,6 @@ const hash = await flaunchWrite.fastFlaunchIPFS({
   name: "Test",
   symbol: "TEST",
   creator: address,
-  creatorFeeAllocationPercent: 30,
   metadata: {
     base64Image: imageData, // refer to the code below, on how to generate this base64Image
     description: "Your memecoin description",

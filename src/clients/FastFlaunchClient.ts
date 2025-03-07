@@ -34,7 +34,6 @@ export interface FastFlaunchParams {
   symbol: string;
   tokenUri: string;
   creator: Address;
-  creatorFeeAllocationPercent: number;
 }
 
 export interface FastFlaunchIPFSParams
@@ -51,22 +50,13 @@ export class ReadWriteFastFlaunchZap extends ReadFastFlaunchZap {
     super(address, drift);
   }
 
-  fastFlaunch({
-    name,
-    symbol,
-    tokenUri,
-    creator,
-    creatorFeeAllocationPercent,
-  }: FastFlaunchParams) {
-    const creatorFeeAllocationInBps = creatorFeeAllocationPercent * 100;
-
+  fastFlaunch({ name, symbol, tokenUri, creator }: FastFlaunchParams) {
     return this.contract.write("flaunch", {
       _params: {
         name,
         symbol,
         tokenUri,
         creator,
-        creatorFeeAllocation: creatorFeeAllocationInBps,
       },
     });
   }
@@ -75,7 +65,6 @@ export class ReadWriteFastFlaunchZap extends ReadFastFlaunchZap {
     name,
     symbol,
     creator,
-    creatorFeeAllocationPercent,
     metadata,
     pinataConfig,
   }: FastFlaunchIPFSParams) {
@@ -89,7 +78,6 @@ export class ReadWriteFastFlaunchZap extends ReadFastFlaunchZap {
       symbol,
       tokenUri,
       creator,
-      creatorFeeAllocationPercent,
     });
   }
 }
