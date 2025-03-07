@@ -1,6 +1,6 @@
 # Flaunch SDK
 
-[![npm version](https://badge.fury.io/js/%40flaunch%2Fsdk.svg)](https://npmjs.com/package/@flaunch/sdk)
+[![npm version](https://img.shields.io/npm/v/@flaunch/sdk.svg)](https://npmjs.com/package/@flaunch/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap V4.
