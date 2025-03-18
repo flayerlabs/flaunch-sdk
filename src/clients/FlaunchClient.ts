@@ -13,7 +13,7 @@ import { FlaunchAbi } from "../abi/Flaunch";
 export type FlaunchABI = typeof FlaunchAbi;
 
 export class ReadFlaunch {
-  contract: ReadContract<FlaunchABI>;
+  public readonly contract: ReadContract<FlaunchABI>;
 
   constructor(address: Address, drift: Drift = createDrift()) {
     if (!address) {

@@ -1,5 +1,5 @@
 import { base, baseSepolia } from "viem/chains";
-import { Addresses } from "./types";
+import { Addresses, PoolKey } from "./types";
 import { zeroAddress } from "viem";
 
 export const FlaunchPositionManagerAddress: Addresses = {
@@ -27,6 +27,11 @@ export const FlaunchAddress: Addresses = {
   [baseSepolia.id]: "0x7D375C9133721083DF7b7e5Cb0Ed8Fc78862dfe3",
 };
 
+export const BidWallAddress: Addresses = {
+  [base.id]: "0x66681f10BA90496241A25e33380004f30Dfd8aa8",
+  [baseSepolia.id]: "0xa2107050ACEf4809c88Ab744F8e667605db5ACDB",
+};
+
 export const FastFlaunchZapAddress: Addresses = {
   [base.id]: zeroAddress, // FIXME: update with real address when deployed
   [baseSepolia.id]: "0x251e97446a7019E5DA4860d4CF47291321C693D0",
@@ -47,7 +52,31 @@ export const QuoterAddress: Addresses = {
   [baseSepolia.id]: "0x4a6513c898fe1b2d0e78d3b0e0a4a151589b1cba",
 };
 
+export const StateViewAddress: Addresses = {
+  [base.id]: "0xA3c0c9b65baD0b08107Aa264b0f3dB444b867A71",
+  [baseSepolia.id]: "0x571291b572ed32ce6751a2Cb2486EbEe8DEfB9B4",
+};
+
 export const Permit2Address: Addresses = {
   [base.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
   [baseSepolia.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+};
+
+export const USDCETHPoolKeys: {
+  [chainId: number]: PoolKey;
+} = {
+  [base.id]: {
+    currency0: zeroAddress,
+    currency1: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    fee: 500,
+    tickSpacing: 10,
+    hooks: zeroAddress,
+  },
+  [baseSepolia.id]: {
+    currency0: zeroAddress,
+    currency1: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    fee: 0,
+    tickSpacing: 30,
+    hooks: zeroAddress,
+  },
 };

@@ -10,19 +10,20 @@ import {
 } from "@delvtech/drift";
 import { UniversalRouterAbi } from "../abi/UniversalRouter";
 import { QuoterAbi } from "../abi/Quoter";
-import { zeroAddress } from "viem";
+import { formatUnits, parseEther, zeroAddress } from "viem";
 import {
   FairLaunchAddress,
   FlaunchPositionManagerAddress,
   FLETHAddress,
   FLETHHooksAddress,
+  USDCETHPoolKeys,
 } from "addresses";
 
 export type QuoterABI = typeof QuoterAbi;
 
 export class ReadQuoter {
   chainId: number;
-  contract: ReadContract<QuoterABI>;
+  public readonly contract: ReadContract<QuoterABI>;
 
   constructor(chainId: number, address: Address, drift: Drift = createDrift()) {
     this.chainId = chainId;
@@ -115,5 +116,27 @@ export class ReadQuoter {
     });
 
     return res.amountIn;
+  }
+
+  async getETHUSDCPrice() {
+    const amountIn = parseEther("1");
+
+    const res = await this.contract.simulateWrite("quoteExactInput", {
+      params: {
+        exactAmount: amountIn,
+        exactCurrency: zeroAddress,
+        path: [
+          {
+            fee: USDCETHPoolKeys[this.chainId].fee,
+            tickSpacing: USDCETHPoolKeys[this.chainId].tickSpacing,
+            hooks: USDCETHPoolKeys[this.chainId].hooks,
+            hookData: "0x",
+            intermediateCurrency: USDCETHPoolKeys[this.chainId].currency1,
+          },
+        ],
+      },
+    });
+
+    return Number(Number(formatUnits(res.amountOut, 6)).toFixed(2));
   }
 }

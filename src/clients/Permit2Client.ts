@@ -13,7 +13,7 @@ import { Permit2Abi } from "../abi/Permit2";
 export type Permit2ABI = typeof Permit2Abi;
 
 export class ReadPermit2 {
-  contract: ReadContract<Permit2ABI>;
+  public readonly contract: ReadContract<Permit2ABI>;
 
   constructor(address: Address, drift: Drift = createDrift()) {
     if (!address) {

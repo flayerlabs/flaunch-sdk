@@ -99,11 +99,11 @@ export interface FlaunchIPFSParams
     IPFSParams {}
 
 export class ReadFlaunchPositionManager {
-  contract: ReadContract<FlaunchPositionManagerABI>;
+  public readonly contract: ReadContract<FlaunchPositionManagerABI>;
   drift: Drift;
-  pollPoolCreatedNow?: () => Promise<void>;
-  pollPoolSwapNow?: () => Promise<void>;
-  TOTAL_SUPPLY = 100n * 10n ** 27n; // 100 Billion tokens in wei
+  public pollPoolCreatedNow?: () => Promise<void>;
+  public pollPoolSwapNow?: () => Promise<void>;
+  public readonly TOTAL_SUPPLY = 100n * 10n ** 27n; // 100 Billion tokens in wei
 
   constructor(address: Address, drift: Drift = createDrift()) {
     this.drift = drift;

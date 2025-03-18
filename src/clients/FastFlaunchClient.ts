@@ -14,11 +14,9 @@ import { IPFSParams } from "../types";
 export type FastFlaunchZapABI = typeof FastFlaunchZapAbi;
 
 export class ReadFastFlaunchZap {
-  contract: ReadContract<FastFlaunchZapABI>;
-  drift: Drift;
+  public readonly contract: ReadContract<FastFlaunchZapABI>;
 
   constructor(address: Address, drift: Drift = createDrift()) {
-    this.drift = drift;
     if (!address) {
       throw new Error("Address is required");
     }
