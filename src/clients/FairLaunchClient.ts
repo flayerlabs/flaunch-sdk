@@ -13,7 +13,7 @@ import { FairLaunchAbi } from "../abi/FairLaunch";
 export type FairLaunchABI = typeof FairLaunchAbi;
 
 export class ReadFairLaunch {
-  contract: ReadContract<FairLaunchABI>;
+  public readonly contract: ReadContract<FairLaunchABI>;
 
   constructor(address: Address, drift: Drift = createDrift()) {
     if (!address) {

@@ -24,7 +24,7 @@ export interface PositionInfoParams {
 }
 
 export class ReadPoolManager {
-  contract: ReadContract<PoolManagerABI>;
+  public readonly contract: ReadContract<PoolManagerABI>;
 
   constructor(address: Address, drift: Drift = createDrift()) {
     if (!address) {

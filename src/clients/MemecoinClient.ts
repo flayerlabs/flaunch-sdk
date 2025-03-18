@@ -13,7 +13,7 @@ import { MemecoinAbi } from "../abi/Memecoin";
 export type MemecoinABI = typeof MemecoinAbi;
 
 export class ReadMemecoin {
-  contract: ReadContract<MemecoinABI>;
+  public readonly contract: ReadContract<MemecoinABI>;
 
   constructor(address: Address, drift: Drift = createDrift()) {
     if (!address) {

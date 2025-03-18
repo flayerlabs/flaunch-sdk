@@ -17,7 +17,9 @@ import {
   ReadPoolManager,
   PositionInfoParams,
 } from "../clients/PoolManagerClient";
+import { ReadStateView } from "../clients/StateViewClient";
 import { ReadFairLaunch } from "../clients/FairLaunchClient";
+import { ReadBidWall } from "../clients/BidWallClient";
 import {
   ReadWriteFastFlaunchZap,
   FastFlaunchParams,
@@ -28,11 +30,13 @@ import { ReadMemecoin } from "../clients/MemecoinClient";
 import { ReadQuoter } from "clients/QuoterClient";
 import {
   FlaunchPositionManagerAddress,
+  StateViewAddress,
   PoolManagerAddress,
   FLETHAddress,
   FairLaunchAddress,
   FastFlaunchZapAddress,
   FlaunchAddress,
+  BidWallAddress,
   UniversalRouterAddress,
   QuoterAddress,
   Permit2Address,
@@ -42,6 +46,8 @@ import {
   orderPoolKey,
   getValidTick,
   calculateUnderlyingTokenBalances,
+  TickFinder,
+  TICK_SPACING,
 } from "../utils/univ4";
 import { CoinMetadata } from "types";
 import axios from "axios";
@@ -97,13 +103,15 @@ type SellCoinParams = {
 export class ReadFlaunchSDK {
   public readonly drift: Drift;
   public readonly chainId: number;
-  TICK_SPACING = 60;
-  readPositionManager: ReadFlaunchPositionManager;
-  readPoolManager: ReadPoolManager;
-  readFairLaunch: ReadFairLaunch;
-  readFlaunch: ReadFlaunch;
-  readQuoter: ReadQuoter;
-  readPermit2: ReadPermit2;
+  public readonly TICK_SPACING = TICK_SPACING;
+  public readonly readPositionManager: ReadFlaunchPositionManager;
+  public readonly readPoolManager: ReadPoolManager;
+  public readonly readStateView: ReadStateView;
+  public readonly readFairLaunch: ReadFairLaunch;
+  public readonly readBidWall: ReadBidWall;
+  public readonly readFlaunch: ReadFlaunch;
+  public readonly readQuoter: ReadQuoter;
+  public readonly readPermit2: ReadPermit2;
 
   constructor(chainId: number, drift: Drift = createDrift()) {
     this.chainId = chainId;
@@ -116,10 +124,15 @@ export class ReadFlaunchSDK {
       PoolManagerAddress[this.chainId],
       drift
     );
+    this.readStateView = new ReadStateView(
+      StateViewAddress[this.chainId],
+      drift
+    );
     this.readFairLaunch = new ReadFairLaunch(
       FairLaunchAddress[this.chainId],
       drift
     );
+    this.readBidWall = new ReadBidWall(BidWallAddress[this.chainId], drift);
     this.readFlaunch = new ReadFlaunch(FlaunchAddress[this.chainId], drift);
     this.readQuoter = new ReadQuoter(
       this.chainId,
@@ -190,13 +203,13 @@ export class ReadFlaunchSDK {
   }
 
   positionInfo(params: PositionInfoParams) {
-    return this.readPoolManager.positionInfo(params);
+    return this.readStateView.positionInfo(params);
   }
 
   async currentTick(coinAddress: Address) {
     const poolId = this.poolId(coinAddress);
 
-    const poolState = await this.readPoolManager.poolSlot0({ poolId });
+    const poolState = await this.readStateView.poolSlot0({ poolId });
     return poolState.tick;
   }
 
@@ -214,6 +227,17 @@ export class ReadFlaunchSDK {
     }
 
     return ethPerCoin.toFixed(18);
+  }
+
+  // optionally pass in a drift instance to get the price from Base Mainnet
+  async getETHUSDCPrice(drift?: Drift) {
+    if (drift) {
+      const chainId = await drift.getChainId();
+      const quoter = new ReadQuoter(chainId, QuoterAddress[chainId], drift);
+      return quoter.getETHUSDCPrice();
+    }
+
+    return this.readQuoter.getETHUSDCPrice();
   }
 
   async fairLaunchInfo(coinAddress: Address) {
@@ -262,7 +286,7 @@ export class ReadFlaunchSDK {
       tickLower = tickUpper - this.TICK_SPACING;
     }
 
-    const { liquidity } = await this.readPoolManager.positionInfo({
+    const { liquidity } = await this.readStateView.positionInfo({
       poolId,
       owner: FairLaunchAddress[this.chainId],
       tickLower,
@@ -289,6 +313,84 @@ export class ReadFlaunchSDK {
     };
   }
 
+  async fairLaunchCoinOnlyPosition(coinAddress: Address) {
+    const poolId = this.poolId(coinAddress);
+    const initialTick = await this.initialTick(coinAddress);
+    const currentTick = await this.currentTick(coinAddress);
+    const isFLETHZero = this.flETHIsCurrencyZero(coinAddress);
+
+    let tickLower: number;
+    let tickUpper: number;
+
+    if (isFLETHZero) {
+      tickLower = TickFinder.MIN_TICK;
+      tickUpper = getValidTick({
+        tick: initialTick - 1,
+        roundDown: true,
+        tickSpacing: this.TICK_SPACING,
+      });
+    } else {
+      tickLower = getValidTick({
+        tick: initialTick + 1,
+        roundDown: false,
+        tickSpacing: this.TICK_SPACING,
+      });
+      tickUpper = TickFinder.MAX_TICK;
+    }
+
+    const { liquidity } = await this.readStateView.positionInfo({
+      poolId,
+      owner: FairLaunchAddress[this.chainId],
+      tickLower,
+      tickUpper,
+      salt: "",
+    });
+
+    const { amount0, amount1 } = calculateUnderlyingTokenBalances(
+      liquidity,
+      tickLower,
+      tickUpper,
+      currentTick
+    );
+
+    const [flETHAmount, coinAmount] = isFLETHZero
+      ? [amount0, amount1]
+      : [amount1, amount0];
+
+    return {
+      flETHAmount,
+      coinAmount,
+      tickLower,
+      tickUpper,
+    };
+  }
+
+  async bidWallPosition(coinAddress: Address) {
+    const poolId = this.poolId(coinAddress);
+    const isFLETHZero = this.flETHIsCurrencyZero(coinAddress);
+
+    const {
+      amount0_: amount0,
+      amount1_: amount1,
+      pendingEth_: pendingEth,
+    } = await this.readBidWall.position({ poolId });
+    const { tickLower, tickUpper } = await this.readBidWall.poolInfo({
+      poolId,
+    });
+
+    const [flETHAmount, coinAmount] = isFLETHZero
+      ? [amount0, amount1]
+      : [amount1, amount0];
+
+    return {
+      flETHAmount,
+      coinAmount,
+      pendingEth,
+      tickLower,
+      tickUpper,
+    };
+  }
+
   poolId(coinAddress: Address) {
     return getPoolId(
       orderPoolKey({
@@ -307,8 +409,8 @@ export class ReadFlaunchSDK {
 }
 
 export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
-  readWritePositionManager: ReadWriteFlaunchPositionManager;
-  readWriteFastFlaunchZap: ReadWriteFastFlaunchZap;
+  public readonly readWritePositionManager: ReadWriteFlaunchPositionManager;
+  public readonly readWriteFastFlaunchZap: ReadWriteFastFlaunchZap;
 
   constructor(chainId: number, drift: Drift<ReadWriteAdapter> = createDrift()) {
     super(chainId, drift);
@@ -353,6 +455,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   async coinBalance(coinAddress: Address) {
     const user = await this.drift.getSignerAddress();
     const memecoin = new ReadMemecoin(coinAddress, this.drift);
+    await memecoin.contract.cache.clear();
     return memecoin.balanceOf(user);
   }
 
@@ -363,6 +466,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     let amountOutMin: bigint | undefined;
     let amountOut: bigint | undefined;
     let amountInMax: bigint | undefined;
+
+    await this.readQuoter.contract.cache.clear();
 
     if (params.swapType === "EXACT_IN") {
       amountIn = params.amountIn;
@@ -421,6 +526,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   async sellCoin(params: SellCoinParams) {
     let ethOutMin: bigint;
 
+    await this.readQuoter.contract.cache.clear();
+
     if (params.ethOutMin === undefined) {
       ethOutMin = getAmountWithSlippage(
         await this.readQuoter.getSellQuoteExactInput(
@@ -433,6 +540,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     } else {
       ethOutMin = params.ethOutMin;
     }
+
+    await this.readPermit2.contract.cache.clear();
 
     const { commands, inputs } = memecoinToEthWithPermit2({
       chainId: this.chainId,

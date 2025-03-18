@@ -2,6 +2,14 @@ import { concat, keccak256, pad, toHex } from "viem";
 import { TickMath } from "@uniswap/v3-sdk";
 import { PoolKey } from "../types";
 
+// our min/max tick range that is valid for the tick spacing (60)
+export const TickFinder = {
+  MIN_TICK: -887220,
+  MAX_TICK: 887220,
+};
+
+export const TICK_SPACING = 60;
+
 export const getPoolId = (poolKey: PoolKey) => {
   // Pack the data in the same order as Solidity struct
   const packed = concat([
