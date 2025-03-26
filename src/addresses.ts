@@ -33,7 +33,7 @@ export const BidWallAddress: Addresses = {
 };
 
 export const FastFlaunchZapAddress: Addresses = {
-  [base.id]: zeroAddress, // FIXME: update with real address when deployed
+  [base.id]: "0xd79e27f51ddf9df5ee76106ee192530f474b02f6",
   [baseSepolia.id]: "0x251e97446a7019E5DA4860d4CF47291321C693D0",
 };
 
