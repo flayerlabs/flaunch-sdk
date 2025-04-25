@@ -8,20 +8,21 @@ import {
   type HexString,
   createDrift,
 } from "@delvtech/drift";
-import { BidwallAbi } from "../abi/BidWall";
+import { BidWallV1_1Abi } from "../abi/BidWallV1_1";
 
-export type BidwallABI = typeof BidwallAbi;
+export type BidwallV1_1ABI = typeof BidWallV1_1Abi;
 
 /**
- * Client for interacting with the BidWall V1 contract in read-only mode
+ * Client for interacting with the BidWall V1.1 contract in read-only mode
  * Provides methods to query bid wall positions and pool information
+ * Enhanced version of the V1 contract with additional features
  */
-export class ReadBidWall {
-  public readonly contract: ReadContract<BidwallABI>;
+export class ReadBidWallV1_1 {
+  public readonly contract: ReadContract<BidwallV1_1ABI>;
 
   /**
-   * Creates a new ReadBidWall instance
-   * @param address - The address of the BidWall contract
+   * Creates a new ReadBidWallV1_1 instance
+   * @param address - The address of the BidWall V1.1 contract
    * @param drift - Optional drift instance for contract interactions (creates new instance if not provided)
    * @throws Error if address is not provided
    */
@@ -31,7 +32,7 @@ export class ReadBidWall {
     }
 
     this.contract = drift.contract({
-      abi: BidwallAbi,
+      abi: BidWallV1_1Abi,
       address,
     });
   }
