@@ -63,7 +63,9 @@
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
     "prepublishOnly": "npm run build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:generate": "typedoc --plugin typedoc-plugin-markdown --out docs src/index.ts --excludeExternals --exclude '**/abi/**' --includeVersion",
+    "docs:llms": "node scripts/generate-llms-doc.js"
   },
   "packageManager": "pnpm@8.15.4",
   "devDependencies": {
@@ -76,7 +78,9 @@
     "rimraf": "^6.0.1",
     "rollup": "^2.75.6",
     "tslib": "^2.4.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "typedoc": "^0.25.12",
+    "typedoc-plugin-markdown": "^3.17.1"
   },
   "dependencies": {
     "@uniswap/v3-sdk": "^3.24.1",

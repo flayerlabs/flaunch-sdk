@@ -1,0 +1,2448 @@
+# Flaunch SDK
+
+[![npm version](https://img.shields.io/npm/v/@flaunch/sdk.svg)](https://npmjs.com/package/@flaunch/sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap V4.
+
+![Flaunch Header](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/.github/flaunch-header.png)
+
+## Features
+
+- 🚀 Flaunch new memecoins
+- 💱 Buy and sell memecoins via Uniswap V4 hooks
+- 📊 Read functions for token and pool data
+- 🔒 Built-in Permit2 support for gasless approvals
+- 🔵 Works on Base and Base Sepolia networks
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+  - [Read Operations](#read-operations-with-viem)
+  - [Write Operations](#write-operations-with-viem--wagmi)
+  - [Selling with Permit2](#selling-with-permit2)
+  - [Flaunching a Memecoin](#flaunching-a-memecoin)
+    - [How to generate Base64Image from file upload](#how-to-generate-base64image-from-user-uploaded-file)
+  - [All SDK functions](#all-sdk-functions)
+  - [React Hooks](#react-hooks)
+- [Flaunch Docs](#flaunch-reference)
+
+## Installation
+
+Using pnpm (recommended):
+
+```bash
+pnpm add @flaunch/sdk @delvtech/drift
+```
+
+Using npm:
+
+```bash
+npm install @flaunch/sdk @delvtech/drift
+```
+
+Using yarn:
+
+```bash
+yarn add @flaunch/sdk @delvtech/drift
+```
+
+## Quick Start
+
+Here's a simple example to get started with reading token metadata:
+
+```ts
+import { ReadFlaunchSDK } from "@flaunch/sdk";
+import { createDrift } from "@delvtech/drift";
+import { viemAdapter } from "@delvtech/drift-viem";
+import { base } from "viem/chains";
+
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(),
+});
+
+const drift = createDrift({
+  adapter: viemAdapter({ publicClient }),
+});
+
+const flaunchRead = new ReadFlaunchSDK(base.id, drift);
+const { symbol, name, image } = await flaunchRead.getCoinMetadata(coinAddress);
+// returns: {symbol: "TEST", name: "Test", image: "https://<IMAGE_URL>"}
+```
+
+## Usage
+
+The SDK has 2 exports:
+
+1. `ReadFlaunchSDK`: public read only operations
+2. `ReadWriteFlaunchSDK`: read and write operations (extends `ReadFlaunchSDK`)
+
+### Read Operations (with Viem)
+
+1. First, install the Viem adapter:
+
+```bash
+pnpm add @delvtech/drift-viem
+```
+
+2. Initialize the SDK for read operations:
+
+```ts
+import { ReadFlaunchSDK } from "@flaunch/sdk";
+import { createDrift } from "@delvtech/drift";
+import { viemAdapter } from "@delvtech/drift-viem";
+import { base, baseSepolia } from "viem/chains";
+
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http("<RPC_URL>"), // "<RPC_URL>" is optional, defaults to public RPC
+});
+
+const drift = createDrift({
+  adapter: viemAdapter({ publicClient }),
+});
+
+const flaunchRead = new ReadFlaunchSDK(base.id, drift);
+
+// Read token metadata
+const { symbol, name, image } = await flaunchRead.getCoinMetadata(coinAddress);
+// returns: {symbol: "TEST", name: "Test", image: "https://<IMAGE_URL>"}
+```
+
+### Write Operations (with Viem + Wagmi)
+
+For write operations, you'll need both Viem and Wagmi. Here's how to set it up in a React component:
+
+```ts
+import { ReadWriteFlaunchSDK } from "@flaunch/sdk";
+import { createDrift } from "@delvtech/drift";
+import { viemAdapter } from "@delvtech/drift-viem";
+import { base } from "viem/chains";
+import { useWalletClient } from "wagmi";
+import { useMemo } from "react";
+
+// ... your React component ...
+
+const { data: walletClient } = useWalletClient();
+
+const flaunchWrite = useMemo(() => {
+  if (walletClient) {
+    const drift = createDrift({
+      adapter: viemAdapter({ publicClient, walletClient }),
+    });
+    return new ReadWriteFlaunchSDK(base.id, drift);
+  }
+}, [walletClient]);
+
+// Execute a buy transaction
+const buyTokens = async () => {
+  const hash = await flaunchWrite.buyCoin({
+    coinAddress,
+    slippagePercent: 5,
+    swapType: "EXACT_IN",
+    amountIn: parseEther("0.1"),
+  });
+
+  // Wait for confirmation
+  const receipt = await flaunchWrite.drift.waitForTransaction({ hash });
+  console.log(receipt.status === "success" ? "Success" : "Failed");
+};
+```
+
+### Selling with Permit2
+
+Permit2 enables gasless token approvals. Here's how to implement token selling with Permit2:
+
+```ts
+import { useSignTypedData } from "wagmi";
+import { parseEther, Hex } from "viem";
+
+const {
+  signTypedData,
+  status: sigStatus,
+  error: sigError,
+  data: signature,
+} = useSignTypedData();
+
+// Check allowance and permit if needed
+const { allowance } = await flaunchWrite.getPermit2AllowanceAndNonce(
+  coinAddress
+);
+
+if (allowance < parseEther(coinAmount)) {
+  const { typedData, permitSingle } = await flaunchWrite.getPermit2TypedData(
+    coinAddress
+  );
+  signTypedData(typedData);
+
+  // then call this when signature is not undefined
+  const hash = await flaunchWrite.sellCoin({
+    coinAddress,
+    amountIn: parseEther(coinAmount),
+    slippagePercent: 5,
+    permitSingle,
+    signature,
+  });
+} else {
+  // if already approved
+  const hash = await flaunchWrite.sellCoin({
+    coinAddress,
+    amountIn: parseEther(coinAmount),
+    slippagePercent: 5,
+  });
+}
+```
+
+### Flaunching a Memecoin
+
+"Fast" Flaunch your own memecoin with default parameters:
+
+- $10k starting market cap
+- 60% of the total supply goes to the fair launch
+- 80% dev / 20% community split
+
+_**Fast Flaunch doesn't incur any protocol fees!**_
+
+```ts
+const hash = await flaunchWrite.fastFlaunchIPFS({
+  name: "Test",
+  symbol: "TEST",
+  creator: address,
+  metadata: {
+    base64Image: imageData, // refer to the code below, on how to generate this base64Image
+    description: "Your memecoin description",
+    // optional:
+    websiteUrl: "https://example.com/",
+    discordUrl: "https://discord.gg/example",
+    twitterUrl: "https://x.com/example",
+    telegramUrl: "https://t.me/example",
+  },
+  pinataConfig: {
+    // Use one-time JWT for client-side uploads
+    // Refer: https://www.pinata.cloud/blog/how-to-upload-to-ipfs-from-the-frontend-with-signed-jwts/
+    jwt: pinataJWT,
+  },
+});
+```
+
+#### How to generate `base64Image` from User uploaded file
+
+```tsx
+// handle image file input and convert into base64
+const handleImageChange = useCallback(
+  (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+
+      // read the file as base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+
+        // this can be passed to the flaunch function call
+        handleFlaunch({ imageData: base64String });
+
+        // use `storedImagePreview` to display the uploaded image with <image src={storedImagePreview} />
+        setStoredImagePreview(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  },
+  [setStoredImagePreview]
+);
+
+// File upload input
+<input
+  type="file"
+  accept="image/*"
+  onchange="handleImageChange(event)"
+  id="image-upload"
+/>;
+```
+
+### All SDK functions
+
+For a list of all the functions in the SDK, refer to: [FlaunchSDK.ts](./src/sdk/FlaunchSDK.ts)
+
+### React Hooks
+
+The package also has hooks to listen for new Flaunches and new Coin Swaps. Refer to: [hooks](./src/hooks/FlaunchPositionManagerHooks.ts)
+
+```tsx
+import { usePoolCreatedEvents, usePoolSwapEvents } from "@flaunch/sdk/hooks";
+
+const { logs: poolCreatedLogs } = usePoolCreatedEvents(flaunchRead);
+const { logs: poolSwapLogs } = usePoolSwapEvents(flaunchRead, coinAddress);
+
+/**
+ * The `poolSwapLogs` calculates & returns the net swapped amount:
+ *
+ * type BuySwapLog = {
+ *  ...eventLog,
+ *  timestamp: number;
+ *  type: "BUY";
+ *   delta: {
+ *     coinsBought: bigint;
+ *     flETHSold: bigint;
+ *     fees: {
+ *       isInFLETH: boolean;
+ *       amount: bigint;
+ *     };
+ *   };
+ * };
+ *
+ * type SellSwapLog = {
+ *  ...eventLog,
+ *  timestamp: number;
+ *  type: "SELL";
+ *   delta: {
+ *     coinsSold: bigint;
+ *     flETHBought: bigint;
+ *     fees: {
+ *       isInFLETH: boolean;
+ *       amount: bigint;
+ *     };
+ *   };
+ * };
+ */
+```
+
+## Flaunch Reference
+
+For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
+
+
+# API Documentation
+
+@flaunch/sdk - v0.3.1 / Exports / ReadFlaunchSDK
+
+# Class: ReadFlaunchSDK
+
+Base class for interacting with Flaunch protocol in read-only mode
+
+## Hierarchy
+
+- **`ReadFlaunchSDK`**
+
+  ↳ `ReadWriteFlaunchSDK`
+
+## Table of contents
+
+### Constructors
+
+- constructor
+
+### Properties
+
+- TICK\_SPACING
+- chainId
+- drift
+- readBidWall
+- readBidWallV1\_1
+- readFairLaunch
+- readFairLaunchV1\_1
+- readFlaunch
+- readFlaunchV1\_1
+- readPermit2
+- readPoolManager
+- readPositionManager
+- readPositionManagerV1\_1
+- readQuoter
+- readStateView
+
+### Methods
+
+- bidWallPosition
+- coinPriceInETH
+- currentTick
+- fairLaunchCoinOnlyPosition
+- fairLaunchDuration
+- fairLaunchETHOnlyPosition
+- fairLaunchInfo
+- flETHIsCurrencyZero
+- getCoinMetadata
+- getETHUSDCPrice
+- initialTick
+- isFairLaunchActive
+- isV1Coin
+- isValidCoin
+- pollPoolCreatedNow
+- pollPoolCreatedNowV1
+- pollPoolSwapNow
+- pollPoolSwapNowV1
+- poolId
+- positionInfo
+- watchPoolCreated
+- watchPoolCreatedV1
+- watchPoolSwap
+- watchPoolSwapV1
+
+## Constructors
+
+### constructor
+
+• **new ReadFlaunchSDK**(`chainId`, `drift?`): `ReadFlaunchSDK`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `chainId` | `number` |
+| `drift` | `Drift` |
+
+Returns
+
+`ReadFlaunchSDK`
+
+## Properties
+
+### TICK\_SPACING
+
+• `Readonly` **TICK\_SPACING**: ``60``
+
+___
+
+### chainId
+
+• `Readonly` **chainId**: `number`
+
+___
+
+### drift
+
+• `Readonly` **drift**: `Drift`
+
+___
+
+### readBidWall
+
+• `Readonly` **readBidWall**: `ReadBidWall`
+
+___
+
+### readBidWallV1\_1
+
+• `Readonly` **readBidWallV1\_1**: `ReadBidWallV1_1`
+
+___
+
+### readFairLaunch
+
+• `Readonly` **readFairLaunch**: `ReadFairLaunch`
+
+___
+
+### readFairLaunchV1\_1
+
+• `Readonly` **readFairLaunchV1\_1**: `ReadFairLaunchV1_1`
+
+___
+
+### readFlaunch
+
+• `Readonly` **readFlaunch**: `ReadFlaunch`
+
+___
+
+### readFlaunchV1\_1
+
+• `Readonly` **readFlaunchV1\_1**: `ReadFlaunchV1_1`
+
+___
+
+### readPermit2
+
+• `Readonly` **readPermit2**: `ReadPermit2`
+
+___
+
+### readPoolManager
+
+• `Readonly` **readPoolManager**: `ReadPoolManager`
+
+___
+
+### readPositionManager
+
+• `Readonly` **readPositionManager**: `ReadFlaunchPositionManager`
+
+___
+
+### readPositionManagerV1\_1
+
+• `Readonly` **readPositionManagerV1\_1**: `ReadFlaunchPositionManagerV1_1`
+
+___
+
+### readQuoter
+
+• `Readonly` **readQuoter**: `ReadQuoter`
+
+___
+
+### readStateView
+
+• `Readonly` **readStateView**: `ReadStateView`
+
+## Methods
+
+### bidWallPosition
+
+▸ **bidWallPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `pendingEth`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Gets information about the bid wall position for a coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `pendingEth`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Promise<{flETHAmount: bigint, coinAmount: bigint, pendingEth: bigint, tickLower: number, tickUpper: number}> - Bid wall position details
+
+___
+
+### coinPriceInETH
+
+▸ **coinPriceInETH**(`coinAddress`, `isV1Coin?`): `Promise`\<`string`\>
+
+Calculates the coin price in ETH based on the current tick
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<`string`\>
+
+Promise<string> - The price of the coin in ETH with 18 decimals precision
+
+___
+
+### currentTick
+
+▸ **currentTick**(`coinAddress`, `isV1Coin?`): `Promise`\<`number`\>
+
+Gets the current tick for a given coin's pool
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<`number`\>
+
+Promise<number> - The current tick of the pool
+
+___
+
+### fairLaunchCoinOnlyPosition
+
+▸ **fairLaunchCoinOnlyPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Gets information about the coin-only position in a fair launch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
+
+___
+
+### fairLaunchDuration
+
+▸ **fairLaunchDuration**(`coinAddress`, `isV1Coin?`): `Promise`\<`number` \| `bigint`\>
+
+Gets the duration of a fair launch for a given coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<`number` \| `bigint`\>
+
+Promise<number> - The duration in seconds (30 minutes for V1, variable for V1.1)
+
+___
+
+### fairLaunchETHOnlyPosition
+
+▸ **fairLaunchETHOnlyPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Gets information about the ETH-only position in a fair launch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
+
+___
+
+### fairLaunchInfo
+
+▸ **fairLaunchInfo**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `closed`: `boolean` ; `endsAt`: `bigint` ; `initialTick`: `number` ; `revenue`: `bigint` ; `startsAt`: `bigint` ; `supply`: `bigint`  }\>
+
+Gets information about a fair launch for a given coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\{ `closed`: `boolean` ; `endsAt`: `bigint` ; `initialTick`: `number` ; `revenue`: `bigint` ; `startsAt`: `bigint` ; `supply`: `bigint`  }\>
+
+Fair launch information from the appropriate contract version
+
+___
+
+### flETHIsCurrencyZero
+
+▸ **flETHIsCurrencyZero**(`coinAddress`): `boolean`
+
+Determines if flETH is currency0 in the pool
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+
+Returns
+
+`boolean`
+
+boolean - True if flETH is currency0, false otherwise
+
+___
+
+### getCoinMetadata
+
+▸ **getCoinMetadata**(`coinAddress`): `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
+
+Retrieves metadata for a given Flaunch coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+
+Returns
+
+`Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
+
+Promise<CoinMetadata & { symbol: string }> - The coin's metadata including name, symbol, description, and social links
+
+___
+
+### getETHUSDCPrice
+
+▸ **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
+
+Gets the current ETH/USDC price
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `drift?` | `Drift` | Optional drift instance to get price from Base Mainnet |
+
+Returns
+
+`Promise`\<`number`\>
+
+Promise<number> - The current ETH/USDC price
+
+___
+
+### initialTick
+
+▸ **initialTick**(`coinAddress`, `isV1Coin?`): `Promise`\<`number`\>
+
+Gets the initial tick for a fair launch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<`number`\>
+
+Promise<number> - The initial tick value
+
+___
+
+### isFairLaunchActive
+
+▸ **isFairLaunchActive**(`coinAddress`, `isV1Coin?`): `Promise`\<`boolean`\>
+
+Checks if a fair launch is currently active for a given coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if fair launch is active, false otherwise
+
+___
+
+### isV1Coin
+
+▸ **isV1Coin**(`coinAddress`): `Promise`\<`boolean`\>
+
+Checks if a given coin address is a V1 Flaunch coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if the coin is V1, false if V1.1
+
+___
+
+### isValidCoin
+
+▸ **isValidCoin**(`coinAddress`): `Promise`\<`boolean`\>
+
+Checks if a given coin address is a valid Flaunch coin (either V1 or V1.1)
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if the coin is valid, false otherwise
+
+___
+
+### pollPoolCreatedNow
+
+▸ **pollPoolCreatedNow**(): `Promise`\<`void`\>
+
+Polls for current pool creation events on V1.1 contracts
+
+Returns
+
+`Promise`\<`void`\>
+
+Current pool creation events or undefined if polling is not available
+
+___
+
+### pollPoolCreatedNowV1
+
+▸ **pollPoolCreatedNowV1**(): `Promise`\<`void`\>
+
+Polls for current pool creation events on V1 contracts
+
+Returns
+
+`Promise`\<`void`\>
+
+Current pool creation events or undefined if polling is not available
+
+___
+
+### pollPoolSwapNow
+
+▸ **pollPoolSwapNow**(): `Promise`\<`void`\>
+
+Polls for current pool swap events on V1.1 contracts
+
+Returns
+
+`Promise`\<`void`\>
+
+Current pool swap events or undefined if polling is not available
+
+___
+
+### pollPoolSwapNowV1
+
+▸ **pollPoolSwapNowV1**(): `Promise`\<`void`\>
+
+Polls for current pool swap events on V1 contracts
+
+Returns
+
+`Promise`\<`void`\>
+
+Current pool swap events or undefined if polling is not available
+
+___
+
+### poolId
+
+▸ **poolId**(`coinAddress`, `isV1Coin?`): `Promise`\<\`0x$\{string}\`\>
+
+Gets the pool ID for a given coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Promise<string> - The pool ID
+
+___
+
+### positionInfo
+
+▸ **positionInfo**(`params`): `Promise`\<\{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  } \| \{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  }\>
+
+Gets information about a liquidity position
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `PositionInfoParams` | Parameters for querying position info |
+
+Returns
+
+`Promise`\<\{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  } \| \{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  }\>
+
+Position information from the state view contract
+
+___
+
+### watchPoolCreated
+
+▸ **watchPoolCreated**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Watches for pool creation events on V1.1 contracts
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `WatchPoolCreatedParams` | Parameters for watching pool creation |
+
+Returns
+
+`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Subscription to pool creation events
+
+___
+
+### watchPoolCreatedV1
+
+▸ **watchPoolCreatedV1**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Watches for pool creation events on V1 contracts
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `WatchPoolCreatedParams` | Parameters for watching pool creation |
+
+Returns
+
+`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Subscription to pool creation events
+
+___
+
+### watchPoolSwap
+
+▸ **watchPoolSwap**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Watches for pool swap events on V1.1 contracts
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `WatchPoolSwapParams` | Parameters for watching pool swaps including optional coin filter |
+
+Returns
+
+`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Subscription to pool swap events
+
+___
+
+### watchPoolSwapV1
+
+▸ **watchPoolSwapV1**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Watches for pool swap events on V1 contracts
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `WatchPoolSwapParams` | Parameters for watching pool swaps including optional coin filter |
+
+Returns
+
+`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Subscription to pool swap events
+
+
+
+---
+
+@flaunch/sdk - v0.3.1 / Exports / ReadWriteFlaunchSDK
+
+# Class: ReadWriteFlaunchSDK
+
+Base class for interacting with Flaunch protocol in read-only mode
+
+## Hierarchy
+
+- `ReadFlaunchSDK`
+
+  ↳ **`ReadWriteFlaunchSDK`**
+
+## Table of contents
+
+### Constructors
+
+- constructor
+
+### Properties
+
+- TICK\_SPACING
+- chainId
+- drift
+- readBidWall
+- readBidWallV1\_1
+- readFairLaunch
+- readFairLaunchV1\_1
+- readFlaunch
+- readFlaunchV1\_1
+- readPermit2
+- readPoolManager
+- readPositionManager
+- readPositionManagerV1\_1
+- readQuoter
+- readStateView
+- readWriteFastFlaunchZap
+- readWritePositionManagerV1\_1
+
+### Methods
+
+- bidWallPosition
+- buyCoin
+- coinBalance
+- coinPriceInETH
+- currentTick
+- fairLaunchCoinOnlyPosition
+- fairLaunchDuration
+- fairLaunchETHOnlyPosition
+- fairLaunchInfo
+- fastFlaunch
+- fastFlaunchIPFS
+- flETHIsCurrencyZero
+- flaunch
+- flaunchIPFS
+- getCoinMetadata
+- getETHUSDCPrice
+- getPermit2AllowanceAndNonce
+- getPermit2TypedData
+- initialTick
+- isFairLaunchActive
+- isV1Coin
+- isValidCoin
+- pollPoolCreatedNow
+- pollPoolCreatedNowV1
+- pollPoolSwapNow
+- pollPoolSwapNowV1
+- poolId
+- positionInfo
+- sellCoin
+- watchPoolCreated
+- watchPoolCreatedV1
+- watchPoolSwap
+- watchPoolSwapV1
+
+## Constructors
+
+### constructor
+
+• **new ReadWriteFlaunchSDK**(`chainId`, `drift?`): `ReadWriteFlaunchSDK`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `chainId` | `number` |
+| `drift` | `Drift`\<`ReadWriteAdapter`\> |
+
+Returns
+
+`ReadWriteFlaunchSDK`
+
+Overrides
+
+ReadFlaunchSDK.constructor
+
+## Properties
+
+### TICK\_SPACING
+
+• `Readonly` **TICK\_SPACING**: ``60``
+
+Inherited from
+
+ReadFlaunchSDK.TICK_SPACING
+
+___
+
+### chainId
+
+• `Readonly` **chainId**: `number`
+
+Inherited from
+
+ReadFlaunchSDK.chainId
+
+___
+
+### drift
+
+• `Readonly` **drift**: `Drift`
+
+Inherited from
+
+ReadFlaunchSDK.drift
+
+___
+
+### readBidWall
+
+• `Readonly` **readBidWall**: `ReadBidWall`
+
+Inherited from
+
+ReadFlaunchSDK.readBidWall
+
+___
+
+### readBidWallV1\_1
+
+• `Readonly` **readBidWallV1\_1**: `ReadBidWallV1_1`
+
+Inherited from
+
+ReadFlaunchSDK.readBidWallV1_1
+
+___
+
+### readFairLaunch
+
+• `Readonly` **readFairLaunch**: `ReadFairLaunch`
+
+Inherited from
+
+ReadFlaunchSDK.readFairLaunch
+
+___
+
+### readFairLaunchV1\_1
+
+• `Readonly` **readFairLaunchV1\_1**: `ReadFairLaunchV1_1`
+
+Inherited from
+
+ReadFlaunchSDK.readFairLaunchV1_1
+
+___
+
+### readFlaunch
+
+• `Readonly` **readFlaunch**: `ReadFlaunch`
+
+Inherited from
+
+ReadFlaunchSDK.readFlaunch
+
+___
+
+### readFlaunchV1\_1
+
+• `Readonly` **readFlaunchV1\_1**: `ReadFlaunchV1_1`
+
+Inherited from
+
+ReadFlaunchSDK.readFlaunchV1_1
+
+___
+
+### readPermit2
+
+• `Readonly` **readPermit2**: `ReadPermit2`
+
+Inherited from
+
+ReadFlaunchSDK.readPermit2
+
+___
+
+### readPoolManager
+
+• `Readonly` **readPoolManager**: `ReadPoolManager`
+
+Inherited from
+
+ReadFlaunchSDK.readPoolManager
+
+___
+
+### readPositionManager
+
+• `Readonly` **readPositionManager**: `ReadFlaunchPositionManager`
+
+Inherited from
+
+ReadFlaunchSDK.readPositionManager
+
+___
+
+### readPositionManagerV1\_1
+
+• `Readonly` **readPositionManagerV1\_1**: `ReadFlaunchPositionManagerV1_1`
+
+Inherited from
+
+ReadFlaunchSDK.readPositionManagerV1_1
+
+___
+
+### readQuoter
+
+• `Readonly` **readQuoter**: `ReadQuoter`
+
+Inherited from
+
+ReadFlaunchSDK.readQuoter
+
+___
+
+### readStateView
+
+• `Readonly` **readStateView**: `ReadStateView`
+
+Inherited from
+
+ReadFlaunchSDK.readStateView
+
+___
+
+### readWriteFastFlaunchZap
+
+• `Readonly` **readWriteFastFlaunchZap**: `ReadWriteFastFlaunchZap`
+
+___
+
+### readWritePositionManagerV1\_1
+
+• `Readonly` **readWritePositionManagerV1\_1**: `ReadWriteFlaunchPositionManagerV1_1`
+
+## Methods
+
+### bidWallPosition
+
+▸ **bidWallPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `pendingEth`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Gets information about the bid wall position for a coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `pendingEth`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Promise<{flETHAmount: bigint, coinAmount: bigint, pendingEth: bigint, tickLower: number, tickUpper: number}> - Bid wall position details
+
+Inherited from
+
+ReadFlaunchSDK.bidWallPosition
+
+___
+
+### buyCoin
+
+▸ **buyCoin**(`params`, `isV1Coin?`): `Promise`\<\`0x$\{string}\`\>
+
+Buys a coin with ETH
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `BuyCoinParams` | Parameters for buying the coin including amount, slippage, and referrer |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response for the buy operation
+
+___
+
+### coinBalance
+
+▸ **coinBalance**(`coinAddress`): `Promise`\<`bigint`\>
+
+Gets the balance of a specific coin for the connected wallet
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The balance of the coin
+
+___
+
+### coinPriceInETH
+
+▸ **coinPriceInETH**(`coinAddress`, `isV1Coin?`): `Promise`\<`string`\>
+
+Calculates the coin price in ETH based on the current tick
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<`string`\>
+
+Promise<string> - The price of the coin in ETH with 18 decimals precision
+
+Inherited from
+
+ReadFlaunchSDK.coinPriceInETH
+
+___
+
+### currentTick
+
+▸ **currentTick**(`coinAddress`, `isV1Coin?`): `Promise`\<`number`\>
+
+Gets the current tick for a given coin's pool
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<`number`\>
+
+Promise<number> - The current tick of the pool
+
+Inherited from
+
+ReadFlaunchSDK.currentTick
+
+___
+
+### fairLaunchCoinOnlyPosition
+
+▸ **fairLaunchCoinOnlyPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Gets information about the coin-only position in a fair launch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
+
+Inherited from
+
+ReadFlaunchSDK.fairLaunchCoinOnlyPosition
+
+___
+
+### fairLaunchDuration
+
+▸ **fairLaunchDuration**(`coinAddress`, `isV1Coin?`): `Promise`\<`number` \| `bigint`\>
+
+Gets the duration of a fair launch for a given coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<`number` \| `bigint`\>
+
+Promise<number> - The duration in seconds (30 minutes for V1, variable for V1.1)
+
+Inherited from
+
+ReadFlaunchSDK.fairLaunchDuration
+
+___
+
+### fairLaunchETHOnlyPosition
+
+▸ **fairLaunchETHOnlyPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Gets information about the ETH-only position in a fair launch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
+
+Inherited from
+
+ReadFlaunchSDK.fairLaunchETHOnlyPosition
+
+___
+
+### fairLaunchInfo
+
+▸ **fairLaunchInfo**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `closed`: `boolean` ; `endsAt`: `bigint` ; `initialTick`: `number` ; `revenue`: `bigint` ; `startsAt`: `bigint` ; `supply`: `bigint`  }\>
+
+Gets information about a fair launch for a given coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\{ `closed`: `boolean` ; `endsAt`: `bigint` ; `initialTick`: `number` ; `revenue`: `bigint` ; `startsAt`: `bigint` ; `supply`: `bigint`  }\>
+
+Fair launch information from the appropriate contract version
+
+Inherited from
+
+ReadFlaunchSDK.fairLaunchInfo
+
+___
+
+### fastFlaunch
+
+▸ **fastFlaunch**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Creates a new fast Flaunch on V1.1
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `FastFlaunchParams` | Parameters for creating the fast Flaunch |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+**`Throws`**
+
+Error if FastFlaunchZap is not deployed on the current chain
+
+___
+
+### fastFlaunchIPFS
+
+▸ **fastFlaunchIPFS**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Creates a new fast Flaunch on V1.1 with IPFS metadata
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `FastFlaunchIPFSParams` | Parameters for creating the fast Flaunch with IPFS data |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+**`Throws`**
+
+Error if FastFlaunchZap is not deployed on the current chain
+
+___
+
+### flETHIsCurrencyZero
+
+▸ **flETHIsCurrencyZero**(`coinAddress`): `boolean`
+
+Determines if flETH is currency0 in the pool
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+
+Returns
+
+`boolean`
+
+boolean - True if flETH is currency0, false otherwise
+
+Inherited from
+
+ReadFlaunchSDK.flETHIsCurrencyZero
+
+___
+
+### flaunch
+
+▸ **flaunch**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Creates a new Flaunch on V1.1
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `FlaunchParams` | Parameters for creating the Flaunch |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
+
+### flaunchIPFS
+
+▸ **flaunchIPFS**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Creates a new Flaunch on V1.1 with IPFS metadata
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `FlaunchIPFSParams` | Parameters for creating the Flaunch with IPFS data |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
+
+### getCoinMetadata
+
+▸ **getCoinMetadata**(`coinAddress`): `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
+
+Retrieves metadata for a given Flaunch coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+
+Returns
+
+`Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
+
+Promise<CoinMetadata & { symbol: string }> - The coin's metadata including name, symbol, description, and social links
+
+Inherited from
+
+ReadFlaunchSDK.getCoinMetadata
+
+___
+
+### getETHUSDCPrice
+
+▸ **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
+
+Gets the current ETH/USDC price
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `drift?` | `Drift` | Optional drift instance to get price from Base Mainnet |
+
+Returns
+
+`Promise`\<`number`\>
+
+Promise<number> - The current ETH/USDC price
+
+Inherited from
+
+ReadFlaunchSDK.getETHUSDCPrice
+
+___
+
+### getPermit2AllowanceAndNonce
+
+▸ **getPermit2AllowanceAndNonce**(`coinAddress`): `Promise`\<\{ `allowance`: `bigint` = amount; `nonce`: `number`  }\>
+
+Gets the current Permit2 allowance and nonce for a coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
+
+Returns
+
+`Promise`\<\{ `allowance`: `bigint` = amount; `nonce`: `number`  }\>
+
+Promise<{allowance: bigint, nonce: bigint}> - Current allowance and nonce
+
+___
+
+### getPermit2TypedData
+
+▸ **getPermit2TypedData**(`coinAddress`, `deadline?`): `Promise`\<\{ `permitSingle`: `PermitSingle` ; `typedData`: \{ `domain`: \{ `chainId`: `number` ; `name`: `string` ; `verifyingContract`: \`0x$\{string}\`  } ; `message`: `PermitSingle` ; `primaryType`: `string` ; `types`: \{ `PermitDetails`: \{ `name`: `string` = "token"; `type`: `string` = "address" }[] = PERMIT\_DETAILS; `PermitSingle`: \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[]  }  }  }\>
+
+Gets the typed data for a Permit2 signature
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to permit |
+| `deadline?` | `bigint` | Optional deadline for the permit (defaults to 10 years) |
+
+Returns
+
+`Promise`\<\{ `permitSingle`: `PermitSingle` ; `typedData`: \{ `domain`: \{ `chainId`: `number` ; `name`: `string` ; `verifyingContract`: \`0x$\{string}\`  } ; `message`: `PermitSingle` ; `primaryType`: `string` ; `types`: \{ `PermitDetails`: \{ `name`: `string` = "token"; `type`: `string` = "address" }[] = PERMIT\_DETAILS; `PermitSingle`: \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[]  }  }  }\>
+
+The typed data object for signing
+
+___
+
+### initialTick
+
+▸ **initialTick**(`coinAddress`, `isV1Coin?`): `Promise`\<`number`\>
+
+Gets the initial tick for a fair launch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<`number`\>
+
+Promise<number> - The initial tick value
+
+Inherited from
+
+ReadFlaunchSDK.initialTick
+
+___
+
+### isFairLaunchActive
+
+▸ **isFairLaunchActive**(`coinAddress`, `isV1Coin?`): `Promise`\<`boolean`\>
+
+Checks if a fair launch is currently active for a given coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if fair launch is active, false otherwise
+
+Inherited from
+
+ReadFlaunchSDK.isFairLaunchActive
+
+___
+
+### isV1Coin
+
+▸ **isV1Coin**(`coinAddress`): `Promise`\<`boolean`\>
+
+Checks if a given coin address is a V1 Flaunch coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if the coin is V1, false if V1.1
+
+Inherited from
+
+ReadFlaunchSDK.isV1Coin
+
+___
+
+### isValidCoin
+
+▸ **isValidCoin**(`coinAddress`): `Promise`\<`boolean`\>
+
+Checks if a given coin address is a valid Flaunch coin (either V1 or V1.1)
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if the coin is valid, false otherwise
+
+Inherited from
+
+ReadFlaunchSDK.isValidCoin
+
+___
+
+### pollPoolCreatedNow
+
+▸ **pollPoolCreatedNow**(): `Promise`\<`void`\>
+
+Polls for current pool creation events on V1.1 contracts
+
+Returns
+
+`Promise`\<`void`\>
+
+Current pool creation events or undefined if polling is not available
+
+Inherited from
+
+ReadFlaunchSDK.pollPoolCreatedNow
+
+___
+
+### pollPoolCreatedNowV1
+
+▸ **pollPoolCreatedNowV1**(): `Promise`\<`void`\>
+
+Polls for current pool creation events on V1 contracts
+
+Returns
+
+`Promise`\<`void`\>
+
+Current pool creation events or undefined if polling is not available
+
+Inherited from
+
+ReadFlaunchSDK.pollPoolCreatedNowV1
+
+___
+
+### pollPoolSwapNow
+
+▸ **pollPoolSwapNow**(): `Promise`\<`void`\>
+
+Polls for current pool swap events on V1.1 contracts
+
+Returns
+
+`Promise`\<`void`\>
+
+Current pool swap events or undefined if polling is not available
+
+Inherited from
+
+ReadFlaunchSDK.pollPoolSwapNow
+
+___
+
+### pollPoolSwapNowV1
+
+▸ **pollPoolSwapNowV1**(): `Promise`\<`void`\>
+
+Polls for current pool swap events on V1 contracts
+
+Returns
+
+`Promise`\<`void`\>
+
+Current pool swap events or undefined if polling is not available
+
+Inherited from
+
+ReadFlaunchSDK.pollPoolSwapNowV1
+
+___
+
+### poolId
+
+▸ **poolId**(`coinAddress`, `isV1Coin?`): `Promise`\<\`0x$\{string}\`\>
+
+Gets the pool ID for a given coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Promise<string> - The pool ID
+
+Inherited from
+
+ReadFlaunchSDK.poolId
+
+___
+
+### positionInfo
+
+▸ **positionInfo**(`params`): `Promise`\<\{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  } \| \{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  }\>
+
+Gets information about a liquidity position
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `PositionInfoParams` | Parameters for querying position info |
+
+Returns
+
+`Promise`\<\{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  } \| \{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  }\>
+
+Position information from the state view contract
+
+Inherited from
+
+ReadFlaunchSDK.positionInfo
+
+___
+
+### sellCoin
+
+▸ **sellCoin**(`params`, `isV1Coin?`): `Promise`\<\`0x$\{string}\`\>
+
+Sells a coin for ETH
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `SellCoinParams` | Parameters for selling the coin including amount, slippage, permit data, and referrer |
+| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response for the sell operation
+
+___
+
+### watchPoolCreated
+
+▸ **watchPoolCreated**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Watches for pool creation events on V1.1 contracts
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `WatchPoolCreatedParams` | Parameters for watching pool creation |
+
+Returns
+
+`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Subscription to pool creation events
+
+Inherited from
+
+ReadFlaunchSDK.watchPoolCreated
+
+___
+
+### watchPoolCreatedV1
+
+▸ **watchPoolCreatedV1**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Watches for pool creation events on V1 contracts
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `WatchPoolCreatedParams` | Parameters for watching pool creation |
+
+Returns
+
+`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Subscription to pool creation events
+
+Inherited from
+
+ReadFlaunchSDK.watchPoolCreatedV1
+
+___
+
+### watchPoolSwap
+
+▸ **watchPoolSwap**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Watches for pool swap events on V1.1 contracts
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `WatchPoolSwapParams` | Parameters for watching pool swaps including optional coin filter |
+
+Returns
+
+`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Subscription to pool swap events
+
+Inherited from
+
+ReadFlaunchSDK.watchPoolSwap
+
+___
+
+### watchPoolSwapV1
+
+▸ **watchPoolSwapV1**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Watches for pool swap events on V1 contracts
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `WatchPoolSwapParams` | Parameters for watching pool swaps including optional coin filter |
+
+Returns
+
+`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+
+Subscription to pool swap events
+
+Inherited from
+
+ReadFlaunchSDK.watchPoolSwapV1
+
+
+
+---
+
+@flaunch/sdk - v0.3.1 / Exports / PinataConfig
+
+# Interface: PinataConfig
+
+## Table of contents
+
+### Properties
+
+- jwt
+
+## Properties
+
+### jwt
+
+• **jwt**: `string`
+
+
+
+---
+
+@flaunch/sdk - v0.3.1 / Exports
+
+# @flaunch/sdk - v0.3.1
+
+## Table of contents
+
+### Classes
+
+- ReadFlaunchSDK
+- ReadWriteFlaunchSDK
+
+### Interfaces
+
+- PinataConfig
+
+### Type Aliases
+
+- BuySwapLog
+- PoolCreatedLogs
+- SellSwapLog
+
+### Variables
+
+- BidWallAddress
+- BidWallV1\_1Address
+- FLETHAddress
+- FLETHHooksAddress
+- FairLaunchAddress
+- FairLaunchV1\_1Address
+- FastFlaunchZapAddress
+- FlaunchAddress
+- FlaunchPositionManagerAddress
+- FlaunchPositionManagerV1\_1Address
+- FlaunchSDK
+- FlaunchV1\_1Address
+- Permit2Address
+- PoolManagerAddress
+- QuoterAddress
+- StateViewAddress
+- TICK\_SPACING
+- TickFinder
+- USDCETHPoolKeys
+- UniversalRouterAddress
+
+### Functions
+
+- bytes32ToUint256
+- calculateUnderlyingTokenBalances
+- generateTokenUri
+- getPoolId
+- getSqrtPriceX96FromTick
+- getValidTick
+- orderPoolKey
+- resolveIPFS
+- uint256ToBytes32
+- uploadFileToIPFS
+- uploadImageToIPFS
+- uploadJsonToIPFS
+
+## Type Aliases
+
+### BuySwapLog
+
+Ƭ **BuySwapLog**: `BaseSwapLog` & \{ `delta`: \{ `coinsBought`: `bigint` ; `fees`: \{ `amount`: `bigint` ; `isInFLETH`: `boolean`  } ; `flETHSold`: `bigint`  } ; `type`: ``"BUY"``  }
+
+___
+
+### PoolCreatedLogs
+
+Ƭ **PoolCreatedLogs**: `PoolCreatedLog`[]
+
+___
+
+### SellSwapLog
+
+Ƭ **SellSwapLog**: `BaseSwapLog` & \{ `delta`: \{ `coinsSold`: `bigint` ; `fees`: \{ `amount`: `bigint` ; `isInFLETH`: `boolean`  } ; `flETHBought`: `bigint`  } ; `type`: ``"SELL"``  }
+
+## Variables
+
+### BidWallAddress
+
+• `Const` **BidWallAddress**: `Addresses`
+
+___
+
+### BidWallV1\_1Address
+
+• `Const` **BidWallV1\_1Address**: `Addresses`
+
+___
+
+### FLETHAddress
+
+• `Const` **FLETHAddress**: `Addresses`
+
+___
+
+### FLETHHooksAddress
+
+• `Const` **FLETHHooksAddress**: `Addresses`
+
+___
+
+### FairLaunchAddress
+
+• `Const` **FairLaunchAddress**: `Addresses`
+
+___
+
+### FairLaunchV1\_1Address
+
+• `Const` **FairLaunchV1\_1Address**: `Addresses`
+
+___
+
+### FastFlaunchZapAddress
+
+• `Const` **FastFlaunchZapAddress**: `Addresses`
+
+___
+
+### FlaunchAddress
+
+• `Const` **FlaunchAddress**: `Addresses`
+
+___
+
+### FlaunchPositionManagerAddress
+
+• `Const` **FlaunchPositionManagerAddress**: `Addresses`
+
+___
+
+### FlaunchPositionManagerV1\_1Address
+
+• `Const` **FlaunchPositionManagerV1\_1Address**: `Addresses`
+
+___
+
+### FlaunchSDK
+
+• `Const` **FlaunchSDK**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `ReadFlaunchSDK` | typeof `ReadFlaunchSDK` |
+| `ReadWriteFlaunchSDK` | typeof `ReadWriteFlaunchSDK` |
+
+___
+
+### FlaunchV1\_1Address
+
+• `Const` **FlaunchV1\_1Address**: `Addresses`
+
+___
+
+### Permit2Address
+
+• `Const` **Permit2Address**: `Addresses`
+
+___
+
+### PoolManagerAddress
+
+• `Const` **PoolManagerAddress**: `Addresses`
+
+___
+
+### QuoterAddress
+
+• `Const` **QuoterAddress**: `Addresses`
+
+___
+
+### StateViewAddress
+
+• `Const` **StateViewAddress**: `Addresses`
+
+___
+
+### TICK\_SPACING
+
+• `Const` **TICK\_SPACING**: ``60``
+
+___
+
+### TickFinder
+
+• `Const` **TickFinder**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `MAX_TICK` | `number` |
+| `MIN_TICK` | `number` |
+
+___
+
+### USDCETHPoolKeys
+
+• `Const` **USDCETHPoolKeys**: `Object`
+
+Index signature
+
+▪ [chainId: `number`]: `PoolKey`
+
+___
+
+### UniversalRouterAddress
+
+• `Const` **UniversalRouterAddress**: `Addresses`
+
+## Functions
+
+### bytes32ToUint256
+
+▸ **bytes32ToUint256**(`value`): `bigint`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `value` | \`0x$\{string}\` |
+
+Returns
+
+`bigint`
+
+___
+
+### calculateUnderlyingTokenBalances
+
+▸ **calculateUnderlyingTokenBalances**(`liquidity`, `tickLower`, `tickUpper`, `tickCurrent`): `Object`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `liquidity` | `bigint` |
+| `tickLower` | `number` |
+| `tickUpper` | `number` |
+| `tickCurrent` | `number` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `amount0` | `bigint` |
+| `amount1` | `bigint` |
+
+___
+
+### generateTokenUri
+
+▸ **generateTokenUri**(`name`, `params`): `Promise`\<`string`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `name` | `string` |
+| `params` | `IPFSParams` |
+
+Returns
+
+`Promise`\<`string`\>
+
+___
+
+### getPoolId
+
+▸ **getPoolId**(`poolKey`): \`0x$\{string}\`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `poolKey` | `PoolKey` |
+
+Returns
+
+\`0x$\{string}\`
+
+___
+
+### getSqrtPriceX96FromTick
+
+▸ **getSqrtPriceX96FromTick**(`tick`): `bigint`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `tick` | `number` |
+
+Returns
+
+`bigint`
+
+___
+
+### getValidTick
+
+▸ **getValidTick**(`«destructured»`): `number`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `roundDown` | `boolean` |
+| › `tick` | `number` |
+| › `tickSpacing` | `number` |
+
+Returns
+
+`number`
+
+___
+
+### orderPoolKey
+
+▸ **orderPoolKey**(`poolKey`): `Object`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `poolKey` | `PoolKey` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `currency0` | \`0x$\{string}\` |
+| `currency1` | \`0x$\{string}\` |
+| `fee` | `number` |
+| `hooks` | \`0x$\{string}\` |
+| `tickSpacing` | `number` |
+
+___
+
+### resolveIPFS
+
+▸ **resolveIPFS**(`value`): `string`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `value` | `string` |
+
+Returns
+
+`string`
+
+___
+
+### uint256ToBytes32
+
+▸ **uint256ToBytes32**(`value`): \`0x$\{string}\`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `value` | `bigint` |
+
+Returns
+
+\`0x$\{string}\`
+
+___
+
+### uploadFileToIPFS
+
+▸ **uploadFileToIPFS**(`params`): `Promise`\<`UploadResponse`\>
+
+Uploads a file to IPFS using Pinata
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Configuration and file data |
+| `params.file` | `File` | - |
+| `params.metadata?` | `Record`\<`string`, `string`\> | - |
+| `params.name?` | `string` | - |
+| `params.pinataConfig` | `PinataConfig` | - |
+
+Returns
+
+`Promise`\<`UploadResponse`\>
+
+Upload response with CID and other details
+
+___
+
+### uploadImageToIPFS
+
+▸ **uploadImageToIPFS**(`params`): `Promise`\<`UploadResponse`\>
+
+Uploads a base64 image to IPFS using Pinata
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Configuration and base64 image data |
+| `params.base64Image` | `string` | - |
+| `params.metadata?` | `Record`\<`string`, `string`\> | - |
+| `params.name?` | `string` | - |
+| `params.pinataConfig` | `PinataConfig` | - |
+
+Returns
+
+`Promise`\<`UploadResponse`\>
+
+Upload response with CID and other details
+
+___
+
+### uploadJsonToIPFS
+
+▸ **uploadJsonToIPFS**(`params`): `Promise`\<`UploadResponse`\>
+
+Uploads JSON data to IPFS using Pinata
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Configuration and JSON data |
+| `params.json` | `Record`\<`string`, `any`\> | - |
+| `params.metadata?` | `Record`\<`string`, `string`\> | - |
+| `params.name?` | `string` | - |
+| `params.pinataConfig` | `PinataConfig` | - |
+
+Returns
+
+`Promise`\<`UploadResponse`\>
+
+Upload response with CID and other details
+
+
+
+---
+

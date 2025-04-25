@@ -1,93 +1,62 @@
 export const FastFlaunchZapAbi = [
   {
-    type: "constructor",
     inputs: [
       {
+        internalType: "contract PositionManager",
         name: "_positionManager",
         type: "address",
-        internalType: "contract PositionManager",
       },
     ],
     stateMutability: "nonpayable",
+    type: "constructor",
   },
   {
+    inputs: [],
+    name: "CREATOR_FEE_ALLOCATION",
+    outputs: [{ internalType: "uint24", name: "", type: "uint24" }],
+    stateMutability: "view",
     type: "function",
+  },
+  {
+    inputs: [],
     name: "FAIR_LAUNCH_SUPPLY",
-    inputs: [],
-    outputs: [
-      {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
+    type: "function",
   },
   {
-    type: "function",
+    inputs: [],
     name: "USDC_MARKET_CAP",
-    inputs: [],
-    outputs: [
-      {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
-    ],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
+    type: "function",
   },
   {
-    type: "function",
-    name: "flaunch",
     inputs: [
       {
+        components: [
+          { internalType: "string", name: "name", type: "string" },
+          { internalType: "string", name: "symbol", type: "string" },
+          { internalType: "string", name: "tokenUri", type: "string" },
+          { internalType: "address", name: "creator", type: "address" },
+        ],
+        internalType: "struct FastFlaunchZap.FastFlaunchParams",
         name: "_params",
         type: "tuple",
-        internalType: "struct FastFlaunchZap.FastFlaunchParams",
-        components: [
-          {
-            name: "name",
-            type: "string",
-            internalType: "string",
-          },
-          {
-            name: "symbol",
-            type: "string",
-            internalType: "string",
-          },
-          {
-            name: "tokenUri",
-            type: "string",
-            internalType: "string",
-          },
-          {
-            name: "creator",
-            type: "address",
-            internalType: "address",
-          },
-        ],
       },
     ],
-    outputs: [
-      {
-        name: "memecoin_",
-        type: "address",
-        internalType: "address",
-      },
-    ],
+    name: "flaunch",
+    outputs: [{ internalType: "address", name: "memecoin_", type: "address" }],
     stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    type: "function",
-    name: "positionManager",
     inputs: [],
+    name: "positionManager",
     outputs: [
-      {
-        name: "",
-        type: "address",
-        internalType: "contract PositionManager",
-      },
+      { internalType: "contract PositionManager", name: "", type: "address" },
     ],
     stateMutability: "view",
+    type: "function",
   },
 ] as const;

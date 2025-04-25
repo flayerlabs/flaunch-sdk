@@ -8,20 +8,21 @@ import {
   type HexString,
   createDrift,
 } from "@delvtech/drift";
-import { FairLaunchAbi } from "../abi/FairLaunch";
+import { FairLaunchV1_1Abi } from "../abi/FairLaunchV1_1";
 
-export type FairLaunchABI = typeof FairLaunchAbi;
+export type FairLaunchV1_1ABI = typeof FairLaunchV1_1Abi;
 
 /**
- * Client for interacting with the FairLaunch V1 contract in read-only mode
+ * Client for interacting with the FairLaunch V1.1 contract in read-only mode
  * Provides methods to query fair launch information and status
+ * Enhanced version of the V1 contract with additional features like variable duration
  */
-export class ReadFairLaunch {
-  public readonly contract: ReadContract<FairLaunchABI>;
+export class ReadFairLaunchV1_1 {
+  public readonly contract: ReadContract<FairLaunchV1_1ABI>;
 
   /**
-   * Creates a new ReadFairLaunch instance
-   * @param address - The address of the FairLaunch contract
+   * Creates a new ReadFairLaunchV1_1 instance
+   * @param address - The address of the FairLaunch V1.1 contract
    * @param drift - Optional drift instance for contract interactions (creates new instance if not provided)
    * @throws Error if address is not provided
    */
@@ -31,7 +32,7 @@ export class ReadFairLaunch {
     }
 
     this.contract = drift.contract({
-      abi: FairLaunchAbi,
+      abi: FairLaunchV1_1Abi,
       address,
     });
   }
@@ -39,12 +40,22 @@ export class ReadFairLaunch {
   /**
    * Gets information about a fair launch for a specific pool
    * @param poolId - The ID of the pool
-   * @returns Promise<{initialTick: number, closed: boolean, endsAt: number}> - Fair launch details
+   * @returns Promise<{initialTick: number, closed: boolean, startsAt: number, endsAt: number}> - Fair launch details
    */
   fairLaunchInfo({ poolId }: { poolId: HexString }) {
     return this.contract.read("fairLaunchInfo", {
       _poolId: poolId,
     });
+  }
+
+  /**
+   * Calculates the duration of a fair launch
+   * @param poolId - The ID of the pool
+   * @returns Promise<number> - The duration in seconds between start and end time
+   */
+  async fairLaunchDuration({ poolId }: { poolId: HexString }) {
+    const { startsAt, endsAt } = await this.fairLaunchInfo({ poolId });
+    return endsAt - startsAt;
   }
 
   /**

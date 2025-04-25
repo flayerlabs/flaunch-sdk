@@ -8,20 +8,21 @@ import {
   type HexString,
   createDrift,
 } from "@delvtech/drift";
-import { FlaunchAbi } from "../abi/Flaunch";
+import { FlaunchV1_1Abi } from "../abi/FlaunchV1_1";
 
-export type FlaunchABI = typeof FlaunchAbi;
+export type FlaunchV1_1ABI = typeof FlaunchV1_1Abi;
 
 /**
- * Client for interacting with the Flaunch V1 contract in read-only mode
+ * Client for interacting with the Flaunch V1.1 contract in read-only mode
  * Provides methods to query token IDs and metadata URIs
+ * Enhanced version of the V1 contract with additional features
  */
-export class ReadFlaunch {
-  public readonly contract: ReadContract<FlaunchABI>;
+export class ReadFlaunchV1_1 {
+  public readonly contract: ReadContract<FlaunchV1_1ABI>;
 
   /**
-   * Creates a new ReadFlaunch instance
-   * @param address - The address of the Flaunch contract
+   * Creates a new ReadFlaunchV1_1 instance
+   * @param address - The address of the Flaunch V1.1 contract
    * @param drift - Optional drift instance for contract interactions (creates new instance if not provided)
    * @throws Error if address is not provided
    */
@@ -31,7 +32,7 @@ export class ReadFlaunch {
     }
 
     this.contract = drift.contract({
-      abi: FlaunchAbi,
+      abi: FlaunchV1_1Abi,
       address,
     });
   }
