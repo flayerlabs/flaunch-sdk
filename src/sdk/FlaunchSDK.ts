@@ -22,6 +22,11 @@ import {
   FastFlaunchParams,
   FastFlaunchIPFSParams,
 } from "../clients/FastFlaunchClient";
+import {
+  ReadWriteFlaunchZap,
+  FlaunchWithRevenueManagerParams,
+  FlaunchWithRevenueManagerIPFSParams,
+} from "../clients/FlaunchZapClient";
 import { ReadFlaunch } from "../clients/FlaunchClient";
 import { ReadMemecoin } from "../clients/MemecoinClient";
 import { ReadQuoter } from "clients/QuoterClient";
@@ -32,6 +37,7 @@ import {
   FLETHAddress,
   FairLaunchAddress,
   FastFlaunchZapAddress,
+  FlaunchZapAddress,
   FlaunchAddress,
   BidWallAddress,
   UniversalRouterAddress,
@@ -657,6 +663,7 @@ export class ReadFlaunchSDK {
 export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   public readonly readWritePositionManagerV1_1: ReadWriteFlaunchPositionManagerV1_1;
   public readonly readWriteFastFlaunchZap: ReadWriteFastFlaunchZap;
+  public readonly readWriteFlaunchZap: ReadWriteFlaunchZap;
 
   constructor(chainId: number, drift: Drift<ReadWriteAdapter> = createDrift()) {
     super(chainId, drift);
@@ -666,6 +673,11 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     );
     this.readWriteFastFlaunchZap = new ReadWriteFastFlaunchZap(
       FastFlaunchZapAddress[this.chainId],
+      drift
+    );
+    this.readWriteFlaunchZap = new ReadWriteFlaunchZap(
+      this.chainId,
+      FlaunchZapAddress[this.chainId],
       drift
     );
   }
@@ -718,6 +730,36 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     }
 
     return this.readWriteFastFlaunchZap.fastFlaunchIPFS(params);
+  }
+
+  /**
+   * Creates a new Flaunch with revenue manager configuration
+   * @param params - Parameters for creating the Flaunch with revenue manager
+   * @throws Error if FlaunchZap is not deployed on the current chain
+   * @returns Transaction response
+   */
+  flaunchWithRevenueManager(params: FlaunchWithRevenueManagerParams) {
+    if (this.readWriteFlaunchZap.contract.address === zeroAddress) {
+      throw new Error(`FlaunchZap is not deployed at chainId: ${this.chainId}`);
+    }
+
+    return this.readWriteFlaunchZap.flaunchWithRevenueManager(params);
+  }
+
+  /**
+   * Creates a new Flaunch with revenue manager configuration and IPFS metadata
+   * @param params - Parameters for creating the Flaunch with revenue manager and IPFS data
+   * @throws Error if FlaunchZap is not deployed on the current chain
+   * @returns Transaction response
+   */
+  async flaunchIPFSWithRevenueManager(
+    params: FlaunchWithRevenueManagerIPFSParams
+  ) {
+    if (this.readWriteFlaunchZap.contract.address === zeroAddress) {
+      throw new Error(`FlaunchZap is not deployed at chainId: ${this.chainId}`);
+    }
+
+    return this.readWriteFlaunchZap.flaunchIPFSWithRevenueManager(params);
   }
 
   /**

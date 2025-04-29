@@ -62,6 +62,18 @@ export const FastFlaunchZapAddress: Addresses = {
   [baseSepolia.id]: "0x821d9f6075e7971cc71c379081de9d532f5f9957",
 };
 
+export const FlaunchZapAddress: Addresses = {
+  // FIXME: fix with the new mainnet zap
+  [base.id]: "0x0000000000000000000000000000000000000000",
+  [baseSepolia.id]: "0xb2f5d987de90e026b61805e60b6002d367461474",
+};
+
+export const RevenueManagerAddress: Addresses = {
+  // FIXME: fix with the mainnet address
+  [base.id]: "0x0000000000000000000000000000000000000000",
+  [baseSepolia.id]: "0x1216c723853dac0449c01d01d6e529d751d9c0c8",
+};
+
 export const PoolManagerAddress: Addresses = {
   [base.id]: "0x498581fF718922c3f8e6A244956aF099B2652b2b",
   [baseSepolia.id]: "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
