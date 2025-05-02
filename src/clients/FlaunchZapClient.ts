@@ -11,7 +11,6 @@ import {
 import { FlaunchZapAbi } from "../abi/FlaunchZap";
 import { parseUnits } from "viem";
 import { encodeAbiParameters } from "viem";
-import { RevenueManagerAddress } from "addresses";
 import { generateTokenUri } from "../helpers/ipfs";
 import { IPFSParams } from "../types";
 
@@ -57,8 +56,7 @@ export interface FlaunchParams {
 }
 
 export interface FlaunchWithRevenueManagerParams extends FlaunchParams {
-  protocolRecipient: Address;
-  protocolFeePercent: number;
+  revenueManagerInstanceAddress: Address;
 }
 
 export interface FlaunchWithRevenueManagerIPFSParams
@@ -130,24 +128,8 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
         feeCalculatorParams: "0x",
       },
       _treasuryManagerParams: {
-        manager: RevenueManagerAddress[this.chainId],
-        initializeData: encodeAbiParameters(
-          [
-            {
-              type: "tuple",
-              components: [
-                { type: "address", name: "protocolRecipient" },
-                { type: "uint256", name: "protocolFee" },
-              ],
-            },
-          ],
-          [
-            {
-              protocolRecipient: params.protocolRecipient,
-              protocolFee: BigInt(params.protocolFeePercent * 100), // Convert percentage to basis points
-            },
-          ]
-        ),
+        manager: params.revenueManagerInstanceAddress,
+        initializeData: "0x",
         depositData: "0x",
       },
       _whitelistParams: {
