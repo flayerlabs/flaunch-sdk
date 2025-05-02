@@ -61,11 +61,21 @@ export class ReadWriteRevenueManager extends ReadRevenueManager {
   }
 
   /**
-   * Allows the creator to claim their share of the revenue
+   * Allows the creator to claim their total share of the revenue from a revenue manager
+   * @returns Promise<TransactionResponse> - The transaction response
+   */
+  creatorClaim() {
+    return this.contract.write("claim", {});
+  }
+
+  /**
+   * Allows the creator to claim their share of the revenue from specific flaunch tokens
    * @param flaunchTokens - The flaunch token ids to claim the revenue for
    * @returns Promise<TransactionResponse> - The transaction response
    */
-  creatorClaim(flaunchTokens: { flaunch: Address; tokenId: bigint }[]) {
+  creatorClaimForTokens(
+    flaunchTokens: { flaunch: Address; tokenId: bigint }[]
+  ) {
     return this.contract.write("claim", {
       _flaunchToken: flaunchTokens,
     });

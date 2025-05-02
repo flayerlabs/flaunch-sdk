@@ -1053,11 +1053,24 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   /**
-   * Claims the creator's share of the revenue
+   * Claims the total creator's share of the revenue from a revenue manager
    * @param params - Parameters for claiming the creator's share of the revenue
    * @returns Transaction response
    */
-  revenueManagerCreatorClaim(params: {
+  revenueManagerCreatorClaim(params: { revenueManagerAddress: Address }) {
+    const readWriteRevenueManager = new ReadWriteRevenueManager(
+      params.revenueManagerAddress,
+      this.drift
+    );
+    return readWriteRevenueManager.creatorClaim();
+  }
+
+  /**
+   * Claims the creator's share of the revenue from specific flaunch tokens
+   * @param params - Parameters for claiming the creator's share of the revenue
+   * @returns Transaction response
+   */
+  revenueManagerCreatorClaimForTokens(params: {
     revenueManagerAddress: Address;
     flaunchTokens: { flaunch: Address; tokenId: bigint }[];
   }) {
@@ -1065,6 +1078,6 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       params.revenueManagerAddress,
       this.drift
     );
-    return readWriteRevenueManager.creatorClaim(params.flaunchTokens);
+    return readWriteRevenueManager.creatorClaimForTokens(params.flaunchTokens);
   }
 }
