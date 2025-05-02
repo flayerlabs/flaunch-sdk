@@ -307,6 +307,12 @@ await flaunchWrite.flaunchIPFSWithRevenueManager({
 3.  **Claiming Fees**: Creators can claim their share of earned fees, and the protocol can claim its share via the `RevenueManager` contract.
 
 ```ts
+// check address' balance
+const balance = await flaunchRead.revenueManagerBalance({
+  revenueManagerAddress: revenueManagerInstanceAddress,
+  recipient: "0xabc...",
+});
+
 // protocol claim: the connected wallet must be the protocol recipient for the revenue manager
 await flaunchWrite.revenueManagerProtocolClaim({
   revenueManagerAddress: revenueManagerInstanceAddress,
@@ -314,6 +320,11 @@ await flaunchWrite.revenueManagerProtocolClaim({
 
 // creator claim: the connected wallet must be the coin's creator for them to claim their share
 await flaunchWrite.revenueManagerCreatorClaim({
+  revenueManagerAddress: revenueManagerInstanceAddress,
+});
+
+// creator claim: for specific flaunch token ids:
+await flaunchWrite.revenueManagerCreatorClaimForTokens({
   revenueManagerAddress: revenueManagerInstanceAddress,
   flaunchTokens: [
     {
@@ -384,7 +395,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.3.1 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.4.0 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -1068,7 +1079,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.3.1 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.4.0 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -1143,6 +1154,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - positionInfo
 - revenueManagerBalance
 - revenueManagerCreatorClaim
+- revenueManagerCreatorClaimForTokens
 - revenueManagerProtocolBalance
 - revenueManagerProtocolClaim
 - sellCoin
@@ -2084,7 +2096,28 @@ ___
 
 ▸ **revenueManagerCreatorClaim**(`params`): `Promise`\<\`0x$\{string}\`\>
 
-Claims the creator's share of the revenue
+Claims the total creator's share of the revenue from a revenue manager
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Parameters for claiming the creator's share of the revenue |
+| `params.revenueManagerAddress` | \`0x$\{string}\` | - |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
+
+### revenueManagerCreatorClaimForTokens
+
+▸ **revenueManagerCreatorClaimForTokens**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Claims the creator's share of the revenue from specific flaunch tokens
 
 Parameters
 
@@ -2266,7 +2299,7 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ---
 
-@flaunch/sdk - v0.3.1 / Exports / PinataConfig
+@flaunch/sdk - v0.4.0 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -2286,9 +2319,9 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ---
 
-@flaunch/sdk - v0.3.1 / Exports
+@flaunch/sdk - v0.4.0 / Exports
 
-# @flaunch/sdk - v0.3.1
+# @flaunch/sdk - v0.4.0
 
 ## Table of contents
 
