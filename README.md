@@ -307,6 +307,12 @@ await flaunchWrite.flaunchIPFSWithRevenueManager({
 3.  **Claiming Fees**: Creators can claim their share of earned fees, and the protocol can claim its share via the `RevenueManager` contract.
 
 ```ts
+// check address' balance
+const balance = await flaunchRead.revenueManagerBalance({
+  revenueManagerAddress: revenueManagerInstanceAddress,
+  recipient: "0xabc...",
+});
+
 // protocol claim: the connected wallet must be the protocol recipient for the revenue manager
 await flaunchWrite.revenueManagerProtocolClaim({
   revenueManagerAddress: revenueManagerInstanceAddress,
@@ -314,6 +320,11 @@ await flaunchWrite.revenueManagerProtocolClaim({
 
 // creator claim: the connected wallet must be the coin's creator for them to claim their share
 await flaunchWrite.revenueManagerCreatorClaim({
+  revenueManagerAddress: revenueManagerInstanceAddress,
+});
+
+// creator claim: for specific flaunch token ids:
+await flaunchWrite.revenueManagerCreatorClaimForTokens({
   revenueManagerAddress: revenueManagerInstanceAddress,
   flaunchTokens: [
     {
