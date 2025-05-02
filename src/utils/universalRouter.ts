@@ -11,6 +11,7 @@ import {
 } from "viem";
 import {
   FlaunchPositionManagerAddress,
+  FlaunchPositionManagerV1_1Address,
   FLETHAddress,
   FLETHHooksAddress,
   Permit2Address,
@@ -118,10 +119,13 @@ export const ethToMemecoin = (params: {
   amountOutMin?: bigint; // Required for 'EXACT_IN' swap
   amountOut?: bigint; // Required for 'EXACT_OUT' swap
   amountInMax?: bigint; // Required for 'EXACT_OUT' swap
+  isV1Coin?: boolean;
 }) => {
   const flETH = FLETHAddress[params.chainId];
   const flETHHooks = FLETHHooksAddress[params.chainId];
-  const flaunchHooks = FlaunchPositionManagerAddress[params.chainId];
+  const flaunchHooks = params.isV1Coin
+    ? FlaunchPositionManagerAddress[params.chainId]
+    : FlaunchPositionManagerV1_1Address[params.chainId];
 
   // Determine actions based on swapType
   const v4Actions = ("0x" +
@@ -296,11 +300,14 @@ export const memecoinToEthWithPermit2 = (params: {
   permitSingle: PermitSingle | undefined;
   signature: Hex | undefined;
   referrer: Address | null;
+  isV1Coin?: boolean;
 }) => {
   const flETH = FLETHAddress[params.chainId];
 
   const flETHHooks = FLETHHooksAddress[params.chainId];
-  const flaunchHooks = FlaunchPositionManagerAddress[params.chainId];
+  const flaunchHooks = params.isV1Coin
+    ? FlaunchPositionManagerAddress[params.chainId]
+    : FlaunchPositionManagerV1_1Address[params.chainId];
   const v4Actions = ("0x" +
     V4Actions.SWAP_EXACT_IN +
     V4Actions.SETTLE_ALL +
