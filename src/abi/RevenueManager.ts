@@ -23,6 +23,7 @@ export const RevenueManagerAbi = [
     name: "TokenTimelocked",
     type: "error",
   },
+  { inputs: [], name: "UnknownFlaunchToken", type: "error" },
   {
     anonymous: false,
     inputs: [
@@ -258,6 +259,13 @@ export const RevenueManagerAbi = [
     type: "event",
   },
   {
+    inputs: [{ internalType: "address", name: "_recipient", type: "address" }],
+    name: "balances",
+    outputs: [{ internalType: "uint256", name: "balance_", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "claim",
     outputs: [{ internalType: "uint256", name: "amount_", type: "uint256" }],
@@ -297,7 +305,7 @@ export const RevenueManagerAbi = [
   },
   {
     inputs: [{ internalType: "address", name: "_creator", type: "address" }],
-    name: "creatorTotalClaim",
+    name: "creatorTotalClaimed",
     outputs: [{ internalType: "uint256", name: "_claimed", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -323,6 +331,39 @@ export const RevenueManagerAbi = [
     name: "deposit",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "_flaunch", type: "address" },
+      { internalType: "uint256", name: "_tokenId", type: "uint256" },
+    ],
+    name: "flaunchTokenInternalIds",
+    outputs: [
+      { internalType: "uint256", name: "_internalId", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        components: [
+          {
+            internalType: "contract Flaunch",
+            name: "flaunch",
+            type: "address",
+          },
+          { internalType: "uint256", name: "tokenId", type: "uint256" },
+        ],
+        internalType: "struct ITreasuryManager.FlaunchToken",
+        name: "_flaunchToken",
+        type: "tuple",
+      },
+    ],
+    name: "getPoolId",
+    outputs: [{ internalType: "PoolId", name: "poolId_", type: "bytes32" }],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -352,6 +393,16 @@ export const RevenueManagerAbi = [
     type: "function",
   },
   {
+    inputs: [{ internalType: "uint256", name: "_internalId", type: "uint256" }],
+    name: "internalIds",
+    outputs: [
+      { internalType: "contract Flaunch", name: "flaunch", type: "address" },
+      { internalType: "uint256", name: "tokenId", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "managerOwner",
     outputs: [{ internalType: "address", name: "", type: "address" }],
@@ -360,7 +411,7 @@ export const RevenueManagerAbi = [
   },
   {
     inputs: [],
-    name: "protocolAvailableClaim",
+    name: "nextInternalId",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -374,13 +425,6 @@ export const RevenueManagerAbi = [
   },
   {
     inputs: [],
-    name: "protocolFeesClaimable",
-    outputs: [{ internalType: "uint256", name: "claimable_", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
     name: "protocolRecipient",
     outputs: [{ internalType: "address payable", name: "", type: "address" }],
     stateMutability: "view",
@@ -388,7 +432,7 @@ export const RevenueManagerAbi = [
   },
   {
     inputs: [],
-    name: "protocolTotalClaim",
+    name: "protocolTotalClaimed",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -451,10 +495,7 @@ export const RevenueManagerAbi = [
     type: "function",
   },
   {
-    inputs: [
-      { internalType: "address", name: "_flaunch", type: "address" },
-      { internalType: "uint256", name: "_tokenId", type: "uint256" },
-    ],
+    inputs: [{ internalType: "uint256", name: "_internalId", type: "uint256" }],
     name: "tokenPoolId",
     outputs: [{ internalType: "PoolId", name: "_poolId", type: "bytes32" }],
     stateMutability: "view",
@@ -477,8 +518,29 @@ export const RevenueManagerAbi = [
       { internalType: "address", name: "_flaunch", type: "address" },
       { internalType: "uint256", name: "_tokenId", type: "uint256" },
     ],
-    name: "tokenTotalClaim",
+    name: "tokenTotalClaimed",
     outputs: [{ internalType: "uint256", name: "_claimed", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_creator", type: "address" }],
+    name: "tokens",
+    outputs: [
+      {
+        components: [
+          {
+            internalType: "contract Flaunch",
+            name: "flaunch",
+            type: "address",
+          },
+          { internalType: "uint256", name: "tokenId", type: "uint256" },
+        ],
+        internalType: "struct ITreasuryManager.FlaunchToken[]",
+        name: "flaunchTokens_",
+        type: "tuple[]",
+      },
+    ],
     stateMutability: "view",
     type: "function",
   },
@@ -486,7 +548,7 @@ export const RevenueManagerAbi = [
     inputs: [
       { internalType: "address", name: "_newManagerOwner", type: "address" },
     ],
-    name: "transferOwnership",
+    name: "transferManagerOwnership",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

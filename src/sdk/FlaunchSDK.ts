@@ -6,6 +6,36 @@ import {
   type Address,
 } from "@delvtech/drift";
 import {
+  createPublicClient,
+  decodeEventLog,
+  http,
+  zeroAddress,
+  Hex,
+  type TransactionReceipt,
+  type Log,
+  type GetContractEventsReturnType,
+} from "viem";
+import axios from "axios";
+import {
+  FlaunchPositionManagerAddress,
+  StateViewAddress,
+  PoolManagerAddress,
+  FLETHAddress,
+  FairLaunchAddress,
+  FastFlaunchZapAddress,
+  FlaunchZapAddress,
+  FlaunchAddress,
+  BidWallAddress,
+  UniversalRouterAddress,
+  QuoterAddress,
+  Permit2Address,
+  FlaunchPositionManagerV1_1Address,
+  BidWallV1_1Address,
+  FlaunchV1_1Address,
+  FairLaunchV1_1Address,
+  TreasuryManagerFactoryAddress,
+} from "../addresses";
+import {
   ReadFlaunchPositionManager,
   WatchPoolCreatedParams,
   WatchPoolSwapParams as WatchPoolSwapParamsPositionManager,
@@ -30,45 +60,7 @@ import {
 import { ReadFlaunch } from "../clients/FlaunchClient";
 import { ReadMemecoin } from "../clients/MemecoinClient";
 import { ReadQuoter } from "clients/QuoterClient";
-import {
-  FlaunchPositionManagerAddress,
-  StateViewAddress,
-  PoolManagerAddress,
-  FLETHAddress,
-  FairLaunchAddress,
-  FastFlaunchZapAddress,
-  FlaunchZapAddress,
-  FlaunchAddress,
-  BidWallAddress,
-  UniversalRouterAddress,
-  QuoterAddress,
-  Permit2Address,
-  FlaunchPositionManagerV1_1Address,
-  BidWallV1_1Address,
-  FlaunchV1_1Address,
-  FairLaunchV1_1Address,
-} from "../addresses";
-import {
-  getPoolId,
-  orderPoolKey,
-  getValidTick,
-  calculateUnderlyingTokenBalances,
-  TickFinder,
-  TICK_SPACING,
-} from "../utils/univ4";
-import { CoinMetadata } from "types";
-import axios from "axios";
-import { resolveIPFS } from "../helpers/ipfs";
-import {
-  ethToMemecoin,
-  memecoinToEthWithPermit2,
-  getAmountWithSlippage,
-  PermitSingle,
-  getPermit2TypedData,
-} from "utils/universalRouter";
-import { UniversalRouterAbi } from "abi/UniversalRouter";
 import { ReadPermit2 } from "clients/Permit2Client";
-import { zeroAddress } from "viem";
 import {
   ReadFlaunchPositionManagerV1_1,
   ReadWriteFlaunchPositionManagerV1_1,
@@ -78,6 +70,31 @@ import {
 import { ReadBidWallV1_1 } from "clients/BidWallV1_1Client";
 import { ReadFairLaunchV1_1 } from "clients/FairLaunchV1_1Client";
 import { ReadFlaunchV1_1 } from "clients/FlaunchV1_1Client";
+import { ReadWriteTreasuryManagerFactory } from "clients/TreasuryManagerFactoryClient";
+import {
+  ReadRevenueManager,
+  ReadWriteRevenueManager,
+} from "clients/RevenueManagerClient";
+import { UniversalRouterAbi } from "abi/UniversalRouter";
+import { CoinMetadata } from "types";
+import {
+  getPoolId,
+  orderPoolKey,
+  getValidTick,
+  calculateUnderlyingTokenBalances,
+  TickFinder,
+  TICK_SPACING,
+} from "../utils/univ4";
+import {
+  ethToMemecoin,
+  memecoinToEthWithPermit2,
+  getAmountWithSlippage,
+  PermitSingle,
+  getPermit2TypedData,
+} from "utils/universalRouter";
+import { resolveIPFS } from "../helpers/ipfs";
+import { chainIdToChain } from "helpers";
+import { TreasuryManagerFactoryAbi } from "abi/TreasuryManagerFactory";
 
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
@@ -628,6 +645,38 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets the claimable balance of ETH for the recipient from a revenue manager
+   * @param params - Parameters for checking the balance
+   * @param params.revenueManagerAddress - The address of the revenue manager
+   * @param params.recipient - The address of the recipient to check
+   * @returns Promise<bigint> - The claimable balance of ETH
+   */
+  revenueManagerBalance(params: {
+    revenueManagerAddress: Address;
+    recipient: Address;
+  }) {
+    const readRevenueManager = new ReadRevenueManager(
+      params.revenueManagerAddress,
+      this.drift
+    );
+    return readRevenueManager.balances(params.recipient);
+  }
+
+  /**
+   * Gets the claimable balance of ETH for the protocol from a revenue manager
+   * @param revenueManagerAddress - The address of the revenue manager
+   * @returns Promise<bigint> - The claimable balance of ETH
+   */
+  async revenueManagerProtocolBalance(revenueManagerAddress: Address) {
+    const readRevenueManager = new ReadRevenueManager(
+      revenueManagerAddress,
+      this.drift
+    );
+    const protocolRecipient = await readRevenueManager.protocolRecipient();
+    return readRevenueManager.balances(protocolRecipient);
+  }
+
+  /**
    * Gets the pool ID for a given coin
    * @param coinAddress - The address of the coin
    * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
@@ -661,9 +710,11 @@ export class ReadFlaunchSDK {
 }
 
 export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
+  declare drift: Drift<ReadWriteAdapter>;
   public readonly readWritePositionManagerV1_1: ReadWriteFlaunchPositionManagerV1_1;
   public readonly readWriteFastFlaunchZap: ReadWriteFastFlaunchZap;
   public readonly readWriteFlaunchZap: ReadWriteFlaunchZap;
+  public readonly readWriteTreasuryManagerFactory: ReadWriteTreasuryManagerFactory;
 
   constructor(chainId: number, drift: Drift<ReadWriteAdapter> = createDrift()) {
     super(chainId, drift);
@@ -680,6 +731,52 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       FlaunchZapAddress[this.chainId],
       drift
     );
+    this.readWriteTreasuryManagerFactory = new ReadWriteTreasuryManagerFactory(
+      this.chainId,
+      TreasuryManagerFactoryAddress[this.chainId],
+      drift
+    );
+  }
+
+  /**
+   * Deploys a new revenue manager
+   * @param params - Parameters for deploying the revenue manager
+   * @param params.protocolRecipient - The address of the protocol recipient
+   * @param params.protocolFeePercent - The percentage of the protocol fee
+   * @returns Address of the deployed revenue manager
+   */
+  async deployRevenueManager(params: {
+    protocolRecipient: Address;
+    protocolFeePercent: number;
+  }): Promise<Address> {
+    const hash =
+      await this.readWriteTreasuryManagerFactory.deployRevenueManager(params);
+
+    // Create a public client to get the transaction receipt with logs
+    const publicClient = createPublicClient({
+      chain: chainIdToChain[this.chainId],
+      transport: http(),
+    });
+
+    // Wait for transaction receipt
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+    // Get the logs from the receipt and find the ManagerDeployed event
+    const events = await publicClient.getContractEvents({
+      address: this.readWriteTreasuryManagerFactory.contract.address,
+      abi: TreasuryManagerFactoryAbi,
+      eventName: "ManagerDeployed",
+      fromBlock: receipt.blockNumber,
+      toBlock: receipt.blockNumber,
+    });
+
+    // Find the event from our transaction
+    const event = events.find((e) => e.transactionHash === hash);
+    if (!event) {
+      throw new Error("ManagerDeployed event not found in transaction logs");
+    }
+
+    return event.args._manager;
   }
 
   /**
@@ -940,5 +1037,34 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       allowance: amount,
       nonce,
     };
+  }
+
+  /**
+   * Claims the protocol's share of the revenue
+   * @param params - Parameters for claiming the protocol's share of the revenue
+   * @returns Transaction response
+   */
+  revenueManagerProtocolClaim(params: { revenueManagerAddress: Address }) {
+    const readWriteRevenueManager = new ReadWriteRevenueManager(
+      params.revenueManagerAddress,
+      this.drift
+    );
+    return readWriteRevenueManager.protocolClaim();
+  }
+
+  /**
+   * Claims the creator's share of the revenue
+   * @param params - Parameters for claiming the creator's share of the revenue
+   * @returns Transaction response
+   */
+  revenueManagerCreatorClaim(params: {
+    revenueManagerAddress: Address;
+    flaunchTokens: { flaunch: Address; tokenId: bigint }[];
+  }) {
+    const readWriteRevenueManager = new ReadWriteRevenueManager(
+      params.revenueManagerAddress,
+      this.drift
+    );
+    return readWriteRevenueManager.creatorClaim(params.flaunchTokens);
   }
 }
