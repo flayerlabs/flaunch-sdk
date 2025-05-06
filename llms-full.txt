@@ -395,7 +395,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.4.0 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.4.2 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -430,6 +430,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readPositionManagerV1\_1
 - readQuoter
 - readStateView
+- resolveIPFS
 
 ### Methods
 
@@ -460,6 +461,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerBalance
 - revenueManagerProtocolBalance
 - revenueManagerTokensCount
+- setIPFSResolver
 - watchPoolCreated
 - watchPoolCreatedV1
 - watchPoolSwap
@@ -571,6 +573,26 @@ ___
 ### readStateView
 
 • `Readonly` **readStateView**: `ReadStateView`
+
+___
+
+### resolveIPFS
+
+• **resolveIPFS**: (`value`: `string`) => `string`
+
+Type declaration
+
+▸ (`value`): `string`
+
+#Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `value` | `string` |
+
+#Returns
+
+`string`
 
 ## Methods
 
@@ -765,32 +787,42 @@ ___
 
 ▸ **getCoinMetadataFromTokenId**(`flaunch`, `tokenId`): `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
 
+Retrieves metadata for a given Flaunch coin using its token ID & Flaunch contract address
+
 Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `flaunch` | \`0x$\{string}\` |
-| `tokenId` | `bigint` |
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `flaunch` | \`0x$\{string}\` | The address of the Flaunch contract |
+| `tokenId` | `bigint` | The token ID of the coin |
 
 Returns
 
 `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
 
+The coin's metadata including name, symbol, description, and social links
+
 ___
 
 ### getCoinMetadataFromTokenIds
 
-▸ **getCoinMetadataFromTokenIds**(`params`): `Promise`\<\{ `coinAddress`: \`0x$\{string}\` ; `collaborators`: `any` ; `description`: `any` ; `discordUrl`: `any` ; `external_link`: `any` ; `image`: `string` ; `name`: `string` ; `symbol`: `string` ; `telegramUrl`: `any` ; `twitterUrl`: `any`  }[]\>
+▸ **getCoinMetadataFromTokenIds**(`params`, `batchSize?`, `batchDelay?`): `Promise`\<\{ `coinAddress`: \`0x$\{string}\` ; `collaborators`: `any` ; `description`: `any` ; `discordUrl`: `any` ; `external_link`: `any` ; `image`: `string` ; `name`: `string` ; `symbol`: `string` ; `telegramUrl`: `any` ; `twitterUrl`: `any`  }[]\>
+
+Retrieves metadata for multiple Flaunch coins using their token IDs & Flaunch contract addresses
 
 Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `params` | \{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[] |
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `params` | \{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[] | `undefined` | An array of objects containing flaunch contract address and token ID |
+| `batchSize` | `number` | `9` | Optional, the number of ipfs requests to process in each batch |
+| `batchDelay` | `number` | `500` | Optional, the delay in milliseconds between batches |
 
 Returns
 
 `Promise`\<\{ `coinAddress`: \`0x$\{string}\` ; `collaborators`: `any` ; `description`: `any` ; `discordUrl`: `any` ; `external_link`: `any` ; `image`: `string` ; `name`: `string` ; `symbol`: `string` ; `telegramUrl`: `any` ; `twitterUrl`: `any`  }[]\>
+
+An array of objects containing coin address, name, symbol, description, and social links
 
 ___
 
@@ -1100,6 +1132,28 @@ Promise<bigint> - The total count of tokens
 
 ___
 
+### setIPFSResolver
+
+▸ **setIPFSResolver**(`resolverFn`): `void`
+
+Sets a custom IPFS resolver function
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `resolverFn` | (`ipfsHash`: `string`) => `string` | Custom function to resolve IPFS URIs |
+
+Returns
+
+`void`
+
+**`Dev`**
+
+this is used to resolve IPFS hash to a gateway URL
+
+___
+
 ### watchPoolCreated
 
 ▸ **watchPoolCreated**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
@@ -1182,7 +1236,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.4.0 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.4.2 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -1221,6 +1275,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readWriteFlaunchZap
 - readWritePositionManagerV1\_1
 - readWriteTreasuryManagerFactory
+- resolveIPFS
 
 ### Methods
 
@@ -1266,6 +1321,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerProtocolClaim
 - revenueManagerTokensCount
 - sellCoin
+- setIPFSResolver
 - watchPoolCreated
 - watchPoolCreatedV1
 - watchPoolSwap
@@ -1465,6 +1521,30 @@ ___
 ### readWriteTreasuryManagerFactory
 
 • `Readonly` **readWriteTreasuryManagerFactory**: `ReadWriteTreasuryManagerFactory`
+
+___
+
+### resolveIPFS
+
+• **resolveIPFS**: (`value`: `string`) => `string`
+
+Type declaration
+
+▸ (`value`): `string`
+
+#Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `value` | `string` |
+
+#Returns
+
+`string`
+
+Inherited from
+
+ReadFlaunchSDK.resolveIPFS
 
 ## Methods
 
@@ -1894,16 +1974,20 @@ ___
 
 ▸ **getCoinMetadataFromTokenId**(`flaunch`, `tokenId`): `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
 
+Retrieves metadata for a given Flaunch coin using its token ID & Flaunch contract address
+
 Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `flaunch` | \`0x$\{string}\` |
-| `tokenId` | `bigint` |
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `flaunch` | \`0x$\{string}\` | The address of the Flaunch contract |
+| `tokenId` | `bigint` | The token ID of the coin |
 
 Returns
 
 `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
+
+The coin's metadata including name, symbol, description, and social links
 
 Inherited from
 
@@ -1913,17 +1997,23 @@ ___
 
 ### getCoinMetadataFromTokenIds
 
-▸ **getCoinMetadataFromTokenIds**(`params`): `Promise`\<\{ `coinAddress`: \`0x$\{string}\` ; `collaborators`: `any` ; `description`: `any` ; `discordUrl`: `any` ; `external_link`: `any` ; `image`: `string` ; `name`: `string` ; `symbol`: `string` ; `telegramUrl`: `any` ; `twitterUrl`: `any`  }[]\>
+▸ **getCoinMetadataFromTokenIds**(`params`, `batchSize?`, `batchDelay?`): `Promise`\<\{ `coinAddress`: \`0x$\{string}\` ; `collaborators`: `any` ; `description`: `any` ; `discordUrl`: `any` ; `external_link`: `any` ; `image`: `string` ; `name`: `string` ; `symbol`: `string` ; `telegramUrl`: `any` ; `twitterUrl`: `any`  }[]\>
+
+Retrieves metadata for multiple Flaunch coins using their token IDs & Flaunch contract addresses
 
 Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `params` | \{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[] |
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `params` | \{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[] | `undefined` | An array of objects containing flaunch contract address and token ID |
+| `batchSize` | `number` | `9` | Optional, the number of ipfs requests to process in each batch |
+| `batchDelay` | `number` | `500` | Optional, the delay in milliseconds between batches |
 
 Returns
 
 `Promise`\<\{ `coinAddress`: \`0x$\{string}\` ; `collaborators`: `any` ; `description`: `any` ; `discordUrl`: `any` ; `external_link`: `any` ; `image`: `string` ; `name`: `string` ; `symbol`: `string` ; `telegramUrl`: `any` ; `twitterUrl`: `any`  }[]\>
+
+An array of objects containing coin address, name, symbol, description, and social links
 
 Inherited from
 
@@ -2427,6 +2517,32 @@ Transaction response for the sell operation
 
 ___
 
+### setIPFSResolver
+
+▸ **setIPFSResolver**(`resolverFn`): `void`
+
+Sets a custom IPFS resolver function
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `resolverFn` | (`ipfsHash`: `string`) => `string` | Custom function to resolve IPFS URIs |
+
+Returns
+
+`void`
+
+**`Dev`**
+
+this is used to resolve IPFS hash to a gateway URL
+
+Inherited from
+
+ReadFlaunchSDK.setIPFSResolver
+
+___
+
 ### watchPoolCreated
 
 ▸ **watchPoolCreated**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
@@ -2525,7 +2641,7 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ---
 
-@flaunch/sdk - v0.4.0 / Exports / PinataConfig
+@flaunch/sdk - v0.4.2 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -2545,9 +2661,9 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ---
 
-@flaunch/sdk - v0.4.0 / Exports
+@flaunch/sdk - v0.4.2 / Exports
 
-# @flaunch/sdk - v0.4.0
+# @flaunch/sdk - v0.4.2
 
 ## Table of contents
 
