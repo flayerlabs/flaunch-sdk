@@ -442,6 +442,8 @@ Base class for interacting with Flaunch protocol in read-only mode
 - fairLaunchInfo
 - flETHIsCurrencyZero
 - getCoinMetadata
+- getCoinMetadataFromTokenId
+- getCoinMetadataFromTokenIds
 - getETHUSDCPrice
 - initialTick
 - isFairLaunchActive
@@ -453,8 +455,11 @@ Base class for interacting with Flaunch protocol in read-only mode
 - pollPoolSwapNowV1
 - poolId
 - positionInfo
+- revenueManagerAllTokensByCreator
+- revenueManagerAllTokensInManager
 - revenueManagerBalance
 - revenueManagerProtocolBalance
+- revenueManagerTokensCount
 - watchPoolCreated
 - watchPoolCreatedV1
 - watchPoolSwap
@@ -756,6 +761,39 @@ Promise<CoinMetadata & { symbol: string }> - The coin's metadata including name,
 
 ___
 
+### getCoinMetadataFromTokenId
+
+▸ **getCoinMetadataFromTokenId**(`flaunch`, `tokenId`): `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `flaunch` | \`0x$\{string}\` |
+| `tokenId` | `bigint` |
+
+Returns
+
+`Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
+
+___
+
+### getCoinMetadataFromTokenIds
+
+▸ **getCoinMetadataFromTokenIds**(`params`): `Promise`\<\{ `coinAddress`: \`0x$\{string}\` ; `collaborators`: `any` ; `description`: `any` ; `discordUrl`: `any` ; `external_link`: `any` ; `image`: `string` ; `name`: `string` ; `symbol`: `string` ; `telegramUrl`: `any` ; `twitterUrl`: `any`  }[]\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | \{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[] |
+
+Returns
+
+`Promise`\<\{ `coinAddress`: \`0x$\{string}\` ; `collaborators`: `any` ; `description`: `any` ; `discordUrl`: `any` ; `external_link`: `any` ; `image`: `string` ; `name`: `string` ; `symbol`: `string` ; `telegramUrl`: `any` ; `twitterUrl`: `any`  }[]\>
+
+___
+
 ### getETHUSDCPrice
 
 ▸ **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
@@ -955,6 +993,51 @@ Position information from the state view contract
 
 ___
 
+### revenueManagerAllTokensByCreator
+
+▸ **revenueManagerAllTokensByCreator**(`params`): `Promise`\<readonly \{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[]\>
+
+Gets all tokens created by a specific creator address
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Parameters for querying tokens by creator |
+| `params.creator` | \`0x$\{string}\` | The address of the creator to query tokens for |
+| `params.revenueManagerAddress` | \`0x$\{string}\` | The address of the revenue manager |
+| `params.sortByDesc?` | `boolean` | Whether to sort the tokens by descending order |
+
+Returns
+
+`Promise`\<readonly \{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[]\>
+
+Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
+
+___
+
+### revenueManagerAllTokensInManager
+
+▸ **revenueManagerAllTokensInManager**(`params`): `Promise`\<\{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[]\>
+
+Gets all tokens currently managed by a revenue manager
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Parameters for querying tokens in manager |
+| `params.revenueManagerAddress` | \`0x$\{string}\` | The address of the revenue manager |
+| `params.sortByDesc?` | `boolean` | Optional boolean to sort tokens in descending order (default: false) |
+
+Returns
+
+`Promise`\<\{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[]\>
+
+Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
+
+___
+
 ### revenueManagerBalance
 
 ▸ **revenueManagerBalance**(`params`): `Promise`\<`bigint`\>
@@ -994,6 +1077,26 @@ Returns
 `Promise`\<`bigint`\>
 
 Promise<bigint> - The claimable balance of ETH
+
+___
+
+### revenueManagerTokensCount
+
+▸ **revenueManagerTokensCount**(`revenueManagerAddress`): `Promise`\<`bigint`\>
+
+Gets the total number of tokens managed by a revenue manager
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `revenueManagerAddress` | \`0x$\{string}\` | The address of the revenue manager |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The total count of tokens
 
 ___
 
@@ -1139,6 +1242,8 @@ Base class for interacting with Flaunch protocol in read-only mode
 - flaunchIPFSWithRevenueManager
 - flaunchWithRevenueManager
 - getCoinMetadata
+- getCoinMetadataFromTokenId
+- getCoinMetadataFromTokenIds
 - getETHUSDCPrice
 - getPermit2AllowanceAndNonce
 - getPermit2TypedData
@@ -1152,11 +1257,14 @@ Base class for interacting with Flaunch protocol in read-only mode
 - pollPoolSwapNowV1
 - poolId
 - positionInfo
+- revenueManagerAllTokensByCreator
+- revenueManagerAllTokensInManager
 - revenueManagerBalance
 - revenueManagerCreatorClaim
 - revenueManagerCreatorClaimForTokens
 - revenueManagerProtocolBalance
 - revenueManagerProtocolClaim
+- revenueManagerTokensCount
 - sellCoin
 - watchPoolCreated
 - watchPoolCreatedV1
@@ -1782,6 +1890,47 @@ ReadFlaunchSDK.getCoinMetadata
 
 ___
 
+### getCoinMetadataFromTokenId
+
+▸ **getCoinMetadataFromTokenId**(`flaunch`, `tokenId`): `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `flaunch` | \`0x$\{string}\` |
+| `tokenId` | `bigint` |
+
+Returns
+
+`Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
+
+Inherited from
+
+ReadFlaunchSDK.getCoinMetadataFromTokenId
+
+___
+
+### getCoinMetadataFromTokenIds
+
+▸ **getCoinMetadataFromTokenIds**(`params`): `Promise`\<\{ `coinAddress`: \`0x$\{string}\` ; `collaborators`: `any` ; `description`: `any` ; `discordUrl`: `any` ; `external_link`: `any` ; `image`: `string` ; `name`: `string` ; `symbol`: `string` ; `telegramUrl`: `any` ; `twitterUrl`: `any`  }[]\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | \{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[] |
+
+Returns
+
+`Promise`\<\{ `coinAddress`: \`0x$\{string}\` ; `collaborators`: `any` ; `description`: `any` ; `discordUrl`: `any` ; `external_link`: `any` ; `image`: `string` ; `name`: `string` ; `symbol`: `string` ; `telegramUrl`: `any` ; `twitterUrl`: `any`  }[]\>
+
+Inherited from
+
+ReadFlaunchSDK.getCoinMetadataFromTokenIds
+
+___
+
 ### getETHUSDCPrice
 
 ▸ **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
@@ -2066,6 +2215,59 @@ ReadFlaunchSDK.positionInfo
 
 ___
 
+### revenueManagerAllTokensByCreator
+
+▸ **revenueManagerAllTokensByCreator**(`params`): `Promise`\<readonly \{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[]\>
+
+Gets all tokens created by a specific creator address
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Parameters for querying tokens by creator |
+| `params.creator` | \`0x$\{string}\` | The address of the creator to query tokens for |
+| `params.revenueManagerAddress` | \`0x$\{string}\` | The address of the revenue manager |
+| `params.sortByDesc?` | `boolean` | Whether to sort the tokens by descending order |
+
+Returns
+
+`Promise`\<readonly \{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[]\>
+
+Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
+
+Inherited from
+
+ReadFlaunchSDK.revenueManagerAllTokensByCreator
+
+___
+
+### revenueManagerAllTokensInManager
+
+▸ **revenueManagerAllTokensInManager**(`params`): `Promise`\<\{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[]\>
+
+Gets all tokens currently managed by a revenue manager
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Parameters for querying tokens in manager |
+| `params.revenueManagerAddress` | \`0x$\{string}\` | The address of the revenue manager |
+| `params.sortByDesc?` | `boolean` | Optional boolean to sort tokens in descending order (default: false) |
+
+Returns
+
+`Promise`\<\{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[]\>
+
+Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
+
+Inherited from
+
+ReadFlaunchSDK.revenueManagerAllTokensInManager
+
+___
+
 ### revenueManagerBalance
 
 ▸ **revenueManagerBalance**(`params`): `Promise`\<`bigint`\>
@@ -2177,6 +2379,30 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response
+
+___
+
+### revenueManagerTokensCount
+
+▸ **revenueManagerTokensCount**(`revenueManagerAddress`): `Promise`\<`bigint`\>
+
+Gets the total number of tokens managed by a revenue manager
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `revenueManagerAddress` | \`0x$\{string}\` | The address of the revenue manager |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The total count of tokens
+
+Inherited from
+
+ReadFlaunchSDK.revenueManagerTokensCount
 
 ___
 
