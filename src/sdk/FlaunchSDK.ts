@@ -95,6 +95,8 @@ import {
 import { resolveIPFS } from "../helpers/ipfs";
 import { chainIdToChain } from "helpers";
 import { TreasuryManagerFactoryAbi } from "abi/TreasuryManagerFactory";
+import { ReadMulticall } from "clients/MulticallClient";
+import { MemecoinAbi } from "abi";
 
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
@@ -246,6 +248,138 @@ export class ReadFlaunchSDK {
       twitterUrl: metadata.twitterUrl ?? "",
       telegramUrl: metadata.telegramUrl ?? "",
     };
+  }
+
+  async getCoinMetadataFromTokenId(
+    flaunch: Address,
+    tokenId: bigint
+  ): Promise<CoinMetadata & { symbol: string }> {
+    const _flaunch = new ReadFlaunch(flaunch, this.drift);
+    const coinAddress = await _flaunch.memecoin(tokenId);
+    return this.getCoinMetadata(coinAddress);
+  }
+
+  async getCoinMetadataFromTokenIds(
+    params: {
+      flaunch: Address;
+      tokenId: bigint;
+    }[]
+  ): Promise<
+    {
+      coinAddress: Address;
+      name: string;
+      symbol: string;
+      description: any;
+      image: string;
+      external_link: any;
+      collaborators: any;
+      discordUrl: any;
+      twitterUrl: any;
+      telegramUrl: any;
+    }[]
+  > {
+    const multicall = new ReadMulticall(this.drift);
+
+    // get coin addresses via multicall
+    const coinAddresses_calldata = params.map((p) =>
+      this.readFlaunch.contract.encodeFunctionData("memecoin", {
+        _tokenId: p.tokenId,
+      })
+    );
+    const coinAddresses_result = await multicall.aggregate3(
+      coinAddresses_calldata.map((calldata, i) => ({
+        target: params[i].flaunch,
+        callData: calldata,
+      }))
+    );
+    const coinAddresses = coinAddresses_result.map((r) =>
+      this.readFlaunch.contract.decodeFunctionReturn("memecoin", r.returnData)
+    );
+
+    /// get coin metadata for each coin address via multicall
+    const coinMetadata_calldata: Hex[] = [];
+    // name, symbol, tokenURI for each coin
+    coinAddresses.forEach(() => {
+      coinMetadata_calldata.push(
+        this.drift.adapter.encodeFunctionData({
+          abi: MemecoinAbi,
+          fn: "name",
+        })
+      );
+      coinMetadata_calldata.push(
+        this.drift.adapter.encodeFunctionData({
+          abi: MemecoinAbi,
+          fn: "symbol",
+        })
+      );
+      coinMetadata_calldata.push(
+        this.drift.adapter.encodeFunctionData({
+          abi: MemecoinAbi,
+          fn: "tokenURI",
+        })
+      );
+    });
+    const coinMetadata_result = await multicall.aggregate3(
+      coinMetadata_calldata.map((calldata, i) => ({
+        target: coinAddresses[Math.floor(i / 3)],
+        callData: calldata,
+      }))
+    );
+
+    // First decode all the results
+    const results = [];
+    for (let i = 0; i < coinAddresses.length; i++) {
+      const name = this.drift.adapter.decodeFunctionReturn({
+        abi: MemecoinAbi,
+        fn: "name",
+        data: coinMetadata_result[i * 3].returnData,
+      });
+      const symbol = this.drift.adapter.decodeFunctionReturn({
+        abi: MemecoinAbi,
+        fn: "symbol",
+        data: coinMetadata_result[i * 3 + 1].returnData,
+      });
+      const tokenURI = this.drift.adapter.decodeFunctionReturn({
+        abi: MemecoinAbi,
+        fn: "tokenURI",
+        data: coinMetadata_result[i * 3 + 2].returnData,
+      });
+
+      results.push({ name, symbol, tokenURI, coinAddress: coinAddresses[i] });
+    }
+
+    // Process IPFS requests in batches to avoid rate limiting
+    const batchSize = 3;
+    const processedResults = [];
+    for (let i = 0; i < results.length; i += batchSize) {
+      const batch = results.slice(i, i + batchSize);
+      const batchResults = await Promise.all(
+        batch.map(async ({ name, symbol, tokenURI, coinAddress }) => {
+          const metadata = (await axios.get(resolveIPFS(tokenURI))).data;
+
+          return {
+            coinAddress,
+            name,
+            symbol,
+            description: metadata.description ?? "",
+            image: metadata.image ? resolveIPFS(metadata.image) : "",
+            external_link: metadata.websiteUrl ?? "",
+            collaborators: metadata.collaborators ?? [],
+            discordUrl: metadata.discordUrl ?? "",
+            twitterUrl: metadata.twitterUrl ?? "",
+            telegramUrl: metadata.telegramUrl ?? "",
+          };
+        })
+      );
+      processedResults.push(...batchResults);
+
+      // Add a small delay between batches to avoid rate limiting
+      if (i + batchSize < results.length) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+    }
+
+    return processedResults;
   }
 
   /**
@@ -674,6 +808,60 @@ export class ReadFlaunchSDK {
     );
     const protocolRecipient = await readRevenueManager.protocolRecipient();
     return readRevenueManager.balances(protocolRecipient);
+  }
+
+  /**
+   * Gets the total number of tokens managed by a revenue manager
+   * @param revenueManagerAddress - The address of the revenue manager
+   * @returns Promise<bigint> - The total count of tokens
+   */
+  async revenueManagerTokensCount(revenueManagerAddress: Address) {
+    const readRevenueManager = new ReadRevenueManager(
+      revenueManagerAddress,
+      this.drift
+    );
+    return readRevenueManager.tokensCount();
+  }
+
+  /**
+   * Gets all tokens created by a specific creator address
+   * @param params - Parameters for querying tokens by creator
+   * @param params.revenueManagerAddress - The address of the revenue manager
+   * @param params.creator - The address of the creator to query tokens for
+   * @param params.sortByDesc - Whether to sort the tokens by descending order
+   * @returns Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
+   */
+  async revenueManagerAllTokensByCreator(params: {
+    revenueManagerAddress: Address;
+    creator: Address;
+    sortByDesc?: boolean;
+  }) {
+    const readRevenueManager = new ReadRevenueManager(
+      params.revenueManagerAddress,
+      this.drift
+    );
+    return readRevenueManager.allTokensByCreator(
+      params.creator,
+      params.sortByDesc
+    );
+  }
+
+  /**
+   * Gets all tokens currently managed by a revenue manager
+   * @param params - Parameters for querying tokens in manager
+   * @param params.revenueManagerAddress - The address of the revenue manager
+   * @param params.sortByDesc - Optional boolean to sort tokens in descending order (default: false)
+   * @returns Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
+   */
+  async revenueManagerAllTokensInManager(params: {
+    revenueManagerAddress: Address;
+    sortByDesc?: boolean;
+  }) {
+    const readRevenueManager = new ReadRevenueManager(
+      params.revenueManagerAddress,
+      this.drift
+    );
+    return readRevenueManager.allTokensInManager(params.sortByDesc);
   }
 
   /**
