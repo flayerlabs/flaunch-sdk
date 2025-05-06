@@ -25,14 +25,14 @@ We follow [Semantic Versioning](https://semver.org/) (SemVer) with the following
 Use the pnpm version command to update the version in package.json:
 
 ```bash
+# For bug fixes
+pnpm version patch
+
 # For breaking changes in pre-1.0 or new features in post-1.0
 pnpm version minor
 
 # For breaking changes in post-1.0
 pnpm version major
-
-# For bug fixes
-pnpm version patch
 ```
 
 This command will:
