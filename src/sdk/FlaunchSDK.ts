@@ -92,7 +92,7 @@ import {
   PermitSingle,
   getPermit2TypedData,
 } from "utils/universalRouter";
-import { resolveIPFS } from "../helpers/ipfs";
+import { resolveIPFS as defaultResolveIPFS } from "../helpers/ipfs";
 import { chainIdToChain } from "helpers";
 import { TreasuryManagerFactoryAbi } from "abi/TreasuryManagerFactory";
 import { ReadMulticall } from "clients/MulticallClient";
@@ -154,10 +154,12 @@ export class ReadFlaunchSDK {
   public readonly readFlaunchV1_1: ReadFlaunchV1_1;
   public readonly readQuoter: ReadQuoter;
   public readonly readPermit2: ReadPermit2;
+  public resolveIPFS: (value: string) => string;
 
   constructor(chainId: number, drift: Drift = createDrift()) {
     this.chainId = chainId;
     this.drift = drift;
+    this.resolveIPFS = defaultResolveIPFS;
     this.readPositionManager = new ReadFlaunchPositionManager(
       FlaunchPositionManagerAddress[this.chainId],
       drift
@@ -235,13 +237,13 @@ export class ReadFlaunchSDK {
     const tokenURI = await memecoin.tokenURI();
 
     // get metadata from tokenURI
-    const metadata = (await axios.get(resolveIPFS(tokenURI))).data;
+    const metadata = (await axios.get(this.resolveIPFS(tokenURI))).data;
 
     return {
       name,
       symbol,
       description: metadata.description ?? "",
-      image: metadata.image ? resolveIPFS(metadata.image) : "",
+      image: metadata.image ? this.resolveIPFS(metadata.image) : "",
       external_link: metadata.websiteUrl ?? "",
       collaborators: metadata.collaborators ?? [],
       discordUrl: metadata.discordUrl ?? "",
@@ -263,7 +265,9 @@ export class ReadFlaunchSDK {
     params: {
       flaunch: Address;
       tokenId: bigint;
-    }[]
+    }[],
+    batchSize: number = 9,
+    batchDelay: number = 500
   ): Promise<
     {
       coinAddress: Address;
@@ -349,20 +353,19 @@ export class ReadFlaunchSDK {
     }
 
     // Process IPFS requests in batches to avoid rate limiting
-    const batchSize = 3;
     const processedResults = [];
     for (let i = 0; i < results.length; i += batchSize) {
       const batch = results.slice(i, i + batchSize);
       const batchResults = await Promise.all(
         batch.map(async ({ name, symbol, tokenURI, coinAddress }) => {
-          const metadata = (await axios.get(resolveIPFS(tokenURI))).data;
+          const metadata = (await axios.get(this.resolveIPFS(tokenURI))).data;
 
           return {
             coinAddress,
             name,
             symbol,
             description: metadata.description ?? "",
-            image: metadata.image ? resolveIPFS(metadata.image) : "",
+            image: metadata.image ? this.resolveIPFS(metadata.image) : "",
             external_link: metadata.websiteUrl ?? "",
             collaborators: metadata.collaborators ?? [],
             discordUrl: metadata.discordUrl ?? "",
@@ -375,7 +378,7 @@ export class ReadFlaunchSDK {
 
       // Add a small delay between batches to avoid rate limiting
       if (i + batchSize < results.length) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, batchDelay));
       }
     }
 
@@ -894,6 +897,15 @@ export class ReadFlaunchSDK {
    */
   flETHIsCurrencyZero(coinAddress: Address) {
     return coinAddress > FLETHAddress[this.chainId];
+  }
+
+  /**
+   * Sets a custom IPFS resolver function
+   * @dev this is used to resolve IPFS hash to a gateway URL
+   * @param resolverFn - Custom function to resolve IPFS URIs
+   */
+  setIPFSResolver(resolverFn: (ipfsHash: string) => string): void {
+    this.resolveIPFS = resolverFn;
   }
 }
 

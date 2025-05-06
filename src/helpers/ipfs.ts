@@ -1,9 +1,24 @@
 import axios from "axios";
 import { CoinMetadata, IPFSParams } from "../types";
 
-export const resolveIPFS = (value: string) => {
+// List of public IPFS gateways to cycle through
+const IPFS_GATEWAYS = [
+  "https://gateway.pinata.cloud/ipfs/",
+  "https://ipfs.io/ipfs/",
+  "https://dweb.link/ipfs/",
+];
+
+// Counter to track the current gateway index
+let currentGatewayIndex = 0;
+
+export const resolveIPFS = (value: string): string => {
   if (value.startsWith("ipfs://")) {
-    return `https://gateway.pinata.cloud/ipfs/${value.slice(7)}`;
+    const cid = value.slice(7);
+    // Get the next gateway and increment the counter
+    const gateway = IPFS_GATEWAYS[currentGatewayIndex];
+    // Update the counter, cycling back to 0 when we reach the end
+    currentGatewayIndex = (currentGatewayIndex + 1) % IPFS_GATEWAYS.length;
+    return `${gateway}${cid}`;
   }
   return value;
 };
