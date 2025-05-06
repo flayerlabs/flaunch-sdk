@@ -57,4 +57,15 @@ export class ReadFlaunch {
       _tokenId: tokenId,
     });
   }
+
+  /**
+   * Gets the memecoin address for a given token ID
+   * @param tokenId - The ID of the token
+   * @returns Promise<Address> - The address of the memecoin
+   */
+  memecoin(tokenId: bigint) {
+    return this.contract.read("memecoin", {
+      _tokenId: tokenId,
+    });
+  }
 }
