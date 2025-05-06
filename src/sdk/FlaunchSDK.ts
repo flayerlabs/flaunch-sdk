@@ -252,6 +252,12 @@ export class ReadFlaunchSDK {
     };
   }
 
+  /**
+   * Retrieves metadata for a given Flaunch coin using its token ID & Flaunch contract address
+   * @param flaunch - The address of the Flaunch contract
+   * @param tokenId - The token ID of the coin
+   * @returns The coin's metadata including name, symbol, description, and social links
+   */
   async getCoinMetadataFromTokenId(
     flaunch: Address,
     tokenId: bigint
@@ -261,6 +267,13 @@ export class ReadFlaunchSDK {
     return this.getCoinMetadata(coinAddress);
   }
 
+  /**
+   * Retrieves metadata for multiple Flaunch coins using their token IDs & Flaunch contract addresses
+   * @param params - An array of objects containing flaunch contract address and token ID
+   * @param batchSize - Optional, the number of ipfs requests to process in each batch
+   * @param batchDelay - Optional, the delay in milliseconds between batches
+   * @returns An array of objects containing coin address, name, symbol, description, and social links
+   */
   async getCoinMetadataFromTokenIds(
     params: {
       flaunch: Address;
