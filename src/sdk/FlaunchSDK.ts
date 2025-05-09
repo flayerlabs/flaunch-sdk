@@ -172,6 +172,11 @@ export class ReadFlaunchSDK {
       FlaunchPositionManagerV1_1Address[this.chainId],
       drift
     );
+    this.readFlaunchZap = new ReadFlaunchZap(
+      this.chainId,
+      FlaunchZapAddress[this.chainId],
+      drift
+    );
     this.readPoolManager = new ReadPoolManager(
       PoolManagerAddress[this.chainId],
       drift
