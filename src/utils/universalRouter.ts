@@ -89,6 +89,9 @@ const URCommands = {
   PERMIT2_PERMIT: "0a",
 };
 
+/**
+ * @dev EXACT_OUT adds the slippage, EXACT_IN removes it
+ */
 export const getAmountWithSlippage = (
   amount: bigint | undefined,
   slippage: string,

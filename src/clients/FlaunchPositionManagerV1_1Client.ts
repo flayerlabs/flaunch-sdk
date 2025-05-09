@@ -12,6 +12,8 @@ import { FlaunchPositionManagerV1_1Abi } from "../abi/FlaunchPositionManagerV1_1
 import { encodeAbiParameters, parseUnits } from "viem";
 import { IPFSParams } from "../types";
 import { generateTokenUri } from "helpers/ipfs";
+import { ReadInitialPrice } from "./InitialPriceClient";
+import { getAmountWithSlippage } from "utils/universalRouter";
 
 export type FlaunchPositionManagerV1_1ABI =
   typeof FlaunchPositionManagerV1_1Abi;
@@ -86,7 +88,6 @@ export interface WatchPoolSwapParams<
 }
 
 export interface FlaunchParams {
-  flaunchingETHFees: bigint;
   name: string;
   symbol: string;
   tokenUri: string;
@@ -96,7 +97,6 @@ export interface FlaunchParams {
   creator: Address;
   creatorFeeAllocationPercent: number;
   flaunchAt?: bigint;
-  premineAmount?: bigint;
 }
 
 export interface FlaunchIPFSParams
@@ -127,6 +127,32 @@ export class ReadFlaunchPositionManagerV1_1 {
     });
 
     return poolKey.tickSpacing !== 0;
+  }
+
+  getFlaunchingMarketCap(initialPriceParams: HexString) {
+    return this.contract.read("getFlaunchingMarketCap", {
+      _initialPriceParams: initialPriceParams,
+    });
+  }
+
+  async getFlaunchingFee(params: {
+    sender: Address;
+    initialPriceParams: HexString;
+    slippagePercent?: number;
+  }) {
+    const readInitialPrice = new ReadInitialPrice(
+      await this.contract.read("initialPrice"),
+      this.drift
+    );
+    const flaunchingFee = await readInitialPrice.getFlaunchingFee(params);
+
+    // increase the flaunching fee by the slippage percent
+    const flaunchingFeeWithSlippage = getAmountWithSlippage(
+      flaunchingFee,
+      (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
+      "EXACT_OUT"
+    );
+    return flaunchingFeeWithSlippage;
   }
 
   async watchPoolCreated({
@@ -376,6 +402,10 @@ export class ReadFlaunchPositionManagerV1_1 {
       pollPoolSwapNow: pollEvents,
     };
   }
+
+  initialPrice() {
+    return this.contract.read("initialPrice");
+  }
 }
 
 export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionManagerV1_1 {
@@ -388,9 +418,11 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
     super(address, drift);
   }
 
-  // TODO: auto calculate flaunchingETHFees with buffer
-  flaunch({
-    flaunchingETHFees,
+  /**
+   * Flaunches a new token directly from the position manager.
+   * For premine support, flaunch via the FlaunchZapClient.
+   */
+  async flaunch({
     name,
     symbol,
     tokenUri,
@@ -400,7 +432,6 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
     creator,
     creatorFeeAllocationPercent,
     flaunchAt,
-    premineAmount,
   }: FlaunchParams) {
     const initialMCapInUSDCWei = parseUnits(initialMarketCapUSD.toString(), 6);
     const initialPriceParams = encodeAbiParameters(
@@ -415,6 +446,12 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
     const fairLaunchInBps = BigInt(fairLaunchPercent * 100);
     const creatorFeeAllocationInBps = creatorFeeAllocationPercent * 100;
 
+    const flaunchingFee = await this.getFlaunchingFee({
+      sender: await this.drift.adapter.getSignerAddress(),
+      initialPriceParams,
+      slippagePercent: 5,
+    });
+
     return this.contract.write(
       "flaunch",
       {
@@ -425,7 +462,7 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
           initialTokenFairLaunch:
             (this.TOTAL_SUPPLY * fairLaunchInBps) / 10_000n,
           fairLaunchDuration,
-          premineAmount: premineAmount ?? 0n,
+          premineAmount: 0n,
           creator,
           creatorFeeAllocation: creatorFeeAllocationInBps,
           flaunchAt: flaunchAt ?? 0n,
@@ -434,7 +471,7 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
         },
       },
       {
-        value: flaunchingETHFees,
+        value: flaunchingFee,
         onMined: async () => {
           if (this.pollPoolCreatedNow) {
             await this.pollPoolCreatedNow();
@@ -444,8 +481,11 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
     );
   }
 
+  /**
+   * Flaunches a new token directly from the position manager by uploading the token metadata to IPFS.
+   * For premine support, flaunch via the FlaunchZapClient.
+   */
   async flaunchIPFS({
-    flaunchingETHFees,
     name,
     symbol,
     fairLaunchPercent,
@@ -454,7 +494,6 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
     creator,
     creatorFeeAllocationPercent,
     flaunchAt,
-    premineAmount,
     metadata,
     pinataConfig,
   }: FlaunchIPFSParams) {
@@ -464,7 +503,6 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
     });
 
     return this.flaunch({
-      flaunchingETHFees,
       name,
       symbol,
       tokenUri,
@@ -474,7 +512,6 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
       creator,
       creatorFeeAllocationPercent,
       flaunchAt,
-      premineAmount,
     });
   }
 }
