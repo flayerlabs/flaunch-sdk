@@ -395,7 +395,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.4.2 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.5.1 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -444,11 +444,14 @@ Base class for interacting with Flaunch protocol in read-only mode
 - fairLaunchETHOnlyPosition
 - fairLaunchInfo
 - flETHIsCurrencyZero
+- getBuyQuoteExactInput
+- getBuyQuoteExactOutput
 - getCoinMetadata
 - getCoinMetadataFromTokenId
 - getCoinMetadataFromTokenIds
 - getETHUSDCPrice
 - getFlaunchingFee
+- getSellQuoteExactInput
 - initialTick
 - isFairLaunchActive
 - isV1Coin
@@ -795,6 +798,50 @@ boolean - True if flETH is currency0, false otherwise
 
 ___
 
+### getBuyQuoteExactInput
+
+▸ **getBuyQuoteExactInput**(`coinAddress`, `amountIn`, `isV1Coin?`): `Promise`\<`bigint`\>
+
+Gets a quote for buying tokens with an exact amount of ETH
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
+| `amountIn` | `bigint` | - |
+| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The expected amount of tokens to receive
+
+___
+
+### getBuyQuoteExactOutput
+
+▸ **getBuyQuoteExactOutput**(`coinAddress`, `amountOut`, `isV1Coin?`): `Promise`\<`bigint`\>
+
+Gets a quote for buying an exact amount of tokens with ETH
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
+| `amountOut` | `bigint` | - |
+| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The required amount of ETH to spend
+
+___
+
 ### getCoinMetadata
 
 ▸ **getCoinMetadata**(`coinAddress`): `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
@@ -898,6 +945,28 @@ Returns
 `Promise`\<`bigint`\>
 
 Promise<bigint> - The flaunching fee
+
+___
+
+### getSellQuoteExactInput
+
+▸ **getSellQuoteExactInput**(`coinAddress`, `amountIn`, `isV1Coin?`): `Promise`\<`bigint`\>
+
+Gets a quote for selling an exact amount of tokens for ETH
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the token to sell |
+| `amountIn` | `bigint` | The exact amount of tokens to sell |
+| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The expected amount of ETH to receive
 
 ___
 
@@ -1292,7 +1361,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.4.2 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.5.1 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -1354,6 +1423,8 @@ Base class for interacting with Flaunch protocol in read-only mode
 - flaunchIPFS
 - flaunchIPFSWithRevenueManager
 - flaunchWithRevenueManager
+- getBuyQuoteExactInput
+- getBuyQuoteExactOutput
 - getCoinMetadata
 - getCoinMetadataFromTokenId
 - getCoinMetadataFromTokenIds
@@ -1361,6 +1432,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getFlaunchingFee
 - getPermit2AllowanceAndNonce
 - getPermit2TypedData
+- getSellQuoteExactInput
 - initialTick
 - isFairLaunchActive
 - isV1Coin
@@ -2042,6 +2114,58 @@ Error if FlaunchZap is not deployed on the current chain
 
 ___
 
+### getBuyQuoteExactInput
+
+▸ **getBuyQuoteExactInput**(`coinAddress`, `amountIn`, `isV1Coin?`): `Promise`\<`bigint`\>
+
+Gets a quote for buying tokens with an exact amount of ETH
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
+| `amountIn` | `bigint` | - |
+| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The expected amount of tokens to receive
+
+Inherited from
+
+ReadFlaunchSDK.getBuyQuoteExactInput
+
+___
+
+### getBuyQuoteExactOutput
+
+▸ **getBuyQuoteExactOutput**(`coinAddress`, `amountOut`, `isV1Coin?`): `Promise`\<`bigint`\>
+
+Gets a quote for buying an exact amount of tokens with ETH
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
+| `amountOut` | `bigint` | - |
+| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The required amount of ETH to spend
+
+Inherited from
+
+ReadFlaunchSDK.getBuyQuoteExactOutput
+
+___
+
 ### getCoinMetadata
 
 ▸ **getCoinMetadata**(`coinAddress`): `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
@@ -2206,6 +2330,32 @@ Returns
 `Promise`\<\{ `permitSingle`: `PermitSingle` ; `typedData`: \{ `domain`: \{ `chainId`: `number` ; `name`: `string` ; `verifyingContract`: \`0x$\{string}\`  } ; `message`: `PermitSingle` ; `primaryType`: `string` ; `types`: \{ `PermitDetails`: \{ `name`: `string` = "token"; `type`: `string` = "address" }[] = PERMIT\_DETAILS; `PermitSingle`: \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[]  }  }  }\>
 
 The typed data object for signing
+
+___
+
+### getSellQuoteExactInput
+
+▸ **getSellQuoteExactInput**(`coinAddress`, `amountIn`, `isV1Coin?`): `Promise`\<`bigint`\>
+
+Gets a quote for selling an exact amount of tokens for ETH
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the token to sell |
+| `amountIn` | `bigint` | The exact amount of tokens to sell |
+| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The expected amount of ETH to receive
+
+Inherited from
+
+ReadFlaunchSDK.getSellQuoteExactInput
 
 ___
 
@@ -2765,7 +2915,7 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ---
 
-@flaunch/sdk - v0.4.2 / Exports / PinataConfig
+@flaunch/sdk - v0.5.1 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -2785,9 +2935,9 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ---
 
-@flaunch/sdk - v0.4.2 / Exports
+@flaunch/sdk - v0.5.1 / Exports
 
-# @flaunch/sdk - v0.4.2
+# @flaunch/sdk - v0.5.1
 
 ## Table of contents
 
