@@ -977,6 +977,72 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets a quote for selling an exact amount of tokens for ETH
+   * @param coinAddress - The address of the token to sell
+   * @param amountIn - The exact amount of tokens to sell
+   * @param isV1Coin - Optional flag to specify if token is V1. If not provided, V1.1 is assumed
+   * @returns Promise<bigint> - The expected amount of ETH to receive
+   */
+  async getSellQuoteExactInput(
+    coinAddress: Address,
+    amountIn: bigint,
+    isV1Coin?: boolean
+  ) {
+    if (isV1Coin === undefined) {
+      isV1Coin = await this.isV1Coin(coinAddress);
+    }
+    return this.readQuoter.getSellQuoteExactInput(
+      coinAddress,
+      amountIn,
+      isV1Coin
+    );
+  }
+
+  /**
+   * Gets a quote for buying tokens with an exact amount of ETH
+   * @param coinAddress - The address of the token to buy
+   * @param ethIn - The exact amount of ETH to spend
+   * @param isV1Coin - Optional flag to specify if token is V1. If not provided, V1.1 is assumed
+   * @returns Promise<bigint> - The expected amount of tokens to receive
+   */
+  async getBuyQuoteExactInput(
+    coinAddress: Address,
+    amountIn: bigint,
+    isV1Coin?: boolean
+  ) {
+    if (isV1Coin === undefined) {
+      isV1Coin = await this.isV1Coin(coinAddress);
+    }
+    return this.readQuoter.getBuyQuoteExactInput(
+      coinAddress,
+      amountIn,
+      isV1Coin
+    );
+  }
+
+  /**
+   * Gets a quote for buying an exact amount of tokens with ETH
+   * @param coinAddress - The address of the token to buy
+   * @param coinOut - The exact amount of tokens to receive
+   * @param isV1Coin - Optional flag to specify if token is V1. If not provided, V1.1 is assumed
+   * @returns Promise<bigint> - The required amount of ETH to spend
+   */
+  async getBuyQuoteExactOutput(
+    coinAddress: Address,
+    amountOut: bigint,
+    isV1Coin?: boolean
+  ) {
+    if (isV1Coin === undefined) {
+      isV1Coin = await this.isV1Coin(coinAddress);
+    }
+    return this.readQuoter.getBuyQuoteExactOutput(
+      coinAddress,
+      amountOut,
+      isV1Coin
+    );
+  }
+
+  /**
    * Determines if flETH is currency0 in the pool
    * @param coinAddress - The address of the coin
    * @returns boolean - True if flETH is currency0, false otherwise
