@@ -424,6 +424,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readFairLaunchV1\_1
 - readFlaunch
 - readFlaunchV1\_1
+- readFlaunchZap
 - readPermit2
 - readPoolManager
 - readPositionManager
@@ -437,6 +438,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - bidWallPosition
 - coinPriceInETH
 - currentTick
+- ethRequiredToFlaunch
 - fairLaunchCoinOnlyPosition
 - fairLaunchDuration
 - fairLaunchETHOnlyPosition
@@ -446,6 +448,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getCoinMetadataFromTokenId
 - getCoinMetadataFromTokenIds
 - getETHUSDCPrice
+- getFlaunchingFee
 - initialTick
 - isFairLaunchActive
 - isV1Coin
@@ -537,6 +540,12 @@ ___
 ### readFlaunchV1\_1
 
 • `Readonly` **readFlaunchV1\_1**: `ReadFlaunchV1_1`
+
+___
+
+### readFlaunchZap
+
+• `Readonly` **readFlaunchZap**: `ReadFlaunchZap`
 
 ___
 
@@ -656,6 +665,29 @@ Returns
 `Promise`\<`number`\>
 
 Promise<number> - The current tick of the pool
+
+___
+
+### ethRequiredToFlaunch
+
+▸ **ethRequiredToFlaunch**(`params`): `Promise`\<`bigint`\>
+
+Calculates the ETH required to flaunch a token, takes into account the ETH for premine and the flaunching fee
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | - |
+| `params.initialMarketCapUSD` | `number` | The initial market cap in USD |
+| `params.premineAmount` | `bigint` | The amount of coins to be premined |
+| `params.slippagePercent?` | `number` | The slippage percent |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The ETH required to flaunch
 
 ___
 
@@ -843,6 +875,29 @@ Returns
 `Promise`\<`number`\>
 
 Promise<number> - The current ETH/USDC price
+
+___
+
+### getFlaunchingFee
+
+▸ **getFlaunchingFee**(`params`): `Promise`\<`bigint`\>
+
+Gets the flaunching fee for a given initial price and slippage percent
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | - |
+| `params.initialMarketCapUSD` | `number` | The initial market cap in USD |
+| `params.sender` | \`0x$\{string}\` | The address of the sender |
+| `params.slippagePercent?` | `number` | The slippage percent |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The flaunching fee
 
 ___
 
@@ -1151,6 +1206,7 @@ Returns
 **`Dev`**
 
 this is used to resolve IPFS hash to a gateway URL
+eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
 
 ___
 
@@ -1265,6 +1321,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readFairLaunchV1\_1
 - readFlaunch
 - readFlaunchV1\_1
+- readFlaunchZap
 - readPermit2
 - readPoolManager
 - readPositionManager
@@ -1285,6 +1342,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - coinPriceInETH
 - currentTick
 - deployRevenueManager
+- ethRequiredToFlaunch
 - fairLaunchCoinOnlyPosition
 - fairLaunchDuration
 - fairLaunchETHOnlyPosition
@@ -1300,6 +1358,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getCoinMetadataFromTokenId
 - getCoinMetadataFromTokenIds
 - getETHUSDCPrice
+- getFlaunchingFee
 - getPermit2AllowanceAndNonce
 - getPermit2TypedData
 - initialTick
@@ -1437,6 +1496,16 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readFlaunchV1_1
+
+___
+
+### readFlaunchZap
+
+• `Readonly` **readFlaunchZap**: `ReadFlaunchZap`
+
+Inherited from
+
+ReadFlaunchSDK.readFlaunchZap
 
 ___
 
@@ -1683,6 +1752,33 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Address of the deployed revenue manager
+
+___
+
+### ethRequiredToFlaunch
+
+▸ **ethRequiredToFlaunch**(`params`): `Promise`\<`bigint`\>
+
+Calculates the ETH required to flaunch a token, takes into account the ETH for premine and the flaunching fee
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | - |
+| `params.initialMarketCapUSD` | `number` | The initial market cap in USD |
+| `params.premineAmount` | `bigint` | The amount of coins to be premined |
+| `params.slippagePercent?` | `number` | The slippage percent |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The ETH required to flaunch
+
+Inherited from
+
+ReadFlaunchSDK.ethRequiredToFlaunch
 
 ___
 
@@ -2042,6 +2138,33 @@ Promise<number> - The current ETH/USDC price
 Inherited from
 
 ReadFlaunchSDK.getETHUSDCPrice
+
+___
+
+### getFlaunchingFee
+
+▸ **getFlaunchingFee**(`params`): `Promise`\<`bigint`\>
+
+Gets the flaunching fee for a given initial price and slippage percent
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | - |
+| `params.initialMarketCapUSD` | `number` | The initial market cap in USD |
+| `params.sender` | \`0x$\{string}\` | The address of the sender |
+| `params.slippagePercent?` | `number` | The slippage percent |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The flaunching fee
+
+Inherited from
+
+ReadFlaunchSDK.getFlaunchingFee
 
 ___
 
@@ -2536,6 +2659,7 @@ Returns
 **`Dev`**
 
 this is used to resolve IPFS hash to a gateway URL
+eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
 
 Inherited from
 
