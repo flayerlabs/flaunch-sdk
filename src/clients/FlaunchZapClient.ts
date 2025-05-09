@@ -65,6 +65,7 @@ export class ReadFlaunchZap {
    */
   constructor(chainId: number, address: Address, drift: Drift = createDrift()) {
     this.chainId = chainId;
+    this.drift = drift;
     if (!address) {
       throw new Error("Address is required");
     }
