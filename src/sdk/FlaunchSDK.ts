@@ -14,6 +14,8 @@ import {
   type TransactionReceipt,
   type Log,
   type GetContractEventsReturnType,
+  encodeAbiParameters,
+  parseUnits,
 } from "viem";
 import axios from "axios";
 import {
@@ -53,7 +55,10 @@ import {
   FastFlaunchIPFSParams,
 } from "../clients/FastFlaunchClient";
 import {
+  ReadFlaunchZap,
   ReadWriteFlaunchZap,
+  FlaunchParams,
+  FlaunchIPFSParams,
   FlaunchWithRevenueManagerParams,
   FlaunchWithRevenueManagerIPFSParams,
 } from "../clients/FlaunchZapClient";
@@ -64,8 +69,6 @@ import { ReadPermit2 } from "clients/Permit2Client";
 import {
   ReadFlaunchPositionManagerV1_1,
   ReadWriteFlaunchPositionManagerV1_1,
-  FlaunchParams,
-  FlaunchIPFSParams,
 } from "clients/FlaunchPositionManagerV1_1Client";
 import { ReadBidWallV1_1 } from "clients/BidWallV1_1Client";
 import { ReadFairLaunchV1_1 } from "clients/FairLaunchV1_1Client";
@@ -144,6 +147,7 @@ export class ReadFlaunchSDK {
   public readonly TICK_SPACING = TICK_SPACING;
   public readonly readPositionManager: ReadFlaunchPositionManager;
   public readonly readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
+  public readonly readFlaunchZap: ReadFlaunchZap;
   public readonly readPoolManager: ReadPoolManager;
   public readonly readStateView: ReadStateView;
   public readonly readFairLaunch: ReadFairLaunch;
@@ -904,6 +908,70 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets the flaunching fee for a given initial price and slippage percent
+   * @param params.sender - The address of the sender
+   * @param params.initialMarketCapUSD - The initial market cap in USD
+   * @param params.slippagePercent - The slippage percent
+   * @returns Promise<bigint> - The flaunching fee
+   */
+  getFlaunchingFee(params: {
+    sender: Address;
+    initialMarketCapUSD: number;
+    slippagePercent?: number;
+  }) {
+    const initialMCapInUSDCWei = parseUnits(
+      params.initialMarketCapUSD.toString(),
+      6
+    );
+    const initialPriceParams = encodeAbiParameters(
+      [
+        {
+          type: "uint256",
+        },
+      ],
+      [initialMCapInUSDCWei]
+    );
+
+    return this.readPositionManagerV1_1.getFlaunchingFee({
+      sender: params.sender,
+      initialPriceParams,
+      slippagePercent: params.slippagePercent,
+    });
+  }
+
+  /**
+   * Calculates the ETH required to flaunch a token, takes into account the ETH for premine and the flaunching fee
+   * @param params.premineAmount - The amount of coins to be premined
+   * @param params.initialMarketCapUSD - The initial market cap in USD
+   * @param params.slippagePercent - The slippage percent
+   * @returns Promise<bigint> - The ETH required to flaunch
+   */
+  ethRequiredToFlaunch(params: {
+    premineAmount: bigint;
+    initialMarketCapUSD: number;
+    slippagePercent?: number;
+  }) {
+    const initialMCapInUSDCWei = parseUnits(
+      params.initialMarketCapUSD.toString(),
+      6
+    );
+    const initialPriceParams = encodeAbiParameters(
+      [
+        {
+          type: "uint256",
+        },
+      ],
+      [initialMCapInUSDCWei]
+    );
+
+    return this.readFlaunchZap.ethRequiredToFlaunch({
+      premineAmount: params.premineAmount,
+      initialPriceParams,
+      slippagePercent: params.slippagePercent,
+    });
+  }
+
+  /**
    * Determines if flETH is currency0 in the pool
    * @param coinAddress - The address of the coin
    * @returns boolean - True if flETH is currency0, false otherwise
@@ -915,6 +983,7 @@ export class ReadFlaunchSDK {
   /**
    * Sets a custom IPFS resolver function
    * @dev this is used to resolve IPFS hash to a gateway URL
+   * eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
    * @param resolverFn - Custom function to resolve IPFS URIs
    */
   setIPFSResolver(resolverFn: (ipfsHash: string) => string): void {
@@ -998,7 +1067,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response
    */
   flaunch(params: FlaunchParams) {
-    return this.readWritePositionManagerV1_1.flaunch(params);
+    return this.readWriteFlaunchZap.flaunch(params);
   }
 
   /**
@@ -1007,7 +1076,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response
    */
   flaunchIPFS(params: FlaunchIPFSParams) {
-    return this.readWritePositionManagerV1_1.flaunchIPFS(params);
+    return this.readWriteFlaunchZap.flaunchIPFS(params);
   }
 
   /**

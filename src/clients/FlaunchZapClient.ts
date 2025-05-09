@@ -9,40 +9,18 @@ import {
   createDrift,
 } from "@delvtech/drift";
 import { FlaunchZapAbi } from "../abi/FlaunchZap";
-import { parseUnits } from "viem";
+import { parseUnits, zeroAddress } from "viem";
 import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
 import { IPFSParams } from "../types";
+import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
+import { FlaunchPositionManagerV1_1Address } from "addresses";
+import { getAmountWithSlippage } from "utils/universalRouter";
+import { ReadInitialPrice } from "./InitialPriceClient";
 
 export type FlaunchZapABI = typeof FlaunchZapAbi;
 
-/**
- * Base client for interacting with the FlaunchZap contract in read-only mode
- * Provides basic contract initialization
- */
-export class ReadFlaunchZap {
-  public readonly contract: ReadContract<FlaunchZapABI>;
-  public readonly TOTAL_SUPPLY = 100n * 10n ** 27n; // 100 Billion tokens in wei
-
-  /**
-   * Creates a new ReadFlaunchZap instance
-   * @param address - The address of the FlaunchZap contract
-   * @param drift - Optional drift instance for contract interactions (creates new instance if not provided)
-   * @throws Error if address is not provided
-   */
-  constructor(address: Address, drift: Drift = createDrift()) {
-    if (!address) {
-      throw new Error("Address is required");
-    }
-    this.contract = drift.contract({
-      abi: FlaunchZapAbi,
-      address,
-    });
-  }
-}
-
 export interface FlaunchParams {
-  flaunchingETHFees: bigint;
   name: string;
   symbol: string;
   tokenUri: string;
@@ -55,6 +33,10 @@ export interface FlaunchParams {
   premineAmount?: bigint;
 }
 
+export interface FlaunchIPFSParams
+  extends Omit<FlaunchParams, "tokenUri">,
+    IPFSParams {}
+
 export interface FlaunchWithRevenueManagerParams extends FlaunchParams {
   revenueManagerInstanceAddress: Address;
 }
@@ -64,10 +46,100 @@ export interface FlaunchWithRevenueManagerIPFSParams
     IPFSParams {}
 
 /**
+ * Base client for interacting with the FlaunchZap contract in read-only mode
+ * Provides basic contract initialization
+ */
+export class ReadFlaunchZap {
+  drift: Drift;
+  chainId: number;
+  public readonly contract: ReadContract<FlaunchZapABI>;
+  public readonly TOTAL_SUPPLY = 100n * 10n ** 27n; // 100 Billion tokens in wei
+  public readonly readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
+
+  /**
+   * Creates a new ReadFlaunchZap instance
+   * @param chainId - The chain ID of the contract
+   * @param address - The address of the FlaunchZap contract
+   * @param drift - Optional drift instance for contract interactions (creates new instance if not provided)
+   * @throws Error if address is not provided
+   */
+  constructor(chainId: number, address: Address, drift: Drift = createDrift()) {
+    this.chainId = chainId;
+    if (!address) {
+      throw new Error("Address is required");
+    }
+    this.contract = drift.contract({
+      abi: FlaunchZapAbi,
+      address,
+    });
+    this.readPositionManagerV1_1 = new ReadFlaunchPositionManagerV1_1(
+      FlaunchPositionManagerV1_1Address[this.chainId],
+      drift
+    );
+  }
+
+  async getPremineCostInWei(params: {
+    initialPriceParams: HexString;
+    premineAmount: bigint;
+    slippagePercent?: number;
+  }) {
+    const mcapInWei = await this.readPositionManagerV1_1.getFlaunchingMarketCap(
+      params.initialPriceParams
+    );
+    const premineCostInWei =
+      (mcapInWei * params.premineAmount) / this.TOTAL_SUPPLY;
+
+    // increase the premine cost by the slippage percent
+    const premineCostInWeiWithSlippage = getAmountWithSlippage(
+      premineCostInWei,
+      (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
+      "EXACT_OUT" // as we know the output premine amount
+    );
+    return premineCostInWeiWithSlippage;
+  }
+
+  async getFlaunchingFee(params: {
+    sender: Address;
+    initialPriceParams: HexString;
+    slippagePercent?: number;
+  }) {
+    const readInitialPrice = new ReadInitialPrice(
+      await this.readPositionManagerV1_1.initialPrice(),
+      this.drift
+    );
+    const flaunchingFee = await readInitialPrice.getFlaunchingFee(params);
+
+    // increase the flaunching fee by the slippage percent
+    const flaunchingFeeWithSlippage = getAmountWithSlippage(
+      flaunchingFee,
+      (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
+      "EXACT_OUT"
+    );
+    return flaunchingFeeWithSlippage;
+  }
+
+  /**
+   * Calculates the ETH required to flaunch a token, takes into account the ETH for premine and the flaunching fee
+   */
+  ethRequiredToFlaunch(params: {
+    premineAmount: bigint;
+    initialPriceParams: HexString;
+    slippagePercent?: number;
+  }) {
+    return this.contract.read("calculateFee", {
+      _premineAmount: params.premineAmount ?? 0n,
+      _slippage: params.slippagePercent
+        ? BigInt(params.slippagePercent * 100)
+        : 0n,
+      _initialPriceParams: params.initialPriceParams,
+    });
+  }
+}
+
+/**
  * Extended client for interacting with the FlaunchZap contract with write capabilities
  */
 export class ReadWriteFlaunchZap extends ReadFlaunchZap {
-  chainId: number;
   declare contract: ReadWriteContract<FlaunchZapABI>;
 
   constructor(
@@ -75,28 +147,15 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
     address: Address,
     drift: Drift<ReadWriteAdapter> = createDrift()
   ) {
-    super(address, drift);
-    this.chainId = chainId;
+    super(chainId, address, drift);
   }
 
   /**
-   * Creates a new flaunch with revenue manager configuration
-   * @param params - Parameters for the flaunch with revenue manager
-   * @param params.name - The name of the token
-   * @param params.symbol - The symbol of the token
-   * @param params.tokenUri - The URI containing the token metadata
-   * @param params.fairLaunchPercent - Percentage of total supply to be used in fair launch (0-100)
-   * @param params.fairLaunchDuration - Duration of fair launch in seconds
-   * @param params.initialMarketCapUSD - Initial market cap in USD
-   * @param params.creator - Address of the token creator
-   * @param params.creatorFeeAllocationPercent - Percentage of fees allocated to creator (0-100)
-   * @param params.protocolRecipient - Address to receive protocol fees
-   * @param params.protocolFeePercent - Percentage of fees allocated to protocol (0-100)
-   * @param params.flaunchAt - Optional timestamp when the flaunch should start
-   * @param params.premineAmount - Optional amount of tokens to premine
+   * Flaunches a new token, supports premine
+   * @param params - Parameters for the flaunch
    * @returns Transaction response for the flaunch creation
    */
-  flaunchWithRevenueManager(params: FlaunchWithRevenueManagerParams) {
+  async flaunch(params: FlaunchParams) {
     const initialMCapInUSDCWei = parseUnits(
       params.initialMarketCapUSD.toString(),
       6
@@ -113,42 +172,148 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
     const fairLaunchInBps = BigInt(params.fairLaunchPercent * 100);
     const creatorFeeAllocationInBps = params.creatorFeeAllocationPercent * 100;
 
-    return this.contract.write("flaunch", {
-      _flaunchParams: {
-        name: params.name,
-        symbol: params.symbol,
-        tokenUri: params.tokenUri,
-        initialTokenFairLaunch: (this.TOTAL_SUPPLY * fairLaunchInBps) / 10_000n,
-        fairLaunchDuration: BigInt(params.fairLaunchDuration),
-        premineAmount: params.premineAmount,
-        creator: params.creator,
-        creatorFeeAllocation: creatorFeeAllocationInBps,
-        flaunchAt: params.flaunchAt,
-        initialPriceParams,
-        feeCalculatorParams: "0x",
+    const ethRequired = await this.ethRequiredToFlaunch({
+      premineAmount: params.premineAmount ?? 0n,
+      initialPriceParams,
+      slippagePercent: 5,
+    });
+
+    return this.contract.write(
+      "flaunch",
+      {
+        _flaunchParams: {
+          name: params.name,
+          symbol: params.symbol,
+          tokenUri: params.tokenUri,
+          initialTokenFairLaunch:
+            (this.TOTAL_SUPPLY * fairLaunchInBps) / 10_000n,
+          fairLaunchDuration: BigInt(params.fairLaunchDuration),
+          premineAmount: params.premineAmount ?? 0n,
+          creator: params.creator,
+          creatorFeeAllocation: creatorFeeAllocationInBps,
+          flaunchAt: params.flaunchAt ?? 0n,
+          initialPriceParams,
+          feeCalculatorParams: "0x",
+        },
+        _treasuryManagerParams: {
+          manager: zeroAddress,
+          initializeData: "0x",
+          depositData: "0x",
+        },
+        _whitelistParams: {
+          merkleRoot: "0x",
+          merkleIPFSHash: "",
+          maxTokens: 0n,
+        },
+        _airdropParams: {
+          airdropIndex: 0n,
+          airdropAmount: 0n,
+          airdropEndTime: 0n,
+          merkleRoot: "0x",
+          merkleIPFSHash: "",
+        },
       },
-      _treasuryManagerParams: {
-        manager: params.revenueManagerInstanceAddress,
-        initializeData: "0x",
-        depositData: "0x",
-      },
-      _whitelistParams: {
-        merkleRoot: "0x",
-        merkleIPFSHash: "",
-        maxTokens: 0n,
-      },
-      _airdropParams: {
-        airdropIndex: 0n,
-        airdropAmount: 0n,
-        airdropEndTime: 0n,
-        merkleRoot: "0x",
-        merkleIPFSHash: "",
-      },
+      {
+        value: ethRequired,
+      }
+    );
+  }
+
+  async flaunchIPFS(params: FlaunchIPFSParams) {
+    const tokenUri = await generateTokenUri(params.name, {
+      metadata: params.metadata,
+      pinataConfig: params.pinataConfig,
+    });
+
+    return this.flaunch({
+      ...params,
+      tokenUri,
     });
   }
 
   /**
-   * Creates a new flaunch with revenue manager using metadata stored on IPFS
+   * Flaunches a new token for a revenue manager
+   * @param params - Parameters for the flaunch with revenue manager
+   * @param params.name - The name of the token
+   * @param params.symbol - The symbol of the token
+   * @param params.tokenUri - The URI containing the token metadata
+   * @param params.fairLaunchPercent - Percentage of total supply to be used in fair launch (0-100)
+   * @param params.fairLaunchDuration - Duration of fair launch in seconds
+   * @param params.initialMarketCapUSD - Initial market cap in USD
+   * @param params.creator - Address of the token creator
+   * @param params.creatorFeeAllocationPercent - Percentage of fees allocated to creator (0-100)
+   * @param params.protocolRecipient - Address to receive protocol fees
+   * @param params.protocolFeePercent - Percentage of fees allocated to protocol (0-100)
+   * @param params.flaunchAt - Optional timestamp when the flaunch should start
+   * @param params.premineAmount - Optional amount of tokens to premine
+   * @returns Transaction response for the flaunch creation
+   */
+  async flaunchWithRevenueManager(params: FlaunchWithRevenueManagerParams) {
+    const initialMCapInUSDCWei = parseUnits(
+      params.initialMarketCapUSD.toString(),
+      6
+    );
+    const initialPriceParams = encodeAbiParameters(
+      [
+        {
+          type: "uint256",
+        },
+      ],
+      [initialMCapInUSDCWei]
+    );
+
+    const fairLaunchInBps = BigInt(params.fairLaunchPercent * 100);
+    const creatorFeeAllocationInBps = params.creatorFeeAllocationPercent * 100;
+
+    const ethRequired = await this.ethRequiredToFlaunch({
+      premineAmount: params.premineAmount ?? 0n,
+      initialPriceParams,
+      slippagePercent: 5,
+    });
+
+    return this.contract.write(
+      "flaunch",
+      {
+        _flaunchParams: {
+          name: params.name,
+          symbol: params.symbol,
+          tokenUri: params.tokenUri,
+          initialTokenFairLaunch:
+            (this.TOTAL_SUPPLY * fairLaunchInBps) / 10_000n,
+          fairLaunchDuration: BigInt(params.fairLaunchDuration),
+          premineAmount: params.premineAmount ?? 0n,
+          creator: params.creator,
+          creatorFeeAllocation: creatorFeeAllocationInBps,
+          flaunchAt: params.flaunchAt ?? 0n,
+          initialPriceParams,
+          feeCalculatorParams: "0x",
+        },
+        _treasuryManagerParams: {
+          manager: params.revenueManagerInstanceAddress,
+          initializeData: "0x",
+          depositData: "0x",
+        },
+        _whitelistParams: {
+          merkleRoot: "0x",
+          merkleIPFSHash: "",
+          maxTokens: 0n,
+        },
+        _airdropParams: {
+          airdropIndex: 0n,
+          airdropAmount: 0n,
+          airdropEndTime: 0n,
+          merkleRoot: "0x",
+          merkleIPFSHash: "",
+        },
+      },
+      {
+        value: ethRequired,
+      }
+    );
+  }
+
+  /**
+   * Flaunches a new token for a revenue manager, storing the token metadata on IPFS
    * @param params - Parameters for the flaunch including all revenue manager params and IPFS metadata
    * @returns Promise resolving to the transaction response for the flaunch creation
    */
