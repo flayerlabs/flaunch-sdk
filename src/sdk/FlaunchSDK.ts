@@ -65,7 +65,7 @@ import {
 import { ReadFlaunch } from "../clients/FlaunchClient";
 import { ReadMemecoin } from "../clients/MemecoinClient";
 import { ReadQuoter } from "clients/QuoterClient";
-import { ReadPermit2 } from "clients/Permit2Client";
+import { ReadPermit2, ReadWritePermit2 } from "clients/Permit2Client";
 import {
   ReadFlaunchPositionManagerV1_1,
   ReadWriteFlaunchPositionManagerV1_1,
@@ -462,7 +462,9 @@ export class ReadFlaunchSDK {
       filterByPoolId: params.filterByCoin
         ? await this.poolId(params.filterByCoin, true)
         : undefined,
-      flETHIsCurrencyZero: this.flETHIsCurrencyZero(params.filterByCoin),
+      flETHIsCurrencyZero: params.filterByCoin
+        ? this.flETHIsCurrencyZero(params.filterByCoin)
+        : undefined,
     });
   }
 
@@ -477,7 +479,9 @@ export class ReadFlaunchSDK {
       filterByPoolId: params.filterByCoin
         ? await this.poolId(params.filterByCoin)
         : undefined,
-      flETHIsCurrencyZero: this.flETHIsCurrencyZero(params.filterByCoin),
+      flETHIsCurrencyZero: params.filterByCoin
+        ? this.flETHIsCurrencyZero(params.filterByCoin)
+        : undefined,
     });
   }
 
@@ -1068,6 +1072,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   public readonly readWriteFastFlaunchZap: ReadWriteFastFlaunchZap;
   public readonly readWriteFlaunchZap: ReadWriteFlaunchZap;
   public readonly readWriteTreasuryManagerFactory: ReadWriteTreasuryManagerFactory;
+  public readonly readWritePermit2: ReadWritePermit2;
 
   constructor(chainId: number, drift: Drift<ReadWriteAdapter> = createDrift()) {
     super(chainId, drift);
@@ -1087,6 +1092,10 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     this.readWriteTreasuryManagerFactory = new ReadWriteTreasuryManagerFactory(
       this.chainId,
       TreasuryManagerFactoryAddress[this.chainId],
+      drift
+    );
+    this.readWritePermit2 = new ReadWritePermit2(
+      Permit2Address[this.chainId],
       drift
     );
   }
@@ -1129,7 +1138,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       throw new Error("ManagerDeployed event not found in transaction logs");
     }
 
-    return event.args._manager;
+    return event.args._manager as Address;
   }
 
   /**
@@ -1279,7 +1288,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       sender: sender,
       memecoin: params.coinAddress,
       chainId: this.chainId,
-      referrer: params.referrer,
+      referrer: params.referrer ?? null,
       swapType: params.swapType,
       amountIn: amountIn,
       amountOutMin: amountOutMin,
@@ -1337,7 +1346,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       ethOutMin,
       permitSingle: params.permitSingle,
       signature: params.signature,
-      referrer: params.referrer,
+      referrer: params.referrer ?? null,
       isV1Coin: isV1Coin,
     });
 

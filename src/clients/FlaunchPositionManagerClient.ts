@@ -9,7 +9,7 @@ import {
   HexString,
 } from "@delvtech/drift";
 import { FlaunchPositionManagerAbi } from "../abi/FlaunchPositionManager";
-import { encodeAbiParameters, parseUnits } from "viem";
+import { encodeAbiParameters, parseUnits, zeroAddress } from "viem";
 import { IPFSParams } from "../types";
 import { generateTokenUri } from "helpers/ipfs";
 import { getAmountWithSlippage } from "utils/universalRouter";
@@ -174,9 +174,7 @@ export class ReadFlaunchPositionManager {
           // Get timestamps for each log
           const logsWithTimestamps = await Promise.all(
             [..._logs].reverse().map(async (log) => {
-              const block = await this.drift.getBlock({
-                blockNumber: log.blockNumber,
-              });
+              const block = await this.drift.getBlock(log.blockNumber);
               return {
                 ...log,
                 timestamp: Number(block?.timestamp) * 1_000, // convert to ms for js
@@ -255,9 +253,7 @@ export class ReadFlaunchPositionManager {
           // Get timestamps for each log
           const logsWithTimestamps = await Promise.all(
             [..._logs].reverse().map(async (log): Promise<PoolSwapLog> => {
-              const block = await this.drift.getBlock({
-                blockNumber: log.blockNumber,
-              });
+              const block = await this.drift.getBlock(log.blockNumber);
               const timestamp = Number(block?.timestamp) * 1_000; // convert to ms for js
 
               if (flETHIsCurrencyZero === undefined) {
@@ -426,8 +422,13 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
     const fairLaunchInBps = BigInt(fairLaunchPercent * 100);
     const creatorFeeAllocationInBps = creatorFeeAllocationPercent * 100;
 
+    let sender: Address = zeroAddress;
+    if (this.drift.adapter.getSignerAddress) {
+      sender = await this.drift.adapter.getSignerAddress();
+    }
+
     const flaunchingFee = await this.getFlaunchingFee({
-      sender: await this.drift.adapter.getSignerAddress(),
+      sender,
       initialPriceParams,
       slippagePercent: 5,
     });

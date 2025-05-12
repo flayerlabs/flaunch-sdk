@@ -235,11 +235,11 @@ export const generateTokenUri = async (name: string, params: IPFSParams) => {
     name,
     description: params.metadata.description,
     image: `ipfs://${imageRes.IpfsHash}`,
-    external_link: params.metadata.websiteUrl,
+    external_link: params.metadata.websiteUrl || "",
     collaborators: [],
-    discordUrl: params.metadata.discordUrl,
-    twitterUrl: params.metadata.twitterUrl,
-    telegramUrl: params.metadata.telegramUrl,
+    discordUrl: params.metadata.discordUrl || "",
+    twitterUrl: params.metadata.twitterUrl || "",
+    telegramUrl: params.metadata.telegramUrl || "",
   };
 
   const metadataRes = await uploadJsonToIPFS({

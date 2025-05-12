@@ -51,3 +51,28 @@ export class ReadPermit2 {
     });
   }
 }
+
+export class ReadWritePermit2 extends ReadPermit2 {
+  declare contract: ReadWriteContract<Permit2ABI>;
+
+  constructor(
+    address: Address,
+    drift: Drift<ReadWriteAdapter> = createDrift()
+  ) {
+    super(address, drift);
+  }
+
+  /**
+   * Approves a spender to spend a token via transaction
+   * @param params - The parameters for the approval
+   * @returns The transaction response
+   */
+  approve(params: {
+    token: Address;
+    spender: Address;
+    amount: bigint;
+    expiration: number;
+  }) {
+    return this.contract.write("approve", params);
+  }
+}

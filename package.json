@@ -78,17 +78,17 @@
     "rimraf": "^6.0.1",
     "rollup": "^2.75.6",
     "tslib": "^2.4.0",
-    "typescript": "^5.3.3",
     "typedoc": "^0.25.12",
-    "typedoc-plugin-markdown": "^3.17.1"
+    "typedoc-plugin-markdown": "^3.17.1",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "@uniswap/v3-sdk": "^3.24.1",
     "axios": "^1.8.1",
     "react": "^19.0.0",
-    "viem": "^2.23.2"
+    "viem": "^2.29.2"
   },
   "peerDependencies": {
-    "@delvtech/drift": "0.3.0"
+    "@delvtech/drift": "^0.8.4"
   }
 }

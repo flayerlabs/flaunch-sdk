@@ -41,7 +41,7 @@ export class ReadMemecoin {
    * @returns Promise<string> - The name of the token
    */
   name() {
-    return this.contract.read("name");
+    return this.contract.read("name", {});
   }
 
   /**
