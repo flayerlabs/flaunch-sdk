@@ -59,6 +59,14 @@ pnpm publish
 
 The `pnpm publish` command will automatically run the build script (via prepublishOnly) before publishing.
 
+### 4.
+
+Update the llm docs:
+
+```bash
+pnpm docs:llms
+```
+
 ## Configuration
 
 The versioning and commit message format is configured in the `.npmrc` file:
