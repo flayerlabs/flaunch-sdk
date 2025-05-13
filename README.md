@@ -38,19 +38,19 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 Using pnpm (recommended):
 
 ```bash
-pnpm add @flaunch/sdk @delvtech/drift
+pnpm add @flaunch/sdk
 ```
 
 Using npm:
 
 ```bash
-npm install @flaunch/sdk @delvtech/drift
+npm install @flaunch/sdk
 ```
 
 Using yarn:
 
 ```bash
-yarn add @flaunch/sdk @delvtech/drift
+yarn add @flaunch/sdk
 ```
 
 ## Quick Start
@@ -58,9 +58,8 @@ yarn add @flaunch/sdk @delvtech/drift
 Here's a simple example to get started with reading token metadata:
 
 ```ts
-import { ReadFlaunchSDK } from "@flaunch/sdk";
-import { createDrift } from "@delvtech/drift";
-import { viemAdapter } from "@delvtech/drift-viem";
+import { createFlaunch } from "@flaunch/sdk";
+import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
 
 const publicClient = createPublicClient({
@@ -68,48 +67,31 @@ const publicClient = createPublicClient({
   transport: http(),
 });
 
-const drift = createDrift({
-  adapter: viemAdapter({ publicClient }),
-});
-
-const flaunchRead = new ReadFlaunchSDK(base.id, drift);
+const flaunchRead = createFlaunch({ publicClient });
 const { symbol, name, image } = await flaunchRead.getCoinMetadata(coinAddress);
 // returns: {symbol: "TEST", name: "Test", image: "https://<IMAGE_URL>"}
 ```
 
 ## Usage
 
-The SDK has 2 exports:
+The SDK provides two types of operations:
 
-1. `ReadFlaunchSDK`: public read only operations
-2. `ReadWriteFlaunchSDK`: read and write operations (extends `ReadFlaunchSDK`)
+1. Read operations: Only require a `publicClient`
+2. Write operations: Require both `publicClient` and `walletClient`
 
 ### Read Operations (with Viem)
 
-1. First, install the Viem adapter:
-
-```bash
-pnpm add @delvtech/drift-viem
-```
-
-2. Initialize the SDK for read operations:
-
 ```ts
-import { ReadFlaunchSDK } from "@flaunch/sdk";
-import { createDrift } from "@delvtech/drift";
-import { viemAdapter } from "@delvtech/drift-viem";
-import { base, baseSepolia } from "viem/chains";
+import { createFlaunch } from "@flaunch/sdk";
+import { createPublicClient, http } from "viem";
+import { base } from "viem/chains";
 
 const publicClient = createPublicClient({
   chain: base,
   transport: http("<RPC_URL>"), // "<RPC_URL>" is optional, defaults to public RPC
 });
 
-const drift = createDrift({
-  adapter: viemAdapter({ publicClient }),
-});
-
-const flaunchRead = new ReadFlaunchSDK(base.id, drift);
+const flaunchRead = createFlaunch({ publicClient });
 
 // Read token metadata
 const { symbol, name, image } = await flaunchRead.getCoinMetadata(coinAddress);
@@ -121,25 +103,27 @@ const { symbol, name, image } = await flaunchRead.getCoinMetadata(coinAddress);
 For write operations, you'll need both Viem and Wagmi. Here's how to set it up in a React component:
 
 ```ts
-import { ReadWriteFlaunchSDK } from "@flaunch/sdk";
-import { createDrift } from "@delvtech/drift";
-import { viemAdapter } from "@delvtech/drift-viem";
+import { createFlaunch } from "@flaunch/sdk";
 import { base } from "viem/chains";
 import { useWalletClient } from "wagmi";
 import { useMemo } from "react";
 
 // ... your React component ...
 
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http("<RPC_URL>"), // "<RPC_URL>" is optional, defaults to public RPC
+});
 const { data: walletClient } = useWalletClient();
 
 const flaunchWrite = useMemo(() => {
-  if (walletClient) {
-    const drift = createDrift({
-      adapter: viemAdapter({ publicClient, walletClient }),
-    });
-    return new ReadWriteFlaunchSDK(base.id, drift);
-  }
-}, [walletClient]);
+  if (!publicClient && !walletClient) return null;
+
+  return createFlaunch({
+    publicClient,
+    walletClient,
+  }) as ReadWriteFlaunchSDK;
+}, [publicClient, walletClient]);
 
 // Execute a buy transaction
 const buyTokens = async () => {
