@@ -2,6 +2,27 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.6.0] - 2025-05-13
+
+### Added
+
+- New `ReadWritePermit2` client with direct approval support
+  - Added `approve` function to execute token approvals via transaction
+- Improved TypeScript type safety and null checking
+
+### Changed
+
+- Updated dependency on `@delvtech/drift` from 0.3.0 to ^0.8.4
+- Updated Viem from 2.23.2 to 2.29.2
+- Modified API calls to match latest Drift interfaces
+- Changed TypeScript module resolution to "bundler" with stricter type checking
+- Better handling of optional parameters in metadata uploads
+
+### Fixed
+
+- Improved null checking in functions to prevent TypeScript errors
+- Fixed potential undefined parameter issues when filtering by coin
+
 ## [0.5.1] - 2025-05-09
 
 ### Added
