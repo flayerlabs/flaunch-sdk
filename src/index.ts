@@ -12,6 +12,8 @@ export type {
 } from "./clients/FlaunchPositionManagerClient";
 
 export { ReadFlaunchSDK, ReadWriteFlaunchSDK };
+export { createFlaunch } from "./sdk/factory";
+export type { CreateFlaunchParams } from "./sdk/factory";
 
 export const FlaunchSDK = {
   ReadFlaunchSDK,
