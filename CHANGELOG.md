@@ -2,16 +2,24 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
-## [0.6.0] - 2025-05-13
+## [0.7.0] - 2025-05-14
 
 ### Added
 
-- New `ReadWritePermit2` client with direct approval support
-  - Added `approve` function to execute token approvals via transaction
-- Improved TypeScript type safety and null checking
+- New `createFlaunch` factory function to simplify SDK initialization
+  - Provides a more intuitive way to create SDK instances
+  - Automatically handles Drift setup internally
+  - Type-safe return types based on provided clients
 
 ### Changed
 
+- Removed `@delvtech/drift` as a peer dependency
+  - Now included as a direct dependency
+  - Users no longer need to install it separately
+- Simplified SDK setup process
+  - Reduced boilerplate code for initialization
+  - Better TypeScript type inference
+  - Improved developer experience
 - Updated dependency on `@delvtech/drift` from 0.3.0 to ^0.8.4
 - Updated Viem from 2.23.2 to 2.29.2
 - Modified API calls to match latest Drift interfaces
@@ -22,6 +30,14 @@ All notable changes to the @flaunch/sdk package will be documented in this file.
 
 - Improved null checking in functions to prevent TypeScript errors
 - Fixed potential undefined parameter issues when filtering by coin
+
+## [0.6.0] - 2025-05-13
+
+### Added
+
+- New `ReadWritePermit2` client with direct approval support
+  - Added `approve` function to execute token approvals via transaction
+- Improved TypeScript type safety and null checking
 
 ## [0.5.1] - 2025-05-09
 
