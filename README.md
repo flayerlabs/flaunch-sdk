@@ -103,7 +103,7 @@ const { symbol, name, image } = await flaunchRead.getCoinMetadata(coinAddress);
 For write operations, you'll need both Viem and Wagmi. Here's how to set it up in a React component:
 
 ```ts
-import { createFlaunch } from "@flaunch/sdk";
+import { createFlaunch, ReadWriteFlaunchSDK } from "@flaunch/sdk";
 import { base } from "viem/chains";
 import { useWalletClient } from "wagmi";
 import { useMemo } from "react";
