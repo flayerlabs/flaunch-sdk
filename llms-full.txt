@@ -395,7 +395,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.5.1 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.6.0 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -1054,13 +1054,13 @@ ___
 
 ### pollPoolCreatedNow
 
-▸ **pollPoolCreatedNow**(): `Promise`\<`void`\>
+▸ **pollPoolCreatedNow**(): `undefined` \| `Promise`\<`void`\>
 
 Polls for current pool creation events on V1.1 contracts
 
 Returns
 
-`Promise`\<`void`\>
+`undefined` \| `Promise`\<`void`\>
 
 Current pool creation events or undefined if polling is not available
 
@@ -1068,13 +1068,13 @@ ___
 
 ### pollPoolCreatedNowV1
 
-▸ **pollPoolCreatedNowV1**(): `Promise`\<`void`\>
+▸ **pollPoolCreatedNowV1**(): `undefined` \| `Promise`\<`void`\>
 
 Polls for current pool creation events on V1 contracts
 
 Returns
 
-`Promise`\<`void`\>
+`undefined` \| `Promise`\<`void`\>
 
 Current pool creation events or undefined if polling is not available
 
@@ -1082,13 +1082,13 @@ ___
 
 ### pollPoolSwapNow
 
-▸ **pollPoolSwapNow**(): `Promise`\<`void`\>
+▸ **pollPoolSwapNow**(): `undefined` \| `Promise`\<`void`\>
 
 Polls for current pool swap events on V1.1 contracts
 
 Returns
 
-`Promise`\<`void`\>
+`undefined` \| `Promise`\<`void`\>
 
 Current pool swap events or undefined if polling is not available
 
@@ -1096,13 +1096,13 @@ ___
 
 ### pollPoolSwapNowV1
 
-▸ **pollPoolSwapNowV1**(): `Promise`\<`void`\>
+▸ **pollPoolSwapNowV1**(): `undefined` \| `Promise`\<`void`\>
 
 Polls for current pool swap events on V1 contracts
 
 Returns
 
-`Promise`\<`void`\>
+`undefined` \| `Promise`\<`void`\>
 
 Current pool swap events or undefined if polling is not available
 
@@ -1361,7 +1361,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.5.1 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.6.0 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -1399,6 +1399,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readStateView
 - readWriteFastFlaunchZap
 - readWriteFlaunchZap
+- readWritePermit2
 - readWritePositionManagerV1\_1
 - readWriteTreasuryManagerFactory
 - resolveIPFS
@@ -1650,6 +1651,12 @@ ___
 ### readWriteFlaunchZap
 
 • `Readonly` **readWriteFlaunchZap**: `ReadWriteFlaunchZap`
+
+___
+
+### readWritePermit2
+
+• `Readonly` **readWritePermit2**: `ReadWritePermit2`
 
 ___
 
@@ -2459,13 +2466,13 @@ ___
 
 ### pollPoolCreatedNow
 
-▸ **pollPoolCreatedNow**(): `Promise`\<`void`\>
+▸ **pollPoolCreatedNow**(): `undefined` \| `Promise`\<`void`\>
 
 Polls for current pool creation events on V1.1 contracts
 
 Returns
 
-`Promise`\<`void`\>
+`undefined` \| `Promise`\<`void`\>
 
 Current pool creation events or undefined if polling is not available
 
@@ -2477,13 +2484,13 @@ ___
 
 ### pollPoolCreatedNowV1
 
-▸ **pollPoolCreatedNowV1**(): `Promise`\<`void`\>
+▸ **pollPoolCreatedNowV1**(): `undefined` \| `Promise`\<`void`\>
 
 Polls for current pool creation events on V1 contracts
 
 Returns
 
-`Promise`\<`void`\>
+`undefined` \| `Promise`\<`void`\>
 
 Current pool creation events or undefined if polling is not available
 
@@ -2495,13 +2502,13 @@ ___
 
 ### pollPoolSwapNow
 
-▸ **pollPoolSwapNow**(): `Promise`\<`void`\>
+▸ **pollPoolSwapNow**(): `undefined` \| `Promise`\<`void`\>
 
 Polls for current pool swap events on V1.1 contracts
 
 Returns
 
-`Promise`\<`void`\>
+`undefined` \| `Promise`\<`void`\>
 
 Current pool swap events or undefined if polling is not available
 
@@ -2513,13 +2520,13 @@ ___
 
 ### pollPoolSwapNowV1
 
-▸ **pollPoolSwapNowV1**(): `Promise`\<`void`\>
+▸ **pollPoolSwapNowV1**(): `undefined` \| `Promise`\<`void`\>
 
 Polls for current pool swap events on V1 contracts
 
 Returns
 
-`Promise`\<`void`\>
+`undefined` \| `Promise`\<`void`\>
 
 Current pool swap events or undefined if polling is not available
 
@@ -2915,7 +2922,7 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ---
 
-@flaunch/sdk - v0.5.1 / Exports / PinataConfig
+@flaunch/sdk - v0.6.0 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -2935,9 +2942,9 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ---
 
-@flaunch/sdk - v0.5.1 / Exports
+@flaunch/sdk - v0.6.0 / Exports
 
-# @flaunch/sdk - v0.5.1
+# @flaunch/sdk - v0.6.0
 
 ## Table of contents
 
