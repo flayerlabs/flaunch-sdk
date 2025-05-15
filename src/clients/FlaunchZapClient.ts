@@ -9,7 +9,7 @@ import {
   createDrift,
 } from "@delvtech/drift";
 import { FlaunchZapAbi } from "../abi/FlaunchZap";
-import { parseUnits, zeroAddress } from "viem";
+import { parseUnits, zeroAddress, zeroHash } from "viem";
 import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
 import { IPFSParams } from "../types";
@@ -202,7 +202,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           depositData: "0x",
         },
         _whitelistParams: {
-          merkleRoot: "0x",
+          merkleRoot: zeroHash,
           merkleIPFSHash: "",
           maxTokens: 0n,
         },
@@ -210,7 +210,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           airdropIndex: 0n,
           airdropAmount: 0n,
           airdropEndTime: 0n,
-          merkleRoot: "0x",
+          merkleRoot: zeroHash,
           merkleIPFSHash: "",
         },
       },
@@ -295,7 +295,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           depositData: "0x",
         },
         _whitelistParams: {
-          merkleRoot: "0x",
+          merkleRoot: zeroHash,
           merkleIPFSHash: "",
           maxTokens: 0n,
         },
@@ -303,7 +303,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           airdropIndex: 0n,
           airdropAmount: 0n,
           airdropEndTime: 0n,
-          merkleRoot: "0x",
+          merkleRoot: zeroHash,
           merkleIPFSHash: "",
         },
       },
