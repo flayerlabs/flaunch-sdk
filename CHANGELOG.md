@@ -2,6 +2,13 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.7.1] - 2025-05-15
+
+### Fixed
+
+- Fixed merkle root handling in FlaunchZapClient by using `zeroHash` instead of "0x" for empty bytes32 values
+  - Fixes the error: "AbiEncodingBytesSizeMismatchError: Size of bytes "0x" (bytes0) does not match expected size (bytes32)."
+
 ## [0.7.0] - 2025-05-14
 
 ### Added
