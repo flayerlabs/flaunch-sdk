@@ -36,6 +36,10 @@ export class ReadFairLaunch {
     });
   }
 
+  fairLaunchDuration({ poolId }: { poolId: HexString }) {
+    return 30 * 60; // 30 minutes
+  }
+
   /**
    * Gets information about a fair launch for a specific pool
    * @param poolId - The ID of the pool
