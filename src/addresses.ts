@@ -12,6 +12,11 @@ export const FlaunchPositionManagerV1_1Address: Addresses = {
   [baseSepolia.id]: "0x24347e0dd16357059abfc1b321df354873552fdc",
 };
 
+export const AnyPositionManagerAddress: Addresses = {
+  [base.id]: "0x69a96de474521f7c6c0be3ea0498e5cf2f0565dc",
+  [baseSepolia.id]: "0xe999c5676b0e0f83292074441292f4b3b11d65dc",
+};
+
 export const FLETHAddress: Addresses = {
   [base.id]: "0x000000000D564D5be76f7f0d28fE52605afC7Cf8",
   [baseSepolia.id]: "0x79FC52701cD4BE6f9Ba9aDC94c207DE37e3314eb",

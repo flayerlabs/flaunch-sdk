@@ -51,13 +51,13 @@ export class ReadQuoter {
    * Gets a quote for selling an exact amount of tokens for ETH
    * @param coinAddress - The address of the token to sell
    * @param amountIn - The exact amount of tokens to sell
-   * @param isV1Coin - Optional flag to specify if token is V1. If not provided, V1.1 is assumed
+   * @param positionManagerAddress - The address of the position manager to use
    * @returns Promise<bigint> - The expected amount of ETH to receive
    */
   async getSellQuoteExactInput(
     coinAddress: Address,
     amountIn: bigint,
-    isV1Coin?: boolean
+    positionManagerAddress: Address
   ) {
     const res = await this.contract.simulateWrite("quoteExactInput", {
       params: {
@@ -67,9 +67,7 @@ export class ReadQuoter {
           {
             fee: 0,
             tickSpacing: 60,
-            hooks: isV1Coin
-              ? FlaunchPositionManagerAddress[this.chainId]
-              : FlaunchPositionManagerV1_1Address[this.chainId],
+            hooks: positionManagerAddress,
             hookData: "0x",
             intermediateCurrency: FLETHAddress[this.chainId],
           },
@@ -91,13 +89,13 @@ export class ReadQuoter {
    * Gets a quote for buying tokens with an exact amount of ETH
    * @param coinAddress - The address of the token to buy
    * @param ethIn - The exact amount of ETH to spend
-   * @param isV1Coin - Optional flag to specify if token is V1. If not provided, V1.1 is assumed
+   * @param positionManagerAddress - The address of the position manager to use
    * @returns Promise<bigint> - The expected amount of tokens to receive
    */
   async getBuyQuoteExactInput(
     coinAddress: Address,
     ethIn: bigint,
-    isV1Coin?: boolean
+    positionManagerAddress: Address
   ) {
     const res = await this.contract.simulateWrite("quoteExactInput", {
       params: {
@@ -114,9 +112,7 @@ export class ReadQuoter {
           {
             fee: 0,
             tickSpacing: 60,
-            hooks: isV1Coin
-              ? FlaunchPositionManagerAddress[this.chainId]
-              : FlaunchPositionManagerV1_1Address[this.chainId],
+            hooks: positionManagerAddress,
             hookData: "0x",
             intermediateCurrency: coinAddress,
           },
@@ -131,13 +127,13 @@ export class ReadQuoter {
    * Gets a quote for buying an exact amount of tokens with ETH
    * @param coinAddress - The address of the token to buy
    * @param coinOut - The exact amount of tokens to receive
-   * @param isV1Coin - Optional flag to specify if token is V1. If not provided, V1.1 is assumed
+   * @param positionManagerAddress - The address of the position manager to use
    * @returns Promise<bigint> - The required amount of ETH to spend
    */
   async getBuyQuoteExactOutput(
     coinAddress: Address,
     coinOut: bigint,
-    isV1Coin?: boolean
+    positionManagerAddress: Address
   ) {
     const res = await this.contract.simulateWrite("quoteExactOutput", {
       params: {
@@ -153,9 +149,7 @@ export class ReadQuoter {
             intermediateCurrency: FLETHAddress[this.chainId],
             fee: 0,
             tickSpacing: 60,
-            hooks: isV1Coin
-              ? FlaunchPositionManagerAddress[this.chainId]
-              : FlaunchPositionManagerV1_1Address[this.chainId],
+            hooks: positionManagerAddress,
             hookData: "0x",
           },
         ],

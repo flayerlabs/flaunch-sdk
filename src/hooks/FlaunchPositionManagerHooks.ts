@@ -121,7 +121,7 @@ export function usePoolCreatedEventsV1(
 
   useEffect(() => {
     const setupWatcher = async () => {
-      const cleanup = await flaunch.watchPoolCreatedV1({
+      const cleanup = await flaunch.watchPoolCreated({
         onPoolCreated: ({ logs: newLogs, isFetchingFromStart }) => {
           setIsFetchingFromStart(isFetchingFromStart);
           setLogs((prevLogs) => [...newLogs, ...prevLogs]);
@@ -170,7 +170,7 @@ export function usePoolSwapEventsV1(
 
   useEffect(() => {
     const setupWatcher = async () => {
-      const cleanup = await flaunch.watchPoolSwapV1({
+      const cleanup = await flaunch.watchPoolSwap({
         onPoolSwap: ({ logs: newLogs, isFetchingFromStart }) => {
           setIsFetchingFromStart(isFetchingFromStart);
           setLogs((prevLogs) => [...newLogs, ...prevLogs]);

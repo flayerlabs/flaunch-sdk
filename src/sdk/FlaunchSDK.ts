@@ -36,6 +36,8 @@ import {
   FlaunchV1_1Address,
   FairLaunchV1_1Address,
   TreasuryManagerFactoryAddress,
+  AnyPositionManagerAddress,
+  // V1.1.1 and AnyPositionManager addresses will be imported here when available
 } from "../addresses";
 import {
   ReadFlaunchPositionManager,
@@ -70,6 +72,11 @@ import {
   ReadFlaunchPositionManagerV1_1,
   ReadWriteFlaunchPositionManagerV1_1,
 } from "clients/FlaunchPositionManagerV1_1Client";
+import {
+  AnyFlaunchParams,
+  ReadAnyPositionManager,
+  ReadWriteAnyPositionManager,
+} from "clients/AnyPositionManagerClient";
 import { ReadBidWallV1_1 } from "clients/BidWallV1_1Client";
 import { ReadFairLaunchV1_1 } from "clients/FairLaunchV1_1Client";
 import { ReadFlaunchV1_1 } from "clients/FlaunchV1_1Client";
@@ -100,6 +107,16 @@ import { chainIdToChain } from "helpers";
 import { TreasuryManagerFactoryAbi } from "abi/TreasuryManagerFactory";
 import { ReadMulticall } from "clients/MulticallClient";
 import { MemecoinAbi } from "abi";
+
+/**
+ * Enumeration of Flaunch contract versions
+ */
+export enum FlaunchVersion {
+  V1 = "V1",
+  V1_1 = "V1_1",
+  V1_1_1 = "V1_1_1",
+  ANY = "ANY",
+}
 
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
@@ -147,6 +164,7 @@ export class ReadFlaunchSDK {
   public readonly TICK_SPACING = TICK_SPACING;
   public readonly readPositionManager: ReadFlaunchPositionManager;
   public readonly readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
+  public readonly readAnyPositionManager: ReadAnyPositionManager;
   public readonly readFlaunchZap: ReadFlaunchZap;
   public readonly readPoolManager: ReadPoolManager;
   public readonly readStateView: ReadStateView;
@@ -158,6 +176,15 @@ export class ReadFlaunchSDK {
   public readonly readFlaunchV1_1: ReadFlaunchV1_1;
   public readonly readQuoter: ReadQuoter;
   public readonly readPermit2: ReadPermit2;
+
+  // These properties will be initialized when the clients are available
+  // public readonly readPositionManagerV1_1_1: ReadFlaunchPositionManagerV1_1_1;
+  // public readonly readFairLaunchV1_1_1: ReadFairLaunchV1_1_1;
+  // public readonly readBidWallV1_1_1: ReadBidWallV1_1_1;
+  // public readonly readFlaunchV1_1_1: ReadFlaunchV1_1_1;
+  // public readonly readAnyPositionManager: ReadAnyPositionManager;
+  // public readonly readAnyFlaunch: ReadAnyFlaunch;
+
   public resolveIPFS: (value: string) => string;
 
   constructor(chainId: number, drift: Drift = createDrift()) {
@@ -170,6 +197,10 @@ export class ReadFlaunchSDK {
     );
     this.readPositionManagerV1_1 = new ReadFlaunchPositionManagerV1_1(
       FlaunchPositionManagerV1_1Address[this.chainId],
+      drift
+    );
+    this.readAnyPositionManager = new ReadAnyPositionManager(
+      AnyPositionManagerAddress[this.chainId],
       drift
     );
     this.readFlaunchZap = new ReadFlaunchZap(
@@ -212,24 +243,96 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Checks if a given coin address is a valid Flaunch coin (either V1 or V1.1)
+   * Checks if a given coin address is a valid Flaunch coin (supports all versions)
    * @param coinAddress - The address of the coin to check
    * @returns Promise<boolean> - True if the coin is valid, false otherwise
    */
   async isValidCoin(coinAddress: Address) {
     return (
       (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) ||
-      (await this.readPositionManager.isValidCoin(coinAddress))
+      (await this.readPositionManager.isValidCoin(coinAddress)) ||
+      (await this.readAnyPositionManager.isValidCoin(coinAddress))
     );
   }
 
   /**
-   * Checks if a given coin address is a V1 Flaunch coin
+   * Determines the version of a Flaunch coin
    * @param coinAddress - The address of the coin to check
-   * @returns Promise<boolean> - True if the coin is V1, false if V1.1
+   * @returns Promise<FlaunchVersion> - The version of the coin
    */
-  async isV1Coin(coinAddress: Address): Promise<boolean> {
-    return this.readPositionManager.isValidCoin(coinAddress);
+  async getCoinVersion(coinAddress: Address): Promise<FlaunchVersion> {
+    if (await this.readPositionManager.isValidCoin(coinAddress)) {
+      return FlaunchVersion.V1;
+    } else if (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) {
+      return FlaunchVersion.V1_1;
+    } else if (await this.readAnyPositionManager.isValidCoin(coinAddress)) {
+      return FlaunchVersion.ANY;
+    }
+
+    throw new Error(`Unknown coin version for address: ${coinAddress}`);
+  }
+
+  /**
+   * Gets the position manager address for a given version
+   * @param version - The version to get the position manager address for
+   */
+  getPositionManager(version: FlaunchVersion) {
+    switch (version) {
+      case FlaunchVersion.V1:
+        return this.readPositionManager;
+      case FlaunchVersion.V1_1:
+        return this.readPositionManagerV1_1;
+      case FlaunchVersion.ANY:
+        return this.readAnyPositionManager;
+      default:
+        return this.readPositionManagerV1_1;
+    }
+  }
+
+  /**
+   * Gets the fair launch address for a given version
+   * @param version - The version to get the fair launch address for
+   */
+  getFairLaunch(version: FlaunchVersion) {
+    switch (version) {
+      case FlaunchVersion.V1:
+        return this.readFairLaunch;
+      case FlaunchVersion.V1_1:
+        return this.readFairLaunchV1_1;
+      case FlaunchVersion.ANY:
+        return this.readFairLaunchV1_1;
+      default:
+        return this.readFairLaunchV1_1;
+    }
+  }
+
+  /**
+   * Gets the bid wall address for a given version
+   * @param version - The version to get the bid wall address for
+   */
+  getBidWall(version: FlaunchVersion) {
+    switch (version) {
+      case FlaunchVersion.V1:
+        return this.readBidWall;
+      case FlaunchVersion.V1_1:
+        return this.readBidWallV1_1;
+      case FlaunchVersion.ANY:
+        return this.readBidWallV1_1;
+      default:
+        return this.readBidWallV1_1;
+    }
+  }
+
+  getPositionManagerAddress(version: FlaunchVersion) {
+    return this.getPositionManager(version).contract.address;
+  }
+
+  getFairLaunchAddress(version: FlaunchVersion) {
+    return this.getFairLaunch(version).contract.address;
+  }
+
+  getBidWallAddress(version: FlaunchVersion) {
+    return this.getBidWall(version).contract.address;
   }
 
   /**
@@ -408,29 +511,32 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Watches for pool creation events on V1 contracts
+   * Watches for pool creation events
    * @param params - Parameters for watching pool creation
+   * @param version - Version of Flaunch to use (defaults to V1_1)
    * @returns Subscription to pool creation events
    */
-  watchPoolCreatedV1(params: WatchPoolCreatedParams) {
-    return this.readPositionManager.watchPoolCreated(params);
+  watchPoolCreated(
+    params: WatchPoolCreatedParams,
+    version: FlaunchVersion = FlaunchVersion.V1_1
+  ) {
+    return version === FlaunchVersion.V1
+      ? this.readPositionManager.watchPoolCreated(params)
+      : this.readPositionManagerV1_1.watchPoolCreated(params);
   }
 
   /**
-   * Watches for pool creation events on V1.1 contracts
-   * @param params - Parameters for watching pool creation
-   * @returns Subscription to pool creation events
-   */
-  watchPoolCreated(params: WatchPoolCreatedParams) {
-    return this.readPositionManagerV1_1.watchPoolCreated(params);
-  }
-
-  /**
-   * Polls for current pool creation events on V1 contracts
+   * Polls for current pool creation events
+   * @param version - Version of Flaunch to use (defaults to V1_1)
    * @returns Current pool creation events or undefined if polling is not available
    */
-  pollPoolCreatedNowV1() {
-    const poll = this.readPositionManager.pollPoolCreatedNow;
+  pollPoolCreatedNow(version: FlaunchVersion = FlaunchVersion.V1_1) {
+    const positionManager =
+      version === FlaunchVersion.V1
+        ? this.readPositionManager
+        : this.readPositionManagerV1_1;
+
+    const poll = positionManager.pollPoolCreatedNow;
     if (!poll) {
       return undefined;
     }
@@ -439,28 +545,24 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Polls for current pool creation events on V1.1 contracts
-   * @returns Current pool creation events or undefined if polling is not available
-   */
-  pollPoolCreatedNow() {
-    const poll = this.readPositionManagerV1_1.pollPoolCreatedNow;
-    if (!poll) {
-      return undefined;
-    }
-
-    return poll();
-  }
-
-  /**
-   * Watches for pool swap events on V1 contracts
+   * Watches for pool swap events
    * @param params - Parameters for watching pool swaps including optional coin filter
+   * @param version - Version of Flaunch to use (defaults to V1_1)
    * @returns Subscription to pool swap events
    */
-  async watchPoolSwapV1(params: WatchPoolSwapParams) {
-    return this.readPositionManager.watchPoolSwap<boolean>({
+  async watchPoolSwap(
+    params: WatchPoolSwapParams,
+    version: FlaunchVersion = FlaunchVersion.V1_1
+  ) {
+    const positionManager =
+      version === FlaunchVersion.V1
+        ? this.readPositionManager
+        : this.readPositionManagerV1_1;
+
+    return positionManager.watchPoolSwap<boolean>({
       ...params,
       filterByPoolId: params.filterByCoin
-        ? await this.poolId(params.filterByCoin, true)
+        ? await this.poolId(params.filterByCoin, version)
         : undefined,
       flETHIsCurrencyZero: params.filterByCoin
         ? this.flETHIsCurrencyZero(params.filterByCoin)
@@ -469,41 +571,17 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Watches for pool swap events on V1.1 contracts
-   * @param params - Parameters for watching pool swaps including optional coin filter
-   * @returns Subscription to pool swap events
-   */
-  async watchPoolSwap(params: WatchPoolSwapParams) {
-    return this.readPositionManagerV1_1.watchPoolSwap<boolean>({
-      ...params,
-      filterByPoolId: params.filterByCoin
-        ? await this.poolId(params.filterByCoin)
-        : undefined,
-      flETHIsCurrencyZero: params.filterByCoin
-        ? this.flETHIsCurrencyZero(params.filterByCoin)
-        : undefined,
-    });
-  }
-
-  /**
-   * Polls for current pool swap events on V1 contracts
+   * Polls for current pool swap events
+   * @param version - Version of Flaunch to use (defaults to V1_1)
    * @returns Current pool swap events or undefined if polling is not available
    */
-  pollPoolSwapNowV1() {
-    const poll = this.readPositionManager.pollPoolSwapNow;
-    if (!poll) {
-      return undefined;
-    }
+  pollPoolSwapNow(version: FlaunchVersion = FlaunchVersion.V1_1) {
+    const positionManager =
+      version === FlaunchVersion.V1
+        ? this.readPositionManager
+        : this.readPositionManagerV1_1;
 
-    return poll();
-  }
-
-  /**
-   * Polls for current pool swap events on V1.1 contracts
-   * @returns Current pool swap events or undefined if polling is not available
-   */
-  pollPoolSwapNow() {
-    const poll = this.readPositionManagerV1_1.pollPoolSwapNow;
+    const poll = positionManager.pollPoolSwapNow;
     if (!poll) {
       return undefined;
     }
@@ -523,14 +601,13 @@ export class ReadFlaunchSDK {
   /**
    * Gets the current tick for a given coin's pool
    * @param coinAddress - The address of the coin
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will be determined automatically
    * @returns Promise<number> - The current tick of the pool
    */
-  async currentTick(coinAddress: Address, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
-    const poolId = await this.poolId(coinAddress, isV1Coin);
+  async currentTick(coinAddress: Address, version?: FlaunchVersion) {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
+    const poolId = await this.poolId(coinAddress, coinVersion);
 
     const poolState = await this.readStateView.poolSlot0({ poolId });
     return poolState.tick;
@@ -539,15 +616,14 @@ export class ReadFlaunchSDK {
   /**
    * Calculates the coin price in ETH based on the current tick
    * @param coinAddress - The address of the coin
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will be determined automatically
    * @returns Promise<string> - The price of the coin in ETH with 18 decimals precision
    */
-  async coinPriceInETH(coinAddress: Address, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
+  async coinPriceInETH(coinAddress: Address, version?: FlaunchVersion) {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
     const isFLETHZero = this.flETHIsCurrencyZero(coinAddress);
-    const currentTick = await this.currentTick(coinAddress, isV1Coin);
+    const currentTick = await this.currentTick(coinAddress, coinVersion);
 
     const price = Math.pow(1.0001, currentTick);
 
@@ -579,84 +655,74 @@ export class ReadFlaunchSDK {
   /**
    * Gets information about a fair launch for a given coin
    * @param coinAddress - The address of the coin
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will be determined automatically
    * @returns Fair launch information from the appropriate contract version
    */
-  async fairLaunchInfo(coinAddress: Address, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
-    const poolId = await this.poolId(coinAddress, isV1Coin);
-    return isV1Coin
-      ? this.readFairLaunch.fairLaunchInfo({ poolId })
-      : this.readFairLaunchV1_1.fairLaunchInfo({ poolId });
+  async fairLaunchInfo(coinAddress: Address, version?: FlaunchVersion) {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
+    const poolId = await this.poolId(coinAddress, coinVersion);
+    return this.getFairLaunch(coinVersion).fairLaunchInfo({ poolId });
   }
 
   /**
    * Checks if a fair launch is currently active for a given coin
    * @param coinAddress - The address of the coin
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will be determined automatically
    * @returns Promise<boolean> - True if fair launch is active, false otherwise
    */
-  async isFairLaunchActive(coinAddress: Address, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
-    const poolId = await this.poolId(coinAddress, isV1Coin);
-    return isV1Coin
-      ? this.readFairLaunch.isFairLaunchActive({ poolId })
-      : this.readFairLaunchV1_1.isFairLaunchActive({ poolId });
+  async isFairLaunchActive(coinAddress: Address, version?: FlaunchVersion) {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
+    const poolId = await this.poolId(coinAddress, coinVersion);
+    return this.getFairLaunch(coinVersion).isFairLaunchActive({ poolId });
   }
 
   /**
    * Gets the duration of a fair launch for a given coin
    * @param coinAddress - The address of the coin
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will be determined automatically
    * @returns Promise<number> - The duration in seconds (30 minutes for V1, variable for V1.1)
    */
-  async fairLaunchDuration(coinAddress: Address, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
-    if (isV1Coin) {
-      return 30 * 60; // 30 minutes
-    }
+  async fairLaunchDuration(coinAddress: Address, version?: FlaunchVersion) {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
 
-    const poolId = await this.poolId(coinAddress, isV1Coin);
-    return this.readFairLaunchV1_1.fairLaunchDuration({ poolId });
+    const poolId = await this.poolId(coinAddress, coinVersion);
+    return this.getFairLaunch(coinVersion).fairLaunchDuration({ poolId });
   }
 
   /**
    * Gets the initial tick for a fair launch
    * @param coinAddress - The address of the coin
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will be determined automatically
    * @returns Promise<number> - The initial tick value
    */
-  async initialTick(coinAddress: Address, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
-    const poolId = await this.poolId(coinAddress, isV1Coin);
+  async initialTick(coinAddress: Address, version?: FlaunchVersion) {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
 
-    const fairLaunchInfo = isV1Coin
-      ? await this.readFairLaunch.fairLaunchInfo({ poolId })
-      : await this.readFairLaunchV1_1.fairLaunchInfo({ poolId });
+    const poolId = await this.poolId(coinAddress, coinVersion);
+
+    const fairLaunchInfo = await this.getFairLaunch(coinVersion).fairLaunchInfo(
+      { poolId }
+    );
     return fairLaunchInfo.initialTick;
   }
 
   /**
    * Gets information about the ETH-only position in a fair launch
    * @param coinAddress - The address of the coin
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will be determined automatically
    * @returns Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
    */
-  async fairLaunchETHOnlyPosition(coinAddress: Address, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
-    const poolId = await this.poolId(coinAddress, isV1Coin);
-    const initialTick = await this.initialTick(coinAddress, isV1Coin);
-    const currentTick = await this.currentTick(coinAddress, isV1Coin);
+  async fairLaunchETHOnlyPosition(
+    coinAddress: Address,
+    version?: FlaunchVersion
+  ) {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
+    const poolId = await this.poolId(coinAddress, coinVersion);
+    const initialTick = await this.initialTick(coinAddress, coinVersion);
+    const currentTick = await this.currentTick(coinAddress, coinVersion);
     const isFLETHZero = this.flETHIsCurrencyZero(coinAddress);
 
     let tickLower: number;
@@ -680,9 +746,7 @@ export class ReadFlaunchSDK {
 
     const { liquidity } = await this.readStateView.positionInfo({
       poolId,
-      owner: isV1Coin
-        ? FairLaunchAddress[this.chainId]
-        : FairLaunchV1_1Address[this.chainId],
+      owner: this.getFairLaunchAddress(coinVersion),
       tickLower,
       tickUpper,
       salt: "",
@@ -710,16 +774,18 @@ export class ReadFlaunchSDK {
   /**
    * Gets information about the coin-only position in a fair launch
    * @param coinAddress - The address of the coin
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will be determined automatically
    * @returns Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
    */
-  async fairLaunchCoinOnlyPosition(coinAddress: Address, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
-    const poolId = await this.poolId(coinAddress, isV1Coin);
-    const initialTick = await this.initialTick(coinAddress, isV1Coin);
-    const currentTick = await this.currentTick(coinAddress, isV1Coin);
+  async fairLaunchCoinOnlyPosition(
+    coinAddress: Address,
+    version?: FlaunchVersion
+  ) {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
+    const poolId = await this.poolId(coinAddress, coinVersion);
+    const initialTick = await this.initialTick(coinAddress, coinVersion);
+    const currentTick = await this.currentTick(coinAddress, coinVersion);
     const isFLETHZero = this.flETHIsCurrencyZero(coinAddress);
 
     let tickLower: number;
@@ -743,9 +809,7 @@ export class ReadFlaunchSDK {
 
     const { liquidity } = await this.readStateView.positionInfo({
       poolId,
-      owner: isV1Coin
-        ? FairLaunchAddress[this.chainId]
-        : FairLaunchV1_1Address[this.chainId],
+      owner: this.getFairLaunchAddress(coinVersion),
       tickLower,
       tickUpper,
       salt: "",
@@ -773,26 +837,23 @@ export class ReadFlaunchSDK {
   /**
    * Gets information about the bid wall position for a coin
    * @param coinAddress - The address of the coin
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will be determined automatically
    * @returns Promise<{flETHAmount: bigint, coinAmount: bigint, pendingEth: bigint, tickLower: number, tickUpper: number}> - Bid wall position details
    */
-  async bidWallPosition(coinAddress: Address, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
-    const poolId = await this.poolId(coinAddress, isV1Coin);
+  async bidWallPosition(coinAddress: Address, version?: FlaunchVersion) {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
+    const poolId = await this.poolId(coinAddress, coinVersion);
     const isFLETHZero = this.flETHIsCurrencyZero(coinAddress);
 
     const {
       amount0_: amount0,
       amount1_: amount1,
       pendingEth_: pendingEth,
-    } = isV1Coin
-      ? await this.readBidWall.position({ poolId })
-      : await this.readBidWallV1_1.position({ poolId });
-    const { tickLower, tickUpper } = isV1Coin
-      ? await this.readBidWall.poolInfo({ poolId })
-      : await this.readBidWallV1_1.poolInfo({ poolId });
+    } = await this.getBidWall(coinVersion).position({ poolId });
+    const { tickLower, tickUpper } = await this.getBidWall(
+      coinVersion
+    ).poolInfo({ poolId });
 
     const [flETHAmount, coinAmount] = isFLETHZero
       ? [amount0, amount1]
@@ -896,22 +957,26 @@ export class ReadFlaunchSDK {
   /**
    * Gets the pool ID for a given coin
    * @param coinAddress - The address of the coin
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use
    * @returns Promise<string> - The pool ID
    */
-  async poolId(coinAddress: Address, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
+  async poolId(coinAddress: Address, version?: FlaunchVersion) {
+    let hookAddress: Address;
+
+    if (version) {
+      hookAddress = this.getPositionManagerAddress(version);
+    } else {
+      const coinVersion = await this.getCoinVersion(coinAddress);
+      hookAddress = this.getPositionManagerAddress(coinVersion);
     }
+
     return getPoolId(
       orderPoolKey({
         currency0: FLETHAddress[this.chainId],
         currency1: coinAddress,
         fee: 0,
         tickSpacing: 60,
-        hooks: isV1Coin
-          ? FlaunchPositionManagerAddress[this.chainId]
-          : FlaunchPositionManagerV1_1Address[this.chainId],
+        hooks: hookAddress,
       })
     );
   }
@@ -984,21 +1049,20 @@ export class ReadFlaunchSDK {
    * Gets a quote for selling an exact amount of tokens for ETH
    * @param coinAddress - The address of the token to sell
    * @param amountIn - The exact amount of tokens to sell
-   * @param isV1Coin - Optional flag to specify if token is V1. If not provided, V1.1 is assumed
+   * @param version - Optional specific version to use
    * @returns Promise<bigint> - The expected amount of ETH to receive
    */
   async getSellQuoteExactInput(
     coinAddress: Address,
     amountIn: bigint,
-    isV1Coin?: boolean
+    version?: FlaunchVersion
   ) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
     return this.readQuoter.getSellQuoteExactInput(
       coinAddress,
       amountIn,
-      isV1Coin
+      this.getPositionManagerAddress(coinVersion)
     );
   }
 
@@ -1006,21 +1070,20 @@ export class ReadFlaunchSDK {
    * Gets a quote for buying tokens with an exact amount of ETH
    * @param coinAddress - The address of the token to buy
    * @param ethIn - The exact amount of ETH to spend
-   * @param isV1Coin - Optional flag to specify if token is V1. If not provided, V1.1 is assumed
+   * @param version - Optional specific version to use
    * @returns Promise<bigint> - The expected amount of tokens to receive
    */
   async getBuyQuoteExactInput(
     coinAddress: Address,
     amountIn: bigint,
-    isV1Coin?: boolean
+    version?: FlaunchVersion
   ) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
     return this.readQuoter.getBuyQuoteExactInput(
       coinAddress,
       amountIn,
-      isV1Coin
+      this.getPositionManagerAddress(coinVersion)
     );
   }
 
@@ -1028,21 +1091,20 @@ export class ReadFlaunchSDK {
    * Gets a quote for buying an exact amount of tokens with ETH
    * @param coinAddress - The address of the token to buy
    * @param coinOut - The exact amount of tokens to receive
-   * @param isV1Coin - Optional flag to specify if token is V1. If not provided, V1.1 is assumed
+   * @param version - Optional specific version to use
    * @returns Promise<bigint> - The required amount of ETH to spend
    */
   async getBuyQuoteExactOutput(
     coinAddress: Address,
     amountOut: bigint,
-    isV1Coin?: boolean
+    version?: FlaunchVersion
   ) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(coinAddress);
-    }
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
     return this.readQuoter.getBuyQuoteExactOutput(
       coinAddress,
       amountOut,
-      isV1Coin
+      this.getPositionManagerAddress(coinVersion)
     );
   }
 
@@ -1069,6 +1131,7 @@ export class ReadFlaunchSDK {
 export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   declare drift: Drift<ReadWriteAdapter>;
   public readonly readWritePositionManagerV1_1: ReadWriteFlaunchPositionManagerV1_1;
+  public readonly readWriteAnyPositionManager: ReadWriteAnyPositionManager;
   public readonly readWriteFastFlaunchZap: ReadWriteFastFlaunchZap;
   public readonly readWriteFlaunchZap: ReadWriteFlaunchZap;
   public readonly readWriteTreasuryManagerFactory: ReadWriteTreasuryManagerFactory;
@@ -1077,7 +1140,11 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   constructor(chainId: number, drift: Drift<ReadWriteAdapter> = createDrift()) {
     super(chainId, drift);
     this.readWritePositionManagerV1_1 = new ReadWriteFlaunchPositionManagerV1_1(
-      FlaunchPositionManagerAddress[this.chainId],
+      FlaunchPositionManagerV1_1Address[this.chainId],
+      drift
+    );
+    this.readWriteAnyPositionManager = new ReadWriteAnyPositionManager(
+      AnyPositionManagerAddress[this.chainId],
       drift
     );
     this.readWriteFastFlaunchZap = new ReadWriteFastFlaunchZap(
@@ -1142,7 +1209,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   /**
-   * Creates a new Flaunch on V1.1
+   * Creates a new Flaunch on the specified version
    * @param params - Parameters for creating the Flaunch
    * @returns Transaction response
    */
@@ -1151,7 +1218,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   /**
-   * Creates a new Flaunch on V1.1 with IPFS metadata
+   * Creates a new Flaunch with IPFS metadata and optional version specification
    * @param params - Parameters for creating the Flaunch with IPFS data
    * @returns Transaction response
    */
@@ -1190,6 +1257,15 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   /**
+   * Creates a new Flaunch with AnyPositionManager for external coins
+   * @param params - Parameters for creating the Flaunch with AnyPositionManager
+   * @returns Transaction response
+   */
+  anyFlaunch(params: AnyFlaunchParams) {
+    return this.readWriteAnyPositionManager.flaunch(params);
+  }
+
+  /**
    * Gets the balance of a specific coin for the connected wallet
    * @param coinAddress - The address of the coin to check
    * @returns Promise<bigint> - The balance of the coin
@@ -1204,13 +1280,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   /**
    * Buys a coin with ETH
    * @param params - Parameters for buying the coin including amount, slippage, and referrer
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will determine automatically
    * @returns Transaction response for the buy operation
    */
-  async buyCoin(params: BuyCoinParams, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(params.coinAddress);
-    }
+  async buyCoin(params: BuyCoinParams, version?: FlaunchVersion) {
+    const coinVersion =
+      version || (await this.getCoinVersion(params.coinAddress));
+
     const sender = await this.drift.getSignerAddress();
 
     let amountIn: bigint | undefined;
@@ -1223,11 +1299,12 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     if (params.swapType === "EXACT_IN") {
       amountIn = params.amountIn;
       if (params.amountOutMin === undefined) {
+        // Currently only V1 and V1.1 are supported in the Quoter
         amountOutMin = getAmountWithSlippage(
           await this.readQuoter.getBuyQuoteExactInput(
             params.coinAddress,
             amountIn,
-            isV1Coin
+            this.getPositionManagerAddress(coinVersion)
           ),
           (params.slippagePercent / 100).toFixed(18).toString(),
           params.swapType
@@ -1238,11 +1315,12 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     } else {
       amountOut = params.amountOut;
       if (params.amountInMax === undefined) {
+        // Currently only V1 and V1.1 are supported in the Quoter
         amountInMax = getAmountWithSlippage(
           await this.readQuoter.getBuyQuoteExactOutput(
             params.coinAddress,
             amountOut,
-            isV1Coin
+            this.getPositionManagerAddress(coinVersion)
           ),
           (params.slippagePercent / 100).toFixed(18).toString(),
           params.swapType
@@ -1252,6 +1330,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       }
     }
 
+    // When UniversalRouter supports isAny parameter, add it here
     const { commands, inputs } = ethToMemecoin({
       sender: sender,
       memecoin: params.coinAddress,
@@ -1262,7 +1341,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       amountOutMin: amountOutMin,
       amountOut: amountOut,
       amountInMax: amountInMax,
-      isV1Coin: isV1Coin,
+      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
     });
 
     return this.drift.adapter.write({
@@ -1280,23 +1359,24 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   /**
    * Sells a coin for ETH
    * @param params - Parameters for selling the coin including amount, slippage, permit data, and referrer
-   * @param isV1Coin - Optional flag to specify if coin is V1. If not provided, will be determined automatically
+   * @param version - Optional specific version to use. If not provided, will determine automatically
    * @returns Transaction response for the sell operation
    */
-  async sellCoin(params: SellCoinParams, isV1Coin?: boolean) {
-    if (isV1Coin === undefined) {
-      isV1Coin = await this.isV1Coin(params.coinAddress);
-    }
+  async sellCoin(params: SellCoinParams, version?: FlaunchVersion) {
+    const coinVersion =
+      version || (await this.getCoinVersion(params.coinAddress));
+
     let ethOutMin: bigint;
 
     await this.readQuoter.contract.cache.clear();
 
     if (params.ethOutMin === undefined) {
+      // Currently only V1 and V1.1 are supported in the Quoter
       ethOutMin = getAmountWithSlippage(
         await this.readQuoter.getSellQuoteExactInput(
           params.coinAddress,
           params.amountIn,
-          isV1Coin
+          this.getPositionManagerAddress(coinVersion)
         ),
         (params.slippagePercent / 100).toFixed(18).toString(),
         "EXACT_IN"
@@ -1307,6 +1387,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
 
     await this.readPermit2.contract.cache.clear();
 
+    // When UniversalRouter supports isAny parameter, add it here
     const { commands, inputs } = memecoinToEthWithPermit2({
       chainId: this.chainId,
       memecoin: params.coinAddress,
@@ -1315,7 +1396,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       permitSingle: params.permitSingle,
       signature: params.signature,
       referrer: params.referrer ?? null,
-      isV1Coin: isV1Coin,
+      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
     });
 
     return this.drift.write({
