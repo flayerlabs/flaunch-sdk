@@ -1160,38 +1160,6 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   /**
-   * Creates a new fast Flaunch on V1.1
-   * @param params - Parameters for creating the fast Flaunch
-   * @throws Error if FastFlaunchZap is not deployed on the current chain
-   * @returns Transaction response
-   */
-  fastFlaunch(params: FastFlaunchParams) {
-    if (this.readWriteFastFlaunchZap.contract.address === zeroAddress) {
-      throw new Error(
-        `FastFlaunchZap is not deployed at chainId: ${this.chainId}`
-      );
-    }
-
-    return this.readWriteFastFlaunchZap.fastFlaunch(params);
-  }
-
-  /**
-   * Creates a new fast Flaunch on V1.1 with IPFS metadata
-   * @param params - Parameters for creating the fast Flaunch with IPFS data
-   * @throws Error if FastFlaunchZap is not deployed on the current chain
-   * @returns Transaction response
-   */
-  fastFlaunchIPFS(params: FastFlaunchIPFSParams) {
-    if (this.readWriteFastFlaunchZap.contract.address === zeroAddress) {
-      throw new Error(
-        `FastFlaunchZap is not deployed at chainId: ${this.chainId}`
-      );
-    }
-
-    return this.readWriteFastFlaunchZap.fastFlaunchIPFS(params);
-  }
-
-  /**
    * Creates a new Flaunch with revenue manager configuration
    * @param params - Parameters for creating the Flaunch with revenue manager
    * @throws Error if FlaunchZap is not deployed on the current chain

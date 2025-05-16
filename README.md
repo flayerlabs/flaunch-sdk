@@ -186,19 +186,19 @@ if (allowance < parseEther(coinAmount)) {
 
 ### Flaunching a Memecoin
 
-"Fast" Flaunch your own memecoin with default parameters:
+Flaunch your own memecoin with default parameters:
 
-- $10k starting market cap
-- 60% of the total supply goes to the fair launch
-- 80% dev / 20% community split
-
-_**Fast Flaunch doesn't incur any protocol fees!**_
+_**Flaunches below $10k market caps don't incur any protocol fees!**_
 
 ```ts
-const hash = await flaunchWrite.fastFlaunchIPFS({
+const hash = await flaunchWrite.flaunchIPFS({
   name: "Test",
   symbol: "TEST",
+  fairLaunchPercent: 60, // 60%
+  fairLaunchDuration: 30 * 60, // 30 mins
+  initialMarketCapUSD: 10_000, // $10k
   creator: address,
+  creatorFeeAllocationPercent: 80, // 80% to creator, 20% to community
   metadata: {
     base64Image: imageData, // refer to the code below, on how to generate this base64Image
     description: "Your memecoin description",
