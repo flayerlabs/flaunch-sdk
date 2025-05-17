@@ -15,6 +15,7 @@ export type {
 export { ReadFlaunchSDK, ReadWriteFlaunchSDK };
 export { createFlaunch } from "./sdk/factory";
 export type { CreateFlaunchParams } from "./sdk/factory";
+export { createDrift } from "./sdk/drift";
 
 export const FlaunchSDK = {
   ReadFlaunchSDK,

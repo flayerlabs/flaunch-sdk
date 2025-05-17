@@ -1,4 +1,4 @@
-import { createDrift } from "@delvtech/drift";
+import { createDrift } from "./drift";
 import { viemAdapter } from "@delvtech/drift-viem";
 import type { PublicClient, WalletClient } from "viem";
 import { ReadFlaunchSDK, ReadWriteFlaunchSDK } from "./FlaunchSDK";
@@ -46,14 +46,7 @@ export function createFlaunch(params: CreateFlaunchParams) {
   return walletClient
     ? new ReadWriteFlaunchSDK(
         chainId,
-        createDrift({
-          adapter: viemAdapter({ publicClient, walletClient }),
-        })
+        createDrift({ publicClient, walletClient })
       )
-    : new ReadFlaunchSDK(
-        chainId,
-        createDrift({
-          adapter: viemAdapter({ publicClient }),
-        })
-      );
+    : new ReadFlaunchSDK(chainId, createDrift({ publicClient }));
 }
