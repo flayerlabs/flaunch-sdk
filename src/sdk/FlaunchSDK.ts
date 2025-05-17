@@ -659,7 +659,7 @@ export class ReadFlaunchSDK {
     version?: FlaunchVersion;
     drift?: Drift;
   }) {
-    const totalSupply = 10_000_000_000;
+    const totalSupply = 100_000_000_000; // 100 Billion tokens
     const priceInUSD = await this.coinPriceInUSD({
       coinAddress,
       version,
