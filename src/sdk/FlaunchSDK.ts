@@ -16,6 +16,7 @@ import {
   type GetContractEventsReturnType,
   encodeAbiParameters,
   parseUnits,
+  parseEther,
 } from "viem";
 import axios from "axios";
 import {
@@ -86,7 +87,7 @@ import {
   ReadWriteRevenueManager,
 } from "clients/RevenueManagerClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
-import { CoinMetadata } from "types";
+import { CoinMetadata, FlaunchVersion } from "types";
 import {
   getPoolId,
   orderPoolKey,
@@ -107,16 +108,6 @@ import { chainIdToChain } from "helpers";
 import { TreasuryManagerFactoryAbi } from "abi/TreasuryManagerFactory";
 import { ReadMulticall } from "clients/MulticallClient";
 import { MemecoinAbi } from "abi";
-
-/**
- * Enumeration of Flaunch contract versions
- */
-export enum FlaunchVersion {
-  V1 = "V1",
-  V1_1 = "V1_1",
-  V1_1_1 = "V1_1_1",
-  ANY = "ANY",
-}
 
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
@@ -637,6 +628,45 @@ export class ReadFlaunchSDK {
     return ethPerCoin.toFixed(18);
   }
 
+  /**
+   * Calculates the coin price in USD based on the current ETH/USDC price
+   * @param coinAddress - The address of the coin
+   * @param version - Optional specific version to use. If not provided, will be determined automatically
+   * @returns Promise<string> - The price of the coin in USD with 2 decimal precision
+   */
+  async coinPriceInUSD({
+    coinAddress,
+    version,
+    drift,
+  }: {
+    coinAddress: Address;
+    version?: FlaunchVersion;
+    drift?: Drift;
+  }) {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+
+    const ethPerCoin = await this.coinPriceInETH(coinAddress, coinVersion);
+    const ethPrice = await this.getETHUSDCPrice(drift);
+    return (parseFloat(ethPerCoin) * ethPrice).toFixed(2);
+  }
+
+  async coinMarketCapInUSD({
+    coinAddress,
+    version,
+    drift,
+  }: {
+    coinAddress: Address;
+    version?: FlaunchVersion;
+    drift?: Drift;
+  }) {
+    const totalSupply = 10_000_000_000;
+    const priceInUSD = await this.coinPriceInUSD({
+      coinAddress,
+      version,
+      drift,
+    });
+    return (parseFloat(priceInUSD) * totalSupply).toFixed(2);
+  }
   /**
    * Gets the current ETH/USDC price
    * @param drift - Optional drift instance to get price from Base Mainnet
