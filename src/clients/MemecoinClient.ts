@@ -61,6 +61,14 @@ export class ReadMemecoin {
   }
 
   /**
+   * Gets the total supply of the token
+   * @returns Promise<bigint> - The total supply
+   */
+  totalSupply() {
+    return this.contract.read("totalSupply");
+  }
+
+  /**
    * Gets the token balance of a specific user
    * @param user - The address of the user to check
    * @returns Promise<bigint> - The token balance
