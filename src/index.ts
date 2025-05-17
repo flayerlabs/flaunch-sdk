@@ -4,6 +4,7 @@ export * from "./abi";
 export * from "./addresses";
 export * from "./helpers";
 export * from "./utils/univ4";
+export * from "./types";
 
 export type {
   BuySwapLog,

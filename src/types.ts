@@ -35,3 +35,13 @@ export interface IPFSParams {
   };
   pinataConfig: PinataConfig;
 }
+
+/**
+ * Enumeration of Flaunch contract versions
+ */
+export enum FlaunchVersion {
+  V1 = "V1",
+  V1_1 = "V1_1",
+  V1_1_1 = "V1_1_1",
+  ANY = "ANY",
+}
