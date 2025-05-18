@@ -9,6 +9,7 @@ import {
   createDrift,
 } from "@delvtech/drift";
 import { InitialPriceAbi } from "../abi/InitialPrice";
+import { zeroAddress } from "viem";
 
 export type InitialPriceABI = typeof InitialPriceAbi;
 
@@ -37,6 +38,17 @@ export class ReadInitialPrice {
     return this.contract.read("getFlaunchingFee", {
       _sender: params.sender,
       _initialPriceParams: params.initialPriceParams,
+    });
+  }
+
+  getSqrtPriceX96(params: {
+    isFLETHZero: boolean;
+    initialPriceParams: HexString;
+  }) {
+    return this.contract.read("getSqrtPriceX96", {
+      _flipped: !params.isFLETHZero,
+      _initialPriceParams: params.initialPriceParams,
+      0: zeroAddress, // sender
     });
   }
 }

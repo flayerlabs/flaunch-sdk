@@ -86,6 +86,7 @@ import {
   ReadRevenueManager,
   ReadWriteRevenueManager,
 } from "clients/RevenueManagerClient";
+import { ReadInitialPrice } from "clients/InitialPriceClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
 import { CoinMetadata, FlaunchVersion } from "types";
 import {
@@ -667,6 +668,7 @@ export class ReadFlaunchSDK {
     });
     return (parseFloat(priceInUSD) * totalSupply).toFixed(2);
   }
+
   /**
    * Gets the current ETH/USDC price
    * @param drift - Optional drift instance to get price from Base Mainnet
@@ -680,6 +682,35 @@ export class ReadFlaunchSDK {
     }
 
     return this.readQuoter.getETHUSDCPrice();
+  }
+
+  async initialSqrtPriceX96(params: {
+    coinAddress: Address;
+    initialMarketCapUSD: number;
+  }) {
+    const initialMCapInUSDCWei = parseUnits(
+      params.initialMarketCapUSD.toString(),
+      6
+    );
+    const initialPriceParams = encodeAbiParameters(
+      [
+        {
+          type: "uint256",
+        },
+      ],
+      [initialMCapInUSDCWei]
+    );
+    const isFLETHZero = this.flETHIsCurrencyZero(params.coinAddress);
+
+    const initialPrice = new ReadInitialPrice(
+      await this.readPositionManagerV1_1.initialPrice(),
+      this.drift
+    );
+
+    return initialPrice.getSqrtPriceX96({
+      isFLETHZero,
+      initialPriceParams,
+    });
   }
 
   /**
