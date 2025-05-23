@@ -38,6 +38,7 @@ import {
   TreasuryManagerFactoryAddress,
   AnyPositionManagerAddress,
   FeeEscrowAddress,
+  ReferralEscrowAddress,
   // V1.1.1 and AnyPositionManager addresses will be imported here when available
 } from "../addresses";
 import {
@@ -75,6 +76,10 @@ import {
   ReadWriteAnyPositionManager,
 } from "clients/AnyPositionManagerClient";
 import { ReadFeeEscrow, ReadWriteFeeEscrow } from "clients/FeeEscrowClient";
+import {
+  ReadReferralEscrow,
+  ReadWriteReferralEscrow,
+} from "clients/ReferralEscrowClient";
 import { ReadBidWallV1_1 } from "clients/BidWallV1_1Client";
 import { ReadFairLaunchV1_1 } from "clients/FairLaunchV1_1Client";
 import { ReadFlaunchV1_1 } from "clients/FlaunchV1_1Client";
@@ -155,6 +160,7 @@ export class ReadFlaunchSDK {
   public readonly readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
   public readonly readAnyPositionManager: ReadAnyPositionManager;
   public readonly readFeeEscrow: ReadFeeEscrow;
+  public readonly readReferralEscrow: ReadReferralEscrow;
   public readonly readFlaunchZap: ReadFlaunchZap;
   public readonly readPoolManager: ReadPoolManager;
   public readonly readStateView: ReadStateView;
@@ -195,6 +201,10 @@ export class ReadFlaunchSDK {
     );
     this.readFeeEscrow = new ReadFeeEscrow(
       FeeEscrowAddress[this.chainId],
+      drift
+    );
+    this.readReferralEscrow = new ReadReferralEscrow(
+      ReferralEscrowAddress[this.chainId],
       drift
     );
     this.readFlaunchZap = new ReadFlaunchZap(
@@ -947,6 +957,16 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets the balance of a recipient for a given coin
+   * @param recipient - The address of the recipient to check
+   * @param coinAddress - The address of the coin
+   * @returns Promise<bigint> - The balance of the recipient
+   */
+  referralBalance(recipient: Address, coinAddress: Address) {
+    return this.readReferralEscrow.allocations(recipient, coinAddress);
+  }
+
+  /**
    * Gets the claimable balance of ETH for the recipient from a revenue manager
    * @param params - Parameters for checking the balance
    * @param params.revenueManagerAddress - The address of the revenue manager
@@ -1212,6 +1232,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   public readonly readWritePositionManagerV1_1: ReadWriteFlaunchPositionManagerV1_1;
   public readonly readWriteAnyPositionManager: ReadWriteAnyPositionManager;
   public readonly readWriteFeeEscrow: ReadWriteFeeEscrow;
+  public readonly readWriteReferralEscrow: ReadWriteReferralEscrow;
   public readonly readWriteFlaunchZap: ReadWriteFlaunchZap;
   public readonly readWriteTreasuryManagerFactory: ReadWriteTreasuryManagerFactory;
   public readonly readWritePermit2: ReadWritePermit2;
@@ -1232,6 +1253,10 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     );
     this.readWriteFeeEscrow = new ReadWriteFeeEscrow(
       FeeEscrowAddress[this.chainId],
+      drift
+    );
+    this.readWriteReferralEscrow = new ReadWriteReferralEscrow(
+      ReferralEscrowAddress[this.chainId],
       drift
     );
     this.readWriteFlaunchZap = new ReadWriteFlaunchZap(
@@ -1551,6 +1576,16 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     } else {
       return this.readWriteFeeEscrow.withdrawFees(recipient);
     }
+  }
+
+  /**
+   * Claims the referral balance for a given recipient
+   * @param coins - The addresses of the coins to claim
+   * @param recipient - The address of the recipient to claim the balance for
+   * @returns Transaction response
+   */
+  claimReferralBalance(coins: Address[], recipient: Address) {
+    return this.readWriteReferralEscrow.claimTokens(coins, recipient);
   }
 
   /**

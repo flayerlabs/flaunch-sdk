@@ -23,6 +23,11 @@ export const FeeEscrowAddress: Addresses = {
   [baseSepolia.id]: "0x73E27908b7d35A9251a54799A8ef4C17e4ED9FF9",
 };
 
+export const ReferralEscrowAddress: Addresses = {
+  [base.id]: "0xBD39c7Be6D98BD1a3e4Ad482baF99d738947fE55",
+  [baseSepolia.id]: "0x0651cadC51b6a13CB3465C134A22154a2b633779",
+};
+
 export const FLETHAddress: Addresses = {
   [base.id]: "0x000000000D564D5be76f7f0d28fE52605afC7Cf8",
   [baseSepolia.id]: "0x79FC52701cD4BE6f9Ba9aDC94c207DE37e3314eb",
