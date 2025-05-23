@@ -2,6 +2,7 @@ import { base, baseSepolia } from "viem/chains";
 import { Addresses, PoolKey } from "./types";
 import { zeroAddress } from "viem";
 
+// doesn't use FeeEscrow
 export const FlaunchPositionManagerAddress: Addresses = {
   [base.id]: "0x51Bba15255406Cfe7099a42183302640ba7dAFDC",
   [baseSepolia.id]: "0x9A7059cA00dA92843906Cb4bCa1D005cE848AFdC",
@@ -15,6 +16,11 @@ export const FlaunchPositionManagerV1_1Address: Addresses = {
 export const AnyPositionManagerAddress: Addresses = {
   [base.id]: "0x69a96de474521f7c6c0be3ea0498e5cf2f0565dc",
   [baseSepolia.id]: "0xe999c5676b0e0f83292074441292f4b3b11d65dc",
+};
+
+export const FeeEscrowAddress: Addresses = {
+  [base.id]: "0x72e6f7948b1B1A343B477F39aAbd2E35E6D27dde",
+  [baseSepolia.id]: "0x73E27908b7d35A9251a54799A8ef4C17e4ED9FF9",
 };
 
 export const FLETHAddress: Addresses = {
