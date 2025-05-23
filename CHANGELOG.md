@@ -2,6 +2,35 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.8.0] - 2025-05-23
+
+### Added
+
+- New `AnyPositionManager` for external coin support with associated client and ABI
+- Fee Escrow system for managing creator revenue with `creatorRevenue` and `withdrawCreatorRevenue` functions
+- Referral Escrow system with `referralBalance` and `claimReferralBalance` functions
+- Coin price and market cap in USD with `coinPriceInUSD` and `coinMarketCapInUSD` functions
+- `createDrift` helper function for type-safe Drift SDK instantiation
+- `initialSqrtPriceX96` function for calculating initial launch price
+- `FlaunchVersion` enum (V1, V1.1, ANY) for better version management
+
+### Changed
+
+- Refactored SDK to support multiple contract versions with `getCoinVersion` and version-aware helper functions
+- Updated Quoter and Universal Router to use `positionManagerAddress` instead of `isV1Coin`
+- Modified `createFlaunch` factory to use new `createDrift` helper
+- Added `totalSupply()` method to `ReadMemecoin` client
+- Updated README to reflect new launch parameters and deprecations
+
+### Deprecated
+
+- `fastFlaunch` and `fastFlaunchIPFS` methods in favor of `flaunch` or `flaunchIPFS`
+
+### Fixed
+
+- Consistent total supply calculation for market cap
+- Improved handling of position manager versions
+
 ## [0.7.1] - 2025-05-15
 
 ### Fixed
