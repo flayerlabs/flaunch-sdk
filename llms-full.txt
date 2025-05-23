@@ -186,19 +186,19 @@ if (allowance < parseEther(coinAmount)) {
 
 ### Flaunching a Memecoin
 
-"Fast" Flaunch your own memecoin with default parameters:
+Flaunch your own memecoin with default parameters:
 
-- $10k starting market cap
-- 60% of the total supply goes to the fair launch
-- 80% dev / 20% community split
-
-_**Fast Flaunch doesn't incur any protocol fees!**_
+_**Flaunches below $10k market caps don't incur any protocol fees!**_
 
 ```ts
-const hash = await flaunchWrite.fastFlaunchIPFS({
+const hash = await flaunchWrite.flaunchIPFS({
   name: "Test",
   symbol: "TEST",
+  fairLaunchPercent: 60, // 60%
+  fairLaunchDuration: 30 * 60, // 30 mins
+  initialMarketCapUSD: 10_000, // $10k
   creator: address,
+  creatorFeeAllocationPercent: 80, // 80% to creator, 20% to community
   metadata: {
     base64Image: imageData, // refer to the code below, on how to generate this base64Image
     description: "Your memecoin description",
@@ -379,7 +379,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.7.1 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.8.0 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -402,10 +402,12 @@ Base class for interacting with Flaunch protocol in read-only mode
 - TICK\_SPACING
 - chainId
 - drift
+- readAnyPositionManager
 - readBidWall
 - readBidWallV1\_1
 - readFairLaunch
 - readFairLaunchV1\_1
+- readFeeEscrow
 - readFlaunch
 - readFlaunchV1\_1
 - readFlaunchZap
@@ -414,13 +416,17 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readPositionManager
 - readPositionManagerV1\_1
 - readQuoter
+- readReferralEscrow
 - readStateView
 - resolveIPFS
 
 ### Methods
 
 - bidWallPosition
+- coinMarketCapInUSD
 - coinPriceInETH
+- coinPriceInUSD
+- creatorRevenue
 - currentTick
 - ethRequiredToFlaunch
 - fairLaunchCoinOnlyPosition
@@ -428,24 +434,30 @@ Base class for interacting with Flaunch protocol in read-only mode
 - fairLaunchETHOnlyPosition
 - fairLaunchInfo
 - flETHIsCurrencyZero
+- getBidWall
+- getBidWallAddress
 - getBuyQuoteExactInput
 - getBuyQuoteExactOutput
 - getCoinMetadata
 - getCoinMetadataFromTokenId
 - getCoinMetadataFromTokenIds
+- getCoinVersion
 - getETHUSDCPrice
+- getFairLaunch
+- getFairLaunchAddress
 - getFlaunchingFee
+- getPositionManager
+- getPositionManagerAddress
 - getSellQuoteExactInput
+- initialSqrtPriceX96
 - initialTick
 - isFairLaunchActive
-- isV1Coin
 - isValidCoin
 - pollPoolCreatedNow
-- pollPoolCreatedNowV1
 - pollPoolSwapNow
-- pollPoolSwapNowV1
 - poolId
 - positionInfo
+- referralBalance
 - revenueManagerAllTokensByCreator
 - revenueManagerAllTokensInManager
 - revenueManagerBalance
@@ -453,9 +465,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerTokensCount
 - setIPFSResolver
 - watchPoolCreated
-- watchPoolCreatedV1
 - watchPoolSwap
-- watchPoolSwapV1
 
 ## Constructors
 
@@ -494,6 +504,12 @@ ___
 
 ___
 
+### readAnyPositionManager
+
+• `Readonly` **readAnyPositionManager**: `ReadAnyPositionManager`
+
+___
+
 ### readBidWall
 
 • `Readonly` **readBidWall**: `ReadBidWall`
@@ -515,6 +531,12 @@ ___
 ### readFairLaunchV1\_1
 
 • `Readonly` **readFairLaunchV1\_1**: `ReadFairLaunchV1_1`
+
+___
+
+### readFeeEscrow
+
+• `Readonly` **readFeeEscrow**: `ReadFeeEscrow`
 
 ___
 
@@ -566,6 +588,12 @@ ___
 
 ___
 
+### readReferralEscrow
+
+• `Readonly` **readReferralEscrow**: `ReadReferralEscrow`
+
+___
+
 ### readStateView
 
 • `Readonly` **readStateView**: `ReadStateView`
@@ -594,7 +622,7 @@ Type declaration
 
 ### bidWallPosition
 
-▸ **bidWallPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `pendingEth`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+▸ **bidWallPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `pendingEth`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
 Gets information about the bid wall position for a coin
 
@@ -603,7 +631,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -613,9 +641,28 @@ Promise<{flETHAmount: bigint, coinAmount: bigint, pendingEth: bigint, tickLower:
 
 ___
 
+### coinMarketCapInUSD
+
+▸ **coinMarketCapInUSD**(`«destructured»`): `Promise`\<`string`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `drift?` | `Drift` |
+| › `version?` | `FlaunchVersion` |
+
+Returns
+
+`Promise`\<`string`\>
+
+___
+
 ### coinPriceInETH
 
-▸ **coinPriceInETH**(`coinAddress`, `isV1Coin?`): `Promise`\<`string`\>
+▸ **coinPriceInETH**(`coinAddress`, `version?`): `Promise`\<`string`\>
 
 Calculates the coin price in ETH based on the current tick
 
@@ -624,7 +671,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -634,9 +681,53 @@ Promise<string> - The price of the coin in ETH with 18 decimals precision
 
 ___
 
+### coinPriceInUSD
+
+▸ **coinPriceInUSD**(`«destructured»`): `Promise`\<`string`\>
+
+Calculates the coin price in USD based on the current ETH/USDC price
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `drift?` | `Drift` |
+| › `version?` | `FlaunchVersion` |
+
+Returns
+
+`Promise`\<`string`\>
+
+Promise<string> - The price of the coin in USD with 2 decimal precision
+
+___
+
+### creatorRevenue
+
+▸ **creatorRevenue**(`creator`, `isV1?`): `Promise`\<`bigint`\>
+
+Gets the ETH balance for the creator to claim
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `creator` | \`0x$\{string}\` | The address of the creator to check |
+| `isV1?` | `boolean` | Optional boolean to check the balance for V1. V1.1 & AnyPositionManager use the same FeeEscrow contract |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+The balance of the creator
+
+___
+
 ### currentTick
 
-▸ **currentTick**(`coinAddress`, `isV1Coin?`): `Promise`\<`number`\>
+▸ **currentTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
 Gets the current tick for a given coin's pool
 
@@ -645,7 +736,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -680,7 +771,7 @@ ___
 
 ### fairLaunchCoinOnlyPosition
 
-▸ **fairLaunchCoinOnlyPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+▸ **fairLaunchCoinOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
 Gets information about the coin-only position in a fair launch
 
@@ -689,7 +780,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -701,7 +792,7 @@ ___
 
 ### fairLaunchDuration
 
-▸ **fairLaunchDuration**(`coinAddress`, `isV1Coin?`): `Promise`\<`number` \| `bigint`\>
+▸ **fairLaunchDuration**(`coinAddress`, `version?`): `Promise`\<`number` \| `bigint`\>
 
 Gets the duration of a fair launch for a given coin
 
@@ -710,7 +801,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -722,7 +813,7 @@ ___
 
 ### fairLaunchETHOnlyPosition
 
-▸ **fairLaunchETHOnlyPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+▸ **fairLaunchETHOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
 Gets information about the ETH-only position in a fair launch
 
@@ -731,7 +822,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -743,7 +834,7 @@ ___
 
 ### fairLaunchInfo
 
-▸ **fairLaunchInfo**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `closed`: `boolean` ; `endsAt`: `bigint` ; `initialTick`: `number` ; `revenue`: `bigint` ; `startsAt`: `bigint` ; `supply`: `bigint`  }\>
+▸ **fairLaunchInfo**(`coinAddress`, `version?`): `Promise`\<\{ `closed`: `boolean` ; `endsAt`: `bigint` ; `initialTick`: `number` ; `revenue`: `bigint` ; `startsAt`: `bigint` ; `supply`: `bigint`  }\>
 
 Gets information about a fair launch for a given coin
 
@@ -752,7 +843,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -782,9 +873,43 @@ boolean - True if flETH is currency0, false otherwise
 
 ___
 
+### getBidWall
+
+▸ **getBidWall**(`version`): `ReadBidWall` \| `ReadBidWallV1_1`
+
+Gets the bid wall address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the bid wall address for |
+
+Returns
+
+`ReadBidWall` \| `ReadBidWallV1_1`
+
+___
+
+### getBidWallAddress
+
+▸ **getBidWallAddress**(`version`): \`0x$\{string}\`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `version` | `FlaunchVersion` |
+
+Returns
+
+\`0x$\{string}\`
+
+___
+
 ### getBuyQuoteExactInput
 
-▸ **getBuyQuoteExactInput**(`coinAddress`, `amountIn`, `isV1Coin?`): `Promise`\<`bigint`\>
+▸ **getBuyQuoteExactInput**(`coinAddress`, `amountIn`, `version?`): `Promise`\<`bigint`\>
 
 Gets a quote for buying tokens with an exact amount of ETH
 
@@ -794,7 +919,7 @@ Parameters
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
 | `amountIn` | `bigint` | - |
-| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+| `version?` | `FlaunchVersion` | Optional specific version to use |
 
 Returns
 
@@ -806,7 +931,7 @@ ___
 
 ### getBuyQuoteExactOutput
 
-▸ **getBuyQuoteExactOutput**(`coinAddress`, `amountOut`, `isV1Coin?`): `Promise`\<`bigint`\>
+▸ **getBuyQuoteExactOutput**(`coinAddress`, `amountOut`, `version?`): `Promise`\<`bigint`\>
 
 Gets a quote for buying an exact amount of tokens with ETH
 
@@ -816,7 +941,7 @@ Parameters
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
 | `amountOut` | `bigint` | - |
-| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+| `version?` | `FlaunchVersion` | Optional specific version to use |
 
 Returns
 
@@ -889,6 +1014,26 @@ An array of objects containing coin address, name, symbol, description, and soci
 
 ___
 
+### getCoinVersion
+
+▸ **getCoinVersion**(`coinAddress`): `Promise`\<`FlaunchVersion`\>
+
+Determines the version of a Flaunch coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
+
+Returns
+
+`Promise`\<`FlaunchVersion`\>
+
+Promise<FlaunchVersion> - The version of the coin
+
+___
+
 ### getETHUSDCPrice
 
 ▸ **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
@@ -906,6 +1051,40 @@ Returns
 `Promise`\<`number`\>
 
 Promise<number> - The current ETH/USDC price
+
+___
+
+### getFairLaunch
+
+▸ **getFairLaunch**(`version`): `ReadFairLaunch` \| `ReadFairLaunchV1_1`
+
+Gets the fair launch address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the fair launch address for |
+
+Returns
+
+`ReadFairLaunch` \| `ReadFairLaunchV1_1`
+
+___
+
+### getFairLaunchAddress
+
+▸ **getFairLaunchAddress**(`version`): \`0x$\{string}\`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `version` | `FlaunchVersion` |
+
+Returns
+
+\`0x$\{string}\`
 
 ___
 
@@ -932,9 +1111,43 @@ Promise<bigint> - The flaunching fee
 
 ___
 
+### getPositionManager
+
+▸ **getPositionManager**(`version`): `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadAnyPositionManager`
+
+Gets the position manager address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the position manager address for |
+
+Returns
+
+`ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadAnyPositionManager`
+
+___
+
+### getPositionManagerAddress
+
+▸ **getPositionManagerAddress**(`version`): \`0x$\{string}\`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `version` | `FlaunchVersion` |
+
+Returns
+
+\`0x$\{string}\`
+
+___
+
 ### getSellQuoteExactInput
 
-▸ **getSellQuoteExactInput**(`coinAddress`, `amountIn`, `isV1Coin?`): `Promise`\<`bigint`\>
+▸ **getSellQuoteExactInput**(`coinAddress`, `amountIn`, `version?`): `Promise`\<`bigint`\>
 
 Gets a quote for selling an exact amount of tokens for ETH
 
@@ -944,7 +1157,7 @@ Parameters
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the token to sell |
 | `amountIn` | `bigint` | The exact amount of tokens to sell |
-| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+| `version?` | `FlaunchVersion` | Optional specific version to use |
 
 Returns
 
@@ -954,9 +1167,27 @@ Promise<bigint> - The expected amount of ETH to receive
 
 ___
 
+### initialSqrtPriceX96
+
+▸ **initialSqrtPriceX96**(`params`): `Promise`\<`bigint`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.coinAddress` | \`0x$\{string}\` |
+| `params.initialMarketCapUSD` | `number` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+___
+
 ### initialTick
 
-▸ **initialTick**(`coinAddress`, `isV1Coin?`): `Promise`\<`number`\>
+▸ **initialTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
 Gets the initial tick for a fair launch
 
@@ -965,7 +1196,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -977,7 +1208,7 @@ ___
 
 ### isFairLaunchActive
 
-▸ **isFairLaunchActive**(`coinAddress`, `isV1Coin?`): `Promise`\<`boolean`\>
+▸ **isFairLaunchActive**(`coinAddress`, `version?`): `Promise`\<`boolean`\>
 
 Checks if a fair launch is currently active for a given coin
 
@@ -986,7 +1217,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -996,31 +1227,11 @@ Promise<boolean> - True if fair launch is active, false otherwise
 
 ___
 
-### isV1Coin
-
-▸ **isV1Coin**(`coinAddress`): `Promise`\<`boolean`\>
-
-Checks if a given coin address is a V1 Flaunch coin
-
-Parameters
-
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
-
-Returns
-
-`Promise`\<`boolean`\>
-
-Promise<boolean> - True if the coin is V1, false if V1.1
-
-___
-
 ### isValidCoin
 
 ▸ **isValidCoin**(`coinAddress`): `Promise`\<`boolean`\>
 
-Checks if a given coin address is a valid Flaunch coin (either V1 or V1.1)
+Checks if a given coin address is a valid Flaunch coin (supports all versions)
 
 Parameters
 
@@ -1038,23 +1249,15 @@ ___
 
 ### pollPoolCreatedNow
 
-▸ **pollPoolCreatedNow**(): `undefined` \| `Promise`\<`void`\>
+▸ **pollPoolCreatedNow**(`version?`): `undefined` \| `Promise`\<`void`\>
 
-Polls for current pool creation events on V1.1 contracts
+Polls for current pool creation events
 
-Returns
+Parameters
 
-`undefined` \| `Promise`\<`void`\>
-
-Current pool creation events or undefined if polling is not available
-
-___
-
-### pollPoolCreatedNowV1
-
-▸ **pollPoolCreatedNowV1**(): `undefined` \| `Promise`\<`void`\>
-
-Polls for current pool creation events on V1 contracts
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | `FlaunchVersion.V1_1` | Version of Flaunch to use (defaults to V1_1) |
 
 Returns
 
@@ -1066,23 +1269,15 @@ ___
 
 ### pollPoolSwapNow
 
-▸ **pollPoolSwapNow**(): `undefined` \| `Promise`\<`void`\>
+▸ **pollPoolSwapNow**(`version?`): `undefined` \| `Promise`\<`void`\>
 
-Polls for current pool swap events on V1.1 contracts
+Polls for current pool swap events
 
-Returns
+Parameters
 
-`undefined` \| `Promise`\<`void`\>
-
-Current pool swap events or undefined if polling is not available
-
-___
-
-### pollPoolSwapNowV1
-
-▸ **pollPoolSwapNowV1**(): `undefined` \| `Promise`\<`void`\>
-
-Polls for current pool swap events on V1 contracts
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | `FlaunchVersion.V1_1` | Version of Flaunch to use (defaults to V1_1) |
 
 Returns
 
@@ -1094,7 +1289,7 @@ ___
 
 ### poolId
 
-▸ **poolId**(`coinAddress`, `isV1Coin?`): `Promise`\<\`0x$\{string}\`\>
+▸ **poolId**(`coinAddress`, `version?`): `Promise`\<\`0x$\{string}\`\>
 
 Gets the pool ID for a given coin
 
@@ -1103,7 +1298,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use |
 
 Returns
 
@@ -1130,6 +1325,27 @@ Returns
 `Promise`\<\{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  } \| \{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  }\>
 
 Position information from the state view contract
+
+___
+
+### referralBalance
+
+▸ **referralBalance**(`recipient`, `coinAddress`): `Promise`\<`bigint`\>
+
+Gets the balance of a recipient for a given coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `recipient` | \`0x$\{string}\` | The address of the recipient to check |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The balance of the recipient
 
 ___
 
@@ -1265,35 +1481,16 @@ ___
 
 ### watchPoolCreated
 
-▸ **watchPoolCreated**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
+▸ **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
 
-Watches for pool creation events on V1.1 contracts
-
-Parameters
-
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `WatchPoolCreatedParams` | Parameters for watching pool creation |
-
-Returns
-
-`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
-
-Subscription to pool creation events
-
-___
-
-### watchPoolCreatedV1
-
-▸ **watchPoolCreatedV1**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
-
-Watches for pool creation events on V1 contracts
+Watches for pool creation events
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `WatchPoolCreatedParams` | Parameters for watching pool creation |
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `params` | `WatchPoolCreatedParams` | `undefined` | Parameters for watching pool creation |
+| `version` | `FlaunchVersion` | `FlaunchVersion.V1_1` | Version of Flaunch to use (defaults to V1_1) |
 
 Returns
 
@@ -1305,35 +1502,16 @@ ___
 
 ### watchPoolSwap
 
-▸ **watchPoolSwap**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+▸ **watchPoolSwap**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
 
-Watches for pool swap events on V1.1 contracts
-
-Parameters
-
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `WatchPoolSwapParams` | Parameters for watching pool swaps including optional coin filter |
-
-Returns
-
-`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
-
-Subscription to pool swap events
-
-___
-
-### watchPoolSwapV1
-
-▸ **watchPoolSwapV1**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
-
-Watches for pool swap events on V1 contracts
+Watches for pool swap events
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `WatchPoolSwapParams` | Parameters for watching pool swaps including optional coin filter |
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `params` | `WatchPoolSwapParams` | `undefined` | Parameters for watching pool swaps including optional coin filter |
+| `version` | `FlaunchVersion` | `FlaunchVersion.V1_1` | Version of Flaunch to use (defaults to V1_1) |
 
 Returns
 
@@ -1345,7 +1523,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.7.1 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.8.0 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -1368,10 +1546,12 @@ Base class for interacting with Flaunch protocol in read-only mode
 - TICK\_SPACING
 - chainId
 - drift
+- readAnyPositionManager
 - readBidWall
 - readBidWallV1\_1
 - readFairLaunch
 - readFairLaunchV1\_1
+- readFeeEscrow
 - readFlaunch
 - readFlaunchV1\_1
 - readFlaunchZap
@@ -1380,20 +1560,29 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readPositionManager
 - readPositionManagerV1\_1
 - readQuoter
+- readReferralEscrow
 - readStateView
-- readWriteFastFlaunchZap
+- readWriteAnyPositionManager
+- readWriteFeeEscrow
 - readWriteFlaunchZap
 - readWritePermit2
+- readWritePositionManager
 - readWritePositionManagerV1\_1
+- readWriteReferralEscrow
 - readWriteTreasuryManagerFactory
 - resolveIPFS
 
 ### Methods
 
+- anyFlaunch
 - bidWallPosition
 - buyCoin
+- claimReferralBalance
 - coinBalance
+- coinMarketCapInUSD
 - coinPriceInETH
+- coinPriceInUSD
+- creatorRevenue
 - currentTick
 - deployRevenueManager
 - ethRequiredToFlaunch
@@ -1401,33 +1590,37 @@ Base class for interacting with Flaunch protocol in read-only mode
 - fairLaunchDuration
 - fairLaunchETHOnlyPosition
 - fairLaunchInfo
-- fastFlaunch
-- fastFlaunchIPFS
 - flETHIsCurrencyZero
 - flaunch
 - flaunchIPFS
 - flaunchIPFSWithRevenueManager
 - flaunchWithRevenueManager
+- getBidWall
+- getBidWallAddress
 - getBuyQuoteExactInput
 - getBuyQuoteExactOutput
 - getCoinMetadata
 - getCoinMetadataFromTokenId
 - getCoinMetadataFromTokenIds
+- getCoinVersion
 - getETHUSDCPrice
+- getFairLaunch
+- getFairLaunchAddress
 - getFlaunchingFee
 - getPermit2AllowanceAndNonce
 - getPermit2TypedData
+- getPositionManager
+- getPositionManagerAddress
 - getSellQuoteExactInput
+- initialSqrtPriceX96
 - initialTick
 - isFairLaunchActive
-- isV1Coin
 - isValidCoin
 - pollPoolCreatedNow
-- pollPoolCreatedNowV1
 - pollPoolSwapNow
-- pollPoolSwapNowV1
 - poolId
 - positionInfo
+- referralBalance
 - revenueManagerAllTokensByCreator
 - revenueManagerAllTokensInManager
 - revenueManagerBalance
@@ -1439,9 +1632,8 @@ Base class for interacting with Flaunch protocol in read-only mode
 - sellCoin
 - setIPFSResolver
 - watchPoolCreated
-- watchPoolCreatedV1
 - watchPoolSwap
-- watchPoolSwapV1
+- withdrawCreatorRevenue
 
 ## Constructors
 
@@ -1496,6 +1688,16 @@ ReadFlaunchSDK.drift
 
 ___
 
+### readAnyPositionManager
+
+• `Readonly` **readAnyPositionManager**: `ReadAnyPositionManager`
+
+Inherited from
+
+ReadFlaunchSDK.readAnyPositionManager
+
+___
+
 ### readBidWall
 
 • `Readonly` **readBidWall**: `ReadBidWall`
@@ -1533,6 +1735,16 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readFairLaunchV1_1
+
+___
+
+### readFeeEscrow
+
+• `Readonly` **readFeeEscrow**: `ReadFeeEscrow`
+
+Inherited from
+
+ReadFlaunchSDK.readFeeEscrow
 
 ___
 
@@ -1616,6 +1828,16 @@ ReadFlaunchSDK.readQuoter
 
 ___
 
+### readReferralEscrow
+
+• `Readonly` **readReferralEscrow**: `ReadReferralEscrow`
+
+Inherited from
+
+ReadFlaunchSDK.readReferralEscrow
+
+___
+
 ### readStateView
 
 • `Readonly` **readStateView**: `ReadStateView`
@@ -1626,9 +1848,15 @@ ReadFlaunchSDK.readStateView
 
 ___
 
-### readWriteFastFlaunchZap
+### readWriteAnyPositionManager
 
-• `Readonly` **readWriteFastFlaunchZap**: `ReadWriteFastFlaunchZap`
+• `Readonly` **readWriteAnyPositionManager**: `ReadWriteAnyPositionManager`
+
+___
+
+### readWriteFeeEscrow
+
+• `Readonly` **readWriteFeeEscrow**: `ReadWriteFeeEscrow`
 
 ___
 
@@ -1644,9 +1872,21 @@ ___
 
 ___
 
+### readWritePositionManager
+
+• `Readonly` **readWritePositionManager**: `ReadWriteFlaunchPositionManager`
+
+___
+
 ### readWritePositionManagerV1\_1
 
 • `Readonly` **readWritePositionManagerV1\_1**: `ReadWriteFlaunchPositionManagerV1_1`
+
+___
+
+### readWriteReferralEscrow
+
+• `Readonly` **readWriteReferralEscrow**: `ReadWriteReferralEscrow`
 
 ___
 
@@ -1680,9 +1920,29 @@ ReadFlaunchSDK.resolveIPFS
 
 ## Methods
 
+### anyFlaunch
+
+▸ **anyFlaunch**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Creates a new Flaunch with AnyPositionManager for external coins
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `AnyFlaunchParams` | Parameters for creating the Flaunch with AnyPositionManager |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
+
 ### bidWallPosition
 
-▸ **bidWallPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `pendingEth`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+▸ **bidWallPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `pendingEth`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
 Gets information about the bid wall position for a coin
 
@@ -1691,7 +1951,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -1707,7 +1967,7 @@ ___
 
 ### buyCoin
 
-▸ **buyCoin**(`params`, `isV1Coin?`): `Promise`\<\`0x$\{string}\`\>
+▸ **buyCoin**(`params`, `version?`): `Promise`\<\`0x$\{string}\`\>
 
 Buys a coin with ETH
 
@@ -1716,13 +1976,34 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `BuyCoinParams` | Parameters for buying the coin including amount, slippage, and referrer |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will determine automatically |
 
 Returns
 
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response for the buy operation
+
+___
+
+### claimReferralBalance
+
+▸ **claimReferralBalance**(`coins`, `recipient`): `Promise`\<\`0x$\{string}\`\>
+
+Claims the referral balance for a given recipient
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coins` | \`0x$\{string}\`[] | The addresses of the coins to claim |
+| `recipient` | \`0x$\{string}\` | The address of the recipient to claim the balance for |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
 
 ___
 
@@ -1746,9 +2027,32 @@ Promise<bigint> - The balance of the coin
 
 ___
 
+### coinMarketCapInUSD
+
+▸ **coinMarketCapInUSD**(`«destructured»`): `Promise`\<`string`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `drift?` | `Drift` |
+| › `version?` | `FlaunchVersion` |
+
+Returns
+
+`Promise`\<`string`\>
+
+Inherited from
+
+ReadFlaunchSDK.coinMarketCapInUSD
+
+___
+
 ### coinPriceInETH
 
-▸ **coinPriceInETH**(`coinAddress`, `isV1Coin?`): `Promise`\<`string`\>
+▸ **coinPriceInETH**(`coinAddress`, `version?`): `Promise`\<`string`\>
 
 Calculates the coin price in ETH based on the current tick
 
@@ -1757,7 +2061,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -1771,9 +2075,61 @@ ReadFlaunchSDK.coinPriceInETH
 
 ___
 
+### coinPriceInUSD
+
+▸ **coinPriceInUSD**(`«destructured»`): `Promise`\<`string`\>
+
+Calculates the coin price in USD based on the current ETH/USDC price
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `drift?` | `Drift` |
+| › `version?` | `FlaunchVersion` |
+
+Returns
+
+`Promise`\<`string`\>
+
+Promise<string> - The price of the coin in USD with 2 decimal precision
+
+Inherited from
+
+ReadFlaunchSDK.coinPriceInUSD
+
+___
+
+### creatorRevenue
+
+▸ **creatorRevenue**(`creator`, `isV1?`): `Promise`\<`bigint`\>
+
+Gets the ETH balance for the creator to claim
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `creator` | \`0x$\{string}\` | The address of the creator to check |
+| `isV1?` | `boolean` | Optional boolean to check the balance for V1. V1.1 & AnyPositionManager use the same FeeEscrow contract |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+The balance of the creator
+
+Inherited from
+
+ReadFlaunchSDK.creatorRevenue
+
+___
+
 ### currentTick
 
-▸ **currentTick**(`coinAddress`, `isV1Coin?`): `Promise`\<`number`\>
+▸ **currentTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
 Gets the current tick for a given coin's pool
 
@@ -1782,7 +2138,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -1847,7 +2203,7 @@ ___
 
 ### fairLaunchCoinOnlyPosition
 
-▸ **fairLaunchCoinOnlyPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+▸ **fairLaunchCoinOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
 Gets information about the coin-only position in a fair launch
 
@@ -1856,7 +2212,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -1872,7 +2228,7 @@ ___
 
 ### fairLaunchDuration
 
-▸ **fairLaunchDuration**(`coinAddress`, `isV1Coin?`): `Promise`\<`number` \| `bigint`\>
+▸ **fairLaunchDuration**(`coinAddress`, `version?`): `Promise`\<`number` \| `bigint`\>
 
 Gets the duration of a fair launch for a given coin
 
@@ -1881,7 +2237,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -1897,7 +2253,7 @@ ___
 
 ### fairLaunchETHOnlyPosition
 
-▸ **fairLaunchETHOnlyPosition**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+▸ **fairLaunchETHOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
 Gets information about the ETH-only position in a fair launch
 
@@ -1906,7 +2262,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -1922,7 +2278,7 @@ ___
 
 ### fairLaunchInfo
 
-▸ **fairLaunchInfo**(`coinAddress`, `isV1Coin?`): `Promise`\<\{ `closed`: `boolean` ; `endsAt`: `bigint` ; `initialTick`: `number` ; `revenue`: `bigint` ; `startsAt`: `bigint` ; `supply`: `bigint`  }\>
+▸ **fairLaunchInfo**(`coinAddress`, `version?`): `Promise`\<\{ `closed`: `boolean` ; `endsAt`: `bigint` ; `initialTick`: `number` ; `revenue`: `bigint` ; `startsAt`: `bigint` ; `supply`: `bigint`  }\>
 
 Gets information about a fair launch for a given coin
 
@@ -1931,7 +2287,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -1942,54 +2298,6 @@ Fair launch information from the appropriate contract version
 Inherited from
 
 ReadFlaunchSDK.fairLaunchInfo
-
-___
-
-### fastFlaunch
-
-▸ **fastFlaunch**(`params`): `Promise`\<\`0x$\{string}\`\>
-
-Creates a new fast Flaunch on V1.1
-
-Parameters
-
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `FastFlaunchParams` | Parameters for creating the fast Flaunch |
-
-Returns
-
-`Promise`\<\`0x$\{string}\`\>
-
-Transaction response
-
-**`Throws`**
-
-Error if FastFlaunchZap is not deployed on the current chain
-
-___
-
-### fastFlaunchIPFS
-
-▸ **fastFlaunchIPFS**(`params`): `Promise`\<\`0x$\{string}\`\>
-
-Creates a new fast Flaunch on V1.1 with IPFS metadata
-
-Parameters
-
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `FastFlaunchIPFSParams` | Parameters for creating the fast Flaunch with IPFS data |
-
-Returns
-
-`Promise`\<\`0x$\{string}\`\>
-
-Transaction response
-
-**`Throws`**
-
-Error if FastFlaunchZap is not deployed on the current chain
 
 ___
 
@@ -2021,7 +2329,7 @@ ___
 
 ▸ **flaunch**(`params`): `Promise`\<\`0x$\{string}\`\>
 
-Creates a new Flaunch on V1.1
+Creates a new Flaunch on the specified version
 
 Parameters
 
@@ -2041,7 +2349,7 @@ ___
 
 ▸ **flaunchIPFS**(`params`): `Promise`\<\`0x$\{string}\`\>
 
-Creates a new Flaunch on V1.1 with IPFS metadata
+Creates a new Flaunch with IPFS metadata and optional version specification
 
 Parameters
 
@@ -2105,9 +2413,51 @@ Error if FlaunchZap is not deployed on the current chain
 
 ___
 
+### getBidWall
+
+▸ **getBidWall**(`version`): `ReadBidWall` \| `ReadBidWallV1_1`
+
+Gets the bid wall address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the bid wall address for |
+
+Returns
+
+`ReadBidWall` \| `ReadBidWallV1_1`
+
+Inherited from
+
+ReadFlaunchSDK.getBidWall
+
+___
+
+### getBidWallAddress
+
+▸ **getBidWallAddress**(`version`): \`0x$\{string}\`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `version` | `FlaunchVersion` |
+
+Returns
+
+\`0x$\{string}\`
+
+Inherited from
+
+ReadFlaunchSDK.getBidWallAddress
+
+___
+
 ### getBuyQuoteExactInput
 
-▸ **getBuyQuoteExactInput**(`coinAddress`, `amountIn`, `isV1Coin?`): `Promise`\<`bigint`\>
+▸ **getBuyQuoteExactInput**(`coinAddress`, `amountIn`, `version?`): `Promise`\<`bigint`\>
 
 Gets a quote for buying tokens with an exact amount of ETH
 
@@ -2117,7 +2467,7 @@ Parameters
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
 | `amountIn` | `bigint` | - |
-| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+| `version?` | `FlaunchVersion` | Optional specific version to use |
 
 Returns
 
@@ -2133,7 +2483,7 @@ ___
 
 ### getBuyQuoteExactOutput
 
-▸ **getBuyQuoteExactOutput**(`coinAddress`, `amountOut`, `isV1Coin?`): `Promise`\<`bigint`\>
+▸ **getBuyQuoteExactOutput**(`coinAddress`, `amountOut`, `version?`): `Promise`\<`bigint`\>
 
 Gets a quote for buying an exact amount of tokens with ETH
 
@@ -2143,7 +2493,7 @@ Parameters
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
 | `amountOut` | `bigint` | - |
-| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+| `version?` | `FlaunchVersion` | Optional specific version to use |
 
 Returns
 
@@ -2232,6 +2582,30 @@ ReadFlaunchSDK.getCoinMetadataFromTokenIds
 
 ___
 
+### getCoinVersion
+
+▸ **getCoinVersion**(`coinAddress`): `Promise`\<`FlaunchVersion`\>
+
+Determines the version of a Flaunch coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
+
+Returns
+
+`Promise`\<`FlaunchVersion`\>
+
+Promise<FlaunchVersion> - The version of the coin
+
+Inherited from
+
+ReadFlaunchSDK.getCoinVersion
+
+___
+
 ### getETHUSDCPrice
 
 ▸ **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
@@ -2253,6 +2627,48 @@ Promise<number> - The current ETH/USDC price
 Inherited from
 
 ReadFlaunchSDK.getETHUSDCPrice
+
+___
+
+### getFairLaunch
+
+▸ **getFairLaunch**(`version`): `ReadFairLaunch` \| `ReadFairLaunchV1_1`
+
+Gets the fair launch address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the fair launch address for |
+
+Returns
+
+`ReadFairLaunch` \| `ReadFairLaunchV1_1`
+
+Inherited from
+
+ReadFlaunchSDK.getFairLaunch
+
+___
+
+### getFairLaunchAddress
+
+▸ **getFairLaunchAddress**(`version`): \`0x$\{string}\`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `version` | `FlaunchVersion` |
+
+Returns
+
+\`0x$\{string}\`
+
+Inherited from
+
+ReadFlaunchSDK.getFairLaunchAddress
 
 ___
 
@@ -2324,9 +2740,51 @@ The typed data object for signing
 
 ___
 
+### getPositionManager
+
+▸ **getPositionManager**(`version`): `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadAnyPositionManager`
+
+Gets the position manager address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the position manager address for |
+
+Returns
+
+`ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadAnyPositionManager`
+
+Inherited from
+
+ReadFlaunchSDK.getPositionManager
+
+___
+
+### getPositionManagerAddress
+
+▸ **getPositionManagerAddress**(`version`): \`0x$\{string}\`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `version` | `FlaunchVersion` |
+
+Returns
+
+\`0x$\{string}\`
+
+Inherited from
+
+ReadFlaunchSDK.getPositionManagerAddress
+
+___
+
 ### getSellQuoteExactInput
 
-▸ **getSellQuoteExactInput**(`coinAddress`, `amountIn`, `isV1Coin?`): `Promise`\<`bigint`\>
+▸ **getSellQuoteExactInput**(`coinAddress`, `amountIn`, `version?`): `Promise`\<`bigint`\>
 
 Gets a quote for selling an exact amount of tokens for ETH
 
@@ -2336,7 +2794,7 @@ Parameters
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the token to sell |
 | `amountIn` | `bigint` | The exact amount of tokens to sell |
-| `isV1Coin?` | `boolean` | Optional flag to specify if token is V1. If not provided, V1.1 is assumed |
+| `version?` | `FlaunchVersion` | Optional specific version to use |
 
 Returns
 
@@ -2350,9 +2808,31 @@ ReadFlaunchSDK.getSellQuoteExactInput
 
 ___
 
+### initialSqrtPriceX96
+
+▸ **initialSqrtPriceX96**(`params`): `Promise`\<`bigint`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.coinAddress` | \`0x$\{string}\` |
+| `params.initialMarketCapUSD` | `number` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadFlaunchSDK.initialSqrtPriceX96
+
+___
+
 ### initialTick
 
-▸ **initialTick**(`coinAddress`, `isV1Coin?`): `Promise`\<`number`\>
+▸ **initialTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
 Gets the initial tick for a fair launch
 
@@ -2361,7 +2841,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -2377,7 +2857,7 @@ ___
 
 ### isFairLaunchActive
 
-▸ **isFairLaunchActive**(`coinAddress`, `isV1Coin?`): `Promise`\<`boolean`\>
+▸ **isFairLaunchActive**(`coinAddress`, `version?`): `Promise`\<`boolean`\>
 
 Checks if a fair launch is currently active for a given coin
 
@@ -2386,7 +2866,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will be determined automatically |
 
 Returns
 
@@ -2400,35 +2880,11 @@ ReadFlaunchSDK.isFairLaunchActive
 
 ___
 
-### isV1Coin
-
-▸ **isV1Coin**(`coinAddress`): `Promise`\<`boolean`\>
-
-Checks if a given coin address is a V1 Flaunch coin
-
-Parameters
-
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
-
-Returns
-
-`Promise`\<`boolean`\>
-
-Promise<boolean> - True if the coin is V1, false if V1.1
-
-Inherited from
-
-ReadFlaunchSDK.isV1Coin
-
-___
-
 ### isValidCoin
 
 ▸ **isValidCoin**(`coinAddress`): `Promise`\<`boolean`\>
 
-Checks if a given coin address is a valid Flaunch coin (either V1 or V1.1)
+Checks if a given coin address is a valid Flaunch coin (supports all versions)
 
 Parameters
 
@@ -2450,9 +2906,15 @@ ___
 
 ### pollPoolCreatedNow
 
-▸ **pollPoolCreatedNow**(): `undefined` \| `Promise`\<`void`\>
+▸ **pollPoolCreatedNow**(`version?`): `undefined` \| `Promise`\<`void`\>
 
-Polls for current pool creation events on V1.1 contracts
+Polls for current pool creation events
+
+Parameters
+
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | `FlaunchVersion.V1_1` | Version of Flaunch to use (defaults to V1_1) |
 
 Returns
 
@@ -2466,29 +2928,17 @@ ReadFlaunchSDK.pollPoolCreatedNow
 
 ___
 
-### pollPoolCreatedNowV1
-
-▸ **pollPoolCreatedNowV1**(): `undefined` \| `Promise`\<`void`\>
-
-Polls for current pool creation events on V1 contracts
-
-Returns
-
-`undefined` \| `Promise`\<`void`\>
-
-Current pool creation events or undefined if polling is not available
-
-Inherited from
-
-ReadFlaunchSDK.pollPoolCreatedNowV1
-
-___
-
 ### pollPoolSwapNow
 
-▸ **pollPoolSwapNow**(): `undefined` \| `Promise`\<`void`\>
+▸ **pollPoolSwapNow**(`version?`): `undefined` \| `Promise`\<`void`\>
 
-Polls for current pool swap events on V1.1 contracts
+Polls for current pool swap events
+
+Parameters
+
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | `FlaunchVersion.V1_1` | Version of Flaunch to use (defaults to V1_1) |
 
 Returns
 
@@ -2502,27 +2952,9 @@ ReadFlaunchSDK.pollPoolSwapNow
 
 ___
 
-### pollPoolSwapNowV1
-
-▸ **pollPoolSwapNowV1**(): `undefined` \| `Promise`\<`void`\>
-
-Polls for current pool swap events on V1 contracts
-
-Returns
-
-`undefined` \| `Promise`\<`void`\>
-
-Current pool swap events or undefined if polling is not available
-
-Inherited from
-
-ReadFlaunchSDK.pollPoolSwapNowV1
-
-___
-
 ### poolId
 
-▸ **poolId**(`coinAddress`, `isV1Coin?`): `Promise`\<\`0x$\{string}\`\>
+▸ **poolId**(`coinAddress`, `version?`): `Promise`\<\`0x$\{string}\`\>
 
 Gets the pool ID for a given coin
 
@@ -2531,7 +2963,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `coinAddress` | \`0x$\{string}\` | The address of the coin |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use |
 
 Returns
 
@@ -2566,6 +2998,31 @@ Position information from the state view contract
 Inherited from
 
 ReadFlaunchSDK.positionInfo
+
+___
+
+### referralBalance
+
+▸ **referralBalance**(`recipient`, `coinAddress`): `Promise`\<`bigint`\>
+
+Gets the balance of a recipient for a given coin
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `recipient` | \`0x$\{string}\` | The address of the recipient to check |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The balance of the recipient
+
+Inherited from
+
+ReadFlaunchSDK.referralBalance
 
 ___
 
@@ -2762,7 +3219,7 @@ ___
 
 ### sellCoin
 
-▸ **sellCoin**(`params`, `isV1Coin?`): `Promise`\<\`0x$\{string}\`\>
+▸ **sellCoin**(`params`, `version?`): `Promise`\<\`0x$\{string}\`\>
 
 Sells a coin for ETH
 
@@ -2771,7 +3228,7 @@ Parameters
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `SellCoinParams` | Parameters for selling the coin including amount, slippage, permit data, and referrer |
-| `isV1Coin?` | `boolean` | Optional flag to specify if coin is V1. If not provided, will be determined automatically |
+| `version?` | `FlaunchVersion` | Optional specific version to use. If not provided, will determine automatically |
 
 Returns
 
@@ -2810,15 +3267,16 @@ ___
 
 ### watchPoolCreated
 
-▸ **watchPoolCreated**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
+▸ **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
 
-Watches for pool creation events on V1.1 contracts
+Watches for pool creation events
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `WatchPoolCreatedParams` | Parameters for watching pool creation |
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `params` | `WatchPoolCreatedParams` | `undefined` | Parameters for watching pool creation |
+| `version` | `FlaunchVersion` | `FlaunchVersion.V1_1` | Version of Flaunch to use (defaults to V1_1) |
 
 Returns
 
@@ -2832,41 +3290,18 @@ ReadFlaunchSDK.watchPoolCreated
 
 ___
 
-### watchPoolCreatedV1
-
-▸ **watchPoolCreatedV1**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
-
-Watches for pool creation events on V1 contracts
-
-Parameters
-
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `WatchPoolCreatedParams` | Parameters for watching pool creation |
-
-Returns
-
-`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
-
-Subscription to pool creation events
-
-Inherited from
-
-ReadFlaunchSDK.watchPoolCreatedV1
-
-___
-
 ### watchPoolSwap
 
-▸ **watchPoolSwap**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+▸ **watchPoolSwap**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
 
-Watches for pool swap events on V1.1 contracts
+Watches for pool swap events
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `WatchPoolSwapParams` | Parameters for watching pool swaps including optional coin filter |
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `params` | `WatchPoolSwapParams` | `undefined` | Parameters for watching pool swaps including optional coin filter |
+| `version` | `FlaunchVersion` | `FlaunchVersion.V1_1` | Version of Flaunch to use (defaults to V1_1) |
 
 Returns
 
@@ -2880,33 +3315,192 @@ ReadFlaunchSDK.watchPoolSwap
 
 ___
 
-### watchPoolSwapV1
+### withdrawCreatorRevenue
 
-▸ **watchPoolSwapV1**(`params`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+▸ **withdrawCreatorRevenue**(`params`): `Promise`\<\`0x$\{string}\`\>
 
-Watches for pool swap events on V1 contracts
+Withdraws the creator's share of the revenue
 
 Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `params` | `WatchPoolSwapParams` | Parameters for watching pool swaps including optional coin filter |
+| `params` | `Object` | Parameters for withdrawing the creator's share of the revenue |
+| `params.isV1?` | `boolean` | Optional boolean to withdraw from V1. V1.1 & AnyPositionManager use the same FeeEscrow contract |
+| `params.recipient?` | \`0x$\{string}\` | The address to withdraw the revenue to. Defaults to the connected wallet |
 
 Returns
 
-`Promise`\<\{ `cleanup`: () => `void` ; `pollPoolSwapNow`: () => `Promise`\<`void`\> = pollEvents }\>
+`Promise`\<\`0x$\{string}\`\>
 
-Subscription to pool swap events
-
-Inherited from
-
-ReadFlaunchSDK.watchPoolSwapV1
+Transaction response
 
 
 
 ---
 
-@flaunch/sdk - v0.7.1 / Exports / PinataConfig
+@flaunch/sdk - v0.8.0 / Exports / FlaunchVersion
+
+# Enumeration: FlaunchVersion
+
+Enumeration of Flaunch contract versions
+
+## Table of contents
+
+### Enumeration Members
+
+- ANY
+- V1
+- V1\_1
+- V1\_1\_1
+
+## Enumeration Members
+
+### ANY
+
+• **ANY** = ``"ANY"``
+
+___
+
+### V1
+
+• **V1** = ``"V1"``
+
+___
+
+### V1\_1
+
+• **V1\_1** = ``"V1_1"``
+
+___
+
+### V1\_1\_1
+
+• **V1\_1\_1** = ``"V1_1_1"``
+
+
+
+---
+
+@flaunch/sdk - v0.8.0 / Exports / Addresses
+
+# Interface: Addresses
+
+## Indexable
+
+▪ [chainId: `number`]: `Address`
+
+
+---
+
+@flaunch/sdk - v0.8.0 / Exports / CoinMetadata
+
+# Interface: CoinMetadata
+
+## Table of contents
+
+### Properties
+
+- collaborators
+- description
+- discordUrl
+- external\_link
+- image
+- name
+- telegramUrl
+- twitterUrl
+
+## Properties
+
+### collaborators
+
+• **collaborators**: `string`[]
+
+___
+
+### description
+
+• **description**: `string`
+
+___
+
+### discordUrl
+
+• **discordUrl**: `string`
+
+___
+
+### external\_link
+
+• **external\_link**: `string`
+
+___
+
+### image
+
+• **image**: `string`
+
+___
+
+### name
+
+• **name**: `string`
+
+___
+
+### telegramUrl
+
+• **telegramUrl**: `string`
+
+___
+
+### twitterUrl
+
+• **twitterUrl**: `string`
+
+
+
+---
+
+@flaunch/sdk - v0.8.0 / Exports / IPFSParams
+
+# Interface: IPFSParams
+
+## Table of contents
+
+### Properties
+
+- metadata
+- pinataConfig
+
+## Properties
+
+### metadata
+
+• **metadata**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `base64Image` | `string` |
+| `description` | `string` |
+| `discordUrl?` | `string` |
+| `telegramUrl?` | `string` |
+| `twitterUrl?` | `string` |
+| `websiteUrl?` | `string` |
+
+___
+
+### pinataConfig
+
+• **pinataConfig**: `PinataConfig`
+
+
+
+---
+
+@flaunch/sdk - v0.8.0 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -2926,11 +3520,63 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ---
 
-@flaunch/sdk - v0.7.1 / Exports
+@flaunch/sdk - v0.8.0 / Exports / PoolKey
 
-# @flaunch/sdk - v0.7.1
+# Interface: PoolKey
 
 ## Table of contents
+
+### Properties
+
+- currency0
+- currency1
+- fee
+- hooks
+- tickSpacing
+
+## Properties
+
+### currency0
+
+• **currency0**: \`0x$\{string}\`
+
+___
+
+### currency1
+
+• **currency1**: \`0x$\{string}\`
+
+___
+
+### fee
+
+• **fee**: `number`
+
+___
+
+### hooks
+
+• **hooks**: \`0x$\{string}\`
+
+___
+
+### tickSpacing
+
+• **tickSpacing**: `number`
+
+
+
+---
+
+@flaunch/sdk - v0.8.0 / Exports
+
+# @flaunch/sdk - v0.8.0
+
+## Table of contents
+
+### Enumerations
+
+- FlaunchVersion
 
 ### Classes
 
@@ -2939,7 +3585,11 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ### Interfaces
 
+- Addresses
+- CoinMetadata
+- IPFSParams
 - PinataConfig
+- PoolKey
 
 ### Type Aliases
 
@@ -2950,6 +3600,7 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 ### Variables
 
+- AnyPositionManagerAddress
 - BidWallAddress
 - BidWallV1\_1Address
 - FLETHAddress
@@ -2957,6 +3608,7 @@ ReadFlaunchSDK.watchPoolSwapV1
 - FairLaunchAddress
 - FairLaunchV1\_1Address
 - FastFlaunchZapAddress
+- FeeEscrowAddress
 - FlaunchAddress
 - FlaunchPositionManagerAddress
 - FlaunchPositionManagerV1\_1Address
@@ -2966,6 +3618,7 @@ ReadFlaunchSDK.watchPoolSwapV1
 - Permit2Address
 - PoolManagerAddress
 - QuoterAddress
+- ReferralEscrowAddress
 - RevenueManagerAddress
 - StateViewAddress
 - TICK\_SPACING
@@ -2979,6 +3632,7 @@ ReadFlaunchSDK.watchPoolSwapV1
 
 - bytes32ToUint256
 - calculateUnderlyingTokenBalances
+- createDrift
 - createFlaunch
 - generateTokenUri
 - getPoolId
@@ -3024,6 +3678,12 @@ ___
 
 ## Variables
 
+### AnyPositionManagerAddress
+
+• `Const` **AnyPositionManagerAddress**: `Addresses`
+
+___
+
 ### BidWallAddress
 
 • `Const` **BidWallAddress**: `Addresses`
@@ -3063,6 +3723,12 @@ ___
 ### FastFlaunchZapAddress
 
 • `Const` **FastFlaunchZapAddress**: `Addresses`
+
+___
+
+### FeeEscrowAddress
+
+• `Const` **FeeEscrowAddress**: `Addresses`
 
 ___
 
@@ -3124,6 +3790,12 @@ ___
 ### QuoterAddress
 
 • `Const` **QuoterAddress**: `Addresses`
+
+___
+
+### ReferralEscrowAddress
+
+• `Const` **ReferralEscrowAddress**: `Addresses`
 
 ___
 
@@ -3227,6 +3899,50 @@ Returns
 | :------ | :------ |
 | `amount0` | `bigint` |
 | `amount1` | `bigint` |
+
+___
+
+### createDrift
+
+▸ **createDrift**(`params`): `Drift`
+
+Creates a read-only Drift instance with only public client
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Omit`\<`CreateDriftParams`, ``"walletClient"``\> | Parameters with only publicClient |
+
+Returns
+
+`Drift`
+
+Drift instance for read-only operations
+
+**`Throws`**
+
+Error if publicClient.chain is not configured
+
+▸ **createDrift**(`params`): `Drift`\<`ReadWriteAdapter`\>
+
+Creates a read-write Drift instance with both public and wallet clients
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Required`\<`CreateDriftParams`\> | Parameters with both publicClient and walletClient |
+
+Returns
+
+`Drift`\<`ReadWriteAdapter`\>
+
+Drift instance for read and write operations
+
+**`Throws`**
+
+Error if publicClient.chain is not configured
 
 ___
 
