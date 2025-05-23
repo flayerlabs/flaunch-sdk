@@ -25,7 +25,6 @@ import {
   PoolManagerAddress,
   FLETHAddress,
   FairLaunchAddress,
-  FastFlaunchZapAddress,
   FlaunchZapAddress,
   FlaunchAddress,
   BidWallAddress,
@@ -38,10 +37,12 @@ import {
   FairLaunchV1_1Address,
   TreasuryManagerFactoryAddress,
   AnyPositionManagerAddress,
+  FeeEscrowAddress,
   // V1.1.1 and AnyPositionManager addresses will be imported here when available
 } from "../addresses";
 import {
   ReadFlaunchPositionManager,
+  ReadWriteFlaunchPositionManager,
   WatchPoolCreatedParams,
   WatchPoolSwapParams as WatchPoolSwapParamsPositionManager,
 } from "../clients/FlaunchPositionManagerClient";
@@ -52,11 +53,6 @@ import {
 import { ReadStateView } from "../clients/StateViewClient";
 import { ReadFairLaunch } from "../clients/FairLaunchClient";
 import { ReadBidWall } from "../clients/BidWallClient";
-import {
-  ReadWriteFastFlaunchZap,
-  FastFlaunchParams,
-  FastFlaunchIPFSParams,
-} from "../clients/FastFlaunchClient";
 import {
   ReadFlaunchZap,
   ReadWriteFlaunchZap,
@@ -78,6 +74,7 @@ import {
   ReadAnyPositionManager,
   ReadWriteAnyPositionManager,
 } from "clients/AnyPositionManagerClient";
+import { ReadFeeEscrow, ReadWriteFeeEscrow } from "clients/FeeEscrowClient";
 import { ReadBidWallV1_1 } from "clients/BidWallV1_1Client";
 import { ReadFairLaunchV1_1 } from "clients/FairLaunchV1_1Client";
 import { ReadFlaunchV1_1 } from "clients/FlaunchV1_1Client";
@@ -157,6 +154,7 @@ export class ReadFlaunchSDK {
   public readonly readPositionManager: ReadFlaunchPositionManager;
   public readonly readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
   public readonly readAnyPositionManager: ReadAnyPositionManager;
+  public readonly readFeeEscrow: ReadFeeEscrow;
   public readonly readFlaunchZap: ReadFlaunchZap;
   public readonly readPoolManager: ReadPoolManager;
   public readonly readStateView: ReadStateView;
@@ -193,6 +191,10 @@ export class ReadFlaunchSDK {
     );
     this.readAnyPositionManager = new ReadAnyPositionManager(
       AnyPositionManagerAddress[this.chainId],
+      drift
+    );
+    this.readFeeEscrow = new ReadFeeEscrow(
+      FeeEscrowAddress[this.chainId],
       drift
     );
     this.readFlaunchZap = new ReadFlaunchZap(
@@ -264,6 +266,7 @@ export class ReadFlaunchSDK {
     throw new Error(`Unknown coin version for address: ${coinAddress}`);
   }
 
+  // TODO: update these get functions to support V1.1.1 and new AnyPositionManager
   /**
    * Gets the position manager address for a given version
    * @param version - The version to get the position manager address for
@@ -930,6 +933,20 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets the ETH balance for the creator to claim
+   * @param creator - The address of the creator to check
+   * @param isV1 - Optional boolean to check the balance for V1. V1.1 & AnyPositionManager use the same FeeEscrow contract
+   * @returns The balance of the creator
+   */
+  creatorRevenue(creator: Address, isV1?: boolean) {
+    if (isV1) {
+      return this.readPositionManager.creatorBalance(creator);
+    } else {
+      return this.readFeeEscrow.balances(creator);
+    }
+  }
+
+  /**
    * Gets the claimable balance of ETH for the recipient from a revenue manager
    * @param params - Parameters for checking the balance
    * @param params.revenueManagerAddress - The address of the revenue manager
@@ -1191,15 +1208,20 @@ export class ReadFlaunchSDK {
 
 export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   declare drift: Drift<ReadWriteAdapter>;
+  public readonly readWritePositionManager: ReadWriteFlaunchPositionManager;
   public readonly readWritePositionManagerV1_1: ReadWriteFlaunchPositionManagerV1_1;
   public readonly readWriteAnyPositionManager: ReadWriteAnyPositionManager;
-  public readonly readWriteFastFlaunchZap: ReadWriteFastFlaunchZap;
+  public readonly readWriteFeeEscrow: ReadWriteFeeEscrow;
   public readonly readWriteFlaunchZap: ReadWriteFlaunchZap;
   public readonly readWriteTreasuryManagerFactory: ReadWriteTreasuryManagerFactory;
   public readonly readWritePermit2: ReadWritePermit2;
 
   constructor(chainId: number, drift: Drift<ReadWriteAdapter> = createDrift()) {
     super(chainId, drift);
+    this.readWritePositionManager = new ReadWriteFlaunchPositionManager(
+      FlaunchPositionManagerAddress[this.chainId],
+      drift
+    );
     this.readWritePositionManagerV1_1 = new ReadWriteFlaunchPositionManagerV1_1(
       FlaunchPositionManagerV1_1Address[this.chainId],
       drift
@@ -1208,8 +1230,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       AnyPositionManagerAddress[this.chainId],
       drift
     );
-    this.readWriteFastFlaunchZap = new ReadWriteFastFlaunchZap(
-      FastFlaunchZapAddress[this.chainId],
+    this.readWriteFeeEscrow = new ReadWriteFeeEscrow(
+      FeeEscrowAddress[this.chainId],
       drift
     );
     this.readWriteFlaunchZap = new ReadWriteFlaunchZap(
@@ -1509,6 +1531,26 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       allowance: amount,
       nonce,
     };
+  }
+
+  /**
+   * Withdraws the creator's share of the revenue
+   * @param params - Parameters for withdrawing the creator's share of the revenue
+   * @param params.recipient - The address to withdraw the revenue to. Defaults to the connected wallet
+   * @param params.isV1 - Optional boolean to withdraw from V1. V1.1 & AnyPositionManager use the same FeeEscrow contract
+   * @returns Transaction response
+   */
+  async withdrawCreatorRevenue(params: {
+    recipient?: Address;
+    isV1?: boolean;
+  }) {
+    const recipient = params.recipient ?? (await this.drift.getSignerAddress());
+
+    if (params.isV1) {
+      return this.readWritePositionManager.withdrawFees(recipient);
+    } else {
+      return this.readWriteFeeEscrow.withdrawFees(recipient);
+    }
   }
 
   /**

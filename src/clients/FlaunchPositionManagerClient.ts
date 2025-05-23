@@ -124,6 +124,17 @@ export class ReadFlaunchPositionManager {
     return poolKey.tickSpacing !== 0;
   }
 
+  /**
+   * Gets the ETH balance for the creator to claim
+   * @param creator - The address of the creator to check
+   * @returns The balance of the creator
+   */
+  creatorBalance(creator: Address) {
+    return this.contract.read("balances", {
+      _recipient: creator,
+    });
+  }
+
   async getFlaunchingFee(params: {
     sender: Address;
     initialPriceParams: HexString;
@@ -486,6 +497,18 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
       creator,
       creatorFeeAllocationPercent,
       flaunchAt,
+    });
+  }
+
+  /**
+   * Withdraws the creator's share of the revenue
+   * @param recipient - The address to withdraw the revenue to
+   * @returns Transaction response
+   */
+  withdrawFees(recipient: Address) {
+    return this.contract.write("withdrawFees", {
+      _recipient: recipient,
+      _unwrap: true,
     });
   }
 }
