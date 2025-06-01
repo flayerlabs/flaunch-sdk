@@ -37,6 +37,8 @@ import {
   FairLaunchV1_1Address,
   TreasuryManagerFactoryAddress,
   AnyPositionManagerAddress,
+  AnyBidWallAddress,
+  AnyFlaunchAddress,
   FeeEscrowAddress,
   ReferralEscrowAddress,
   // V1.1.1 and AnyPositionManager addresses will be imported here when available
@@ -54,6 +56,7 @@ import {
 import { ReadStateView } from "../clients/StateViewClient";
 import { ReadFairLaunch } from "../clients/FairLaunchClient";
 import { ReadBidWall } from "../clients/BidWallClient";
+import { AnyBidWall } from "../clients/AnyBidWall";
 import {
   ReadFlaunchZap,
   ReadWriteFlaunchZap,
@@ -167,6 +170,7 @@ export class ReadFlaunchSDK {
   public readonly readFairLaunch: ReadFairLaunch;
   public readonly readFairLaunchV1_1: ReadFairLaunchV1_1;
   public readonly readBidWall: ReadBidWall;
+  public readonly readAnyBidWall: AnyBidWall;
   public readonly readBidWallV1_1: ReadBidWallV1_1;
   public readonly readFlaunch: ReadFlaunch;
   public readonly readFlaunchV1_1: ReadFlaunchV1_1;
@@ -231,6 +235,10 @@ export class ReadFlaunchSDK {
     this.readBidWall = new ReadBidWall(BidWallAddress[this.chainId], drift);
     this.readBidWallV1_1 = new ReadBidWallV1_1(
       BidWallV1_1Address[this.chainId],
+      drift
+    );
+    this.readAnyBidWall = new AnyBidWall(
+      AnyBidWallAddress[this.chainId],
       drift
     );
     this.readFlaunch = new ReadFlaunch(FlaunchAddress[this.chainId], drift);
@@ -322,7 +330,7 @@ export class ReadFlaunchSDK {
       case FlaunchVersion.V1_1:
         return this.readBidWallV1_1;
       case FlaunchVersion.ANY:
-        return this.readBidWallV1_1;
+        return this.readAnyBidWall;
       default:
         return this.readBidWallV1_1;
     }

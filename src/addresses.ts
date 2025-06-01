@@ -15,7 +15,8 @@ export const FlaunchPositionManagerV1_1Address: Addresses = {
 
 export const AnyPositionManagerAddress: Addresses = {
   [base.id]: "0x69a96de474521f7c6c0be3ea0498e5cf2f0565dc",
-  [baseSepolia.id]: "0xe999c5676b0e0f83292074441292f4b3b11d65dc",
+  // FIXME: this is temp address
+  [baseSepolia.id]: "0xB4A535B9D35851972736495CC52FBfDaCF32e5dc",
 };
 
 export const FeeEscrowAddress: Addresses = {
@@ -25,7 +26,8 @@ export const FeeEscrowAddress: Addresses = {
 
 export const ReferralEscrowAddress: Addresses = {
   [base.id]: "0xBD39c7Be6D98BD1a3e4Ad482baF99d738947fE55",
-  [baseSepolia.id]: "0x0651cadC51b6a13CB3465C134A22154a2b633779",
+  // FIXME: this is temp address
+  [baseSepolia.id]: "0x651c203C4fc420f1652b0445642a21a7F1eF814E",
 };
 
 export const FLETHAddress: Addresses = {
@@ -60,6 +62,13 @@ export const FlaunchV1_1Address: Addresses = {
   [baseSepolia.id]: "0x96be8ff5e244294a34bfa507a39190dc7a839baa",
 };
 
+export const AnyFlaunchAddress: Addresses = {
+  // FIXME: update with actual address
+  [base.id]: zeroAddress,
+  // FIXME: this is temp address
+  [baseSepolia.id]: "0x67Ee6C83956a75f67bD3Fc8Ca4080D95a145c7C9",
+};
+
 export const BidWallAddress: Addresses = {
   [base.id]: "0x66681f10BA90496241A25e33380004f30Dfd8aa8",
   [baseSepolia.id]: "0xa2107050ACEf4809c88Ab744F8e667605db5ACDB",
@@ -69,6 +78,13 @@ export const BidWallAddress: Addresses = {
 export const BidWallV1_1Address: Addresses = {
   [base.id]: "0x7f22353d1634223a802D1c1Ea5308Ddf5DD0ef9c",
   [baseSepolia.id]: "0x6f2fa01a05ff8b6efbfefd91a3b85aaf19265a00",
+};
+
+export const AnyBidWallAddress: Addresses = {
+  // FIXME: update with actual address
+  [base.id]: zeroAddress,
+  // FIXME: this is temp address
+  [baseSepolia.id]: "0xcfF222eA42E43F46A98755db237E4c9C2CA9B772",
 };
 
 export const FastFlaunchZapAddress: Addresses = {

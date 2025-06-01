@@ -55,8 +55,8 @@ export const AnyPositionManagerAbi = [
   },
   { inputs: [], name: "AlreadyFlaunched", type: "error" },
   { inputs: [], name: "AlreadyInitialized", type: "error" },
+  { inputs: [], name: "CallerIsNotApprovedCreator", type: "error" },
   { inputs: [], name: "CallerIsNotBidWall", type: "error" },
-  { inputs: [], name: "CallerIsNotCreator", type: "error" },
   {
     inputs: [{ internalType: "address", name: "_caller", type: "address" }],
     name: "CallerNotCreator",
@@ -79,6 +79,25 @@ export const AnyPositionManagerAbi = [
     inputs: [{ internalType: "PoolId", name: "_poolId", type: "bytes32" }],
     name: "UnknownPool",
     type: "error",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "_creator",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "bool",
+        name: "_isApproved",
+        type: "bool",
+      },
+    ],
+    name: "CreatorApproved",
+    type: "event",
   },
   {
     anonymous: false,
@@ -219,25 +238,6 @@ export const AnyPositionManagerAbi = [
       },
     ],
     name: "InitialPriceUpdated",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "address",
-        name: "_memecoin",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "address",
-        name: "_creator",
-        type: "address",
-      },
-    ],
-    name: "MemecoinApproved",
     type: "event",
   },
   {
@@ -822,18 +822,18 @@ export const AnyPositionManagerAbi = [
   },
   {
     inputs: [
-      { internalType: "address", name: "_memecoin", type: "address" },
       { internalType: "address", name: "_creator", type: "address" },
+      { internalType: "bool", name: "_isApproved", type: "bool" },
     ],
-    name: "approveMemecoin",
+    name: "approveCreator",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [{ internalType: "address", name: "_memecoin", type: "address" }],
-    name: "approvedMemecoinToCreator",
-    outputs: [{ internalType: "address", name: "_creator", type: "address" }],
+    inputs: [{ internalType: "address", name: "_creator", type: "address" }],
+    name: "approvedMemecoinCreator",
+    outputs: [{ internalType: "bool", name: "isApproved", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
