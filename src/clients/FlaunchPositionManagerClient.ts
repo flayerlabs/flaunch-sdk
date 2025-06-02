@@ -334,7 +334,7 @@ export class ReadFlaunchPositionManager {
                 };
               }
 
-              // Use the utility function to parse swap data
+              // parse swap data
               const swapData = parseSwapData(
                 log.args as SwapLogArgs,
                 flETHIsCurrencyZero
