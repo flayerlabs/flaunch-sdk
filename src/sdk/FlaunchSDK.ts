@@ -48,6 +48,9 @@ import {
   ReadWriteFlaunchPositionManager,
   WatchPoolCreatedParams,
   WatchPoolSwapParams as WatchPoolSwapParamsPositionManager,
+  type BaseSwapLog as FlaunchBaseSwapLog,
+  type BuySwapLog as FlaunchBuySwapLog,
+  type SellSwapLog as FlaunchSellSwapLog,
 } from "../clients/FlaunchPositionManagerClient";
 import {
   ReadPoolManager,
@@ -77,6 +80,9 @@ import {
   AnyFlaunchParams,
   ReadAnyPositionManager,
   ReadWriteAnyPositionManager,
+  type BaseSwapLog as AnyBaseSwapLog,
+  type BuySwapLog as AnyBuySwapLog,
+  type SellSwapLog as AnySellSwapLog,
 } from "clients/AnyPositionManagerClient";
 import { ReadFeeEscrow, ReadWriteFeeEscrow } from "clients/FeeEscrowClient";
 import {
@@ -121,6 +127,43 @@ type WatchPoolSwapParams = Omit<
 > & {
   filterByCoin?: Address;
 };
+
+// Generic swap log types that work across all position manager versions
+type GenericBaseSwapLog = {
+  timestamp: number;
+  transactionHash: Hex;
+  blockNumber: bigint;
+  args: any;
+};
+
+type GenericBuySwapLog = GenericBaseSwapLog & {
+  type: "BUY";
+  delta: {
+    coinsBought: bigint;
+    flETHSold: bigint;
+    fees: {
+      isInFLETH: boolean;
+      amount: bigint;
+    };
+  };
+};
+
+type GenericSellSwapLog = GenericBaseSwapLog & {
+  type: "SELL";
+  delta: {
+    coinsSold: bigint;
+    flETHBought: bigint;
+    fees: {
+      isInFLETH: boolean;
+      amount: bigint;
+    };
+  };
+};
+
+type GenericPoolSwapLog =
+  | GenericBuySwapLog
+  | GenericSellSwapLog
+  | GenericBaseSwapLog;
 
 type BuyCoinBase = {
   coinAddress: Address;
@@ -1231,6 +1274,32 @@ export class ReadFlaunchSDK {
    */
   setIPFSResolver(resolverFn: (ipfsHash: string) => string): void {
     this.resolveIPFS = resolverFn;
+  }
+
+  /**
+   * Parses a transaction hash to extract PoolSwap events and return parsed swap data
+   * @param params - Object containing parsing parameters
+   * @param params.txHash - The transaction hash to parse
+   * @param params.version - The Flaunch version to use for parsing
+   * @param params.flETHIsCurrencyZero - Whether flETH is currency 0 in the pool (optional)
+   * @returns Parsed swap log or undefined if no PoolSwap event found.
+   *          If flETHIsCurrencyZero is provided, returns typed swap data with BUY/SELL information.
+   *          If flETHIsCurrencyZero is undefined, returns basic swap log without parsed delta.
+   */
+  async parseSwapTx<T extends boolean | undefined = undefined>(params: {
+    txHash: Hex;
+    version: FlaunchVersion;
+    flETHIsCurrencyZero?: T;
+  }): Promise<
+    T extends boolean
+      ? GenericBuySwapLog | GenericSellSwapLog | undefined
+      : GenericBaseSwapLog | undefined
+  > {
+    const positionManager = this.getPositionManager(params.version);
+    return positionManager.parseSwapTx(
+      params.txHash,
+      params.flETHIsCurrencyZero
+    ) as any;
   }
 }
 

@@ -9,11 +9,12 @@ import {
   HexString,
 } from "@delvtech/drift";
 import { FlaunchPositionManagerV1_1Abi } from "../abi/FlaunchPositionManagerV1_1";
-import { encodeAbiParameters, parseUnits, zeroAddress } from "viem";
+import { encodeAbiParameters, parseUnits, zeroAddress, type Hex } from "viem";
 import { IPFSParams } from "../types";
 import { generateTokenUri } from "helpers/ipfs";
 import { ReadInitialPrice } from "./InitialPriceClient";
 import { getAmountWithSlippage } from "utils/universalRouter";
+import { parseSwapData, type SwapLogArgs } from "utils/parseSwap";
 
 export type FlaunchPositionManagerV1_1ABI =
   typeof FlaunchPositionManagerV1_1Abi;
@@ -229,6 +230,65 @@ export class ReadFlaunchPositionManagerV1_1 {
     };
   }
 
+  /**
+   * Parses a transaction hash to extract PoolSwap events and return parsed swap data
+   * @param txHash - The transaction hash to parse
+   * @param flETHIsCurrencyZero - Whether flETH is currency 0 in the pool (optional)
+   * @returns Parsed swap log or undefined if no PoolSwap event found
+   */
+  async parseSwapTx(
+    txHash: Hex,
+    flETHIsCurrencyZero?: boolean
+  ): Promise<PoolSwapLog | undefined> {
+    try {
+      // Get transaction to get block number
+      const tx = await this.drift.getTransaction({ hash: txHash });
+      if (!tx) {
+        return undefined;
+      }
+
+      // Get block to get timestamp
+      const block = await this.drift.getBlock(tx.blockNumber);
+      const timestamp = Number(block?.timestamp) * 1_000; // convert to ms for js
+
+      // Get PoolSwap events from the specific transaction
+      const swapLogs = await this.contract.getEvents("PoolSwap", {
+        fromBlock: tx.blockNumber,
+        toBlock: tx.blockNumber,
+      });
+
+      // Find the first swap log that matches our transaction hash
+      const targetLog = swapLogs.find((log) => log.transactionHash === txHash);
+      if (!targetLog) {
+        return undefined;
+      }
+
+      // If flETHIsCurrencyZero is not provided, return basic log
+      if (flETHIsCurrencyZero === undefined) {
+        return {
+          ...targetLog,
+          timestamp,
+        };
+      }
+
+      // Parse the swap data using the utility function
+      const swapData = parseSwapData(
+        targetLog.args as SwapLogArgs,
+        flETHIsCurrencyZero
+      );
+
+      return {
+        ...targetLog,
+        timestamp,
+        type: swapData.type,
+        delta: swapData.delta,
+      };
+    } catch (error) {
+      console.error("Error parsing swap transaction:", error);
+      return undefined;
+    }
+  }
+
   async watchPoolSwap<T extends boolean | undefined = undefined>({
     onPoolSwap,
     flETHIsCurrencyZero,
@@ -274,90 +334,18 @@ export class ReadFlaunchPositionManagerV1_1 {
                 };
               }
 
-              const {
-                flAmount0,
-                flAmount1,
-                flFee0,
-                flFee1,
-                ispAmount0,
-                ispAmount1,
-                ispFee0,
-                ispFee1,
-                uniAmount0,
-                uniAmount1,
-                uniFee0,
-                uniFee1,
-              } = log.args;
+              // parse swap data
+              const swapData = parseSwapData(
+                log.args as SwapLogArgs,
+                flETHIsCurrencyZero
+              );
 
-              const currency0Delta = flAmount0 + ispAmount0 + uniAmount0;
-              const currency1Delta = flAmount1 + ispAmount1 + uniAmount1;
-              const currency0Fees = flFee0 + ispFee0 + uniFee0;
-              const currency1Fees = flFee1 + ispFee1 + uniFee1;
-
-              let feesIsInFLETH: boolean;
-              let swapType: "BUY" | "SELL";
-
-              if (flETHIsCurrencyZero) {
-                swapType = currency0Delta < 0 ? "BUY" : "SELL";
-                feesIsInFLETH = currency0Fees < 0;
-              } else {
-                swapType = currency1Delta < 0 ? "BUY" : "SELL";
-                feesIsInFLETH = currency1Fees < 0;
-              }
-
-              const absCurrency0Delta =
-                currency0Delta < 0 ? -currency0Delta : currency0Delta;
-              const absCurrency1Delta =
-                currency1Delta < 0 ? -currency1Delta : currency1Delta;
-              const absCurrency0Fees =
-                currency0Fees < 0 ? -currency0Fees : currency0Fees;
-              const absCurrency1Fees =
-                currency1Fees < 0 ? -currency1Fees : currency1Fees;
-
-              const fees = {
-                isInFLETH: feesIsInFLETH,
-                amount: flETHIsCurrencyZero
-                  ? feesIsInFLETH
-                    ? absCurrency0Fees
-                    : absCurrency1Fees
-                  : feesIsInFLETH
-                  ? absCurrency1Fees
-                  : absCurrency0Fees,
+              return {
+                ...log,
+                timestamp,
+                type: swapData.type,
+                delta: swapData.delta,
               };
-
-              if (swapType === "BUY") {
-                return {
-                  ...log,
-                  timestamp,
-                  type: swapType,
-                  delta: {
-                    coinsBought: flETHIsCurrencyZero
-                      ? absCurrency1Delta - (!fees.isInFLETH ? fees.amount : 0n)
-                      : absCurrency0Delta -
-                        (!fees.isInFLETH ? fees.amount : 0n),
-                    flETHSold: flETHIsCurrencyZero
-                      ? absCurrency0Delta - (fees.isInFLETH ? fees.amount : 0n)
-                      : absCurrency1Delta - (fees.isInFLETH ? fees.amount : 0n),
-                    fees,
-                  },
-                };
-              } else {
-                return {
-                  ...log,
-                  timestamp,
-                  type: swapType,
-                  delta: {
-                    coinsSold: flETHIsCurrencyZero
-                      ? absCurrency1Delta - (!fees.isInFLETH ? fees.amount : 0n)
-                      : absCurrency0Delta -
-                        (!fees.isInFLETH ? fees.amount : 0n),
-                    flETHBought: flETHIsCurrencyZero
-                      ? absCurrency0Delta - (fees.isInFLETH ? fees.amount : 0n)
-                      : absCurrency1Delta - (fees.isInFLETH ? fees.amount : 0n),
-                    fees,
-                  },
-                };
-              }
             })
           );
 

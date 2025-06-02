@@ -4,12 +4,15 @@ export * from "./abi";
 export * from "./addresses";
 export * from "./helpers";
 export * from "./utils/univ4";
+export * from "./utils/parseSwap";
 export * from "./types";
 
 export type {
   BuySwapLog,
-  PoolCreatedLogs,
   SellSwapLog,
+  BaseSwapLog,
+  PoolCreatedLogs,
+  PoolSwapLog,
 } from "./clients/FlaunchPositionManagerClient";
 
 export { ReadFlaunchSDK, ReadWriteFlaunchSDK };
