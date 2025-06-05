@@ -26,8 +26,7 @@ export const FeeEscrowAddress: Addresses = {
 
 export const ReferralEscrowAddress: Addresses = {
   [base.id]: "0xBD39c7Be6D98BD1a3e4Ad482baF99d738947fE55",
-  // FIXME: this is temp address
-  [baseSepolia.id]: "0x651c203C4fc420f1652b0445642a21a7F1eF814E",
+  [baseSepolia.id]: "0xd3d9047CaBE3346C70b510435866565176e8CE12",
 };
 
 export const FLETHAddress: Addresses = {
