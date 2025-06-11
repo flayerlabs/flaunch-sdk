@@ -99,6 +99,11 @@ export const RevenueManagerAddress: Addresses = {
   [baseSepolia.id]: "0x17E02501dE3e420347e7C5fCAe3AD787C5aea690",
 };
 
+export const AddressFeeSplitManagerAddress: Addresses = {
+  [base.id]: "0x6baa4ec493a9698dc7388c0f290e29ea3d149f99",
+  [baseSepolia.id]: "0xf72dcdee692c188de6b14c6213e849982e04069b",
+};
+
 export const TreasuryManagerFactoryAddress: Addresses = {
   [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763",
   [baseSepolia.id]: "0xd2f3c6185e06925dcbe794c6574315b2202e9ccd",

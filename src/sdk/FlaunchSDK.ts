@@ -67,6 +67,8 @@ import {
   FlaunchIPFSParams,
   FlaunchWithRevenueManagerParams,
   FlaunchWithRevenueManagerIPFSParams,
+  FlaunchWithSplitManagerParams,
+  FlaunchWithSplitManagerIPFSParams,
 } from "../clients/FlaunchZapClient";
 import { ReadFlaunch } from "../clients/FlaunchClient";
 import { ReadMemecoin } from "../clients/MemecoinClient";
@@ -1439,6 +1441,24 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     }
 
     return this.readWriteFlaunchZap.flaunchIPFSWithRevenueManager(params);
+  }
+
+  /**
+   * Creates a new Flaunch that splits the creator fees to the creator and a list of recipients
+   * @param params - Parameters for creating the Flaunch with split manager
+   * @returns Transaction response
+   */
+  flaunchWithSplitManager(params: FlaunchWithSplitManagerParams) {
+    return this.readWriteFlaunchZap.flaunchWithSplitManager(params);
+  }
+
+  /**
+   * Creates a new Flaunch that splits the creator fees to the creator and a list of recipients, storing the token metadata on IPFS
+   * @param params - Parameters for creating the Flaunch with split manager including all IPFS metadata
+   * @returns Transaction response
+   */
+  flaunchIPFSWithSplitManager(params: FlaunchWithSplitManagerIPFSParams) {
+    return this.readWriteFlaunchZap.flaunchIPFSWithSplitManager(params);
   }
 
   /**

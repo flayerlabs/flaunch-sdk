@@ -14,7 +14,10 @@ import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
 import { IPFSParams } from "../types";
 import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
-import { FlaunchPositionManagerV1_1Address } from "addresses";
+import {
+  AddressFeeSplitManagerAddress,
+  FlaunchPositionManagerV1_1Address,
+} from "addresses";
 import { getAmountWithSlippage } from "utils/universalRouter";
 import { ReadInitialPrice } from "./InitialPriceClient";
 
@@ -43,6 +46,18 @@ export interface FlaunchWithRevenueManagerParams extends FlaunchParams {
 
 export interface FlaunchWithRevenueManagerIPFSParams
   extends Omit<FlaunchWithRevenueManagerParams, "tokenUri">,
+    IPFSParams {}
+
+export interface FlaunchWithSplitManagerParams extends FlaunchParams {
+  creatorSplitPercent: number;
+  splitReceivers: {
+    address: Address;
+    percent: number;
+  }[];
+}
+
+export interface FlaunchWithSplitManagerIPFSParams
+  extends Omit<FlaunchWithSplitManagerParams, "tokenUri">,
     IPFSParams {}
 
 /**
@@ -327,6 +342,151 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
     });
 
     return this.flaunchWithRevenueManager({
+      ...params,
+      tokenUri,
+    });
+  }
+
+  /**
+   * Flaunches a new token that splits the creator fees to the creator and a list of recipients
+   * @param params - Parameters for the flaunch with split manager
+   * @param params.name - The name of the token
+   * @param params.symbol - The symbol of the token
+   * @param params.tokenUri - The URI containing the token metadata
+   * @param params.fairLaunchPercent - Percentage of total supply to be used in fair launch (0-100)
+   * @param params.fairLaunchDuration - Duration of fair launch in seconds
+   * @param params.initialMarketCapUSD - Initial market cap in USD
+   * @param params.creator - Address of the token creator
+   * @param params.creatorFeeAllocationPercent - Percentage of fees allocated to creator (0-100)
+   * @param params.creatorSplitPercent - Percentage of fees allocated to creator (0-100)
+   * @param params.splitReceivers - List of recipients and their percentage of the fees
+   * @param params.flaunchAt - Optional timestamp when the flaunch should start
+   * @param params.premineAmount - Optional amount of tokens to premine
+   * @param params.creatorSplitPercent - Split percentage of the fees for the creator (0-100)
+   * @param params.splitReceivers - List of recipients and their percentage of the fees
+   * @returns Transaction response for the flaunch creation
+   */
+  async flaunchWithSplitManager(params: FlaunchWithSplitManagerParams) {
+    const initialMCapInUSDCWei = parseUnits(
+      params.initialMarketCapUSD.toString(),
+      6
+    );
+    const initialPriceParams = encodeAbiParameters(
+      [
+        {
+          type: "uint256",
+        },
+      ],
+      [initialMCapInUSDCWei]
+    );
+
+    const fairLaunchInBps = BigInt(params.fairLaunchPercent * 100);
+    const creatorFeeAllocationInBps = params.creatorFeeAllocationPercent * 100;
+
+    const ethRequired = await this.ethRequiredToFlaunch({
+      premineAmount: params.premineAmount ?? 0n,
+      initialPriceParams,
+      slippagePercent: 5,
+    });
+
+    const VALID_SHARE_TOTAL = 100_00000n; // 5 decimals as BigInt
+    let creatorShare =
+      (BigInt(params.creatorSplitPercent) * VALID_SHARE_TOTAL) / 100n;
+    const recipientShares = params.splitReceivers.map((receiver) => {
+      return {
+        recipient: receiver.address,
+        share: (BigInt(receiver.percent) * VALID_SHARE_TOTAL) / 100n,
+      };
+    });
+
+    const totalRecipientShares = recipientShares.reduce(
+      (acc, curr) => acc + curr.share,
+      0n
+    );
+
+    // if there's a remainder (due to rounding errors), add it to the creator share
+    const remainderShares = VALID_SHARE_TOTAL - totalRecipientShares;
+    creatorShare += remainderShares;
+
+    const initializeData = encodeAbiParameters(
+      [
+        {
+          type: "tuple",
+          name: "params",
+          components: [
+            { type: "uint256", name: "creatorShare" },
+            {
+              type: "tuple[]",
+              name: "recipientShares",
+              components: [
+                { type: "address", name: "recipient" },
+                { type: "uint256", name: "share" },
+              ],
+            },
+          ],
+        },
+      ],
+      [
+        {
+          creatorShare,
+          recipientShares,
+        },
+      ]
+    );
+
+    return this.contract.write(
+      "flaunch",
+      {
+        _flaunchParams: {
+          name: params.name,
+          symbol: params.symbol,
+          tokenUri: params.tokenUri,
+          initialTokenFairLaunch:
+            (this.TOTAL_SUPPLY * fairLaunchInBps) / 10_000n,
+          fairLaunchDuration: BigInt(params.fairLaunchDuration),
+          premineAmount: params.premineAmount ?? 0n,
+          creator: params.creator,
+          creatorFeeAllocation: creatorFeeAllocationInBps,
+          flaunchAt: params.flaunchAt ?? 0n,
+          initialPriceParams,
+          feeCalculatorParams: "0x",
+        },
+        _treasuryManagerParams: {
+          manager: AddressFeeSplitManagerAddress[this.chainId],
+          initializeData,
+          depositData: "0x",
+        },
+        _whitelistParams: {
+          merkleRoot: zeroHash,
+          merkleIPFSHash: "",
+          maxTokens: 0n,
+        },
+        _airdropParams: {
+          airdropIndex: 0n,
+          airdropAmount: 0n,
+          airdropEndTime: 0n,
+          merkleRoot: zeroHash,
+          merkleIPFSHash: "",
+        },
+      },
+      {
+        value: ethRequired,
+      }
+    );
+  }
+
+  /**
+   * Flaunches a new token that splits the creator fees to the creator and a list of recipients, storing the token metadata on IPFS
+   * @param params - Parameters for the flaunch with split manager including all IPFS metadata
+   * @returns Promise resolving to the transaction response for the flaunch creation
+   */
+  async flaunchIPFSWithSplitManager(params: FlaunchWithSplitManagerIPFSParams) {
+    const tokenUri = await generateTokenUri(params.name, {
+      metadata: params.metadata,
+      pinataConfig: params.pinataConfig,
+    });
+
+    return this.flaunchWithSplitManager({
       ...params,
       tokenUri,
     });
