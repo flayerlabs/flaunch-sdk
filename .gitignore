@@ -5,3 +5,4 @@ coverage
 .env
 docs
 .rollup.cache
+dist
