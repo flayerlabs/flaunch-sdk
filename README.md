@@ -28,6 +28,7 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
   - [Selling with Permit2](#selling-with-permit2)
   - [Flaunching a Memecoin](#flaunching-a-memecoin)
     - [How to generate Base64Image from file upload](#how-to-generate-base64image-from-user-uploaded-file)
+  - [Flaunch with Address Fee Splits](#flaunch-with-address-fee-splits)
   - [Advanced Integration: Revenue Sharing with RevenueManager](#advanced-integration-revenue-sharing-with-revenuemanager)
   - [All SDK functions](#all-sdk-functions)
   - [React Hooks](#react-hooks)
@@ -249,6 +250,41 @@ const handleImageChange = useCallback(
   onchange="handleImageChange(event)"
   id="image-upload"
 />;
+```
+
+### Flaunch with Address Fee Splits
+
+You can flaunch a coin and share the revenue with the creator and an array of recipients, each with a different percentage share.\
+Example below of a creator splitting 50% of their revenue with 2 addresses, with 30% and 70% share respectively:
+
+```ts
+await flaunchWrite.flaunchIPFSWithSplitManager({
+  name: "...",
+  symbol: "...",
+  metadata: {
+    base64Image: "...",
+  },
+  pinataConfig: {
+    jwt: "...",
+  },
+  fairLaunchPercent: 40,
+  fairLaunchDuration: 30 * 60, // 30 mins
+  initialMarketCapUSD: 1_000,
+  creator: "0x...",
+  creatorFeeAllocationPercent: 100,
+  // **Note:** Split related params
+  creatorSplitPercent: 50,
+  splitReceivers: [
+    {
+      address: "0x123...",
+      percent: 30,
+    },
+    {
+      address: "0xabc...",
+      percent: 70,
+    },
+  ],
+});
 ```
 
 ### Advanced Integration: Revenue Sharing with RevenueManager
