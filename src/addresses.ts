@@ -14,8 +14,8 @@ export const FlaunchPositionManagerV1_1Address: Addresses = {
 };
 
 export const AnyPositionManagerAddress: Addresses = {
-  [base.id]: "0x69a96de474521f7c6c0be3ea0498e5cf2f0565dc",
-  // FIXME: this is temp address
+  // TODO: update with actual address
+  [base.id]: zeroAddress,
   [baseSepolia.id]: "0xB4A535B9D35851972736495CC52FBfDaCF32e5dc",
 };
 
@@ -64,7 +64,6 @@ export const FlaunchV1_1Address: Addresses = {
 export const AnyFlaunchAddress: Addresses = {
   // FIXME: update with actual address
   [base.id]: zeroAddress,
-  // FIXME: this is temp address
   [baseSepolia.id]: "0x67Ee6C83956a75f67bD3Fc8Ca4080D95a145c7C9",
 };
 
@@ -82,7 +81,6 @@ export const BidWallV1_1Address: Addresses = {
 export const AnyBidWallAddress: Addresses = {
   // FIXME: update with actual address
   [base.id]: zeroAddress,
-  // FIXME: this is temp address
   [baseSepolia.id]: "0xcfF222eA42E43F46A98755db237E4c9C2CA9B772",
 };
 
