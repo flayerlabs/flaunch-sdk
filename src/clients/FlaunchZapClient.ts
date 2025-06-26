@@ -34,13 +34,19 @@ export interface FlaunchParams {
   creatorFeeAllocationPercent: number;
   flaunchAt?: bigint;
   premineAmount?: bigint;
+  treasuryManagerParams?: {
+    manager?: Address;
+    initializeData?: HexString;
+    depositData?: HexString;
+  };
 }
 
 export interface FlaunchIPFSParams
   extends Omit<FlaunchParams, "tokenUri">,
     IPFSParams {}
 
-export interface FlaunchWithRevenueManagerParams extends FlaunchParams {
+export interface FlaunchWithRevenueManagerParams
+  extends Omit<FlaunchParams, "treasuryManagerParams"> {
   revenueManagerInstanceAddress: Address;
 }
 
@@ -48,7 +54,8 @@ export interface FlaunchWithRevenueManagerIPFSParams
   extends Omit<FlaunchWithRevenueManagerParams, "tokenUri">,
     IPFSParams {}
 
-export interface FlaunchWithSplitManagerParams extends FlaunchParams {
+export interface FlaunchWithSplitManagerParams
+  extends Omit<FlaunchParams, "treasuryManagerParams"> {
   creatorSplitPercent: number;
   splitReceivers: {
     address: Address;
@@ -194,6 +201,22 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
       slippagePercent: 5,
     });
 
+    const _treasuryManagerParams: {
+      manager: Address;
+      initializeData: HexString;
+      depositData: HexString;
+    } = params.treasuryManagerParams
+      ? {
+          manager: params.treasuryManagerParams.manager ?? zeroAddress,
+          initializeData: params.treasuryManagerParams.initializeData ?? "0x",
+          depositData: params.treasuryManagerParams.depositData ?? "0x",
+        }
+      : {
+          manager: zeroAddress,
+          initializeData: "0x",
+          depositData: "0x",
+        };
+
     return this.contract.write(
       "flaunch",
       {
@@ -211,11 +234,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           initialPriceParams,
           feeCalculatorParams: "0x",
         },
-        _treasuryManagerParams: {
-          manager: zeroAddress,
-          initializeData: "0x",
-          depositData: "0x",
-        },
+        _treasuryManagerParams,
         _whitelistParams: {
           merkleRoot: zeroHash,
           merkleIPFSHash: "",
