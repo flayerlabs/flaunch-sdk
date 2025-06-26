@@ -45,3 +45,14 @@ export enum FlaunchVersion {
   V1_1_1 = "V1_1_1",
   ANY = "ANY",
 }
+
+/**
+ * Enumeration of Verifiers for TokenImporter
+ */
+export enum Verifier {
+  CLANKER = "clanker",
+  DOPPLER = "doppler",
+  VIRTUALS = "virtuals",
+  WHITELIST = "whitelist",
+  ZORA = "zora",
+}

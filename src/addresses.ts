@@ -18,6 +18,39 @@ export const AnyPositionManagerAddress: Addresses = {
   [baseSepolia.id]: "0xB4A535B9D35851972736495CC52FBfDaCF32e5dc",
 };
 
+/** Verifiers */
+export const TokenImporterAddress: Addresses = {
+  [base.id]: "0xb47af90ae61bc916ea4b4bacffae4570e7435842",
+  [baseSepolia.id]: "0xb4955a396ef07c124a59164c30d63e96a103a98b",
+};
+
+export const ClankerWorldVerifierAddress: Addresses = {
+  [base.id]: "0xf6ddfcb093be0cd0c015590cb6c5127d9ff2a20b",
+  [baseSepolia.id]: "0x2874f9a30348acaaad55d74b0bec9c18f04b471a",
+};
+
+export const DopplerVerifierAddress: Addresses = {
+  [base.id]: "0xedd66b080b8e9425c39d349a3fb69f480580f993",
+  [baseSepolia.id]: "0x6428b5C4da36ecB070aBdcB5E1939244A3cC7fb5",
+};
+
+export const VirtualsVerifierAddress: Addresses = {
+  [base.id]: "0x06a089fa231aca48d2aa77365123ad9aca43d3a4",
+  [baseSepolia.id]: "0x6582d2bc6a7eba3b40bdf46b3868fc7ec2ff96ec",
+};
+
+export const WhitelistVerifierAddress: Addresses = {
+  [base.id]: "0x7a04367563a65db574d6b7d084fdbcf4a570c5a6",
+  [baseSepolia.id]: "0xfde5b79e3e2814edd5f91e8694ae400954d9cfaa",
+};
+
+export const ZoraVerifierAddress: Addresses = {
+  [base.id]: "0x656047fd43d2c3a121f2ef859d7171d7dd59f8b9",
+  [baseSepolia.id]: "0x05a5763e9199b88bb591c6b112d0424b2cd7a99e",
+};
+
+/** ======== */
+
 export const FeeEscrowAddress: Addresses = {
   [base.id]: "0x72e6f7948b1B1A343B477F39aAbd2E35E6D27dde",
   [baseSepolia.id]: "0x73E27908b7d35A9251a54799A8ef4C17e4ED9FF9",

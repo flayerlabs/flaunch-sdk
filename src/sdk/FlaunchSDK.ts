@@ -41,6 +41,7 @@ import {
   AnyFlaunchAddress,
   FeeEscrowAddress,
   ReferralEscrowAddress,
+  TokenImporterAddress,
   // V1.1.1 and AnyPositionManager addresses will be imported here when available
 } from "../addresses";
 import {
@@ -86,6 +87,10 @@ import {
   type BuySwapLog as AnyBuySwapLog,
   type SellSwapLog as AnySellSwapLog,
 } from "clients/AnyPositionManagerClient";
+import {
+  ReadTokenImporter,
+  ReadWriteTokenImporter,
+} from "clients/TokenImporter";
 import { ReadFeeEscrow, ReadWriteFeeEscrow } from "clients/FeeEscrowClient";
 import {
   ReadReferralEscrow,
@@ -101,7 +106,7 @@ import {
 } from "clients/RevenueManagerClient";
 import { ReadInitialPrice } from "clients/InitialPriceClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
-import { CoinMetadata, FlaunchVersion } from "types";
+import { CoinMetadata, FlaunchVersion, Verifier } from "types";
 import {
   getPoolId,
   orderPoolKey,
@@ -207,6 +212,7 @@ export class ReadFlaunchSDK {
   public readonly readPositionManager: ReadFlaunchPositionManager;
   public readonly readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
   public readonly readAnyPositionManager: ReadAnyPositionManager;
+  public readonly readTokenImporter: ReadTokenImporter;
   public readonly readFeeEscrow: ReadFeeEscrow;
   public readonly readReferralEscrow: ReadReferralEscrow;
   public readonly readFlaunchZap: ReadFlaunchZap;
@@ -227,7 +233,6 @@ export class ReadFlaunchSDK {
   // public readonly readFairLaunchV1_1_1: ReadFairLaunchV1_1_1;
   // public readonly readBidWallV1_1_1: ReadBidWallV1_1_1;
   // public readonly readFlaunchV1_1_1: ReadFlaunchV1_1_1;
-  // public readonly readAnyPositionManager: ReadAnyPositionManager;
   // public readonly readAnyFlaunch: ReadAnyFlaunch;
 
   public resolveIPFS: (value: string) => string;
@@ -246,6 +251,11 @@ export class ReadFlaunchSDK {
     );
     this.readAnyPositionManager = new ReadAnyPositionManager(
       AnyPositionManagerAddress[this.chainId],
+      drift
+    );
+    this.readTokenImporter = new ReadTokenImporter(
+      this.chainId,
+      TokenImporterAddress[this.chainId],
       drift
     );
     this.readFeeEscrow = new ReadFeeEscrow(
@@ -329,7 +339,7 @@ export class ReadFlaunchSDK {
     throw new Error(`Unknown coin version for address: ${coinAddress}`);
   }
 
-  // TODO: update these get functions to support V1.1.1 and new AnyPositionManager
+  // TODO: update these get functions to support V1.1.1
   /**
    * Gets the position manager address for a given version
    * @param version - The version to get the position manager address for
@@ -1303,6 +1313,15 @@ export class ReadFlaunchSDK {
       params.flETHIsCurrencyZero
     ) as any;
   }
+
+  /**
+   * Verifies if a memecoin is valid for importing
+   * @param memecoin - The address of the memecoin to import
+   * @returns Promise<{ isValid: boolean; verifier: Address }> - The result of the verification
+   */
+  tokenImporterVerifyMemecoin(memecoin: Address) {
+    return this.readTokenImporter.verifyMemecoin(memecoin);
+  }
 }
 
 export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
@@ -1310,6 +1329,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   public readonly readWritePositionManager: ReadWriteFlaunchPositionManager;
   public readonly readWritePositionManagerV1_1: ReadWriteFlaunchPositionManagerV1_1;
   public readonly readWriteAnyPositionManager: ReadWriteAnyPositionManager;
+  public readonly readWriteTokenImporter: ReadWriteTokenImporter;
   public readonly readWriteFeeEscrow: ReadWriteFeeEscrow;
   public readonly readWriteReferralEscrow: ReadWriteReferralEscrow;
   public readonly readWriteFlaunchZap: ReadWriteFlaunchZap;
@@ -1328,6 +1348,11 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     );
     this.readWriteAnyPositionManager = new ReadWriteAnyPositionManager(
       AnyPositionManagerAddress[this.chainId],
+      drift
+    );
+    this.readWriteTokenImporter = new ReadWriteTokenImporter(
+      this.chainId,
+      TokenImporterAddress[this.chainId],
       drift
     );
     this.readWriteFeeEscrow = new ReadWriteFeeEscrow(
@@ -1725,5 +1750,22 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       this.drift
     );
     return readWriteRevenueManager.creatorClaimForTokens(params.flaunchTokens);
+  }
+
+  /**
+   * Imports a memecoin into the TokenImporter
+   * @param params.memecoin - The address of the memecoin to import
+   * @param params.creatorFeeAllocationPercent - The creator fee allocation percentage
+   * @param params.initialMarketCapUSD - The initial market cap in USD
+   * @param params.verifier - Optional verifier to use for importing the memecoin
+   * @returns Transaction response
+   */
+  importMemecoin(params: {
+    memecoin: Address;
+    creatorFeeAllocationPercent: number;
+    initialMarketCapUSD: number;
+    verifier?: Verifier;
+  }) {
+    return this.readWriteTokenImporter.initialize(params);
   }
 }
