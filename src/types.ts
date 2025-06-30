@@ -56,3 +56,5 @@ export enum Verifier {
   WHITELIST = "whitelist",
   ZORA = "zora",
 }
+
+export type LiquidityMode = "full-range" | "concentrated";

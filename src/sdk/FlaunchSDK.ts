@@ -17,6 +17,7 @@ import {
   encodeAbiParameters,
   parseUnits,
   parseEther,
+  formatEther,
 } from "viem";
 import axios from "axios";
 import {
@@ -106,7 +107,7 @@ import {
 } from "clients/RevenueManagerClient";
 import { ReadInitialPrice } from "clients/InitialPriceClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
-import { CoinMetadata, FlaunchVersion, Verifier } from "types";
+import { CoinMetadata, FlaunchVersion, LiquidityMode, Verifier } from "types";
 import {
   getPoolId,
   orderPoolKey,
@@ -114,6 +115,8 @@ import {
   calculateUnderlyingTokenBalances,
   TickFinder,
   TICK_SPACING,
+  getNearestUsableTick,
+  priceRatioToTick,
 } from "../utils/univ4";
 import {
   ethToMemecoin,
@@ -1321,6 +1324,126 @@ export class ReadFlaunchSDK {
    */
   tokenImporterVerifyMemecoin(memecoin: Address) {
     return this.readTokenImporter.verifyMemecoin(memecoin);
+  }
+
+  async addLiquidityCalculateTicks({
+    coinAddress,
+    liquidityMode,
+    minMarketCap,
+    maxMarketCap,
+  }: {
+    coinAddress: Address;
+    liquidityMode: LiquidityMode;
+    minMarketCap: string;
+    maxMarketCap: string;
+  }): Promise<{
+    tickLower: number;
+    tickUpper: number;
+    coinTotalSupply: bigint;
+    coinDecimals: number;
+  }> {
+    const memecoin = new ReadMemecoin(coinAddress, this.drift);
+    const coinTotalSupply = await memecoin.totalSupply();
+    const coinDecimals = await memecoin.decimals();
+
+    if (liquidityMode === "full-range") {
+      return {
+        tickLower: getNearestUsableTick({
+          tick: TickFinder.MIN_TICK,
+          tickSpacing: TICK_SPACING,
+        }),
+        tickUpper: getNearestUsableTick({
+          tick: TickFinder.MAX_TICK,
+          tickSpacing: TICK_SPACING,
+        }),
+        coinTotalSupply,
+        coinDecimals,
+      };
+    } else {
+      const ethUsdPrice = await this.getETHUSDCPrice();
+
+      const isFlethZero = this.flETHIsCurrencyZero(coinAddress);
+
+      const minMarketCapNum = parseFloat(minMarketCap);
+      const maxMarketCapNum = parseFloat(maxMarketCap);
+
+      if (
+        minMarketCapNum <= 0 ||
+        maxMarketCapNum <= 0 ||
+        minMarketCapNum >= maxMarketCapNum
+      ) {
+        throw new Error(
+          "[ReadFlaunchSDK.addLiquidityCalculateTicks]: Invalid market cap range"
+        );
+      }
+
+      // Convert total supply to decimal format
+      const totalSupplyDecimal = parseFloat(formatEther(coinTotalSupply));
+
+      // Calculate token price in USD at min and max market caps
+      const minTokenPriceUsd = minMarketCapNum / totalSupplyDecimal;
+      const maxTokenPriceUsd = maxMarketCapNum / totalSupplyDecimal;
+
+      // Convert to token price in ETH
+      const minTokenPriceEth = minTokenPriceUsd / ethUsdPrice;
+      const maxTokenPriceEth = maxTokenPriceUsd / ethUsdPrice;
+
+      const flETHDecimals = 18; // flETH has 18 decimals
+
+      // Determine decimals based on token ordering
+      const decimals0 = isFlethZero ? flETHDecimals : coinDecimals;
+      const decimals1 = isFlethZero ? coinDecimals : flETHDecimals;
+
+      // Convert to ticks using proper price direction handling
+      const minTick = priceRatioToTick({
+        priceInput: minTokenPriceEth.toString(),
+        isDirection1Per0: !isFlethZero,
+        decimals0,
+        decimals1,
+        spacing: TICK_SPACING,
+      });
+      const maxTick = priceRatioToTick({
+        priceInput: maxTokenPriceEth.toString(),
+        isDirection1Per0: !isFlethZero,
+        decimals0,
+        decimals1,
+        spacing: TICK_SPACING,
+      });
+
+      return {
+        tickLower: Math.min(minTick, maxTick),
+        tickUpper: Math.max(minTick, maxTick),
+        coinTotalSupply,
+        coinDecimals,
+      };
+    }
+  }
+
+  async addLiquidityCalculateAmounts({
+    coinAddress,
+    liquidityMode,
+    coinOrFlethAmount,
+    inputToken,
+    minMarketCap,
+    maxMarketCap,
+  }: {
+    coinAddress: Address;
+    liquidityMode: LiquidityMode;
+    coinOrFlethAmount: bigint;
+    inputToken: "coin" | "fleth";
+    minMarketCap: string;
+    maxMarketCap: string;
+  }): Promise<{
+    coinAmount: bigint;
+    flethAmount: bigint;
+  }> {
+    const { tickLower, tickUpper, coinTotalSupply, coinDecimals } =
+      await this.addLiquidityCalculateTicks({
+        coinAddress,
+        liquidityMode,
+        minMarketCap,
+        maxMarketCap,
+      });
   }
 }
 

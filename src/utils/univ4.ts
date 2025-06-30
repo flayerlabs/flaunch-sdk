@@ -39,11 +39,11 @@ export const orderPoolKey = (poolKey: PoolKey) => {
 export const getValidTick = ({
   tick,
   tickSpacing,
-  roundDown,
+  roundDown = true,
 }: {
   tick: number;
   tickSpacing: number;
-  roundDown: boolean;
+  roundDown?: boolean;
 }) => {
   // If the tick is already valid, exit early
   if (tick % tickSpacing === 0) {
@@ -64,6 +64,18 @@ export const getValidTick = ({
   }
 
   return validTick;
+};
+
+// Rounds up or down to the nearest tick
+export const getNearestUsableTick = ({
+  tick,
+  tickSpacing,
+}: {
+  tick: number;
+  tickSpacing: number;
+}): number => {
+  const rounded = Math.round(tick / tickSpacing) * tickSpacing;
+  return Math.max(TickFinder.MIN_TICK, Math.min(TickFinder.MAX_TICK, rounded));
 };
 
 const getAmount0ForLiquidity = (
@@ -151,4 +163,66 @@ export const calculateUnderlyingTokenBalances = (
   }
 
   return { amount0, amount1 };
+};
+
+// Helper function to convert price ratio to tick with decimal handling
+export const priceRatioToTick = ({
+  priceInput,
+  isDirection1Per0,
+  decimals0,
+  decimals1,
+  spacing,
+  shouldGetNearestUsableTick = true,
+}: {
+  priceInput: string;
+  isDirection1Per0: boolean;
+  decimals0: number;
+  decimals1: number;
+  spacing: number;
+  shouldGetNearestUsableTick?: boolean;
+}): number => {
+  if (!priceInput || isNaN(Number(priceInput))) return 0;
+
+  const inputPrice = Number(priceInput);
+
+  try {
+    // For Uniswap v3/v4, the tick represents price as: price = 1.0001^tick
+    // where price = amount1/amount0 in their raw decimal format
+
+    let priceRatio: number;
+
+    if (isDirection1Per0) {
+      // Input is token1 per token0 (e.g., memecoin per flETH)
+      // Convert from human-readable to raw: divide by (10^decimals0 / 10^decimals1)
+      priceRatio = inputPrice / Math.pow(10, decimals0 - decimals1);
+    } else {
+      // Input is token0 per token1 (e.g., flETH per memecoin)
+      // Invert to get token1 per token0, then convert to raw
+      priceRatio = 1 / inputPrice / Math.pow(10, decimals0 - decimals1);
+    }
+
+    // Calculate tick: tick = log(price) / log(1.0001)
+    const tick = Math.log(priceRatio) / Math.log(1.0001);
+
+    if (shouldGetNearestUsableTick) {
+      return getValidTick({
+        tick: Math.round(tick),
+        tickSpacing: spacing,
+      });
+    } else {
+      return Math.round(tick);
+    }
+  } catch (error) {
+    console.error("Error converting price to tick:", error);
+    // Fallback to basic calculation
+    const rawTick = Math.floor(Math.log(inputPrice) / Math.log(1.0001));
+    if (shouldGetNearestUsableTick) {
+      return getValidTick({
+        tick: rawTick,
+        tickSpacing: spacing,
+      });
+    } else {
+      return rawTick;
+    }
+  }
 };
