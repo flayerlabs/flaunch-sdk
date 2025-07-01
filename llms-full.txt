@@ -415,7 +415,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.8.1 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.8.2 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -455,6 +455,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readQuoter
 - readReferralEscrow
 - readStateView
+- readTokenImporter
 - resolveIPFS
 
 ### Methods
@@ -502,6 +503,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerProtocolBalance
 - revenueManagerTokensCount
 - setIPFSResolver
+- tokenImporterVerifyMemecoin
 - watchPoolCreated
 - watchPoolSwap
 
@@ -641,6 +643,12 @@ ___
 ### readStateView
 
 • `Readonly` **readStateView**: `ReadStateView`
+
+___
+
+### readTokenImporter
+
+• `Readonly` **readTokenImporter**: `ReadTokenImporter`
 
 ___
 
@@ -1554,6 +1562,26 @@ eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
 
 ___
 
+### tokenImporterVerifyMemecoin
+
+▸ **tokenImporterVerifyMemecoin**(`memecoin`): `Promise`\<\{ `isValid`: `boolean` ; `verifier`: \`0x$\{string}\`  }\>
+
+Verifies if a memecoin is valid for importing
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `memecoin` | \`0x$\{string}\` | The address of the memecoin to import |
+
+Returns
+
+`Promise`\<\{ `isValid`: `boolean` ; `verifier`: \`0x$\{string}\`  }\>
+
+Promise<{ isValid: boolean; verifier: Address }> - The result of the verification
+
+___
+
 ### watchPoolCreated
 
 ▸ **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
@@ -1598,7 +1626,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.8.2 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -1638,6 +1666,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readQuoter
 - readReferralEscrow
 - readStateView
+- readTokenImporter
 - readWriteAnyPositionManager
 - readWriteFeeEscrow
 - readWriteFlaunchZap
@@ -1645,6 +1674,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readWritePositionManager
 - readWritePositionManagerV1\_1
 - readWriteReferralEscrow
+- readWriteTokenImporter
 - readWriteTreasuryManagerFactory
 - resolveIPFS
 
@@ -1690,6 +1720,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getPositionManager
 - getPositionManagerAddress
 - getSellQuoteExactInput
+- importMemecoin
 - initialSqrtPriceX96
 - initialTick
 - isFairLaunchActive
@@ -1710,6 +1741,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerTokensCount
 - sellCoin
 - setIPFSResolver
+- tokenImporterVerifyMemecoin
 - watchPoolCreated
 - watchPoolSwap
 - withdrawCreatorRevenue
@@ -1937,6 +1969,16 @@ ReadFlaunchSDK.readStateView
 
 ___
 
+### readTokenImporter
+
+• `Readonly` **readTokenImporter**: `ReadTokenImporter`
+
+Inherited from
+
+ReadFlaunchSDK.readTokenImporter
+
+___
+
 ### readWriteAnyPositionManager
 
 • `Readonly` **readWriteAnyPositionManager**: `ReadWriteAnyPositionManager`
@@ -1976,6 +2018,12 @@ ___
 ### readWriteReferralEscrow
 
 • `Readonly` **readWriteReferralEscrow**: `ReadWriteReferralEscrow`
+
+___
+
+### readWriteTokenImporter
+
+• `Readonly` **readWriteTokenImporter**: `ReadWriteTokenImporter`
 
 ___
 
@@ -2937,6 +2985,30 @@ ReadFlaunchSDK.getSellQuoteExactInput
 
 ___
 
+### importMemecoin
+
+▸ **importMemecoin**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Imports a memecoin into the TokenImporter
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | - |
+| `params.creatorFeeAllocationPercent` | `number` | The creator fee allocation percentage |
+| `params.initialMarketCapUSD` | `number` | The initial market cap in USD |
+| `params.memecoin` | \`0x$\{string}\` | The address of the memecoin to import |
+| `params.verifier?` | `Verifier` | Optional verifier to use for importing the memecoin |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
+
 ### initialSqrtPriceX96
 
 ▸ **initialSqrtPriceX96**(`params`): `Promise`\<`bigint`\>
@@ -3429,6 +3501,30 @@ ReadFlaunchSDK.setIPFSResolver
 
 ___
 
+### tokenImporterVerifyMemecoin
+
+▸ **tokenImporterVerifyMemecoin**(`memecoin`): `Promise`\<\{ `isValid`: `boolean` ; `verifier`: \`0x$\{string}\`  }\>
+
+Verifies if a memecoin is valid for importing
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `memecoin` | \`0x$\{string}\` | The address of the memecoin to import |
+
+Returns
+
+`Promise`\<\{ `isValid`: `boolean` ; `verifier`: \`0x$\{string}\`  }\>
+
+Promise<{ isValid: boolean; verifier: Address }> - The result of the verification
+
+Inherited from
+
+ReadFlaunchSDK.tokenImporterVerifyMemecoin
+
+___
+
 ### watchPoolCreated
 
 ▸ **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
@@ -3503,7 +3599,7 @@ Transaction response
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / FlaunchVersion
+@flaunch/sdk - v0.8.2 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -3546,7 +3642,57 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / Addresses
+@flaunch/sdk - v0.8.2 / Exports / Verifier
+
+# Enumeration: Verifier
+
+Enumeration of Verifiers for TokenImporter
+
+## Table of contents
+
+### Enumeration Members
+
+- CLANKER
+- DOPPLER
+- VIRTUALS
+- WHITELIST
+- ZORA
+
+## Enumeration Members
+
+### CLANKER
+
+• **CLANKER** = ``"clanker"``
+
+___
+
+### DOPPLER
+
+• **DOPPLER** = ``"doppler"``
+
+___
+
+### VIRTUALS
+
+• **VIRTUALS** = ``"virtuals"``
+
+___
+
+### WHITELIST
+
+• **WHITELIST** = ``"whitelist"``
+
+___
+
+### ZORA
+
+• **ZORA** = ``"zora"``
+
+
+
+---
+
+@flaunch/sdk - v0.8.2 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -3557,7 +3703,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / BuySwapData
+@flaunch/sdk - v0.8.2 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -3592,7 +3738,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / CoinMetadata
+@flaunch/sdk - v0.8.2 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -3661,7 +3807,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / IPFSParams
+@flaunch/sdk - v0.8.2 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -3699,7 +3845,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / PinataConfig
+@flaunch/sdk - v0.8.2 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -3719,7 +3865,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / PoolKey
+@flaunch/sdk - v0.8.2 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -3767,7 +3913,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / SellSwapData
+@flaunch/sdk - v0.8.2 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -3802,7 +3948,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / SwapFees
+@flaunch/sdk - v0.8.2 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -3829,7 +3975,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / SwapLogArgs
+@flaunch/sdk - v0.8.2 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -3926,15 +4072,16 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports
+@flaunch/sdk - v0.8.2 / Exports
 
-# @flaunch/sdk - v0.8.1
+# @flaunch/sdk - v0.8.2
 
 ## Table of contents
 
 ### Enumerations
 
 - FlaunchVersion
+- Verifier
 
 ### Classes
 
@@ -3959,6 +4106,8 @@ ___
 - BuySwapLog
 - CreateFlaunchParams
 - ParsedSwapData
+- PermitDetails
+- PermitSingle
 - PoolCreatedLogs
 - PoolSwapLog
 - SellSwapLog
@@ -3971,6 +4120,8 @@ ___
 - AnyPositionManagerAddress
 - BidWallAddress
 - BidWallV1\_1Address
+- ClankerWorldVerifierAddress
+- DopplerVerifierAddress
 - FLETHAddress
 - FLETHHooksAddress
 - FairLaunchAddress
@@ -3983,6 +4134,8 @@ ___
 - FlaunchSDK
 - FlaunchV1\_1Address
 - FlaunchZapAddress
+- PERMIT\_DETAILS
+- PERMIT\_TYPES
 - Permit2Address
 - PoolManagerAddress
 - QuoterAddress
@@ -3991,9 +4144,13 @@ ___
 - StateViewAddress
 - TICK\_SPACING
 - TickFinder
+- TokenImporterAddress
 - TreasuryManagerFactoryAddress
 - USDCETHPoolKeys
 - UniversalRouterAddress
+- VirtualsVerifierAddress
+- WhitelistVerifierAddress
+- ZoraVerifierAddress
 - chainIdToChain
 
 ### Functions
@@ -4002,10 +4159,14 @@ ___
 - calculateUnderlyingTokenBalances
 - createDrift
 - createFlaunch
+- ethToMemecoin
 - generateTokenUri
+- getAmountWithSlippage
+- getPermit2TypedData
 - getPoolId
 - getSqrtPriceX96FromTick
 - getValidTick
+- memecoinToEthWithPermit2
 - orderPoolKey
 - parseSwapData
 - resolveIPFS
@@ -4044,6 +4205,35 @@ ___
 ### ParsedSwapData
 
 Ƭ **ParsedSwapData**: `BuySwapData` \| `SellSwapData`
+
+___
+
+### PermitDetails
+
+Ƭ **PermitDetails**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `amount` | `bigint` |
+| `expiration` | `number` |
+| `nonce` | `number` |
+| `token` | `Address` |
+
+___
+
+### PermitSingle
+
+Ƭ **PermitSingle**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `details` | `PermitDetails` |
+| `sigDeadline` | `bigint` |
+| `spender` | `Address` |
 
 ___
 
@@ -4101,6 +4291,18 @@ ___
 
 ___
 
+### ClankerWorldVerifierAddress
+
+• `Const` **ClankerWorldVerifierAddress**: `Addresses`
+
+___
+
+### DopplerVerifierAddress
+
+• `Const` **DopplerVerifierAddress**: `Addresses`
+
+___
+
 ### FLETHAddress
 
 • `Const` **FLETHAddress**: `Addresses`
@@ -4134,6 +4336,8 @@ ___
 ### FeeEscrowAddress
 
 • `Const` **FeeEscrowAddress**: `Addresses`
+
+========
 
 ___
 
@@ -4177,6 +4381,25 @@ ___
 ### FlaunchZapAddress
 
 • `Const` **FlaunchZapAddress**: `Addresses`
+
+___
+
+### PERMIT\_DETAILS
+
+• `Const` **PERMIT\_DETAILS**: \{ `name`: `string` = "token"; `type`: `string` = "address" }[]
+
+___
+
+### PERMIT\_TYPES
+
+• `Const` **PERMIT\_TYPES**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `PermitDetails` | \{ `name`: `string` = "token"; `type`: `string` = "address" }[] |
+| `PermitSingle` | \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[] |
 
 ___
 
@@ -4235,6 +4458,14 @@ Type declaration
 
 ___
 
+### TokenImporterAddress
+
+• `Const` **TokenImporterAddress**: `Addresses`
+
+Verifiers
+
+___
+
 ### TreasuryManagerFactoryAddress
 
 • `Const` **TreasuryManagerFactoryAddress**: `Addresses`
@@ -4254,6 +4485,24 @@ ___
 ### UniversalRouterAddress
 
 • `Const` **UniversalRouterAddress**: `Addresses`
+
+___
+
+### VirtualsVerifierAddress
+
+• `Const` **VirtualsVerifierAddress**: `Addresses`
+
+___
+
+### WhitelistVerifierAddress
+
+• `Const` **WhitelistVerifierAddress**: `Addresses`
+
+___
+
+### ZoraVerifierAddress
+
+• `Const` **ZoraVerifierAddress**: `Addresses`
 
 ___
 
@@ -4395,6 +4644,38 @@ Error if publicClient.chain is not configured
 
 ___
 
+### ethToMemecoin
+
+▸ **ethToMemecoin**(`params`): `Object`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amountIn?` | `bigint` |
+| `params.amountInMax?` | `bigint` |
+| `params.amountOut?` | `bigint` |
+| `params.amountOutMin?` | `bigint` |
+| `params.chainId` | `number` |
+| `params.memecoin` | \`0x$\{string}\` |
+| `params.positionManagerAddress` | \`0x$\{string}\` |
+| `params.referrer` | ``null`` \| \`0x$\{string}\` |
+| `params.sender` | \`0x$\{string}\` |
+| `params.swapType` | ``"EXACT_IN"`` \| ``"EXACT_OUT"`` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `calldata` | \`0x$\{string}\` |
+| `commands` | \`0x$\{string}\` |
+| `inputs` | \`0x$\{string}\`[] |
+
+___
+
 ### generateTokenUri
 
 ▸ **generateTokenUri**(`name`, `params`): `Promise`\<`string`\>
@@ -4409,6 +4690,62 @@ Parameters
 Returns
 
 `Promise`\<`string`\>
+
+___
+
+### getAmountWithSlippage
+
+▸ **getAmountWithSlippage**(`amount`, `slippage`, `swapType`): `bigint`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `amount` | `undefined` \| `bigint` |
+| `slippage` | `string` |
+| `swapType` | ``"EXACT_IN"`` \| ``"EXACT_OUT"`` |
+
+Returns
+
+`bigint`
+
+**`Dev`**
+
+EXACT_OUT adds the slippage, EXACT_IN removes it
+
+___
+
+### getPermit2TypedData
+
+▸ **getPermit2TypedData**(`«destructured»`): `Object`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `chainId` | `number` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `deadline?` | `bigint` |
+| › `nonce` | `number` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `permitSingle` | `PermitSingle` |
+| `typedData` | \{ `domain`: \{ `chainId`: `number` ; `name`: `string` ; `verifyingContract`: \`0x$\{string}\`  } ; `message`: `PermitSingle` ; `primaryType`: `string` ; `types`: \{ `PermitDetails`: \{ `name`: `string` = "token"; `type`: `string` = "address" }[] = PERMIT\_DETAILS; `PermitSingle`: \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[]  }  } |
+| `typedData.domain` | \{ `chainId`: `number` ; `name`: `string` ; `verifyingContract`: \`0x$\{string}\`  } |
+| `typedData.domain.chainId` | `number` |
+| `typedData.domain.name` | `string` |
+| `typedData.domain.verifyingContract` | \`0x$\{string}\` |
+| `typedData.message` | `PermitSingle` |
+| `typedData.primaryType` | `string` |
+| `typedData.types` | \{ `PermitDetails`: \{ `name`: `string` = "token"; `type`: `string` = "address" }[] = PERMIT\_DETAILS; `PermitSingle`: \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[]  } |
+| `typedData.types.PermitDetails` | \{ `name`: `string` = "token"; `type`: `string` = "address" }[] |
+| `typedData.types.PermitSingle` | \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[] |
 
 ___
 
@@ -4460,6 +4797,36 @@ Parameters
 Returns
 
 `number`
+
+___
+
+### memecoinToEthWithPermit2
+
+▸ **memecoinToEthWithPermit2**(`params`): `Object`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amountIn` | `bigint` |
+| `params.chainId` | `number` |
+| `params.ethOutMin` | `bigint` |
+| `params.memecoin` | \`0x$\{string}\` |
+| `params.permitSingle` | `undefined` \| `PermitSingle` |
+| `params.positionManagerAddress` | \`0x$\{string}\` |
+| `params.referrer` | ``null`` \| \`0x$\{string}\` |
+| `params.signature` | `undefined` \| \`0x$\{string}\` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `calldata` | \`0x$\{string}\` |
+| `commands` | \`0x$\{string}\` |
+| `inputs` | \`0x$\{string}\`[] |
 
 ___
 

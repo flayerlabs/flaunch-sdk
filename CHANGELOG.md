@@ -2,6 +2,27 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.8.2] - 2025-07-01
+
+### Added
+
+- **TokenImporter support** for importing external memecoins into the Flaunch ecosystem
+  - New `ReadTokenImporter` and `ReadWriteTokenImporter` clients with verification capabilities
+  - `tokenImporterVerifyMemecoin()` method to check if a memecoin is valid for importing
+  - `importMemecoin()` method to import verified memecoins with configurable parameters
+  - Support for multiple verifier systems: Clanker, Doppler, Virtuals, Whitelist, and Zora
+- **Flaunch into existing groups / treasury managers**
+  - New `treasuryManagerParams` option in `flaunch()` and `flaunchIPFS()` methods
+- **Expanded utility exports** for better developer experience
+  - Added `./utils` export path to package.json for direct access to utility functions
+  - `parseSwapData()`, `universalRouter` utilities, and `univ4` helpers now available as standalone imports
+
+### Changed
+
+- **Updated mainnet contract addresses** for production deployment
+  - Updated `AnyPositionManagerAddress` and `AnyBidWallAddress` for Base mainnet
+  - Updated `AnyFlaunchAddress` for Base mainnet deployment
+
 ## [0.8.1] - 2025-06-12
 
 ### Added
