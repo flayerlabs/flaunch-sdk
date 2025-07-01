@@ -5,6 +5,7 @@ export * from "./addresses";
 export * from "./helpers";
 export * from "./utils/univ4";
 export * from "./utils/parseSwap";
+export * from "./utils/universalRouter";
 export * from "./types";
 
 export type {
