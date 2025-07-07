@@ -12,13 +12,12 @@ import { FlaunchZapAbi } from "../abi/FlaunchZap";
 import { parseUnits, zeroAddress, zeroHash } from "viem";
 import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
+import { getPermissionsAddress } from "../helpers/permissions";
 import { IPFSParams, Permissions } from "../types";
 import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
 import {
   AddressFeeSplitManagerAddress,
-  ClosedPermissionsAddress,
   FlaunchPositionManagerV1_1Address,
-  WhitelistedPermissionsAddress,
 } from "addresses";
 import { getAmountWithSlippage } from "utils/universalRouter";
 import { ReadInitialPrice } from "./InitialPriceClient";
@@ -250,8 +249,9 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
         },
         _treasuryManagerParams: {
           ..._treasuryManagerParams,
-          permissions: this._getPermissionsAddress(
-            _treasuryManagerParams.permissions
+          permissions: getPermissionsAddress(
+            _treasuryManagerParams.permissions,
+            this.chainId
           ),
         },
         _whitelistParams: {
@@ -344,8 +344,9 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
         },
         _treasuryManagerParams: {
           manager: params.revenueManagerInstanceAddress,
-          permissions: this._getPermissionsAddress(
-            params.treasuryManagerParams?.permissions ?? Permissions.OPEN
+          permissions: getPermissionsAddress(
+            params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+            this.chainId
           ),
           initializeData: "0x",
           depositData: "0x",
@@ -494,8 +495,9 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
         },
         _treasuryManagerParams: {
           manager: AddressFeeSplitManagerAddress[this.chainId],
-          permissions: this._getPermissionsAddress(
-            params.treasuryManagerParams?.permissions ?? Permissions.OPEN
+          permissions: getPermissionsAddress(
+            params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+            this.chainId
           ),
           initializeData,
           depositData: "0x",
@@ -534,16 +536,5 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
       ...params,
       tokenUri,
     });
-  }
-
-  _getPermissionsAddress(permissions: Permissions): Address {
-    switch (permissions) {
-      case Permissions.CLOSED:
-        return ClosedPermissionsAddress[this.chainId];
-      case Permissions.WHITELISTED:
-        return WhitelistedPermissionsAddress[this.chainId];
-      default:
-        return zeroAddress;
-    }
   }
 }

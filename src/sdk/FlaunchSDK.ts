@@ -105,8 +105,12 @@ import {
   ReadWriteRevenueManager,
 } from "clients/RevenueManagerClient";
 import { ReadInitialPrice } from "clients/InitialPriceClient";
+import {
+  ReadTreasuryManager,
+  ReadWriteTreasuryManager,
+} from "clients/TreasuryManagerClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
-import { CoinMetadata, FlaunchVersion, Verifier } from "types";
+import { CoinMetadata, FlaunchVersion, Verifier, Permissions } from "types";
 import {
   getPoolId,
   orderPoolKey,
@@ -123,7 +127,7 @@ import {
   getPermit2TypedData,
 } from "utils/universalRouter";
 import { resolveIPFS as defaultResolveIPFS } from "../helpers/ipfs";
-import { chainIdToChain } from "helpers";
+import { chainIdToChain, getPermissionsAddress } from "helpers";
 import { TreasuryManagerFactoryAbi } from "abi/TreasuryManagerFactory";
 import { ReadMulticall } from "clients/MulticallClient";
 import { MemecoinAbi } from "abi";
@@ -1116,6 +1120,28 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets treasury manager information including owner and permissions
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @returns Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
+   */
+  async treasuryManagerInfo(treasuryManagerAddress: Address) {
+    const readTreasuryManager = new ReadTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+
+    const [managerOwner, permissions] = await Promise.all([
+      readTreasuryManager.managerOwner(),
+      readTreasuryManager.permissions(),
+    ]);
+
+    return {
+      managerOwner,
+      permissions,
+    };
+  }
+
+  /**
    * Gets the pool ID for a given coin
    * @param coinAddress - The address of the coin
    * @param version - Optional specific version to use
@@ -1750,6 +1776,41 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       this.drift
     );
     return readWriteRevenueManager.creatorClaimForTokens(params.flaunchTokens);
+  }
+
+  /**
+   * Sets the permissions contract address for a treasury manager
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @param permissions - The permissions enum value to set
+   * @returns Transaction response
+   */
+  treasuryManagerSetPermissions(
+    treasuryManagerAddress: Address,
+    permissions: Permissions
+  ) {
+    const readWriteTreasuryManager = new ReadWriteTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+    const permissionsAddress = getPermissionsAddress(permissions, this.chainId);
+    return readWriteTreasuryManager.setPermissions(permissionsAddress);
+  }
+
+  /**
+   * Transfers the ownership of a treasury manager to a new address
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @param newManagerOwner - The address of the new manager owner
+   * @returns Transaction response
+   */
+  treasuryManagerTransferOwnership(
+    treasuryManagerAddress: Address,
+    newManagerOwner: Address
+  ) {
+    const readWriteTreasuryManager = new ReadWriteTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+    return readWriteTreasuryManager.transferManagerOwnership(newManagerOwner);
   }
 
   /**
