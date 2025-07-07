@@ -17,6 +17,7 @@ import {
   encodeAbiParameters,
   parseUnits,
   parseEther,
+  erc721Abi,
 } from "viem";
 import axios from "axios";
 import {
@@ -392,6 +393,23 @@ export class ReadFlaunchSDK {
         return this.readAnyBidWall;
       default:
         return this.readBidWallV1_1;
+    }
+  }
+
+  /**
+   * Gets the flaunch contract address for a given version
+   * @param version - The version to get the flaunch contract address for
+   */
+  getFlaunchAddress(version: FlaunchVersion) {
+    switch (version) {
+      case FlaunchVersion.V1:
+        return this.readFlaunch.contract.address;
+      case FlaunchVersion.V1_1:
+        return this.readFlaunchV1_1.contract.address;
+      case FlaunchVersion.ANY:
+        return this.readFlaunchV1_1.contract.address;
+      default:
+        return this.readFlaunchV1_1.contract.address;
     }
   }
 
@@ -1348,6 +1366,45 @@ export class ReadFlaunchSDK {
   tokenImporterVerifyMemecoin(memecoin: Address) {
     return this.readTokenImporter.verifyMemecoin(memecoin);
   }
+
+  /**
+   * Checks if a spender is approved for a specific flaunch token
+   * @param version - The flaunch version to determine the correct contract address
+   * @param tokenId - The token ID to check approval for
+   * @returns Promise<Address> - The approved address for the token (zeroAddress if not approved)
+   */
+  async getFlaunchTokenApproved(version: FlaunchVersion, tokenId: bigint) {
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    return this.drift.read({
+      abi: erc721Abi,
+      address: flaunchAddress,
+      fn: "getApproved",
+      args: { tokenId },
+    });
+  }
+
+  /**
+   * Checks if an operator is approved for all flaunch tokens of an owner
+   * @param version - The flaunch version to determine the correct contract address
+   * @param owner - The owner address to check
+   * @param operator - The operator address to check
+   * @returns Promise<boolean> - True if operator is approved for all tokens
+   */
+  async isFlaunchTokenApprovedForAll(
+    version: FlaunchVersion,
+    owner: Address,
+    operator: Address
+  ) {
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    return this.drift.read({
+      abi: erc721Abi,
+      address: flaunchAddress,
+      fn: "isApprovedForAll",
+      args: { owner, operator },
+    });
+  }
 }
 
 export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
@@ -1811,6 +1868,84 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       this.drift
     );
     return readWriteTreasuryManager.transferManagerOwnership(newManagerOwner);
+  }
+
+  /**
+   * Approves a spender for a specific flaunch token
+   * @param version - The flaunch version to determine the correct contract address
+   * @param spender - The address to approve
+   * @param tokenId - The token ID to approve
+   * @returns Transaction response
+   */
+  async approveFlaunchToken(
+    version: FlaunchVersion,
+    spender: Address,
+    tokenId: bigint
+  ) {
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    return this.drift.write({
+      abi: erc721Abi,
+      address: flaunchAddress,
+      fn: "approve",
+      args: { spender, tokenId },
+    });
+  }
+
+  /**
+   * Sets approval for all flaunch tokens to an operator
+   * @param version - The flaunch version to determine the correct contract address
+   * @param operator - The operator address to approve/revoke
+   * @param approved - Whether to approve or revoke approval
+   * @returns Transaction response
+   */
+  async setFlaunchTokenApprovalForAll(
+    version: FlaunchVersion,
+    operator: Address,
+    approved: boolean
+  ) {
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    return this.drift.write({
+      abi: erc721Abi,
+      address: flaunchAddress,
+      fn: "setApprovalForAll",
+      args: { operator, approved },
+    });
+  }
+
+  /**
+   * Adds an existing flaunch token to a treasury manager. NFT approval must be given prior to calling this function.
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @param version - The flaunch version to determine the correct contract address
+   * @param tokenId - The token ID to deposit
+   * @param creator - Optional creator address. If not provided, uses the connected wallet address
+   * @param data - Optional additional data for the deposit (defaults to empty bytes)
+   * @returns Transaction response
+   */
+  async addToTreasuryManager(
+    treasuryManagerAddress: Address,
+    version: FlaunchVersion,
+    tokenId: bigint,
+    creator?: Address,
+    data: `0x${string}` = "0x"
+  ) {
+    const readWriteTreasuryManager = new ReadWriteTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+
+    // Get the flaunch contract address based on version
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    const flaunchToken = {
+      flaunch: flaunchAddress,
+      tokenId,
+    };
+
+    const creatorAddress = creator ?? (await this.drift.getSignerAddress());
+
+    return readWriteTreasuryManager.deposit(flaunchToken, creatorAddress, data);
   }
 
   /**
