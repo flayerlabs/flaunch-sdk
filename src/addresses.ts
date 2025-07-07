@@ -2,7 +2,7 @@ import { base, baseSepolia } from "viem/chains";
 import { Addresses, PoolKey } from "./types";
 import { zeroAddress } from "viem";
 
-// doesn't use FeeEscrow
+// only old V1.0: doesn't use FeeEscrow
 export const FlaunchPositionManagerAddress: Addresses = {
   [base.id]: "0x51Bba15255406Cfe7099a42183302640ba7dAFDC",
   [baseSepolia.id]: "0x9A7059cA00dA92843906Cb4bCa1D005cE848AFdC",
@@ -50,6 +50,18 @@ export const ZoraVerifierAddress: Addresses = {
 };
 
 /** ======== */
+
+/** Permissions */
+export const ClosedPermissionsAddress: Addresses = {
+  [base.id]: "0x0000000000000000000000000000000000000000", // TODO: add mainnet address
+  [baseSepolia.id]: "0x551aeD820CAfaca2f9cD1C637AAc076D05a03AC2",
+};
+
+export const WhitelistedPermissionsAddress: Addresses = {
+  [base.id]: "0x0000000000000000000000000000000000000000", // TODO: add mainnet address
+  [baseSepolia.id]: "0xe8691E8f576A98c41EBB5E984207d4F51386621f",
+};
+/** =========== */
 
 export const FeeEscrowAddress: Addresses = {
   [base.id]: "0x72e6f7948b1B1A343B477F39aAbd2E35E6D27dde",

@@ -12,11 +12,13 @@ import { FlaunchZapAbi } from "../abi/FlaunchZap";
 import { parseUnits, zeroAddress, zeroHash } from "viem";
 import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
-import { IPFSParams } from "../types";
+import { IPFSParams, Permissions } from "../types";
 import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
 import {
   AddressFeeSplitManagerAddress,
+  ClosedPermissionsAddress,
   FlaunchPositionManagerV1_1Address,
+  WhitelistedPermissionsAddress,
 } from "addresses";
 import { getAmountWithSlippage } from "utils/universalRouter";
 import { ReadInitialPrice } from "./InitialPriceClient";
@@ -36,6 +38,8 @@ export interface FlaunchParams {
   premineAmount?: bigint;
   treasuryManagerParams?: {
     manager?: Address;
+    // @note the permissions are only set when a new treasury manager is deployed. Defaults to OPEN.
+    permissions?: Permissions;
     initializeData?: HexString;
     depositData?: HexString;
   };
@@ -48,6 +52,9 @@ export interface FlaunchIPFSParams
 export interface FlaunchWithRevenueManagerParams
   extends Omit<FlaunchParams, "treasuryManagerParams"> {
   revenueManagerInstanceAddress: Address;
+  treasuryManagerParams?: {
+    permissions?: Permissions;
+  };
 }
 
 export interface FlaunchWithRevenueManagerIPFSParams
@@ -61,6 +68,9 @@ export interface FlaunchWithSplitManagerParams
     address: Address;
     percent: number;
   }[];
+  treasuryManagerParams?: {
+    permissions?: Permissions;
+  };
 }
 
 export interface FlaunchWithSplitManagerIPFSParams
@@ -203,16 +213,20 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
 
     const _treasuryManagerParams: {
       manager: Address;
+      permissions: Permissions;
       initializeData: HexString;
       depositData: HexString;
     } = params.treasuryManagerParams
       ? {
           manager: params.treasuryManagerParams.manager ?? zeroAddress,
+          permissions:
+            params.treasuryManagerParams.permissions ?? Permissions.OPEN,
           initializeData: params.treasuryManagerParams.initializeData ?? "0x",
           depositData: params.treasuryManagerParams.depositData ?? "0x",
         }
       : {
           manager: zeroAddress,
+          permissions: Permissions.OPEN,
           initializeData: "0x",
           depositData: "0x",
         };
@@ -234,7 +248,12 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           initialPriceParams,
           feeCalculatorParams: "0x",
         },
-        _treasuryManagerParams,
+        _treasuryManagerParams: {
+          ..._treasuryManagerParams,
+          permissions: this._getPermissionsAddress(
+            _treasuryManagerParams.permissions
+          ),
+        },
         _whitelistParams: {
           merkleRoot: zeroHash,
           merkleIPFSHash: "",
@@ -325,6 +344,9 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
         },
         _treasuryManagerParams: {
           manager: params.revenueManagerInstanceAddress,
+          permissions: this._getPermissionsAddress(
+            params.treasuryManagerParams?.permissions ?? Permissions.OPEN
+          ),
           initializeData: "0x",
           depositData: "0x",
         },
@@ -472,6 +494,9 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
         },
         _treasuryManagerParams: {
           manager: AddressFeeSplitManagerAddress[this.chainId],
+          permissions: this._getPermissionsAddress(
+            params.treasuryManagerParams?.permissions ?? Permissions.OPEN
+          ),
           initializeData,
           depositData: "0x",
         },
@@ -509,5 +534,16 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
       ...params,
       tokenUri,
     });
+  }
+
+  _getPermissionsAddress(permissions: Permissions): Address {
+    switch (permissions) {
+      case Permissions.CLOSED:
+        return ClosedPermissionsAddress[this.chainId];
+      case Permissions.WHITELISTED:
+        return WhitelistedPermissionsAddress[this.chainId];
+      default:
+        return zeroAddress;
+    }
   }
 }
