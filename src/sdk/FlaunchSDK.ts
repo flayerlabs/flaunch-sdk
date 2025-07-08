@@ -1368,23 +1368,6 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Checks if a spender is approved for a specific flaunch token
-   * @param version - The flaunch version to determine the correct contract address
-   * @param tokenId - The token ID to check approval for
-   * @returns Promise<Address> - The approved address for the token (zeroAddress if not approved)
-   */
-  async getFlaunchTokenApproved(version: FlaunchVersion, tokenId: bigint) {
-    const flaunchAddress = this.getFlaunchAddress(version);
-
-    return this.drift.read({
-      abi: erc721Abi,
-      address: flaunchAddress,
-      fn: "getApproved",
-      args: { tokenId },
-    });
-  }
-
-  /**
    * Checks if an operator is approved for all flaunch tokens of an owner
    * @param version - The flaunch version to determine the correct contract address
    * @param owner - The owner address to check
@@ -1868,28 +1851,6 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       this.drift
     );
     return readWriteTreasuryManager.transferManagerOwnership(newManagerOwner);
-  }
-
-  /**
-   * Approves a spender for a specific flaunch token
-   * @param version - The flaunch version to determine the correct contract address
-   * @param spender - The address to approve
-   * @param tokenId - The token ID to approve
-   * @returns Transaction response
-   */
-  async approveFlaunchToken(
-    version: FlaunchVersion,
-    spender: Address,
-    tokenId: bigint
-  ) {
-    const flaunchAddress = this.getFlaunchAddress(version);
-
-    return this.drift.write({
-      abi: erc721Abi,
-      address: flaunchAddress,
-      fn: "approve",
-      args: { spender, tokenId },
-    });
   }
 
   /**
