@@ -100,7 +100,11 @@ import {
 import { ReadBidWallV1_1 } from "clients/BidWallV1_1Client";
 import { ReadFairLaunchV1_1 } from "clients/FairLaunchV1_1Client";
 import { ReadFlaunchV1_1 } from "clients/FlaunchV1_1Client";
-import { ReadWriteTreasuryManagerFactory } from "clients/TreasuryManagerFactoryClient";
+import {
+  DeployRevenueManagerParams,
+  DeployStakingManagerParams,
+  ReadWriteTreasuryManagerFactory,
+} from "clients/TreasuryManagerFactoryClient";
 import {
   ReadRevenueManager,
   ReadWriteRevenueManager,
@@ -1450,40 +1454,41 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @param params - Parameters for deploying the revenue manager
    * @param params.protocolRecipient - The address of the protocol recipient
    * @param params.protocolFeePercent - The percentage of the protocol fee
+   * @param params.permissions - The permissions for the revenue manager
    * @returns Address of the deployed revenue manager
    */
-  async deployRevenueManager(params: {
-    protocolRecipient: Address;
-    protocolFeePercent: number;
-  }): Promise<Address> {
+  async deployRevenueManager(
+    params: DeployRevenueManagerParams
+  ): Promise<Address> {
     const hash =
       await this.readWriteTreasuryManagerFactory.deployRevenueManager(params);
 
-    // Create a public client to get the transaction receipt with logs
-    const publicClient = createPublicClient({
-      chain: chainIdToChain[this.chainId],
-      transport: http(),
-    });
+    return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
+      hash
+    );
+  }
 
-    // Wait for transaction receipt
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  /**
+   * Deploys a new staking manager
+   * @param params - Parameters for deploying the staking manager
+   * @param params.managerOwner - The address of the manager owner
+   * @param params.stakingToken - The address of the token to be staked
+   * @param params.minEscrowDuration - The minimum duration (in seconds) that the creator's NFT is locked for
+   * @param params.minStakeDuration - The minimum duration (in seconds) that the user's tokens are locked for
+   * @param params.creatorSharePercent - The % share that a creator will earn from their token
+   * @param params.ownerSharePercent - The % share that the manager owner will earn from their token
+   * @param params.permissions - The permissions for the staking manager
+   * @returns Address of the deployed staking manager
+   */
+  async deployStakingManager(
+    params: DeployStakingManagerParams
+  ): Promise<Address> {
+    const hash =
+      await this.readWriteTreasuryManagerFactory.deployStakingManager(params);
 
-    // Get the logs from the receipt and find the ManagerDeployed event
-    const events = await publicClient.getContractEvents({
-      address: this.readWriteTreasuryManagerFactory.contract.address,
-      abi: TreasuryManagerFactoryAbi,
-      eventName: "ManagerDeployed",
-      fromBlock: receipt.blockNumber,
-      toBlock: receipt.blockNumber,
-    });
-
-    // Find the event from our transaction
-    const event = events.find((e) => e.transactionHash === hash);
-    if (!event) {
-      throw new Error("ManagerDeployed event not found in transaction logs");
-    }
-
-    return event.args._manager as Address;
+    return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
+      hash
+    );
   }
 
   /**

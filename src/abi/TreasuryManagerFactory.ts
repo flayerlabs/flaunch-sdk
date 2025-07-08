@@ -1,381 +1,434 @@
 export const TreasuryManagerFactoryAbi = [
   {
-    inputs: [
-      { internalType: "address", name: "_protocolOwner", type: "address" },
-      { internalType: "address", name: "_feeEscrow", type: "address" },
-    ],
-    stateMutability: "nonpayable",
     type: "constructor",
-  },
-  { inputs: [], name: "AccessControlBadConfirmation", type: "error" },
-  {
-    inputs: [
-      { internalType: "address", name: "account", type: "address" },
-      { internalType: "bytes32", name: "neededRole", type: "bytes32" },
-    ],
-    name: "AccessControlUnauthorizedAccount",
-    type: "error",
-  },
-  { inputs: [], name: "AlreadyInitialized", type: "error" },
-  { inputs: [], name: "NewOwnerIsZeroAddress", type: "error" },
-  { inputs: [], name: "NoHandoverRequest", type: "error" },
-  { inputs: [], name: "Unauthorized", type: "error" },
-  { inputs: [], name: "UnknownManagerImplemention", type: "error" },
-  {
-    anonymous: false,
     inputs: [
       {
-        indexed: true,
+        name: "_protocolOwner",
+        type: "address",
         internalType: "address",
+      },
+      { name: "_feeEscrow", type: "address", internalType: "address" },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "DEFAULT_ADMIN_ROLE",
+    inputs: [],
+    outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "approveManager",
+    inputs: [
+      {
+        name: "_managerImplementation",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "approvedManagerImplementation",
+    inputs: [
+      {
+        name: "_managerImplementation",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [{ name: "_approved", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "cancelOwnershipHandover",
+    inputs: [],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "completeOwnershipHandover",
+    inputs: [
+      { name: "pendingOwner", type: "address", internalType: "address" },
+    ],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "deployAndInitializeManager",
+    inputs: [
+      {
+        name: "_managerImplementation",
+        type: "address",
+        internalType: "address",
+      },
+      { name: "_owner", type: "address", internalType: "address" },
+      { name: "_data", type: "bytes", internalType: "bytes" },
+    ],
+    outputs: [
+      {
+        name: "manager_",
+        type: "address",
+        internalType: "address payable",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "deployAndInitializeManager",
+    inputs: [
+      {
+        name: "_managerImplementation",
+        type: "address",
+        internalType: "address",
+      },
+      { name: "_owner", type: "address", internalType: "address" },
+      { name: "_data", type: "bytes", internalType: "bytes" },
+      { name: "_permissions", type: "address", internalType: "address" },
+    ],
+    outputs: [
+      {
+        name: "manager_",
+        type: "address",
+        internalType: "address payable",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "deployManager",
+    inputs: [
+      {
+        name: "_managerImplementation",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "manager_",
+        type: "address",
+        internalType: "address payable",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "feeEscrow",
+    inputs: [],
+    outputs: [
+      { name: "", type: "address", internalType: "contract IFeeEscrow" },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getRoleAdmin",
+    inputs: [{ name: "role", type: "bytes32", internalType: "bytes32" }],
+    outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "grantRole",
+    inputs: [
+      { name: "role", type: "bytes32", internalType: "bytes32" },
+      { name: "account", type: "address", internalType: "address" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "hasRole",
+    inputs: [
+      { name: "role", type: "bytes32", internalType: "bytes32" },
+      { name: "account", type: "address", internalType: "address" },
+    ],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "managerImplementation",
+    inputs: [{ name: "_manager", type: "address", internalType: "address" }],
+    outputs: [
+      {
+        name: "_managerImplementation",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "owner",
+    inputs: [],
+    outputs: [{ name: "result", type: "address", internalType: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "ownershipHandoverExpiresAt",
+    inputs: [
+      { name: "pendingOwner", type: "address", internalType: "address" },
+    ],
+    outputs: [{ name: "result", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "renounceOwnership",
+    inputs: [],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "renounceRole",
+    inputs: [
+      { name: "role", type: "bytes32", internalType: "bytes32" },
+      {
+        name: "callerConfirmation",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "requestOwnershipHandover",
+    inputs: [],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "revokeRole",
+    inputs: [
+      { name: "role", type: "bytes32", internalType: "bytes32" },
+      { name: "account", type: "address", internalType: "address" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "supportsInterface",
+    inputs: [{ name: "interfaceId", type: "bytes4", internalType: "bytes4" }],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "transferOwnership",
+    inputs: [{ name: "newOwner", type: "address", internalType: "address" }],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "unapproveManager",
+    inputs: [
+      {
+        name: "_managerImplementation",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "event",
+    name: "ManagerDeployed",
+    inputs: [
+      {
         name: "_manager",
         type: "address",
-      },
-      {
         indexed: true,
         internalType: "address",
+      },
+      {
         name: "_managerImplementation",
         type: "address",
+        indexed: true,
+        internalType: "address",
       },
     ],
-    name: "ManagerDeployed",
-    type: "event",
+    anonymous: false,
   },
   {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "_managerImplementation",
-        type: "address",
-      },
-    ],
+    type: "event",
     name: "ManagerImplementationApproved",
-    type: "event",
-  },
-  {
-    anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: "address",
         name: "_managerImplementation",
         type: "address",
+        indexed: true,
+        internalType: "address",
       },
     ],
+    anonymous: false,
+  },
+  {
+    type: "event",
     name: "ManagerImplementationUnapproved",
-    type: "event",
-  },
-  {
-    anonymous: false,
     inputs: [
       {
+        name: "_managerImplementation",
+        type: "address",
         indexed: true,
         internalType: "address",
-        name: "pendingOwner",
-        type: "address",
       },
     ],
+    anonymous: false,
+  },
+  {
+    type: "event",
     name: "OwnershipHandoverCanceled",
-    type: "event",
-  },
-  {
-    anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: "address",
         name: "pendingOwner",
         type: "address",
-      },
-    ],
-    name: "OwnershipHandoverRequested",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
         indexed: true,
         internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "OwnershipHandoverRequested",
+    inputs: [
+      {
+        name: "pendingOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "OwnershipTransferred",
+    inputs: [
+      {
         name: "oldOwner",
         type: "address",
-      },
-      {
         indexed: true,
         internalType: "address",
+      },
+      {
         name: "newOwner",
         type: "address",
+        indexed: true,
+        internalType: "address",
       },
     ],
-    name: "OwnershipTransferred",
-    type: "event",
+    anonymous: false,
   },
   {
-    anonymous: false,
+    type: "event",
+    name: "RoleAdminChanged",
     inputs: [
-      { indexed: true, internalType: "bytes32", name: "role", type: "bytes32" },
       {
+        name: "role",
+        type: "bytes32",
         indexed: true,
         internalType: "bytes32",
+      },
+      {
         name: "previousAdminRole",
         type: "bytes32",
-      },
-      {
         indexed: true,
         internalType: "bytes32",
+      },
+      {
         name: "newAdminRole",
         type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
       },
     ],
-    name: "RoleAdminChanged",
-    type: "event",
+    anonymous: false,
   },
   {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "bytes32", name: "role", type: "bytes32" },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "sender",
-        type: "address",
-      },
-    ],
+    type: "event",
     name: "RoleGranted",
-    type: "event",
-  },
-  {
-    anonymous: false,
     inputs: [
-      { indexed: true, internalType: "bytes32", name: "role", type: "bytes32" },
       {
+        name: "role",
+        type: "bytes32",
         indexed: true,
-        internalType: "address",
+        internalType: "bytes32",
+      },
+      {
         name: "account",
         type: "address",
-      },
-      {
         indexed: true,
         internalType: "address",
+      },
+      {
         name: "sender",
         type: "address",
+        indexed: true,
+        internalType: "address",
       },
     ],
-    name: "RoleRevoked",
+    anonymous: false,
+  },
+  {
     type: "event",
-  },
-  {
-    inputs: [],
-    name: "DEFAULT_ADMIN_ROLE",
-    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
+    name: "RoleRevoked",
     inputs: [
       {
-        internalType: "address",
-        name: "_managerImplementation",
-        type: "address",
+        name: "role",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
       },
-    ],
-    name: "approveManager",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
       {
-        internalType: "address",
-        name: "_managerImplementation",
+        name: "account",
         type: "address",
+        indexed: true,
+        internalType: "address",
       },
-    ],
-    name: "approvedManagerImplementation",
-    outputs: [{ internalType: "bool", name: "_approved", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "cancelOwnershipHandover",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "address", name: "pendingOwner", type: "address" },
-    ],
-    name: "completeOwnershipHandover",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
       {
-        internalType: "address",
-        name: "_managerImplementation",
+        name: "sender",
         type: "address",
-      },
-      { internalType: "address", name: "_owner", type: "address" },
-      { internalType: "bytes", name: "_data", type: "bytes" },
-    ],
-    name: "deployAndInitializeManager",
-    outputs: [
-      { internalType: "address payable", name: "manager_", type: "address" },
-    ],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
+        indexed: true,
         internalType: "address",
-        name: "_managerImplementation",
-        type: "address",
       },
     ],
-    name: "deployManager",
-    outputs: [
-      { internalType: "address payable", name: "manager_", type: "address" },
-    ],
-    stateMutability: "nonpayable",
-    type: "function",
+    anonymous: false,
   },
+  { type: "error", name: "AccessControlBadConfirmation", inputs: [] },
   {
-    inputs: [],
-    name: "feeEscrow",
-    outputs: [
-      { internalType: "contract IFeeEscrow", name: "", type: "address" },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "bytes32", name: "role", type: "bytes32" }],
-    name: "getRoleAdmin",
-    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
+    type: "error",
+    name: "AccessControlUnauthorizedAccount",
     inputs: [
-      { internalType: "bytes32", name: "role", type: "bytes32" },
-      { internalType: "address", name: "account", type: "address" },
+      { name: "account", type: "address", internalType: "address" },
+      { name: "neededRole", type: "bytes32", internalType: "bytes32" },
     ],
-    name: "grantRole",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
   },
-  {
-    inputs: [
-      { internalType: "bytes32", name: "role", type: "bytes32" },
-      { internalType: "address", name: "account", type: "address" },
-    ],
-    name: "hasRole",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "_manager", type: "address" }],
-    name: "managerImplementation",
-    outputs: [
-      {
-        internalType: "address",
-        name: "_managerImplementation",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "owner",
-    outputs: [{ internalType: "address", name: "result", type: "address" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "address", name: "pendingOwner", type: "address" },
-    ],
-    name: "ownershipHandoverExpiresAt",
-    outputs: [{ internalType: "uint256", name: "result", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "renounceOwnership",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "bytes32", name: "role", type: "bytes32" },
-      { internalType: "address", name: "callerConfirmation", type: "address" },
-    ],
-    name: "renounceRole",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "requestOwnershipHandover",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "bytes32", name: "role", type: "bytes32" },
-      { internalType: "address", name: "account", type: "address" },
-    ],
-    name: "revokeRole",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "bytes4", name: "interfaceId", type: "bytes4" }],
-    name: "supportsInterface",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "newOwner", type: "address" }],
-    name: "transferOwnership",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_managerImplementation",
-        type: "address",
-      },
-    ],
-    name: "unapproveManager",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
+  { type: "error", name: "AlreadyInitialized", inputs: [] },
+  { type: "error", name: "NewOwnerIsZeroAddress", inputs: [] },
+  { type: "error", name: "NoHandoverRequest", inputs: [] },
+  { type: "error", name: "Unauthorized", inputs: [] },
+  { type: "error", name: "UnknownManagerImplemention", inputs: [] },
 ] as const;

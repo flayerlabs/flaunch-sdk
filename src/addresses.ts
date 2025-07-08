@@ -133,7 +133,12 @@ export const FastFlaunchZapAddress: Addresses = {
 
 export const FlaunchZapAddress: Addresses = {
   [base.id]: "0xfa9e8528ee95eb109bffd1a2d59cb95b300a672a", // TODO: update mainnet address with permissions param
-  [baseSepolia.id]: "0x3Ea38C79f3d8Ee9CcC0302B71E908fCF7288aE18",
+  [baseSepolia.id]: "0x9AE92E5ad16822F9723be29E58B6019B7fA765c5",
+};
+
+export const TreasuryManagerFactoryAddress: Addresses = {
+  [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763", // TODO: update mainnet address with permissions param
+  [baseSepolia.id]: "0xb22779fcDB2a1199E6592e0D4BE29A0C8c626246",
 };
 
 export const RevenueManagerAddress: Addresses = {
@@ -146,9 +151,9 @@ export const AddressFeeSplitManagerAddress: Addresses = {
   [baseSepolia.id]: "0xf72dcdee692c188de6b14c6213e849982e04069b",
 };
 
-export const TreasuryManagerFactoryAddress: Addresses = {
-  [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763",
-  [baseSepolia.id]: "0xd2f3c6185e06925dcbe794c6574315b2202e9ccd",
+export const StakingManagerAddress: Addresses = {
+  [base.id]: "0x0000000000000000000000000000000000000000", // TODO: update mainnet address
+  [baseSepolia.id]: "0x4a59dBAd29981A39BE597081f7f5071843552158",
 };
 
 export const PoolManagerAddress: Addresses = {
