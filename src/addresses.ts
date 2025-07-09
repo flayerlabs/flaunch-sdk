@@ -153,7 +153,7 @@ export const AddressFeeSplitManagerAddress: Addresses = {
 
 export const StakingManagerAddress: Addresses = {
   [base.id]: "0x0000000000000000000000000000000000000000", // TODO: update mainnet address
-  [baseSepolia.id]: "0x4a59dBAd29981A39BE597081f7f5071843552158",
+  [baseSepolia.id]: "0x8Ea4074c38cA7a596C740DD9E9D7122ea8E78c3c",
 };
 
 export const PoolManagerAddress: Addresses = {
