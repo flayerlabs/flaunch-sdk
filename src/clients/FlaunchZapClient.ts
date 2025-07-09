@@ -12,7 +12,9 @@ import { FlaunchZapAbi } from "../abi/FlaunchZap";
 import { parseUnits, zeroAddress, zeroHash } from "viem";
 import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
-import { IPFSParams } from "../types";
+import { getPermissionsAddress } from "../helpers/permissions";
+import { IPFSParams, Permissions } from "../types";
+import { RevenueManagerAddress, StakingManagerAddress } from "addresses";
 import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
 import {
   AddressFeeSplitManagerAddress,
@@ -36,6 +38,8 @@ export interface FlaunchParams {
   premineAmount?: bigint;
   treasuryManagerParams?: {
     manager?: Address;
+    // @note the permissions are only set when a new treasury manager is deployed. Defaults to OPEN.
+    permissions?: Permissions;
     initializeData?: HexString;
     depositData?: HexString;
   };
@@ -48,6 +52,9 @@ export interface FlaunchIPFSParams
 export interface FlaunchWithRevenueManagerParams
   extends Omit<FlaunchParams, "treasuryManagerParams"> {
   revenueManagerInstanceAddress: Address;
+  treasuryManagerParams?: {
+    permissions?: Permissions;
+  };
 }
 
 export interface FlaunchWithRevenueManagerIPFSParams
@@ -61,11 +68,30 @@ export interface FlaunchWithSplitManagerParams
     address: Address;
     percent: number;
   }[];
+  treasuryManagerParams?: {
+    permissions?: Permissions;
+  };
 }
 
 export interface FlaunchWithSplitManagerIPFSParams
   extends Omit<FlaunchWithSplitManagerParams, "tokenUri">,
     IPFSParams {}
+
+export interface DeployRevenueManagerParams {
+  protocolRecipient: Address;
+  protocolFeePercent: number;
+  permissions?: Permissions;
+}
+
+export interface DeployStakingManagerParams {
+  managerOwner: Address;
+  stakingToken: Address;
+  minEscrowDuration: bigint;
+  minStakeDuration: bigint;
+  creatorSharePercent: number;
+  ownerSharePercent: number;
+  permissions?: Permissions;
+}
 
 /**
  * Base client for interacting with the FlaunchZap contract in read-only mode
@@ -203,16 +229,20 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
 
     const _treasuryManagerParams: {
       manager: Address;
+      permissions: Permissions;
       initializeData: HexString;
       depositData: HexString;
     } = params.treasuryManagerParams
       ? {
           manager: params.treasuryManagerParams.manager ?? zeroAddress,
+          permissions:
+            params.treasuryManagerParams.permissions ?? Permissions.OPEN,
           initializeData: params.treasuryManagerParams.initializeData ?? "0x",
           depositData: params.treasuryManagerParams.depositData ?? "0x",
         }
       : {
           manager: zeroAddress,
+          permissions: Permissions.OPEN,
           initializeData: "0x",
           depositData: "0x",
         };
@@ -234,7 +264,13 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           initialPriceParams,
           feeCalculatorParams: "0x",
         },
-        _treasuryManagerParams,
+        _treasuryManagerParams: {
+          ..._treasuryManagerParams,
+          permissions: getPermissionsAddress(
+            _treasuryManagerParams.permissions,
+            this.chainId
+          ),
+        },
         _whitelistParams: {
           merkleRoot: zeroHash,
           merkleIPFSHash: "",
@@ -325,6 +361,10 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
         },
         _treasuryManagerParams: {
           manager: params.revenueManagerInstanceAddress,
+          permissions: getPermissionsAddress(
+            params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+            this.chainId
+          ),
           initializeData: "0x",
           depositData: "0x",
         },
@@ -472,6 +512,10 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
         },
         _treasuryManagerParams: {
           manager: AddressFeeSplitManagerAddress[this.chainId],
+          permissions: getPermissionsAddress(
+            params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+            this.chainId
+          ),
           initializeData,
           depositData: "0x",
         },
@@ -508,6 +552,96 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
     return this.flaunchWithSplitManager({
       ...params,
       tokenUri,
+    });
+  }
+
+  /**
+   * Deploys a new revenue manager
+   * @param params - Parameters for deploying the revenue manager
+   * @param params.protocolRecipient - The address of the protocol recipient
+   * @param params.protocolFeePercent - The percentage of the protocol fee
+   * @param params.permissions - The permissions for the revenue manager
+   * @returns Transaction response
+   */
+  deployRevenueManager(params: DeployRevenueManagerParams) {
+    const permissionsAddress = getPermissionsAddress(
+      params.permissions ?? Permissions.OPEN,
+      this.chainId
+    );
+
+    return this.contract.write("deployAndInitializeManager", {
+      _managerImplementation: RevenueManagerAddress[this.chainId],
+      _owner: params.protocolRecipient,
+      _data: encodeAbiParameters(
+        [
+          {
+            type: "tuple",
+            components: [
+              { type: "address", name: "protocolRecipient" },
+              { type: "uint256", name: "protocolFee" },
+            ],
+          },
+        ],
+        [
+          {
+            protocolRecipient: params.protocolRecipient,
+            protocolFee: BigInt(params.protocolFeePercent * 100), // Convert percentage to basis points
+          },
+        ]
+      ),
+      _permissions: permissionsAddress,
+    });
+  }
+
+  /**
+   * Deploys a new staking manager
+   * @param params - Parameters for deploying the staking manager
+   * @param params.managerOwner - The address of the manager owner
+   * @param params.stakingToken - The address of the token to be staked
+   * @param params.minEscrowDuration - The minimum duration (in seconds) that the creator's NFT is locked for
+   * @param params.minStakeDuration - The minimum duration (in seconds) that the user's tokens are locked for
+   * @param params.creatorSharePercent - The % share that a creator will earn from their token
+   * @param params.ownerSharePercent - The % share that the manager owner will earn from their token
+   * @param params.permissions - The permissions for the staking manager
+   * @returns Transaction response
+   */
+  deployStakingManager(params: DeployStakingManagerParams) {
+    const permissionsAddress = getPermissionsAddress(
+      params.permissions ?? Permissions.OPEN,
+      this.chainId
+    );
+
+    const VALID_SHARE_TOTAL = 100_00000n; // 5 decimals as BigInt
+
+    return this.contract.write("deployAndInitializeManager", {
+      _managerImplementation: StakingManagerAddress[this.chainId],
+      _owner: params.managerOwner,
+      _data: encodeAbiParameters(
+        [
+          {
+            type: "tuple",
+            components: [
+              { type: "address", name: "stakingToken" },
+              { type: "uint256", name: "minEscrowDuration" },
+              { type: "uint256", name: "minStakeDuration" },
+              { type: "uint256", name: "creatorShare" },
+              { type: "uint256", name: "ownerShare" },
+            ],
+          },
+        ],
+        [
+          {
+            stakingToken: params.stakingToken,
+            minEscrowDuration: params.minEscrowDuration,
+            minStakeDuration: params.minStakeDuration,
+            creatorShare:
+              (BigInt(params.creatorSharePercent) * VALID_SHARE_TOTAL) / 100n,
+            ownerShare:
+              (BigInt(params.ownerSharePercent) * VALID_SHARE_TOTAL) / 100n,
+          },
+        ]
+      ),
+      _permissions: permissionsAddress,
     });
   }
 }

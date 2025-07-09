@@ -17,6 +17,7 @@ import {
   encodeAbiParameters,
   parseUnits,
   parseEther,
+  erc721Abi,
 } from "viem";
 import axios from "axios";
 import {
@@ -70,6 +71,8 @@ import {
   FlaunchWithRevenueManagerIPFSParams,
   FlaunchWithSplitManagerParams,
   FlaunchWithSplitManagerIPFSParams,
+  DeployRevenueManagerParams,
+  DeployStakingManagerParams,
 } from "../clients/FlaunchZapClient";
 import { ReadFlaunch } from "../clients/FlaunchClient";
 import { ReadMemecoin } from "../clients/MemecoinClient";
@@ -105,8 +108,12 @@ import {
   ReadWriteRevenueManager,
 } from "clients/RevenueManagerClient";
 import { ReadInitialPrice } from "clients/InitialPriceClient";
+import {
+  ReadTreasuryManager,
+  ReadWriteTreasuryManager,
+} from "clients/TreasuryManagerClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
-import { CoinMetadata, FlaunchVersion, Verifier } from "types";
+import { CoinMetadata, FlaunchVersion, Verifier, Permissions } from "types";
 import {
   getPoolId,
   orderPoolKey,
@@ -123,7 +130,7 @@ import {
   getPermit2TypedData,
 } from "utils/universalRouter";
 import { resolveIPFS as defaultResolveIPFS } from "../helpers/ipfs";
-import { chainIdToChain } from "helpers";
+import { chainIdToChain, getPermissionsAddress } from "helpers";
 import { TreasuryManagerFactoryAbi } from "abi/TreasuryManagerFactory";
 import { ReadMulticall } from "clients/MulticallClient";
 import { MemecoinAbi } from "abi";
@@ -388,6 +395,23 @@ export class ReadFlaunchSDK {
         return this.readAnyBidWall;
       default:
         return this.readBidWallV1_1;
+    }
+  }
+
+  /**
+   * Gets the flaunch contract address for a given version
+   * @param version - The version to get the flaunch contract address for
+   */
+  getFlaunchAddress(version: FlaunchVersion) {
+    switch (version) {
+      case FlaunchVersion.V1:
+        return this.readFlaunch.contract.address;
+      case FlaunchVersion.V1_1:
+        return this.readFlaunchV1_1.contract.address;
+      case FlaunchVersion.ANY:
+        return this.readFlaunchV1_1.contract.address;
+      default:
+        return this.readFlaunchV1_1.contract.address;
     }
   }
 
@@ -1116,6 +1140,28 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets treasury manager information including owner and permissions
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @returns Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
+   */
+  async treasuryManagerInfo(treasuryManagerAddress: Address) {
+    const readTreasuryManager = new ReadTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+
+    const [managerOwner, permissions] = await Promise.all([
+      readTreasuryManager.managerOwner(),
+      readTreasuryManager.permissions(),
+    ]);
+
+    return {
+      managerOwner,
+      permissions,
+    };
+  }
+
+  /**
    * Gets the pool ID for a given coin
    * @param coinAddress - The address of the coin
    * @param version - Optional specific version to use
@@ -1322,6 +1368,28 @@ export class ReadFlaunchSDK {
   tokenImporterVerifyMemecoin(memecoin: Address) {
     return this.readTokenImporter.verifyMemecoin(memecoin);
   }
+
+  /**
+   * Checks if an operator is approved for all flaunch tokens of an owner
+   * @param version - The flaunch version to determine the correct contract address
+   * @param owner - The owner address to check
+   * @param operator - The operator address to check
+   * @returns Promise<boolean> - True if operator is approved for all tokens
+   */
+  async isFlaunchTokenApprovedForAll(
+    version: FlaunchVersion,
+    owner: Address,
+    operator: Address
+  ) {
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    return this.drift.read({
+      abi: erc721Abi,
+      address: flaunchAddress,
+      fn: "isApprovedForAll",
+      args: { owner, operator },
+    });
+  }
 }
 
 export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
@@ -1384,40 +1452,39 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @param params - Parameters for deploying the revenue manager
    * @param params.protocolRecipient - The address of the protocol recipient
    * @param params.protocolFeePercent - The percentage of the protocol fee
+   * @param params.permissions - The permissions for the revenue manager
    * @returns Address of the deployed revenue manager
    */
-  async deployRevenueManager(params: {
-    protocolRecipient: Address;
-    protocolFeePercent: number;
-  }): Promise<Address> {
-    const hash =
-      await this.readWriteTreasuryManagerFactory.deployRevenueManager(params);
+  async deployRevenueManager(
+    params: DeployRevenueManagerParams
+  ): Promise<Address> {
+    const hash = await this.readWriteFlaunchZap.deployRevenueManager(params);
 
-    // Create a public client to get the transaction receipt with logs
-    const publicClient = createPublicClient({
-      chain: chainIdToChain[this.chainId],
-      transport: http(),
-    });
+    return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
+      hash
+    );
+  }
 
-    // Wait for transaction receipt
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  /**
+   * Deploys a new staking manager
+   * @param params - Parameters for deploying the staking manager
+   * @param params.managerOwner - The address of the manager owner
+   * @param params.stakingToken - The address of the token to be staked
+   * @param params.minEscrowDuration - The minimum duration (in seconds) that the creator's NFT is locked for
+   * @param params.minStakeDuration - The minimum duration (in seconds) that the user's tokens are locked for
+   * @param params.creatorSharePercent - The % share that a creator will earn from their token
+   * @param params.ownerSharePercent - The % share that the manager owner will earn from their token
+   * @param params.permissions - The permissions for the staking manager
+   * @returns Address of the deployed staking manager
+   */
+  async deployStakingManager(
+    params: DeployStakingManagerParams
+  ): Promise<Address> {
+    const hash = await this.readWriteFlaunchZap.deployStakingManager(params);
 
-    // Get the logs from the receipt and find the ManagerDeployed event
-    const events = await publicClient.getContractEvents({
-      address: this.readWriteTreasuryManagerFactory.contract.address,
-      abi: TreasuryManagerFactoryAbi,
-      eventName: "ManagerDeployed",
-      fromBlock: receipt.blockNumber,
-      toBlock: receipt.blockNumber,
-    });
-
-    // Find the event from our transaction
-    const event = events.find((e) => e.transactionHash === hash);
-    if (!event) {
-      throw new Error("ManagerDeployed event not found in transaction logs");
-    }
-
-    return event.args._manager as Address;
+    return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
+      hash
+    );
   }
 
   /**
@@ -1750,6 +1817,97 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       this.drift
     );
     return readWriteRevenueManager.creatorClaimForTokens(params.flaunchTokens);
+  }
+
+  /**
+   * Sets the permissions contract address for a treasury manager
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @param permissions - The permissions enum value to set
+   * @returns Transaction response
+   */
+  treasuryManagerSetPermissions(
+    treasuryManagerAddress: Address,
+    permissions: Permissions
+  ) {
+    const readWriteTreasuryManager = new ReadWriteTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+    const permissionsAddress = getPermissionsAddress(permissions, this.chainId);
+    return readWriteTreasuryManager.setPermissions(permissionsAddress);
+  }
+
+  /**
+   * Transfers the ownership of a treasury manager to a new address
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @param newManagerOwner - The address of the new manager owner
+   * @returns Transaction response
+   */
+  treasuryManagerTransferOwnership(
+    treasuryManagerAddress: Address,
+    newManagerOwner: Address
+  ) {
+    const readWriteTreasuryManager = new ReadWriteTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+    return readWriteTreasuryManager.transferManagerOwnership(newManagerOwner);
+  }
+
+  /**
+   * Sets approval for all flaunch tokens to an operator
+   * @param version - The flaunch version to determine the correct contract address
+   * @param operator - The operator address to approve/revoke
+   * @param approved - Whether to approve or revoke approval
+   * @returns Transaction response
+   */
+  async setFlaunchTokenApprovalForAll(
+    version: FlaunchVersion,
+    operator: Address,
+    approved: boolean
+  ) {
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    return this.drift.write({
+      abi: erc721Abi,
+      address: flaunchAddress,
+      fn: "setApprovalForAll",
+      args: { operator, approved },
+    });
+  }
+
+  /**
+   * Adds an existing flaunch token to a treasury manager. NFT approval must be given prior to calling this function.
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @param version - The flaunch version to determine the correct contract address
+   * @param tokenId - The token ID to deposit
+   * @param creator - Optional creator address. If not provided, uses the connected wallet address
+   * @param data - Optional additional data for the deposit (defaults to empty bytes)
+   * @returns Transaction response
+   */
+  async addToTreasuryManager(
+    treasuryManagerAddress: Address,
+    version: FlaunchVersion,
+    tokenId: bigint,
+    creator?: Address,
+    data: `0x${string}` = "0x"
+  ) {
+    const readWriteTreasuryManager = new ReadWriteTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+
+    // Get the flaunch contract address based on version
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    const flaunchToken = {
+      flaunch: flaunchAddress,
+      tokenId,
+    };
+
+    const creatorAddress = creator ?? (await this.drift.getSignerAddress());
+
+    return readWriteTreasuryManager.deposit(flaunchToken, creatorAddress, data);
   }
 
   /**

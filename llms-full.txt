@@ -483,6 +483,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getETHUSDCPrice
 - getFairLaunch
 - getFairLaunchAddress
+- getFlaunchAddress
 - getFlaunchingFee
 - getPositionManager
 - getPositionManagerAddress
@@ -490,6 +491,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - initialSqrtPriceX96
 - initialTick
 - isFairLaunchActive
+- isFlaunchTokenApprovedForAll
 - isValidCoin
 - parseSwapTx
 - pollPoolCreatedNow
@@ -504,6 +506,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerTokensCount
 - setIPFSResolver
 - tokenImporterVerifyMemecoin
+- treasuryManagerInfo
 - watchPoolCreated
 - watchPoolSwap
 
@@ -1140,6 +1143,24 @@ Returns
 
 ___
 
+### getFlaunchAddress
+
+▸ **getFlaunchAddress**(`version`): \`0x$\{string}\`
+
+Gets the flaunch contract address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the flaunch contract address for |
+
+Returns
+
+\`0x$\{string}\`
+
+___
+
 ### getFlaunchingFee
 
 ▸ **getFlaunchingFee**(`params`): `Promise`\<`bigint`\>
@@ -1276,6 +1297,28 @@ Returns
 `Promise`\<`boolean`\>
 
 Promise<boolean> - True if fair launch is active, false otherwise
+
+___
+
+### isFlaunchTokenApprovedForAll
+
+▸ **isFlaunchTokenApprovedForAll**(`version`, `owner`, `operator`): `Promise`\<`boolean`\>
+
+Checks if an operator is approved for all flaunch tokens of an owner
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The flaunch version to determine the correct contract address |
+| `owner` | \`0x$\{string}\` | The owner address to check |
+| `operator` | \`0x$\{string}\` | The operator address to check |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if operator is approved for all tokens
 
 ___
 
@@ -1582,6 +1625,26 @@ Promise<{ isValid: boolean; verifier: Address }> - The result of the verificatio
 
 ___
 
+### treasuryManagerInfo
+
+▸ **treasuryManagerInfo**(`treasuryManagerAddress`): `Promise`\<\{ `managerOwner`: \`0x$\{string}\` ; `permissions`: \`0x$\{string}\`  }\>
+
+Gets treasury manager information including owner and permissions
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `treasuryManagerAddress` | \`0x$\{string}\` | The address of the treasury manager |
+
+Returns
+
+`Promise`\<\{ `managerOwner`: \`0x$\{string}\` ; `permissions`: \`0x$\{string}\`  }\>
+
+Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
+
+___
+
 ### watchPoolCreated
 
 ▸ **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
@@ -1680,6 +1743,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 
 ### Methods
 
+- addToTreasuryManager
 - anyFlaunch
 - bidWallPosition
 - buyCoin
@@ -1714,6 +1778,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getETHUSDCPrice
 - getFairLaunch
 - getFairLaunchAddress
+- getFlaunchAddress
 - getFlaunchingFee
 - getPermit2AllowanceAndNonce
 - getPermit2TypedData
@@ -1724,6 +1789,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - initialSqrtPriceX96
 - initialTick
 - isFairLaunchActive
+- isFlaunchTokenApprovedForAll
 - isValidCoin
 - parseSwapTx
 - pollPoolCreatedNow
@@ -1740,8 +1806,12 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerProtocolClaim
 - revenueManagerTokensCount
 - sellCoin
+- setFlaunchTokenApprovalForAll
 - setIPFSResolver
 - tokenImporterVerifyMemecoin
+- treasuryManagerInfo
+- treasuryManagerSetPermissions
+- treasuryManagerTransferOwnership
 - watchPoolCreated
 - watchPoolSwap
 - withdrawCreatorRevenue
@@ -2056,6 +2126,30 @@ Inherited from
 ReadFlaunchSDK.resolveIPFS
 
 ## Methods
+
+### addToTreasuryManager
+
+▸ **addToTreasuryManager**(`treasuryManagerAddress`, `version`, `tokenId`, `creator?`, `data?`): `Promise`\<\`0x$\{string}\`\>
+
+Adds an existing flaunch token to a treasury manager. NFT approval must be given prior to calling this function.
+
+Parameters
+
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `treasuryManagerAddress` | \`0x$\{string}\` | `undefined` | The address of the treasury manager |
+| `version` | `FlaunchVersion` | `undefined` | The flaunch version to determine the correct contract address |
+| `tokenId` | `bigint` | `undefined` | The token ID to deposit |
+| `creator?` | \`0x$\{string}\` | `undefined` | Optional creator address. If not provided, uses the connected wallet address |
+| `data` | \`0x$\{string}\` | `"0x"` | Optional additional data for the deposit (defaults to empty bytes) |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
 
 ### anyFlaunch
 
@@ -2849,6 +2943,28 @@ ReadFlaunchSDK.getFairLaunchAddress
 
 ___
 
+### getFlaunchAddress
+
+▸ **getFlaunchAddress**(`version`): \`0x$\{string}\`
+
+Gets the flaunch contract address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the flaunch contract address for |
+
+Returns
+
+\`0x$\{string}\`
+
+Inherited from
+
+ReadFlaunchSDK.getFlaunchAddress
+
+___
+
 ### getFlaunchingFee
 
 ▸ **getFlaunchingFee**(`params`): `Promise`\<`bigint`\>
@@ -3078,6 +3194,32 @@ Promise<boolean> - True if fair launch is active, false otherwise
 Inherited from
 
 ReadFlaunchSDK.isFairLaunchActive
+
+___
+
+### isFlaunchTokenApprovedForAll
+
+▸ **isFlaunchTokenApprovedForAll**(`version`, `owner`, `operator`): `Promise`\<`boolean`\>
+
+Checks if an operator is approved for all flaunch tokens of an owner
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The flaunch version to determine the correct contract address |
+| `owner` | \`0x$\{string}\` | The owner address to check |
+| `operator` | \`0x$\{string}\` | The operator address to check |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if operator is approved for all tokens
+
+Inherited from
+
+ReadFlaunchSDK.isFlaunchTokenApprovedForAll
 
 ___
 
@@ -3474,6 +3616,28 @@ Transaction response for the sell operation
 
 ___
 
+### setFlaunchTokenApprovalForAll
+
+▸ **setFlaunchTokenApprovalForAll**(`version`, `operator`, `approved`): `Promise`\<\`0x$\{string}\`\>
+
+Sets approval for all flaunch tokens to an operator
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The flaunch version to determine the correct contract address |
+| `operator` | \`0x$\{string}\` | The operator address to approve/revoke |
+| `approved` | `boolean` | Whether to approve or revoke approval |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
+
 ### setIPFSResolver
 
 ▸ **setIPFSResolver**(`resolverFn`): `void`
@@ -3522,6 +3686,72 @@ Promise<{ isValid: boolean; verifier: Address }> - The result of the verificatio
 Inherited from
 
 ReadFlaunchSDK.tokenImporterVerifyMemecoin
+
+___
+
+### treasuryManagerInfo
+
+▸ **treasuryManagerInfo**(`treasuryManagerAddress`): `Promise`\<\{ `managerOwner`: \`0x$\{string}\` ; `permissions`: \`0x$\{string}\`  }\>
+
+Gets treasury manager information including owner and permissions
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `treasuryManagerAddress` | \`0x$\{string}\` | The address of the treasury manager |
+
+Returns
+
+`Promise`\<\{ `managerOwner`: \`0x$\{string}\` ; `permissions`: \`0x$\{string}\`  }\>
+
+Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
+
+Inherited from
+
+ReadFlaunchSDK.treasuryManagerInfo
+
+___
+
+### treasuryManagerSetPermissions
+
+▸ **treasuryManagerSetPermissions**(`treasuryManagerAddress`, `permissions`): `Promise`\<\`0x$\{string}\`\>
+
+Sets the permissions contract address for a treasury manager
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `treasuryManagerAddress` | \`0x$\{string}\` | The address of the treasury manager |
+| `permissions` | `Permissions` | The permissions enum value to set |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
+
+### treasuryManagerTransferOwnership
+
+▸ **treasuryManagerTransferOwnership**(`treasuryManagerAddress`, `newManagerOwner`): `Promise`\<\`0x$\{string}\`\>
+
+Transfers the ownership of a treasury manager to a new address
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `treasuryManagerAddress` | \`0x$\{string}\` | The address of the treasury manager |
+| `newManagerOwner` | \`0x$\{string}\` | The address of the new manager owner |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
 
 ___
 
@@ -3637,6 +3867,42 @@ ___
 ### V1\_1\_1
 
 • **V1\_1\_1** = ``"V1_1_1"``
+
+
+
+---
+
+@flaunch/sdk - v0.8.2 / Exports / Permissions
+
+# Enumeration: Permissions
+
+Enumeration of Permissions for TreasuryManagers. Defaults to OPEN.
+
+## Table of contents
+
+### Enumeration Members
+
+- CLOSED
+- OPEN
+- WHITELISTED
+
+## Enumeration Members
+
+### CLOSED
+
+• **CLOSED** = ``"closed"``
+
+___
+
+### OPEN
+
+• **OPEN** = ``"open"``
+
+___
+
+### WHITELISTED
+
+• **WHITELISTED** = ``"whitelisted"``
 
 
 
@@ -4081,6 +4347,7 @@ ___
 ### Enumerations
 
 - FlaunchVersion
+- Permissions
 - Verifier
 
 ### Classes
@@ -4121,6 +4388,7 @@ ___
 - BidWallAddress
 - BidWallV1\_1Address
 - ClankerWorldVerifierAddress
+- ClosedPermissionsAddress
 - DopplerVerifierAddress
 - FLETHAddress
 - FLETHHooksAddress
@@ -4150,6 +4418,7 @@ ___
 - UniversalRouterAddress
 - VirtualsVerifierAddress
 - WhitelistVerifierAddress
+- WhitelistedPermissionsAddress
 - ZoraVerifierAddress
 - chainIdToChain
 
@@ -4162,6 +4431,7 @@ ___
 - ethToMemecoin
 - generateTokenUri
 - getAmountWithSlippage
+- getPermissionsAddress
 - getPermit2TypedData
 - getPoolId
 - getSqrtPriceX96FromTick
@@ -4297,6 +4567,14 @@ ___
 
 ___
 
+### ClosedPermissionsAddress
+
+• `Const` **ClosedPermissionsAddress**: `Addresses`
+
+Permissions
+
+___
+
 ### DopplerVerifierAddress
 
 • `Const` **DopplerVerifierAddress**: `Addresses`
@@ -4337,7 +4615,7 @@ ___
 
 • `Const` **FeeEscrowAddress**: `Addresses`
 
-========
+===========
 
 ___
 
@@ -4497,6 +4775,12 @@ ___
 ### WhitelistVerifierAddress
 
 • `Const` **WhitelistVerifierAddress**: `Addresses`
+
+___
+
+### WhitelistedPermissionsAddress
+
+• `Const` **WhitelistedPermissionsAddress**: `Addresses`
 
 ___
 
@@ -4712,6 +4996,27 @@ Returns
 **`Dev`**
 
 EXACT_OUT adds the slippage, EXACT_IN removes it
+
+___
+
+### getPermissionsAddress
+
+▸ **getPermissionsAddress**(`permissions`, `chainId`): `Address`
+
+Maps a Permissions enum value to its corresponding contract address
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `permissions` | `Permissions` | The permissions enum value |
+| `chainId` | `number` | The chain ID to get the address for |
+
+Returns
+
+`Address`
+
+The corresponding permissions contract address
 
 ___
 

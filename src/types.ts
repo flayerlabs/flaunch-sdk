@@ -56,3 +56,12 @@ export enum Verifier {
   WHITELIST = "whitelist",
   ZORA = "zora",
 }
+
+/**
+ * Enumeration of Permissions for TreasuryManagers. Defaults to OPEN.
+ */
+export enum Permissions {
+  OPEN = "open",
+  CLOSED = "closed",
+  WHITELISTED = "whitelisted",
+}
