@@ -71,6 +71,8 @@ import {
   FlaunchWithRevenueManagerIPFSParams,
   FlaunchWithSplitManagerParams,
   FlaunchWithSplitManagerIPFSParams,
+  DeployRevenueManagerParams,
+  DeployStakingManagerParams,
 } from "../clients/FlaunchZapClient";
 import { ReadFlaunch } from "../clients/FlaunchClient";
 import { ReadMemecoin } from "../clients/MemecoinClient";
@@ -100,11 +102,7 @@ import {
 import { ReadBidWallV1_1 } from "clients/BidWallV1_1Client";
 import { ReadFairLaunchV1_1 } from "clients/FairLaunchV1_1Client";
 import { ReadFlaunchV1_1 } from "clients/FlaunchV1_1Client";
-import {
-  DeployRevenueManagerParams,
-  DeployStakingManagerParams,
-  ReadWriteTreasuryManagerFactory,
-} from "clients/TreasuryManagerFactoryClient";
+import { ReadWriteTreasuryManagerFactory } from "clients/TreasuryManagerFactoryClient";
 import {
   ReadRevenueManager,
   ReadWriteRevenueManager,
@@ -1460,8 +1458,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   async deployRevenueManager(
     params: DeployRevenueManagerParams
   ): Promise<Address> {
-    const hash =
-      await this.readWriteTreasuryManagerFactory.deployRevenueManager(params);
+    const hash = await this.readWriteFlaunchZap.deployRevenueManager(params);
 
     return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
       hash
@@ -1483,8 +1480,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   async deployStakingManager(
     params: DeployStakingManagerParams
   ): Promise<Address> {
-    const hash =
-      await this.readWriteTreasuryManagerFactory.deployStakingManager(params);
+    const hash = await this.readWriteFlaunchZap.deployStakingManager(params);
 
     return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
       hash

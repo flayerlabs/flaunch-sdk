@@ -64,6 +64,28 @@ export const FlaunchZapAbi = [
   },
   {
     type: "function",
+    name: "deployAndInitializeManager",
+    inputs: [
+      {
+        name: "_managerImplementation",
+        type: "address",
+        internalType: "address",
+      },
+      { name: "_owner", type: "address", internalType: "address" },
+      { name: "_data", type: "bytes", internalType: "bytes" },
+      { name: "_permissions", type: "address", internalType: "address" },
+    ],
+    outputs: [
+      {
+        name: "manager_",
+        type: "address",
+        internalType: "address payable",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "flETH",
     inputs: [],
     outputs: [{ name: "", type: "address", internalType: "contract IFLETH" }],

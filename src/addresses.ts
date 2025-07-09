@@ -133,12 +133,12 @@ export const FastFlaunchZapAddress: Addresses = {
 
 export const FlaunchZapAddress: Addresses = {
   [base.id]: "0xfa9e8528ee95eb109bffd1a2d59cb95b300a672a", // TODO: update mainnet address with permissions param
-  [baseSepolia.id]: "0x9AE92E5ad16822F9723be29E58B6019B7fA765c5",
+  [baseSepolia.id]: "0x2871a184410F03F4e2C7C5257d839FB34169496A",
 };
 
 export const TreasuryManagerFactoryAddress: Addresses = {
-  [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763", // TODO: update mainnet address with permissions param
-  [baseSepolia.id]: "0xb22779fcDB2a1199E6592e0D4BE29A0C8c626246",
+  [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763",
+  [baseSepolia.id]: "0xD2F3C6185e06925dCBE794C6574315b2202E9CcD",
 };
 
 export const RevenueManagerAddress: Addresses = {
