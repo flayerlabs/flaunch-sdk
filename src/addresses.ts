@@ -164,6 +164,11 @@ export const Permit2Address: Addresses = {
   [baseSepolia.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
 };
 
+export const UniV4PositionManagerAddress: Addresses = {
+  [base.id]: "0x7C5f5A4bBd8fD63184577525326123B519429bDc",
+  [baseSepolia.id]: "0x4B2C77d209D3405F41a037Ec6c77F7F5b8e2ca80",
+};
+
 export const USDCETHPoolKeys: {
   [chainId: number]: PoolKey;
 } = {

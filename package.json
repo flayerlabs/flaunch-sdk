@@ -83,8 +83,8 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@delvtech/drift": "^0.8.4",
-    "@delvtech/drift-viem": "^0.8.4",
+    "@delvtech/drift": "^0.11.0",
+    "@delvtech/drift-viem": "^0.11.0",
     "@uniswap/v3-sdk": "^3.24.1",
     "axios": "^1.8.1",
     "react": "^19.0.0",
