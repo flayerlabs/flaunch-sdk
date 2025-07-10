@@ -61,6 +61,14 @@ export class ReadMemecoin {
   }
 
   /**
+   * Gets the decimals of the token
+   * @returns Promise<number> - The decimals of the token
+   */
+  decimals() {
+    return this.contract.read("decimals");
+  }
+
+  /**
    * Gets the total supply of the token
    * @returns Promise<bigint> - The total supply
    */
