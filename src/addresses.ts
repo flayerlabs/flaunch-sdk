@@ -13,6 +13,11 @@ export const FlaunchPositionManagerV1_1Address: Addresses = {
   [baseSepolia.id]: "0x24347e0dd16357059abfc1b321df354873552fdc",
 };
 
+export const FlaunchPositionManagerV1_1_1Address: Addresses = {
+  [base.id]: zeroAddress, // TODO: add mainnet address
+  [baseSepolia.id]: "0x4e7cb1e6800a7b297b38bddcecaf9ca5b6616fdc",
+};
+
 export const AnyPositionManagerAddress: Addresses = {
   [base.id]: "0x8DC3b85e1dc1C846ebf3971179a751896842e5dC",
   [baseSepolia.id]: "0xB4A535B9D35851972736495CC52FBfDaCF32e5dc",
@@ -88,7 +93,7 @@ export const FairLaunchAddress: Addresses = {
   [baseSepolia.id]: "0x227Fc288aC56E169f2BfEA82e07F8635054d4136",
 };
 
-// also supports AnyPositionManager
+// also supports AnyPositionManager & PositionManagerV1_1_1 (sepolia)
 export const FairLaunchV1_1Address: Addresses = {
   [base.id]: "0x4dc442403e8c758425b93c59dc737da522f32640",
   [baseSepolia.id]: "0x7922c1ead7c5825fb52ed6b14f397d064508acbe",
@@ -105,6 +110,11 @@ export const FlaunchV1_1Address: Addresses = {
   [baseSepolia.id]: "0x96be8ff5e244294a34bfa507a39190dc7a839baa",
 };
 
+export const FlaunchV1_1_1Address: Addresses = {
+  [base.id]: zeroAddress, // TODO: add mainnet address
+  [baseSepolia.id]: "0xe2ef58a54ee79dac0D4A130ea58b340124DF9438",
+};
+
 export const AnyFlaunchAddress: Addresses = {
   [base.id]: "0xc5B2E8F197407263F4B62a35C71bFc394ecF95D5",
   [baseSepolia.id]: "0x67Ee6C83956a75f67bD3Fc8Ca4080D95a145c7C9",
@@ -115,7 +125,7 @@ export const BidWallAddress: Addresses = {
   [baseSepolia.id]: "0xa2107050ACEf4809c88Ab744F8e667605db5ACDB",
 };
 
-// also supports AnyPositionManager
+// also supports AnyPositionManager & PositionManagerV1_1_1 (sepolia)
 export const BidWallV1_1Address: Addresses = {
   [base.id]: "0x7f22353d1634223a802D1c1Ea5308Ddf5DD0ef9c",
   [baseSepolia.id]: "0x6f2fa01a05ff8b6efbfefd91a3b85aaf19265a00",
