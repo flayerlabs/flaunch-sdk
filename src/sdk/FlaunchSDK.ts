@@ -16,7 +16,9 @@ import {
   type GetContractEventsReturnType,
   encodeAbiParameters,
   parseUnits,
-  parseEther,
+  formatEther,
+  erc20Abi,
+  encodeFunctionData,
   erc721Abi,
 } from "viem";
 import axios from "axios";
@@ -43,6 +45,7 @@ import {
   FeeEscrowAddress,
   ReferralEscrowAddress,
   TokenImporterAddress,
+  UniV4PositionManagerAddress,
   FlaunchPositionManagerV1_1_1Address,
   FlaunchV1_1_1Address,
   // V1.1.1 and AnyPositionManager addresses will be imported here when available
@@ -120,7 +123,14 @@ import {
   ReadWriteTreasuryManager,
 } from "clients/TreasuryManagerClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
-import { CoinMetadata, FlaunchVersion, Verifier, Permissions } from "types";
+import {
+  CallWithDescription,
+  CoinMetadata,
+  FlaunchVersion,
+  LiquidityMode,
+  Verifier,
+  Permissions,
+} from "types";
 import {
   getPoolId,
   orderPoolKey,
@@ -128,6 +138,13 @@ import {
   calculateUnderlyingTokenBalances,
   TickFinder,
   TICK_SPACING,
+  getNearestUsableTick,
+  priceRatioToTick,
+  getSqrtPriceX96FromTick,
+  Q96,
+  Q192,
+  getLiquidityFromAmounts,
+  getAmountsForLiquidity,
 } from "../utils/univ4";
 import {
   ethToMemecoin,
@@ -140,7 +157,8 @@ import { resolveIPFS as defaultResolveIPFS } from "../helpers/ipfs";
 import { chainIdToChain, getPermissionsAddress } from "helpers";
 import { TreasuryManagerFactoryAbi } from "abi/TreasuryManagerFactory";
 import { ReadMulticall } from "clients/MulticallClient";
-import { MemecoinAbi } from "abi";
+import { MemecoinAbi, Permit2Abi } from "abi";
+import { FLETHAbi } from "abi/FLETH";
 
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
@@ -1394,6 +1412,238 @@ export class ReadFlaunchSDK {
     return this.readTokenImporter.verifyMemecoin(memecoin);
   }
 
+  async calculateAddLiquidityTicks({
+    coinAddress,
+    liquidityMode,
+    minMarketCap,
+    maxMarketCap,
+  }: {
+    coinAddress: Address;
+    liquidityMode: LiquidityMode;
+    minMarketCap: string;
+    maxMarketCap: string;
+  }): Promise<{
+    tickLower: number;
+    tickUpper: number;
+    coinTotalSupply: bigint;
+    coinDecimals: number;
+  }> {
+    const memecoin = new ReadMemecoin(coinAddress, this.drift);
+    const coinTotalSupply = await memecoin.totalSupply();
+    const coinDecimals = await memecoin.decimals();
+
+    if (liquidityMode === LiquidityMode.FULL_RANGE) {
+      return {
+        tickLower: getNearestUsableTick({
+          tick: TickFinder.MIN_TICK,
+          tickSpacing: TICK_SPACING,
+        }),
+        tickUpper: getNearestUsableTick({
+          tick: TickFinder.MAX_TICK,
+          tickSpacing: TICK_SPACING,
+        }),
+        coinTotalSupply,
+        coinDecimals,
+      };
+    } else {
+      const ethUsdPrice = await this.getETHUSDCPrice();
+
+      const isFlethZero = this.flETHIsCurrencyZero(coinAddress);
+
+      const minMarketCapNum = parseFloat(minMarketCap);
+      const maxMarketCapNum = parseFloat(maxMarketCap);
+
+      if (
+        minMarketCapNum <= 0 ||
+        maxMarketCapNum <= 0 ||
+        minMarketCapNum >= maxMarketCapNum
+      ) {
+        throw new Error(
+          "[ReadFlaunchSDK.addLiquidityCalculateTicks]: Invalid market cap range"
+        );
+      }
+
+      // Convert total supply to decimal format
+      const totalSupplyDecimal = parseFloat(formatEther(coinTotalSupply));
+
+      // Calculate token price in USD at min and max market caps
+      const minTokenPriceUsd = minMarketCapNum / totalSupplyDecimal;
+      const maxTokenPriceUsd = maxMarketCapNum / totalSupplyDecimal;
+
+      // Convert to token price in ETH
+      const minTokenPriceEth = minTokenPriceUsd / ethUsdPrice;
+      const maxTokenPriceEth = maxTokenPriceUsd / ethUsdPrice;
+
+      const flETHDecimals = 18; // flETH has 18 decimals
+
+      // Determine decimals based on token ordering
+      const decimals0 = isFlethZero ? flETHDecimals : coinDecimals;
+      const decimals1 = isFlethZero ? coinDecimals : flETHDecimals;
+
+      // Convert to ticks using proper price direction handling
+      const minTick = priceRatioToTick({
+        priceInput: minTokenPriceEth.toString(),
+        isDirection1Per0: !isFlethZero,
+        decimals0,
+        decimals1,
+        spacing: TICK_SPACING,
+      });
+      const maxTick = priceRatioToTick({
+        priceInput: maxTokenPriceEth.toString(),
+        isDirection1Per0: !isFlethZero,
+        decimals0,
+        decimals1,
+        spacing: TICK_SPACING,
+      });
+
+      return {
+        tickLower: Math.min(minTick, maxTick),
+        tickUpper: Math.max(minTick, maxTick),
+        coinTotalSupply,
+        coinDecimals,
+      };
+    }
+  }
+
+  async calculateAddLiquidityAmounts({
+    coinAddress,
+    liquidityMode,
+    coinOrEthInputAmount,
+    inputToken,
+    minMarketCap,
+    maxMarketCap,
+  }: {
+    coinAddress: Address;
+    liquidityMode: LiquidityMode;
+    coinOrEthInputAmount: bigint;
+    inputToken: "coin" | "eth";
+    minMarketCap: string;
+    maxMarketCap: string;
+  }): Promise<{
+    coinAmount: bigint;
+    ethAmount: bigint;
+    tickLower: number;
+    tickUpper: number;
+    currentTick: number;
+  }> {
+    const { tickLower, tickUpper } = await this.calculateAddLiquidityTicks({
+      coinAddress,
+      liquidityMode,
+      minMarketCap,
+      maxMarketCap,
+    });
+
+    // get the current pool state for AnyPositionManager pool for the coin
+    const poolState = await this.readStateView.poolSlot0({
+      poolId: getPoolId(
+        orderPoolKey({
+          currency0: coinAddress,
+          currency1: FLETHAddress[this.chainId],
+          fee: 0,
+          tickSpacing: TICK_SPACING,
+          hooks: AnyPositionManagerAddress[this.chainId],
+        })
+      ),
+    });
+    const currentTick = poolState.tick;
+
+    // Determine currency ordering
+    const isFlETHCurrency0 = this.flETHIsCurrencyZero(coinAddress);
+
+    try {
+      const sqrtRatioCurrentX96 = getSqrtPriceX96FromTick(currentTick);
+      let sqrtRatioLowerX96 = getSqrtPriceX96FromTick(tickLower);
+      let sqrtRatioUpperX96 = getSqrtPriceX96FromTick(tickUpper);
+
+      if (sqrtRatioLowerX96 > sqrtRatioUpperX96) {
+        [sqrtRatioLowerX96, sqrtRatioUpperX96] = [
+          sqrtRatioUpperX96,
+          sqrtRatioLowerX96,
+        ];
+      }
+
+      let amount0Calculated: bigint;
+      let amount1Calculated: bigint;
+
+      // Determine which calculation to use based on input token and currency ordering
+      const isCoinInput = inputToken === "coin";
+      const inputAmount = coinOrEthInputAmount;
+
+      if (
+        (isCoinInput && !isFlETHCurrency0) || // coin input and coin is currency0
+        (!isCoinInput && isFlETHCurrency0) // eth input and flETH is currency0
+      ) {
+        // We have amount0 and need to calculate amount1
+        amount0Calculated = inputAmount;
+
+        if (sqrtRatioCurrentX96 <= sqrtRatioLowerX96) {
+          // Current price below range - no currency1 needed
+          amount1Calculated = 0n;
+        } else if (sqrtRatioCurrentX96 >= sqrtRatioUpperX96) {
+          // Current price above range - proportional amount1 needed
+          const ratio = (sqrtRatioUpperX96 * sqrtRatioUpperX96) / Q96;
+          amount1Calculated = (inputAmount * ratio) / Q96;
+        } else {
+          // Current price in range - proportional amounts
+          const intermediate1 =
+            (sqrtRatioUpperX96 *
+              sqrtRatioCurrentX96 *
+              (sqrtRatioCurrentX96 - sqrtRatioLowerX96)) /
+            Q96;
+          const intermediate2 =
+            (Q192 * (sqrtRatioUpperX96 - sqrtRatioCurrentX96)) / Q96;
+          if (intermediate2 > 0n) {
+            amount1Calculated = (inputAmount * intermediate1) / intermediate2;
+          } else {
+            amount1Calculated = 0n;
+          }
+        }
+      } else {
+        // We have amount1 and need to calculate amount0
+        amount1Calculated = inputAmount;
+
+        if (sqrtRatioCurrentX96 <= sqrtRatioLowerX96) {
+          // Current price below range - proportional amount0 needed
+          const ratio = (sqrtRatioLowerX96 * sqrtRatioLowerX96) / Q96;
+          amount0Calculated = (inputAmount * Q96) / ratio;
+        } else if (sqrtRatioCurrentX96 >= sqrtRatioUpperX96) {
+          // Current price above range - no amount0 needed
+          amount0Calculated = 0n;
+        } else {
+          // Current price in range - proportional amounts
+          const intermediate1 =
+            (sqrtRatioUpperX96 *
+              sqrtRatioCurrentX96 *
+              (sqrtRatioCurrentX96 - sqrtRatioLowerX96)) /
+            Q96;
+          const intermediate2 =
+            (Q192 * (sqrtRatioUpperX96 - sqrtRatioCurrentX96)) / Q96;
+          if (intermediate1 > 0n) {
+            amount0Calculated = (inputAmount * intermediate2) / intermediate1;
+          } else {
+            amount0Calculated = 0n;
+          }
+        }
+      }
+
+      // Map amount0/amount1 back to coin/eth amounts based on currency ordering
+      const [ethAmount, coinAmount] = isFlETHCurrency0
+        ? [amount0Calculated, amount1Calculated]
+        : [amount1Calculated, amount0Calculated];
+
+      return {
+        coinAmount,
+        ethAmount,
+        tickLower,
+        tickUpper,
+        currentTick,
+      };
+    } catch (error) {
+      console.error("Error calculating liquidity amounts:", error);
+      throw error;
+    }
+  }
+
   /**
    * Checks if an operator is approved for all flaunch tokens of an owner
    * @param version - The flaunch version to determine the correct contract address
@@ -1950,5 +2200,400 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     verifier?: Verifier;
   }) {
     return this.readWriteTokenImporter.initialize(params);
+  }
+
+  async getAddLiquidityCalls(
+    params:
+      | {
+          coinAddress: Address;
+          liquidityMode: LiquidityMode;
+          coinOrEthInputAmount: bigint;
+          inputToken: "coin" | "eth";
+          minMarketCap: string;
+          maxMarketCap: string;
+        }
+      | {
+          coinAddress: Address;
+          coinAmount: bigint;
+          flethAmount: bigint;
+          tickLower: number;
+          tickUpper: number;
+        }
+  ): Promise<CallWithDescription[]> {
+    const { coinAddress } = params;
+    const flethAddress = FLETHAddress[this.chainId];
+
+    let coinAmount: bigint;
+    let flethAmount: bigint;
+    let tickLower: number;
+    let tickUpper: number;
+    let currentTick: number;
+
+    const poolKey = orderPoolKey({
+      currency0: coinAddress,
+      currency1: flethAddress,
+      fee: 0,
+      tickSpacing: this.TICK_SPACING,
+      hooks: AnyPositionManagerAddress[this.chainId],
+    });
+
+    // Check if we need to calculate values or use direct values
+    if ("tickLower" in params) {
+      // Use the directly provided values
+      coinAmount = params.coinAmount;
+      flethAmount = params.flethAmount;
+      tickLower = params.tickLower;
+      tickUpper = params.tickUpper;
+
+      const poolState = await this.readStateView.poolSlot0({
+        poolId: getPoolId(poolKey),
+      });
+      currentTick = poolState.tick;
+    } else {
+      // Calculate the amounts
+      const calculated = await this.calculateAddLiquidityAmounts({
+        coinAddress,
+        liquidityMode: params.liquidityMode,
+        coinOrEthInputAmount: params.coinOrEthInputAmount,
+        inputToken: params.inputToken,
+        minMarketCap: params.minMarketCap,
+        maxMarketCap: params.maxMarketCap,
+      });
+
+      coinAmount = calculated.coinAmount;
+      flethAmount = calculated.ethAmount;
+      tickLower = calculated.tickLower;
+      tickUpper = calculated.tickUpper;
+      currentTick = calculated.currentTick;
+    }
+
+    // Fetch approvals via multicall
+    const userAddress = await this.drift.getSignerAddress();
+    const permit2Address = Permit2Address[this.chainId];
+
+    const results = await this.drift.multicall({
+      calls: [
+        // coin -> permit2
+        {
+          address: coinAddress,
+          abi: erc20Abi,
+          fn: "allowance",
+          args: {
+            owner: userAddress,
+            spender: permit2Address,
+          },
+        },
+        // flETH -> permit2
+        {
+          address: flethAddress,
+          abi: erc20Abi,
+          fn: "allowance",
+          args: {
+            owner: userAddress,
+            spender: permit2Address,
+          },
+        },
+        // coin --permit2--> uni position manager
+        {
+          address: permit2Address,
+          abi: Permit2Abi,
+          fn: "allowance",
+          args: {
+            0: userAddress,
+            1: coinAddress,
+            2: UniV4PositionManagerAddress[this.chainId],
+          },
+        },
+        // flETH --permit2--> uni position manager
+        {
+          address: permit2Address,
+          abi: Permit2Abi,
+          fn: "allowance",
+          args: {
+            0: userAddress,
+            1: flethAddress,
+            2: UniV4PositionManagerAddress[this.chainId],
+          },
+        },
+        // coin symbol
+        {
+          address: coinAddress,
+          abi: erc20Abi,
+          fn: "symbol",
+        },
+      ],
+    });
+    const coinToPermit2 = results[0].value!;
+    const flethToPermit2 = results[1].value!;
+    const permit2ToUniPosManagerCoinAllowance = results[2].value!;
+    const permit2ToUniPosManagerFlethAllowance = results[3].value!;
+    const coinSymbol = results[4].value!;
+
+    const needsCoinApproval = coinToPermit2 < coinAmount;
+    const needsFlethApproval = flethToPermit2 < flethAmount;
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    const needsCoinPermit2Approval =
+      permit2ToUniPosManagerCoinAllowance.amount < coinAmount ||
+      permit2ToUniPosManagerCoinAllowance.expiration <= currentTime;
+    const needsFlethPermit2Approval =
+      flethAmount > 0n &&
+      (permit2ToUniPosManagerFlethAllowance.amount < flethAmount ||
+        permit2ToUniPosManagerFlethAllowance.expiration <= currentTime);
+
+    const calls: CallWithDescription[] = [];
+
+    // 1. Coin approval to Permit2
+    if (needsCoinApproval) {
+      calls.push({
+        to: coinAddress,
+        description: `Approve ${coinSymbol} for Permit2`,
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [permit2Address, coinAmount],
+        }),
+      });
+    }
+    // 2. flETH approval to Permit2 (after wrapping)
+    if (needsFlethApproval) {
+      calls.push({
+        to: flethAddress,
+        description: `Approve flETH for Permit2`,
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [permit2Address, flethAmount],
+        }),
+      });
+    }
+    // 3. Permit2 approval for coin to uni position manager
+    const expiration = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+    if (needsCoinPermit2Approval) {
+      calls.push({
+        to: permit2Address,
+        description: `Permit2 approval for ${coinSymbol} to UniV4PositionManager`,
+        data: encodeFunctionData({
+          abi: Permit2Abi,
+          functionName: "approve",
+          args: [
+            coinAddress,
+            UniV4PositionManagerAddress[this.chainId],
+            coinAmount,
+            expiration,
+          ],
+        }),
+      });
+    }
+    // 4. Permit2 approval for flETH to uni position manager
+    if (needsFlethPermit2Approval) {
+      calls.push({
+        to: permit2Address,
+        description: `Permit2 approval for flETH to UniV4PositionManager`,
+        data: encodeFunctionData({
+          abi: Permit2Abi,
+          functionName: "approve",
+          args: [
+            flethAddress,
+            UniV4PositionManagerAddress[this.chainId],
+            flethAmount,
+            expiration,
+          ],
+        }),
+      });
+    }
+
+    // 5. Wrap ETH to flETH
+    if (flethAmount > 0n) {
+      calls.push({
+        to: flethAddress,
+        description: "Wrap ETH to flETH",
+        data: encodeFunctionData({
+          abi: FLETHAbi,
+          functionName: "deposit",
+          args: [0n], // wethAmount = 0, we're only sending ETH
+        }),
+        value: flethAmount,
+      });
+    }
+
+    // === generate add liquidity call ===
+    // Determine amounts for each currency based on pool key ordering
+    const amount0 =
+      poolKey.currency0 === coinAddress ? coinAmount : flethAmount;
+    const amount1 =
+      poolKey.currency0 === coinAddress ? flethAmount : coinAmount;
+
+    // Calculate liquidity first using user's input amounts
+    const initialLiquidity = getLiquidityFromAmounts({
+      currentTick,
+      tickLower,
+      tickUpper,
+      amount0,
+      amount1,
+    });
+
+    // Calculate the actual amounts needed for this liquidity
+    const actualAmounts = getAmountsForLiquidity({
+      currentTick,
+      tickLower,
+      tickUpper,
+      liquidity: initialLiquidity,
+    });
+
+    // Check if actual amounts exceed user input - if so, constrain them
+    let finalLiquidity = initialLiquidity;
+    let finalAmount0 = actualAmounts.amount0;
+    let finalAmount1 = actualAmounts.amount1;
+
+    // If actual amounts exceed user input, we need to recalculate with constraints
+    if (actualAmounts.amount0 > amount0 || actualAmounts.amount1 > amount1) {
+      console.log("Actual amounts exceed user input, constraining...");
+
+      // Calculate liquidity constrained by each amount separately
+      const liquidity0Constrained = getLiquidityFromAmounts({
+        currentTick,
+        tickLower,
+        tickUpper,
+        amount0,
+        amount1: 0n, // Only constrain by amount0
+      });
+
+      const liquidity1Constrained = getLiquidityFromAmounts({
+        currentTick,
+        tickLower,
+        tickUpper,
+        amount0: 0n, // Only constrain by amount1
+        amount1,
+      });
+
+      // Use the smaller liquidity to ensure we don't exceed either amount
+      finalLiquidity =
+        liquidity0Constrained < liquidity1Constrained
+          ? liquidity0Constrained
+          : liquidity1Constrained;
+
+      // Recalculate amounts for the constrained liquidity
+      const constrainedAmounts = getAmountsForLiquidity({
+        currentTick,
+        tickLower,
+        tickUpper,
+        liquidity: finalLiquidity,
+      });
+
+      finalAmount0 = constrainedAmounts.amount0;
+      finalAmount1 = constrainedAmounts.amount1;
+    }
+
+    // IMPORTANT: Add conservative buffer to account for contract rounding differences
+    // Reduce liquidity by 0.01% to ensure contract calculations stay within user bounds
+    const liquidityBuffer = finalLiquidity / 10000n; // 0.01%
+    const conservativeLiquidity =
+      finalLiquidity - (liquidityBuffer > 1n ? liquidityBuffer : 1n);
+
+    // Use conservative liquidity but keep user's original amounts as maximums
+    // The conservative liquidity ensures the contract won't need more than user provided
+    if (currentTick !== undefined) {
+      // If pool is already initialized then use conservative liquidity
+      // as a new pool would accept any liquidity amounts given by us
+      finalLiquidity = conservativeLiquidity;
+    }
+    finalAmount0 = amount0; // Use user's full amount as maximum
+    finalAmount1 = amount1; // Use user's full amount as maximum
+
+    // Prepare mint position parameters (following swiss-knife pattern)
+    const V4PMActions = {
+      MINT_POSITION: "02",
+      SETTLE_PAIR: "0d",
+    };
+
+    const v4Actions = ("0x" +
+      V4PMActions.MINT_POSITION +
+      V4PMActions.SETTLE_PAIR) as Hex;
+
+    // Validate hookData format
+    const validHookData = "0x" as Hex; // Empty hook data for now
+
+    const UniV4PM_MintPositionAbi = [
+      {
+        type: "tuple",
+        components: [
+          { type: "address", name: "currency0" },
+          { type: "address", name: "currency1" },
+          { type: "uint24", name: "fee" },
+          { type: "int24", name: "tickSpacing" },
+          { type: "address", name: "hooks" },
+        ],
+      },
+      { type: "int24", name: "tickLower" },
+      { type: "int24", name: "tickUpper" },
+      { type: "uint256", name: "liquidity" },
+      { type: "uint128", name: "amount0Max" },
+      { type: "uint128", name: "amount1Max" },
+      { type: "address", name: "owner" },
+      { type: "bytes", name: "hookData" },
+    ] as const;
+
+    const UniV4PM_SettlePairAbi = [
+      {
+        type: "tuple",
+        components: [
+          { type: "address", name: "currency0" },
+          { type: "address", name: "currency1" },
+        ],
+      },
+    ] as const;
+
+    const mintPositionParams = encodeAbiParameters(UniV4PM_MintPositionAbi, [
+      poolKey,
+      tickLower,
+      tickUpper,
+      finalLiquidity,
+      finalAmount0,
+      finalAmount1,
+      userAddress,
+      validHookData,
+    ]);
+
+    const settlePairParams = encodeAbiParameters(UniV4PM_SettlePairAbi, [
+      {
+        currency0: poolKey.currency0,
+        currency1: poolKey.currency1,
+      },
+    ]);
+
+    // 6. Add liquidity
+    calls.push({
+      to: UniV4PositionManagerAddress[this.chainId],
+      data: encodeFunctionData({
+        abi: [
+          {
+            inputs: [
+              { internalType: "bytes", name: "unlockData", type: "bytes" },
+              { internalType: "uint256", name: "deadline", type: "uint256" },
+            ],
+            name: "modifyLiquidities",
+            outputs: [],
+            stateMutability: "payable",
+            type: "function",
+          },
+        ],
+        functionName: "modifyLiquidities",
+        args: [
+          encodeAbiParameters(
+            [
+              { type: "bytes", name: "actions" },
+              { type: "bytes[]", name: "params" },
+            ],
+            [v4Actions, [mintPositionParams, settlePairParams]]
+          ),
+          BigInt(Math.floor(Date.now() / 1000) + 3600), // 1 hour deadline
+        ],
+      }),
+      value: 0n,
+      description: "Add Liquidity",
+    });
+
+    return calls;
   }
 }

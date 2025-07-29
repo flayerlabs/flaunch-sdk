@@ -93,7 +93,7 @@ export class ReadWriteTokenImporter extends ReadTokenImporter {
     super(chainId, address, drift);
   }
 
-  initialize({
+  async initialize({
     memecoin,
     creatorFeeAllocationPercent,
     initialMarketCapUSD,
@@ -107,21 +107,18 @@ export class ReadWriteTokenImporter extends ReadTokenImporter {
     const initialMCapInUSDCWei = parseUnits(initialMarketCapUSD.toString(), 6);
     const creatorFeeAllocationInBps = creatorFeeAllocationPercent * 100;
 
-    // if the verifier is known then use that to save on gas
-    if (verifier) {
-      const verifierAddress = this.verifierAddress(verifier);
-      return this.contract.write("initialize", {
-        _memecoin: memecoin,
-        _creatorFeeAllocation: creatorFeeAllocationInBps,
-        _initialMarketCap: initialMCapInUSDCWei,
-        _verifier: verifierAddress,
-      });
-    } else {
-      return this.contract.write("initialize", {
-        _memecoin: memecoin,
-        _creatorFeeAllocation: creatorFeeAllocationInBps,
-        _initialMarketCap: initialMCapInUSDCWei,
-      });
-    }
+    // Passing in the verifier here, as drift doesn't recognize the other initialize function without the verifier param
+    let _verifier = verifier
+      ? this.verifierAddress(verifier)
+      : await this.contract.read("verifyMemecoin", {
+          _memecoin: memecoin,
+        });
+
+    return this.contract.write("initialize", {
+      _memecoin: memecoin,
+      _creatorFeeAllocation: creatorFeeAllocationInBps,
+      _initialMarketCap: initialMCapInUSDCWei,
+      _verifier,
+    });
   }
 }

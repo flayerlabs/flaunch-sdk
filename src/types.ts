@@ -1,4 +1,4 @@
-import { Address } from "viem";
+import { Address, Call } from "viem";
 import { PinataConfig } from "helpers/ipfs";
 
 export interface Addresses {
@@ -57,6 +57,14 @@ export enum Verifier {
   ZORA = "zora",
 }
 
+export enum LiquidityMode {
+  FULL_RANGE = "full-range",
+  CONCENTRATED = "concentrated",
+}
+
+export type CallWithDescription = Call & {
+  description?: string;
+};
 /**
  * Enumeration of Permissions for TreasuryManagers. Defaults to OPEN.
  */
