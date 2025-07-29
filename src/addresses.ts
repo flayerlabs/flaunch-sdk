@@ -2,7 +2,7 @@ import { base, baseSepolia } from "viem/chains";
 import { Addresses, PoolKey } from "./types";
 import { zeroAddress } from "viem";
 
-// doesn't use FeeEscrow
+// only old V1.0: doesn't use FeeEscrow
 export const FlaunchPositionManagerAddress: Addresses = {
   [base.id]: "0x51Bba15255406Cfe7099a42183302640ba7dAFDC",
   [baseSepolia.id]: "0x9A7059cA00dA92843906Cb4bCa1D005cE848AFdC",
@@ -11,6 +11,11 @@ export const FlaunchPositionManagerAddress: Addresses = {
 export const FlaunchPositionManagerV1_1Address: Addresses = {
   [base.id]: "0xf785bb58059fab6fb19bdda2cb9078d9e546efdc",
   [baseSepolia.id]: "0x24347e0dd16357059abfc1b321df354873552fdc",
+};
+
+export const FlaunchPositionManagerV1_1_1Address: Addresses = {
+  [base.id]: zeroAddress, // TODO: add mainnet address
+  [baseSepolia.id]: "0x4e7cb1e6800a7b297b38bddcecaf9ca5b6616fdc",
 };
 
 export const AnyPositionManagerAddress: Addresses = {
@@ -51,6 +56,18 @@ export const ZoraVerifierAddress: Addresses = {
 
 /** ======== */
 
+/** Permissions */
+export const ClosedPermissionsAddress: Addresses = {
+  [base.id]: "0x0000000000000000000000000000000000000000", // TODO: add mainnet address
+  [baseSepolia.id]: "0x551aeD820CAfaca2f9cD1C637AAc076D05a03AC2",
+};
+
+export const WhitelistedPermissionsAddress: Addresses = {
+  [base.id]: "0x0000000000000000000000000000000000000000", // TODO: add mainnet address
+  [baseSepolia.id]: "0xe8691E8f576A98c41EBB5E984207d4F51386621f",
+};
+/** =========== */
+
 export const FeeEscrowAddress: Addresses = {
   [base.id]: "0x72e6f7948b1B1A343B477F39aAbd2E35E6D27dde",
   [baseSepolia.id]: "0x73E27908b7d35A9251a54799A8ef4C17e4ED9FF9",
@@ -76,7 +93,7 @@ export const FairLaunchAddress: Addresses = {
   [baseSepolia.id]: "0x227Fc288aC56E169f2BfEA82e07F8635054d4136",
 };
 
-// also supports AnyPositionManager
+// also supports AnyPositionManager & PositionManagerV1_1_1 (sepolia)
 export const FairLaunchV1_1Address: Addresses = {
   [base.id]: "0x4dc442403e8c758425b93c59dc737da522f32640",
   [baseSepolia.id]: "0x7922c1ead7c5825fb52ed6b14f397d064508acbe",
@@ -93,6 +110,11 @@ export const FlaunchV1_1Address: Addresses = {
   [baseSepolia.id]: "0x96be8ff5e244294a34bfa507a39190dc7a839baa",
 };
 
+export const FlaunchV1_1_1Address: Addresses = {
+  [base.id]: zeroAddress, // TODO: add mainnet address
+  [baseSepolia.id]: "0xe2ef58a54ee79dac0D4A130ea58b340124DF9438",
+};
+
 export const AnyFlaunchAddress: Addresses = {
   [base.id]: "0xc5B2E8F197407263F4B62a35C71bFc394ecF95D5",
   [baseSepolia.id]: "0x67Ee6C83956a75f67bD3Fc8Ca4080D95a145c7C9",
@@ -103,7 +125,7 @@ export const BidWallAddress: Addresses = {
   [baseSepolia.id]: "0xa2107050ACEf4809c88Ab744F8e667605db5ACDB",
 };
 
-// also supports AnyPositionManager
+// also supports AnyPositionManager & PositionManagerV1_1_1 (sepolia)
 export const BidWallV1_1Address: Addresses = {
   [base.id]: "0x7f22353d1634223a802D1c1Ea5308Ddf5DD0ef9c",
   [baseSepolia.id]: "0x6f2fa01a05ff8b6efbfefd91a3b85aaf19265a00",
@@ -120,8 +142,13 @@ export const FastFlaunchZapAddress: Addresses = {
 };
 
 export const FlaunchZapAddress: Addresses = {
-  [base.id]: "0xfa9e8528ee95eb109bffd1a2d59cb95b300a672a",
-  [baseSepolia.id]: "0xb2f5d987de90e026b61805e60b6002d367461474",
+  [base.id]: "0xfa9e8528ee95eb109bffd1a2d59cb95b300a672a", // TODO: update mainnet address with permissions param
+  [baseSepolia.id]: "0x2871a184410F03F4e2C7C5257d839FB34169496A",
+};
+
+export const TreasuryManagerFactoryAddress: Addresses = {
+  [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763",
+  [baseSepolia.id]: "0xD2F3C6185e06925dCBE794C6574315b2202E9CcD",
 };
 
 export const RevenueManagerAddress: Addresses = {
@@ -134,9 +161,9 @@ export const AddressFeeSplitManagerAddress: Addresses = {
   [baseSepolia.id]: "0xf72dcdee692c188de6b14c6213e849982e04069b",
 };
 
-export const TreasuryManagerFactoryAddress: Addresses = {
-  [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763",
-  [baseSepolia.id]: "0xd2f3c6185e06925dcbe794c6574315b2202e9ccd",
+export const StakingManagerAddress: Addresses = {
+  [base.id]: "0x0000000000000000000000000000000000000000", // TODO: update mainnet address
+  [baseSepolia.id]: "0x8Ea4074c38cA7a596C740DD9E9D7122ea8E78c3c",
 };
 
 export const PoolManagerAddress: Addresses = {

@@ -65,3 +65,11 @@ export enum LiquidityMode {
 export type CallWithDescription = Call & {
   description?: string;
 };
+/**
+ * Enumeration of Permissions for TreasuryManagers. Defaults to OPEN.
+ */
+export enum Permissions {
+  OPEN = "open",
+  CLOSED = "closed",
+  WHITELISTED = "whitelisted",
+}

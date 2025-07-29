@@ -415,7 +415,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.8.1 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.8.2 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -455,6 +455,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readQuoter
 - readReferralEscrow
 - readStateView
+- readTokenImporter
 - resolveIPFS
 
 ### Methods
@@ -482,6 +483,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getETHUSDCPrice
 - getFairLaunch
 - getFairLaunchAddress
+- getFlaunchAddress
 - getFlaunchingFee
 - getPositionManager
 - getPositionManagerAddress
@@ -489,6 +491,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - initialSqrtPriceX96
 - initialTick
 - isFairLaunchActive
+- isFlaunchTokenApprovedForAll
 - isValidCoin
 - parseSwapTx
 - pollPoolCreatedNow
@@ -502,6 +505,8 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerProtocolBalance
 - revenueManagerTokensCount
 - setIPFSResolver
+- tokenImporterVerifyMemecoin
+- treasuryManagerInfo
 - watchPoolCreated
 - watchPoolSwap
 
@@ -641,6 +646,12 @@ ___
 ### readStateView
 
 • `Readonly` **readStateView**: `ReadStateView`
+
+___
+
+### readTokenImporter
+
+• `Readonly` **readTokenImporter**: `ReadTokenImporter`
 
 ___
 
@@ -1132,6 +1143,24 @@ Returns
 
 ___
 
+### getFlaunchAddress
+
+▸ **getFlaunchAddress**(`version`): \`0x$\{string}\`
+
+Gets the flaunch contract address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the flaunch contract address for |
+
+Returns
+
+\`0x$\{string}\`
+
+___
+
 ### getFlaunchingFee
 
 ▸ **getFlaunchingFee**(`params`): `Promise`\<`bigint`\>
@@ -1268,6 +1297,28 @@ Returns
 `Promise`\<`boolean`\>
 
 Promise<boolean> - True if fair launch is active, false otherwise
+
+___
+
+### isFlaunchTokenApprovedForAll
+
+▸ **isFlaunchTokenApprovedForAll**(`version`, `owner`, `operator`): `Promise`\<`boolean`\>
+
+Checks if an operator is approved for all flaunch tokens of an owner
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The flaunch version to determine the correct contract address |
+| `owner` | \`0x$\{string}\` | The owner address to check |
+| `operator` | \`0x$\{string}\` | The operator address to check |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if operator is approved for all tokens
 
 ___
 
@@ -1554,6 +1605,46 @@ eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
 
 ___
 
+### tokenImporterVerifyMemecoin
+
+▸ **tokenImporterVerifyMemecoin**(`memecoin`): `Promise`\<\{ `isValid`: `boolean` ; `verifier`: \`0x$\{string}\`  }\>
+
+Verifies if a memecoin is valid for importing
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `memecoin` | \`0x$\{string}\` | The address of the memecoin to import |
+
+Returns
+
+`Promise`\<\{ `isValid`: `boolean` ; `verifier`: \`0x$\{string}\`  }\>
+
+Promise<{ isValid: boolean; verifier: Address }> - The result of the verification
+
+___
+
+### treasuryManagerInfo
+
+▸ **treasuryManagerInfo**(`treasuryManagerAddress`): `Promise`\<\{ `managerOwner`: \`0x$\{string}\` ; `permissions`: \`0x$\{string}\`  }\>
+
+Gets treasury manager information including owner and permissions
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `treasuryManagerAddress` | \`0x$\{string}\` | The address of the treasury manager |
+
+Returns
+
+`Promise`\<\{ `managerOwner`: \`0x$\{string}\` ; `permissions`: \`0x$\{string}\`  }\>
+
+Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
+
+___
+
 ### watchPoolCreated
 
 ▸ **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
@@ -1598,7 +1689,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.8.2 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -1638,6 +1729,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readQuoter
 - readReferralEscrow
 - readStateView
+- readTokenImporter
 - readWriteAnyPositionManager
 - readWriteFeeEscrow
 - readWriteFlaunchZap
@@ -1645,11 +1737,13 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readWritePositionManager
 - readWritePositionManagerV1\_1
 - readWriteReferralEscrow
+- readWriteTokenImporter
 - readWriteTreasuryManagerFactory
 - resolveIPFS
 
 ### Methods
 
+- addToTreasuryManager
 - anyFlaunch
 - bidWallPosition
 - buyCoin
@@ -1684,15 +1778,18 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getETHUSDCPrice
 - getFairLaunch
 - getFairLaunchAddress
+- getFlaunchAddress
 - getFlaunchingFee
 - getPermit2AllowanceAndNonce
 - getPermit2TypedData
 - getPositionManager
 - getPositionManagerAddress
 - getSellQuoteExactInput
+- importMemecoin
 - initialSqrtPriceX96
 - initialTick
 - isFairLaunchActive
+- isFlaunchTokenApprovedForAll
 - isValidCoin
 - parseSwapTx
 - pollPoolCreatedNow
@@ -1709,7 +1806,12 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerProtocolClaim
 - revenueManagerTokensCount
 - sellCoin
+- setFlaunchTokenApprovalForAll
 - setIPFSResolver
+- tokenImporterVerifyMemecoin
+- treasuryManagerInfo
+- treasuryManagerSetPermissions
+- treasuryManagerTransferOwnership
 - watchPoolCreated
 - watchPoolSwap
 - withdrawCreatorRevenue
@@ -1937,6 +2039,16 @@ ReadFlaunchSDK.readStateView
 
 ___
 
+### readTokenImporter
+
+• `Readonly` **readTokenImporter**: `ReadTokenImporter`
+
+Inherited from
+
+ReadFlaunchSDK.readTokenImporter
+
+___
+
 ### readWriteAnyPositionManager
 
 • `Readonly` **readWriteAnyPositionManager**: `ReadWriteAnyPositionManager`
@@ -1979,6 +2091,12 @@ ___
 
 ___
 
+### readWriteTokenImporter
+
+• `Readonly` **readWriteTokenImporter**: `ReadWriteTokenImporter`
+
+___
+
 ### readWriteTreasuryManagerFactory
 
 • `Readonly` **readWriteTreasuryManagerFactory**: `ReadWriteTreasuryManagerFactory`
@@ -2008,6 +2126,30 @@ Inherited from
 ReadFlaunchSDK.resolveIPFS
 
 ## Methods
+
+### addToTreasuryManager
+
+▸ **addToTreasuryManager**(`treasuryManagerAddress`, `version`, `tokenId`, `creator?`, `data?`): `Promise`\<\`0x$\{string}\`\>
+
+Adds an existing flaunch token to a treasury manager. NFT approval must be given prior to calling this function.
+
+Parameters
+
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `treasuryManagerAddress` | \`0x$\{string}\` | `undefined` | The address of the treasury manager |
+| `version` | `FlaunchVersion` | `undefined` | The flaunch version to determine the correct contract address |
+| `tokenId` | `bigint` | `undefined` | The token ID to deposit |
+| `creator?` | \`0x$\{string}\` | `undefined` | Optional creator address. If not provided, uses the connected wallet address |
+| `data` | \`0x$\{string}\` | `"0x"` | Optional additional data for the deposit (defaults to empty bytes) |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
 
 ### anyFlaunch
 
@@ -2801,6 +2943,28 @@ ReadFlaunchSDK.getFairLaunchAddress
 
 ___
 
+### getFlaunchAddress
+
+▸ **getFlaunchAddress**(`version`): \`0x$\{string}\`
+
+Gets the flaunch contract address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the flaunch contract address for |
+
+Returns
+
+\`0x$\{string}\`
+
+Inherited from
+
+ReadFlaunchSDK.getFlaunchAddress
+
+___
+
 ### getFlaunchingFee
 
 ▸ **getFlaunchingFee**(`params`): `Promise`\<`bigint`\>
@@ -2937,6 +3101,30 @@ ReadFlaunchSDK.getSellQuoteExactInput
 
 ___
 
+### importMemecoin
+
+▸ **importMemecoin**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Imports a memecoin into the TokenImporter
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | - |
+| `params.creatorFeeAllocationPercent` | `number` | The creator fee allocation percentage |
+| `params.initialMarketCapUSD` | `number` | The initial market cap in USD |
+| `params.memecoin` | \`0x$\{string}\` | The address of the memecoin to import |
+| `params.verifier?` | `Verifier` | Optional verifier to use for importing the memecoin |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
+
 ### initialSqrtPriceX96
 
 ▸ **initialSqrtPriceX96**(`params`): `Promise`\<`bigint`\>
@@ -3006,6 +3194,32 @@ Promise<boolean> - True if fair launch is active, false otherwise
 Inherited from
 
 ReadFlaunchSDK.isFairLaunchActive
+
+___
+
+### isFlaunchTokenApprovedForAll
+
+▸ **isFlaunchTokenApprovedForAll**(`version`, `owner`, `operator`): `Promise`\<`boolean`\>
+
+Checks if an operator is approved for all flaunch tokens of an owner
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The flaunch version to determine the correct contract address |
+| `owner` | \`0x$\{string}\` | The owner address to check |
+| `operator` | \`0x$\{string}\` | The operator address to check |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if operator is approved for all tokens
+
+Inherited from
+
+ReadFlaunchSDK.isFlaunchTokenApprovedForAll
 
 ___
 
@@ -3402,6 +3616,28 @@ Transaction response for the sell operation
 
 ___
 
+### setFlaunchTokenApprovalForAll
+
+▸ **setFlaunchTokenApprovalForAll**(`version`, `operator`, `approved`): `Promise`\<\`0x$\{string}\`\>
+
+Sets approval for all flaunch tokens to an operator
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The flaunch version to determine the correct contract address |
+| `operator` | \`0x$\{string}\` | The operator address to approve/revoke |
+| `approved` | `boolean` | Whether to approve or revoke approval |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
+
 ### setIPFSResolver
 
 ▸ **setIPFSResolver**(`resolverFn`): `void`
@@ -3426,6 +3662,96 @@ eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
 Inherited from
 
 ReadFlaunchSDK.setIPFSResolver
+
+___
+
+### tokenImporterVerifyMemecoin
+
+▸ **tokenImporterVerifyMemecoin**(`memecoin`): `Promise`\<\{ `isValid`: `boolean` ; `verifier`: \`0x$\{string}\`  }\>
+
+Verifies if a memecoin is valid for importing
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `memecoin` | \`0x$\{string}\` | The address of the memecoin to import |
+
+Returns
+
+`Promise`\<\{ `isValid`: `boolean` ; `verifier`: \`0x$\{string}\`  }\>
+
+Promise<{ isValid: boolean; verifier: Address }> - The result of the verification
+
+Inherited from
+
+ReadFlaunchSDK.tokenImporterVerifyMemecoin
+
+___
+
+### treasuryManagerInfo
+
+▸ **treasuryManagerInfo**(`treasuryManagerAddress`): `Promise`\<\{ `managerOwner`: \`0x$\{string}\` ; `permissions`: \`0x$\{string}\`  }\>
+
+Gets treasury manager information including owner and permissions
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `treasuryManagerAddress` | \`0x$\{string}\` | The address of the treasury manager |
+
+Returns
+
+`Promise`\<\{ `managerOwner`: \`0x$\{string}\` ; `permissions`: \`0x$\{string}\`  }\>
+
+Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
+
+Inherited from
+
+ReadFlaunchSDK.treasuryManagerInfo
+
+___
+
+### treasuryManagerSetPermissions
+
+▸ **treasuryManagerSetPermissions**(`treasuryManagerAddress`, `permissions`): `Promise`\<\`0x$\{string}\`\>
+
+Sets the permissions contract address for a treasury manager
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `treasuryManagerAddress` | \`0x$\{string}\` | The address of the treasury manager |
+| `permissions` | `Permissions` | The permissions enum value to set |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+___
+
+### treasuryManagerTransferOwnership
+
+▸ **treasuryManagerTransferOwnership**(`treasuryManagerAddress`, `newManagerOwner`): `Promise`\<\`0x$\{string}\`\>
+
+Transfers the ownership of a treasury manager to a new address
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `treasuryManagerAddress` | \`0x$\{string}\` | The address of the treasury manager |
+| `newManagerOwner` | \`0x$\{string}\` | The address of the new manager owner |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
 
 ___
 
@@ -3503,7 +3829,7 @@ Transaction response
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / FlaunchVersion
+@flaunch/sdk - v0.8.2 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -3546,7 +3872,93 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / Addresses
+@flaunch/sdk - v0.8.2 / Exports / Permissions
+
+# Enumeration: Permissions
+
+Enumeration of Permissions for TreasuryManagers. Defaults to OPEN.
+
+## Table of contents
+
+### Enumeration Members
+
+- CLOSED
+- OPEN
+- WHITELISTED
+
+## Enumeration Members
+
+### CLOSED
+
+• **CLOSED** = ``"closed"``
+
+___
+
+### OPEN
+
+• **OPEN** = ``"open"``
+
+___
+
+### WHITELISTED
+
+• **WHITELISTED** = ``"whitelisted"``
+
+
+
+---
+
+@flaunch/sdk - v0.8.2 / Exports / Verifier
+
+# Enumeration: Verifier
+
+Enumeration of Verifiers for TokenImporter
+
+## Table of contents
+
+### Enumeration Members
+
+- CLANKER
+- DOPPLER
+- VIRTUALS
+- WHITELIST
+- ZORA
+
+## Enumeration Members
+
+### CLANKER
+
+• **CLANKER** = ``"clanker"``
+
+___
+
+### DOPPLER
+
+• **DOPPLER** = ``"doppler"``
+
+___
+
+### VIRTUALS
+
+• **VIRTUALS** = ``"virtuals"``
+
+___
+
+### WHITELIST
+
+• **WHITELIST** = ``"whitelist"``
+
+___
+
+### ZORA
+
+• **ZORA** = ``"zora"``
+
+
+
+---
+
+@flaunch/sdk - v0.8.2 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -3557,7 +3969,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / BuySwapData
+@flaunch/sdk - v0.8.2 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -3592,7 +4004,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / CoinMetadata
+@flaunch/sdk - v0.8.2 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -3661,7 +4073,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / IPFSParams
+@flaunch/sdk - v0.8.2 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -3699,7 +4111,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / PinataConfig
+@flaunch/sdk - v0.8.2 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -3719,7 +4131,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / PoolKey
+@flaunch/sdk - v0.8.2 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -3767,7 +4179,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / SellSwapData
+@flaunch/sdk - v0.8.2 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -3802,7 +4214,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / SwapFees
+@flaunch/sdk - v0.8.2 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -3829,7 +4241,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports / SwapLogArgs
+@flaunch/sdk - v0.8.2 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -3926,15 +4338,17 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.1 / Exports
+@flaunch/sdk - v0.8.2 / Exports
 
-# @flaunch/sdk - v0.8.1
+# @flaunch/sdk - v0.8.2
 
 ## Table of contents
 
 ### Enumerations
 
 - FlaunchVersion
+- Permissions
+- Verifier
 
 ### Classes
 
@@ -3959,6 +4373,8 @@ ___
 - BuySwapLog
 - CreateFlaunchParams
 - ParsedSwapData
+- PermitDetails
+- PermitSingle
 - PoolCreatedLogs
 - PoolSwapLog
 - SellSwapLog
@@ -3971,6 +4387,9 @@ ___
 - AnyPositionManagerAddress
 - BidWallAddress
 - BidWallV1\_1Address
+- ClankerWorldVerifierAddress
+- ClosedPermissionsAddress
+- DopplerVerifierAddress
 - FLETHAddress
 - FLETHHooksAddress
 - FairLaunchAddress
@@ -3983,6 +4402,8 @@ ___
 - FlaunchSDK
 - FlaunchV1\_1Address
 - FlaunchZapAddress
+- PERMIT\_DETAILS
+- PERMIT\_TYPES
 - Permit2Address
 - PoolManagerAddress
 - QuoterAddress
@@ -3991,9 +4412,14 @@ ___
 - StateViewAddress
 - TICK\_SPACING
 - TickFinder
+- TokenImporterAddress
 - TreasuryManagerFactoryAddress
 - USDCETHPoolKeys
 - UniversalRouterAddress
+- VirtualsVerifierAddress
+- WhitelistVerifierAddress
+- WhitelistedPermissionsAddress
+- ZoraVerifierAddress
 - chainIdToChain
 
 ### Functions
@@ -4002,10 +4428,15 @@ ___
 - calculateUnderlyingTokenBalances
 - createDrift
 - createFlaunch
+- ethToMemecoin
 - generateTokenUri
+- getAmountWithSlippage
+- getPermissionsAddress
+- getPermit2TypedData
 - getPoolId
 - getSqrtPriceX96FromTick
 - getValidTick
+- memecoinToEthWithPermit2
 - orderPoolKey
 - parseSwapData
 - resolveIPFS
@@ -4044,6 +4475,35 @@ ___
 ### ParsedSwapData
 
 Ƭ **ParsedSwapData**: `BuySwapData` \| `SellSwapData`
+
+___
+
+### PermitDetails
+
+Ƭ **PermitDetails**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `amount` | `bigint` |
+| `expiration` | `number` |
+| `nonce` | `number` |
+| `token` | `Address` |
+
+___
+
+### PermitSingle
+
+Ƭ **PermitSingle**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `details` | `PermitDetails` |
+| `sigDeadline` | `bigint` |
+| `spender` | `Address` |
 
 ___
 
@@ -4101,6 +4561,26 @@ ___
 
 ___
 
+### ClankerWorldVerifierAddress
+
+• `Const` **ClankerWorldVerifierAddress**: `Addresses`
+
+___
+
+### ClosedPermissionsAddress
+
+• `Const` **ClosedPermissionsAddress**: `Addresses`
+
+Permissions
+
+___
+
+### DopplerVerifierAddress
+
+• `Const` **DopplerVerifierAddress**: `Addresses`
+
+___
+
 ### FLETHAddress
 
 • `Const` **FLETHAddress**: `Addresses`
@@ -4134,6 +4614,8 @@ ___
 ### FeeEscrowAddress
 
 • `Const` **FeeEscrowAddress**: `Addresses`
+
+===========
 
 ___
 
@@ -4177,6 +4659,25 @@ ___
 ### FlaunchZapAddress
 
 • `Const` **FlaunchZapAddress**: `Addresses`
+
+___
+
+### PERMIT\_DETAILS
+
+• `Const` **PERMIT\_DETAILS**: \{ `name`: `string` = "token"; `type`: `string` = "address" }[]
+
+___
+
+### PERMIT\_TYPES
+
+• `Const` **PERMIT\_TYPES**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `PermitDetails` | \{ `name`: `string` = "token"; `type`: `string` = "address" }[] |
+| `PermitSingle` | \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[] |
 
 ___
 
@@ -4235,6 +4736,14 @@ Type declaration
 
 ___
 
+### TokenImporterAddress
+
+• `Const` **TokenImporterAddress**: `Addresses`
+
+Verifiers
+
+___
+
 ### TreasuryManagerFactoryAddress
 
 • `Const` **TreasuryManagerFactoryAddress**: `Addresses`
@@ -4254,6 +4763,30 @@ ___
 ### UniversalRouterAddress
 
 • `Const` **UniversalRouterAddress**: `Addresses`
+
+___
+
+### VirtualsVerifierAddress
+
+• `Const` **VirtualsVerifierAddress**: `Addresses`
+
+___
+
+### WhitelistVerifierAddress
+
+• `Const` **WhitelistVerifierAddress**: `Addresses`
+
+___
+
+### WhitelistedPermissionsAddress
+
+• `Const` **WhitelistedPermissionsAddress**: `Addresses`
+
+___
+
+### ZoraVerifierAddress
+
+• `Const` **ZoraVerifierAddress**: `Addresses`
 
 ___
 
@@ -4395,6 +4928,38 @@ Error if publicClient.chain is not configured
 
 ___
 
+### ethToMemecoin
+
+▸ **ethToMemecoin**(`params`): `Object`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amountIn?` | `bigint` |
+| `params.amountInMax?` | `bigint` |
+| `params.amountOut?` | `bigint` |
+| `params.amountOutMin?` | `bigint` |
+| `params.chainId` | `number` |
+| `params.memecoin` | \`0x$\{string}\` |
+| `params.positionManagerAddress` | \`0x$\{string}\` |
+| `params.referrer` | ``null`` \| \`0x$\{string}\` |
+| `params.sender` | \`0x$\{string}\` |
+| `params.swapType` | ``"EXACT_IN"`` \| ``"EXACT_OUT"`` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `calldata` | \`0x$\{string}\` |
+| `commands` | \`0x$\{string}\` |
+| `inputs` | \`0x$\{string}\`[] |
+
+___
+
 ### generateTokenUri
 
 ▸ **generateTokenUri**(`name`, `params`): `Promise`\<`string`\>
@@ -4409,6 +4974,83 @@ Parameters
 Returns
 
 `Promise`\<`string`\>
+
+___
+
+### getAmountWithSlippage
+
+▸ **getAmountWithSlippage**(`amount`, `slippage`, `swapType`): `bigint`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `amount` | `undefined` \| `bigint` |
+| `slippage` | `string` |
+| `swapType` | ``"EXACT_IN"`` \| ``"EXACT_OUT"`` |
+
+Returns
+
+`bigint`
+
+**`Dev`**
+
+EXACT_OUT adds the slippage, EXACT_IN removes it
+
+___
+
+### getPermissionsAddress
+
+▸ **getPermissionsAddress**(`permissions`, `chainId`): `Address`
+
+Maps a Permissions enum value to its corresponding contract address
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `permissions` | `Permissions` | The permissions enum value |
+| `chainId` | `number` | The chain ID to get the address for |
+
+Returns
+
+`Address`
+
+The corresponding permissions contract address
+
+___
+
+### getPermit2TypedData
+
+▸ **getPermit2TypedData**(`«destructured»`): `Object`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `chainId` | `number` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `deadline?` | `bigint` |
+| › `nonce` | `number` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `permitSingle` | `PermitSingle` |
+| `typedData` | \{ `domain`: \{ `chainId`: `number` ; `name`: `string` ; `verifyingContract`: \`0x$\{string}\`  } ; `message`: `PermitSingle` ; `primaryType`: `string` ; `types`: \{ `PermitDetails`: \{ `name`: `string` = "token"; `type`: `string` = "address" }[] = PERMIT\_DETAILS; `PermitSingle`: \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[]  }  } |
+| `typedData.domain` | \{ `chainId`: `number` ; `name`: `string` ; `verifyingContract`: \`0x$\{string}\`  } |
+| `typedData.domain.chainId` | `number` |
+| `typedData.domain.name` | `string` |
+| `typedData.domain.verifyingContract` | \`0x$\{string}\` |
+| `typedData.message` | `PermitSingle` |
+| `typedData.primaryType` | `string` |
+| `typedData.types` | \{ `PermitDetails`: \{ `name`: `string` = "token"; `type`: `string` = "address" }[] = PERMIT\_DETAILS; `PermitSingle`: \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[]  } |
+| `typedData.types.PermitDetails` | \{ `name`: `string` = "token"; `type`: `string` = "address" }[] |
+| `typedData.types.PermitSingle` | \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[] |
 
 ___
 
@@ -4460,6 +5102,36 @@ Parameters
 Returns
 
 `number`
+
+___
+
+### memecoinToEthWithPermit2
+
+▸ **memecoinToEthWithPermit2**(`params`): `Object`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amountIn` | `bigint` |
+| `params.chainId` | `number` |
+| `params.ethOutMin` | `bigint` |
+| `params.memecoin` | \`0x$\{string}\` |
+| `params.permitSingle` | `undefined` \| `PermitSingle` |
+| `params.positionManagerAddress` | \`0x$\{string}\` |
+| `params.referrer` | ``null`` \| \`0x$\{string}\` |
+| `params.signature` | `undefined` \| \`0x$\{string}\` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `calldata` | \`0x$\{string}\` |
+| `commands` | \`0x$\{string}\` |
+| `inputs` | \`0x$\{string}\`[] |
 
 ___
 
