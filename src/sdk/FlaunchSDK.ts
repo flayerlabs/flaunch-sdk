@@ -1477,87 +1477,42 @@ export class ReadFlaunchSDK {
     });
     const currentTick = poolState.tick;
 
-    // calculateFlethAmountFromTokenAmount
-    if (inputToken === "coin") {
-      const coinAmount = coinOrEthInputAmount;
+    // Determine currency ordering
+    const isFlETHCurrency0 = this.flETHIsCurrencyZero(coinAddress);
 
-      try {
-        const sqrtRatioCurrentX96 = getSqrtPriceX96FromTick(currentTick);
-        let sqrtRatioLowerX96 = getSqrtPriceX96FromTick(tickLower);
-        let sqrtRatioUpperX96 = getSqrtPriceX96FromTick(tickUpper);
+    try {
+      const sqrtRatioCurrentX96 = getSqrtPriceX96FromTick(currentTick);
+      let sqrtRatioLowerX96 = getSqrtPriceX96FromTick(tickLower);
+      let sqrtRatioUpperX96 = getSqrtPriceX96FromTick(tickUpper);
 
-        if (sqrtRatioLowerX96 > sqrtRatioUpperX96) {
-          [sqrtRatioLowerX96, sqrtRatioUpperX96] = [
-            sqrtRatioUpperX96,
-            sqrtRatioLowerX96,
-          ];
-        }
-
-        let flethAmountCalculated: bigint;
-
-        if (sqrtRatioCurrentX96 <= sqrtRatioLowerX96) {
-          // Current price below range - no flETH needed (only tokens)
-          flethAmountCalculated = 0n;
-        } else if (sqrtRatioCurrentX96 >= sqrtRatioUpperX96) {
-          // Current price above range - only flETH needed
-          const ratio = (sqrtRatioUpperX96 * sqrtRatioUpperX96) / Q96;
-          flethAmountCalculated = (coinAmount * ratio) / Q96;
-        } else {
-          // Current price in range - proportional amounts
-          const intermediate1 =
-            (sqrtRatioUpperX96 *
-              sqrtRatioCurrentX96 *
-              (sqrtRatioCurrentX96 - sqrtRatioLowerX96)) /
-            Q96;
-          const intermediate2 =
-            (Q192 * (sqrtRatioUpperX96 - sqrtRatioCurrentX96)) / Q96;
-          if (intermediate1 > 0n) {
-            flethAmountCalculated =
-              (coinAmount * intermediate2) / intermediate1;
-          } else {
-            flethAmountCalculated = 0n;
-          }
-        }
-
-        return {
-          coinAmount,
-          ethAmount: flethAmountCalculated,
-          tickLower,
-          tickUpper,
-          currentTick,
-        };
-      } catch (error) {
-        console.error(
-          "Error calculating flETH amount from token amount:",
-          error
-        );
-        throw error;
+      if (sqrtRatioLowerX96 > sqrtRatioUpperX96) {
+        [sqrtRatioLowerX96, sqrtRatioUpperX96] = [
+          sqrtRatioUpperX96,
+          sqrtRatioLowerX96,
+        ];
       }
-    } else {
-      // calculateTokenAmountFromFlethAmount
 
-      const flethAmount = coinOrEthInputAmount;
-      try {
-        const sqrtRatioCurrentX96 = getSqrtPriceX96FromTick(currentTick);
-        let sqrtRatioLowerX96 = getSqrtPriceX96FromTick(tickLower);
-        let sqrtRatioUpperX96 = getSqrtPriceX96FromTick(tickUpper);
+      let amount0Calculated: bigint;
+      let amount1Calculated: bigint;
 
-        if (sqrtRatioLowerX96 > sqrtRatioUpperX96) {
-          [sqrtRatioLowerX96, sqrtRatioUpperX96] = [
-            sqrtRatioUpperX96,
-            sqrtRatioLowerX96,
-          ];
-        }
+      // Determine which calculation to use based on input token and currency ordering
+      const isCoinInput = inputToken === "coin";
+      const inputAmount = coinOrEthInputAmount;
 
-        let coinAmountCalculated: bigint;
+      if (
+        (isCoinInput && !isFlETHCurrency0) || // coin input and coin is currency0
+        (!isCoinInput && isFlETHCurrency0) // eth input and flETH is currency0
+      ) {
+        // We have amount0 and need to calculate amount1
+        amount0Calculated = inputAmount;
 
         if (sqrtRatioCurrentX96 <= sqrtRatioLowerX96) {
-          // Current price below range - only tokens needed
-          const ratio = (sqrtRatioLowerX96 * sqrtRatioLowerX96) / Q96;
-          coinAmountCalculated = (flethAmount * Q96) / ratio;
+          // Current price below range - no currency1 needed
+          amount1Calculated = 0n;
         } else if (sqrtRatioCurrentX96 >= sqrtRatioUpperX96) {
-          // Current price above range - no tokens needed (only flETH)
-          coinAmountCalculated = 0n;
+          // Current price above range - proportional amount1 needed
+          const ratio = (sqrtRatioUpperX96 * sqrtRatioUpperX96) / Q96;
+          amount1Calculated = (inputAmount * ratio) / Q96;
         } else {
           // Current price in range - proportional amounts
           const intermediate1 =
@@ -1568,27 +1523,54 @@ export class ReadFlaunchSDK {
           const intermediate2 =
             (Q192 * (sqrtRatioUpperX96 - sqrtRatioCurrentX96)) / Q96;
           if (intermediate2 > 0n) {
-            coinAmountCalculated =
-              (flethAmount * intermediate1) / intermediate2;
+            amount1Calculated = (inputAmount * intermediate1) / intermediate2;
           } else {
-            coinAmountCalculated = 0n;
+            amount1Calculated = 0n;
           }
         }
+      } else {
+        // We have amount1 and need to calculate amount0
+        amount1Calculated = inputAmount;
 
-        return {
-          coinAmount: coinAmountCalculated,
-          ethAmount: flethAmount,
-          tickLower,
-          tickUpper,
-          currentTick,
-        };
-      } catch (error) {
-        console.error(
-          "Error calculating token amount from flETH amount:",
-          error
-        );
-        throw error;
+        if (sqrtRatioCurrentX96 <= sqrtRatioLowerX96) {
+          // Current price below range - proportional amount0 needed
+          const ratio = (sqrtRatioLowerX96 * sqrtRatioLowerX96) / Q96;
+          amount0Calculated = (inputAmount * Q96) / ratio;
+        } else if (sqrtRatioCurrentX96 >= sqrtRatioUpperX96) {
+          // Current price above range - no amount0 needed
+          amount0Calculated = 0n;
+        } else {
+          // Current price in range - proportional amounts
+          const intermediate1 =
+            (sqrtRatioUpperX96 *
+              sqrtRatioCurrentX96 *
+              (sqrtRatioCurrentX96 - sqrtRatioLowerX96)) /
+            Q96;
+          const intermediate2 =
+            (Q192 * (sqrtRatioUpperX96 - sqrtRatioCurrentX96)) / Q96;
+          if (intermediate1 > 0n) {
+            amount0Calculated = (inputAmount * intermediate2) / intermediate1;
+          } else {
+            amount0Calculated = 0n;
+          }
+        }
       }
+
+      // Map amount0/amount1 back to coin/eth amounts based on currency ordering
+      const [ethAmount, coinAmount] = isFlETHCurrency0
+        ? [amount0Calculated, amount1Calculated]
+        : [amount1Calculated, amount0Calculated];
+
+      return {
+        coinAmount,
+        ethAmount,
+        tickLower,
+        tickUpper,
+        currentTick,
+      };
+    } catch (error) {
+      console.error("Error calculating liquidity amounts:", error);
+      throw error;
     }
   }
 }
@@ -2173,8 +2155,9 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       permit2ToUniPosManagerCoinAllowance.amount < coinAmount ||
       permit2ToUniPosManagerCoinAllowance.expiration <= currentTime;
     const needsFlethPermit2Approval =
-      permit2ToUniPosManagerFlethAllowance.amount < flethAmount ||
-      permit2ToUniPosManagerFlethAllowance.expiration <= currentTime;
+      flethAmount > 0n &&
+      (permit2ToUniPosManagerFlethAllowance.amount < flethAmount ||
+        permit2ToUniPosManagerFlethAllowance.expiration <= currentTime);
 
     const calls: CallWithDescription[] = [];
 
@@ -2239,16 +2222,18 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     }
 
     // 5. Wrap ETH to flETH
-    calls.push({
-      to: flethAddress,
-      description: "Wrap ETH to flETH",
-      data: encodeFunctionData({
-        abi: FLETHAbi,
-        functionName: "deposit",
-        args: [0n], // wethAmount = 0, we're only sending ETH
-      }),
-      value: flethAmount,
-    });
+    if (flethAmount > 0n) {
+      calls.push({
+        to: flethAddress,
+        description: "Wrap ETH to flETH",
+        data: encodeFunctionData({
+          abi: FLETHAbi,
+          functionName: "deposit",
+          args: [0n], // wethAmount = 0, we're only sending ETH
+        }),
+        value: flethAmount,
+      });
+    }
 
     // === generate add liquidity call ===
     // Determine amounts for each currency based on pool key ordering
