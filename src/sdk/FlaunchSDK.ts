@@ -2486,8 +2486,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     }
 
     // IMPORTANT: Add conservative buffer to account for contract rounding differences
-    // Reduce liquidity by 0.01% to ensure contract calculations stay within user bounds
-    const liquidityBuffer = finalLiquidity / 10000n; // 0.01%
+    // Reduce liquidity by 0.05% to ensure contract calculations stay within user bounds
+    const liquidityBuffer = finalLiquidity / 2000n; // 0.05%
     const conservativeLiquidity =
       finalLiquidity - (liquidityBuffer > 1n ? liquidityBuffer : 1n);
 
