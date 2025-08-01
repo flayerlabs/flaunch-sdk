@@ -48,6 +48,11 @@ export interface FlaunchParams {
     enabled: boolean;
     walletCap?: bigint;
     txCap?: bigint;
+    // need to pass signed message if trusted signer is enabled and premine requested.
+    premineSignedMessage?: {
+      deadline: number;
+      signature: HexString;
+    };
   };
 }
 
@@ -268,6 +273,32 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
         )
       : "0x";
 
+    const _premineSwapHookData = params.trustedSignerSettings?.enabled
+      ? encodeAbiParameters(
+          [
+            { type: "address", name: "referrer" },
+            {
+              type: "tuple",
+              components: [
+                { type: "uint256", name: "deadline" },
+                { type: "bytes", name: "signature" },
+              ],
+            },
+          ],
+          [
+            zeroAddress,
+            {
+              deadline: BigInt(
+                params.trustedSignerSettings.premineSignedMessage?.deadline ?? 0
+              ),
+              signature:
+                params.trustedSignerSettings.premineSignedMessage?.signature ??
+                "0x",
+            },
+          ]
+        )
+      : "0x";
+
     return this.contract.write(
       "flaunch",
       {
@@ -285,6 +316,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           initialPriceParams,
           feeCalculatorParams,
         },
+        _premineSwapHookData,
         _treasuryManagerParams: {
           ..._treasuryManagerParams,
           permissions: getPermissionsAddress(

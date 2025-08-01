@@ -142,7 +142,7 @@ export const FastFlaunchZapAddress: Addresses = {
 };
 
 export const FlaunchZapAddress: Addresses = {
-  [base.id]: "0xfa9e8528ee95eb109bffd1a2d59cb95b300a672a", // TODO: update mainnet address with permissions param
+  [base.id]: "0x2bC8cbfE237AEddc7C296436fefe239A0A22dAbF",
   [baseSepolia.id]: "0x2871a184410F03F4e2C7C5257d839FB34169496A",
 };
 
