@@ -2344,7 +2344,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
 
   /**
    * Imports a memecoin into the TokenImporter
-   * @param params.memecoin - The address of the memecoin to import
+   * @param params.coinAddress - The address of the memecoin to import
    * @param params.creatorFeeAllocationPercent - The creator fee allocation percentage
    * @param params.initialMarketCapUSD - The initial market cap in USD
    * @param params.verifier - Optional verifier to use for importing the memecoin
@@ -2404,7 +2404,9 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         inputToken: params.inputToken,
         minMarketCap: params.minMarketCap,
         maxMarketCap: params.maxMarketCap,
-        currentMarketCap: params.currentMarketCap,
+        currentMarketCap: params.initialMarketCapUSD
+          ? params.initialMarketCapUSD.toString()
+          : undefined,
       });
 
       coinAmount = calculated.coinAmount;
@@ -2752,7 +2754,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   async getImportAndAddLiquidityCalls(
     params: ImportMemecoinParams &
       GetAddLiquidityCallsParams & {
-        currentMarketCap: string;
+        initialMarketCapUSD: number;
       }
   ): Promise<CallWithDescription[]> {
     const importParams = await this.readWriteTokenImporter.getInitializeParams({

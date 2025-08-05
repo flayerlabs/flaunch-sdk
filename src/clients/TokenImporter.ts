@@ -94,12 +94,12 @@ export class ReadWriteTokenImporter extends ReadTokenImporter {
   }
 
   async initialize({
-    memecoin,
+    coinAddress,
     creatorFeeAllocationPercent,
     initialMarketCapUSD,
     verifier,
   }: {
-    memecoin: Address;
+    coinAddress: Address;
     creatorFeeAllocationPercent: number;
     initialMarketCapUSD: number;
     verifier?: Verifier;
@@ -107,7 +107,7 @@ export class ReadWriteTokenImporter extends ReadTokenImporter {
     return this.contract.write(
       "initialize",
       await this.getInitializeParams({
-        memecoin,
+        memecoin: coinAddress,
         creatorFeeAllocationPercent,
         initialMarketCapUSD,
         verifier,

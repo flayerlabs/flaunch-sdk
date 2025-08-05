@@ -75,7 +75,7 @@ export enum Permissions {
 }
 
 export interface ImportMemecoinParams {
-  memecoin: Address;
+  coinAddress: Address;
   creatorFeeAllocationPercent: number;
   initialMarketCapUSD: number;
   verifier?: Verifier;
@@ -89,7 +89,7 @@ export type GetAddLiquidityCallsParams =
       inputToken: "coin" | "eth";
       minMarketCap: string;
       maxMarketCap: string;
-      currentMarketCap?: string;
+      initialMarketCapUSD?: number;
     }
   | {
       coinAddress: Address;
