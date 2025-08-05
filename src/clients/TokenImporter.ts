@@ -104,6 +104,28 @@ export class ReadWriteTokenImporter extends ReadTokenImporter {
     initialMarketCapUSD: number;
     verifier?: Verifier;
   }) {
+    return this.contract.write(
+      "initialize",
+      await this.getInitializeParams({
+        memecoin,
+        creatorFeeAllocationPercent,
+        initialMarketCapUSD,
+        verifier,
+      })
+    );
+  }
+
+  async getInitializeParams({
+    memecoin,
+    creatorFeeAllocationPercent,
+    initialMarketCapUSD,
+    verifier,
+  }: {
+    memecoin: Address;
+    creatorFeeAllocationPercent: number;
+    initialMarketCapUSD: number;
+    verifier?: Verifier;
+  }) {
     const initialMCapInUSDCWei = parseUnits(initialMarketCapUSD.toString(), 6);
     const creatorFeeAllocationInBps = creatorFeeAllocationPercent * 100;
 
@@ -114,11 +136,11 @@ export class ReadWriteTokenImporter extends ReadTokenImporter {
           _memecoin: memecoin,
         });
 
-    return this.contract.write("initialize", {
+    return {
       _memecoin: memecoin,
       _creatorFeeAllocation: creatorFeeAllocationInBps,
       _initialMarketCap: initialMCapInUSDCWei,
       _verifier,
-    });
+    };
   }
 }

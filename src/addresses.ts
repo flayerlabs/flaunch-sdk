@@ -143,7 +143,7 @@ export const FastFlaunchZapAddress: Addresses = {
 
 export const FlaunchZapAddress: Addresses = {
   [base.id]: "0x2bC8cbfE237AEddc7C296436fefe239A0A22dAbF",
-  [baseSepolia.id]: "0x2871a184410F03F4e2C7C5257d839FB34169496A",
+  [baseSepolia.id]: "0x808DA25e8ecbCC2C0339B6A436AAEAe2021C235d",
 };
 
 export const TreasuryManagerFactoryAddress: Addresses = {

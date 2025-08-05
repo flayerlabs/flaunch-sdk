@@ -130,6 +130,8 @@ import {
   LiquidityMode,
   Verifier,
   Permissions,
+  ImportMemecoinParams,
+  GetAddLiquidityCallsParams,
 } from "types";
 import {
   getPoolId,
@@ -1412,27 +1414,152 @@ export class ReadFlaunchSDK {
     return this.readTokenImporter.verifyMemecoin(memecoin);
   }
 
+  /**
+   * Gets basic coin information (total supply and decimals)
+   */
+  private async getCoinInfo(coinAddress: Address): Promise<{
+    totalSupply: bigint;
+    decimals: number;
+  }> {
+    const memecoin = new ReadMemecoin(coinAddress, this.drift);
+    const [totalSupply, decimals] = await Promise.all([
+      memecoin.totalSupply(),
+      memecoin.decimals(),
+    ]);
+    return { totalSupply, decimals };
+  }
+
+  /**
+   * Gets market context information needed for tick calculations
+   */
+  private async getMarketContext(
+    coinAddress: Address,
+    coinDecimals: number
+  ): Promise<{
+    ethUsdPrice: number;
+    isFlethZero: boolean;
+    decimals0: number;
+    decimals1: number;
+  }> {
+    const ethUsdPrice = await this.getETHUSDCPrice();
+    const isFlethZero = this.flETHIsCurrencyZero(coinAddress);
+    const flETHDecimals = 18; // flETH has 18 decimals
+
+    // Determine decimals based on token ordering
+    const decimals0 = isFlethZero ? flETHDecimals : coinDecimals;
+    const decimals1 = isFlethZero ? coinDecimals : flETHDecimals;
+
+    return {
+      ethUsdPrice,
+      isFlethZero,
+      decimals0,
+      decimals1,
+    };
+  }
+
+  /**
+   * Converts market cap in USD to token price in ETH
+   */
+  private marketCapToTokenPriceEth(
+    marketCapUsd: number,
+    totalSupplyDecimal: number,
+    ethUsdPrice: number
+  ): number {
+    const tokenPriceUsd = marketCapUsd / totalSupplyDecimal;
+    return tokenPriceUsd / ethUsdPrice;
+  }
+
+  /**
+   * Converts token price in ETH to tick
+   */
+  private convertPriceToTick(
+    priceEth: number,
+    isFlethZero: boolean,
+    decimals0: number,
+    decimals1: number
+  ): number {
+    return priceRatioToTick({
+      priceInput: priceEth.toString(),
+      isDirection1Per0: !isFlethZero,
+      decimals0,
+      decimals1,
+      spacing: TICK_SPACING,
+    });
+  }
+
+  /**
+   * Calculates current tick from market cap if provided
+   */
+  private calculateCurrentTickFromMarketCap(
+    currentMarketCap: string | undefined,
+    totalSupplyDecimal: number,
+    marketContext: {
+      ethUsdPrice: number;
+      isFlethZero: boolean;
+      decimals0: number;
+      decimals1: number;
+    }
+  ): number | undefined {
+    if (!currentMarketCap) {
+      return undefined;
+    }
+
+    const currentMarketCapNum = parseFloat(currentMarketCap);
+    const currentTokenPriceEth = this.marketCapToTokenPriceEth(
+      currentMarketCapNum,
+      totalSupplyDecimal,
+      marketContext.ethUsdPrice
+    );
+
+    return this.convertPriceToTick(
+      currentTokenPriceEth,
+      marketContext.isFlethZero,
+      marketContext.decimals0,
+      marketContext.decimals1
+    );
+  }
+
   async calculateAddLiquidityTicks({
     coinAddress,
     liquidityMode,
     minMarketCap,
     maxMarketCap,
+    currentMarketCap,
   }: {
     coinAddress: Address;
     liquidityMode: LiquidityMode;
     minMarketCap: string;
     maxMarketCap: string;
+    currentMarketCap?: string;
   }): Promise<{
     tickLower: number;
     tickUpper: number;
+    currentTick?: number;
     coinTotalSupply: bigint;
     coinDecimals: number;
   }> {
-    const memecoin = new ReadMemecoin(coinAddress, this.drift);
-    const coinTotalSupply = await memecoin.totalSupply();
-    const coinDecimals = await memecoin.decimals();
+    // Get coin information
+    const { totalSupply: coinTotalSupply, decimals: coinDecimals } =
+      await this.getCoinInfo(coinAddress);
+
+    // Convert total supply to decimal format
+    const totalSupplyDecimal = parseFloat(formatEther(coinTotalSupply));
 
     if (liquidityMode === LiquidityMode.FULL_RANGE) {
+      let currentTick: number | undefined;
+
+      if (currentMarketCap) {
+        const marketContext = await this.getMarketContext(
+          coinAddress,
+          coinDecimals
+        );
+        currentTick = this.calculateCurrentTickFromMarketCap(
+          currentMarketCap,
+          totalSupplyDecimal,
+          marketContext
+        );
+      }
+
       return {
         tickLower: getNearestUsableTick({
           tick: TickFinder.MIN_TICK,
@@ -1442,13 +1569,16 @@ export class ReadFlaunchSDK {
           tick: TickFinder.MAX_TICK,
           tickSpacing: TICK_SPACING,
         }),
+        currentTick,
         coinTotalSupply,
         coinDecimals,
       };
     } else {
-      const ethUsdPrice = await this.getETHUSDCPrice();
-
-      const isFlethZero = this.flETHIsCurrencyZero(coinAddress);
+      // Get market context
+      const marketContext = await this.getMarketContext(
+        coinAddress,
+        coinDecimals
+      );
 
       const minMarketCapNum = parseFloat(minMarketCap);
       const maxMarketCapNum = parseFloat(maxMarketCap);
@@ -1463,42 +1593,43 @@ export class ReadFlaunchSDK {
         );
       }
 
-      // Convert total supply to decimal format
-      const totalSupplyDecimal = parseFloat(formatEther(coinTotalSupply));
+      // Convert market caps to token prices in ETH
+      const minTokenPriceEth = this.marketCapToTokenPriceEth(
+        minMarketCapNum,
+        totalSupplyDecimal,
+        marketContext.ethUsdPrice
+      );
+      const maxTokenPriceEth = this.marketCapToTokenPriceEth(
+        maxMarketCapNum,
+        totalSupplyDecimal,
+        marketContext.ethUsdPrice
+      );
 
-      // Calculate token price in USD at min and max market caps
-      const minTokenPriceUsd = minMarketCapNum / totalSupplyDecimal;
-      const maxTokenPriceUsd = maxMarketCapNum / totalSupplyDecimal;
+      // Convert to ticks
+      const minTick = this.convertPriceToTick(
+        minTokenPriceEth,
+        marketContext.isFlethZero,
+        marketContext.decimals0,
+        marketContext.decimals1
+      );
+      const maxTick = this.convertPriceToTick(
+        maxTokenPriceEth,
+        marketContext.isFlethZero,
+        marketContext.decimals0,
+        marketContext.decimals1
+      );
 
-      // Convert to token price in ETH
-      const minTokenPriceEth = minTokenPriceUsd / ethUsdPrice;
-      const maxTokenPriceEth = maxTokenPriceUsd / ethUsdPrice;
-
-      const flETHDecimals = 18; // flETH has 18 decimals
-
-      // Determine decimals based on token ordering
-      const decimals0 = isFlethZero ? flETHDecimals : coinDecimals;
-      const decimals1 = isFlethZero ? coinDecimals : flETHDecimals;
-
-      // Convert to ticks using proper price direction handling
-      const minTick = priceRatioToTick({
-        priceInput: minTokenPriceEth.toString(),
-        isDirection1Per0: !isFlethZero,
-        decimals0,
-        decimals1,
-        spacing: TICK_SPACING,
-      });
-      const maxTick = priceRatioToTick({
-        priceInput: maxTokenPriceEth.toString(),
-        isDirection1Per0: !isFlethZero,
-        decimals0,
-        decimals1,
-        spacing: TICK_SPACING,
-      });
+      // Calculate current tick if provided
+      const currentTick = this.calculateCurrentTickFromMarketCap(
+        currentMarketCap,
+        totalSupplyDecimal,
+        marketContext
+      );
 
       return {
         tickLower: Math.min(minTick, maxTick),
         tickUpper: Math.max(minTick, maxTick),
+        currentTick,
         coinTotalSupply,
         coinDecimals,
       };
@@ -1512,6 +1643,7 @@ export class ReadFlaunchSDK {
     inputToken,
     minMarketCap,
     maxMarketCap,
+    currentMarketCap,
   }: {
     coinAddress: Address;
     liquidityMode: LiquidityMode;
@@ -1519,6 +1651,7 @@ export class ReadFlaunchSDK {
     inputToken: "coin" | "eth";
     minMarketCap: string;
     maxMarketCap: string;
+    currentMarketCap?: string;
   }): Promise<{
     coinAmount: bigint;
     ethAmount: bigint;
@@ -1526,26 +1659,30 @@ export class ReadFlaunchSDK {
     tickUpper: number;
     currentTick: number;
   }> {
-    const { tickLower, tickUpper } = await this.calculateAddLiquidityTicks({
-      coinAddress,
-      liquidityMode,
-      minMarketCap,
-      maxMarketCap,
-    });
+    let { tickLower, tickUpper, currentTick } =
+      await this.calculateAddLiquidityTicks({
+        coinAddress,
+        liquidityMode,
+        minMarketCap,
+        maxMarketCap,
+        currentMarketCap,
+      });
 
-    // get the current pool state for AnyPositionManager pool for the coin
-    const poolState = await this.readStateView.poolSlot0({
-      poolId: getPoolId(
-        orderPoolKey({
-          currency0: coinAddress,
-          currency1: FLETHAddress[this.chainId],
-          fee: 0,
-          tickSpacing: TICK_SPACING,
-          hooks: AnyPositionManagerAddress[this.chainId],
-        })
-      ),
-    });
-    const currentTick = poolState.tick;
+    if (!currentTick) {
+      // get the current pool state for AnyPositionManager pool for the coin
+      const poolState = await this.readStateView.poolSlot0({
+        poolId: getPoolId(
+          orderPoolKey({
+            currency0: coinAddress,
+            currency1: FLETHAddress[this.chainId],
+            fee: 0,
+            tickSpacing: TICK_SPACING,
+            hooks: AnyPositionManagerAddress[this.chainId],
+          })
+        ),
+      });
+      currentTick = poolState.tick;
+    }
 
     // Determine currency ordering
     const isFlETHCurrency0 = this.flETHIsCurrencyZero(coinAddress);
@@ -1642,6 +1779,28 @@ export class ReadFlaunchSDK {
       console.error("Error calculating liquidity amounts:", error);
       throw error;
     }
+  }
+
+  /**
+   * Checks if an external memecoin has been imported to Flaunch
+   * @param memecoin - The address of the memecoin to check
+   * @returns Promise<boolean> - True if the memecoin has been imported
+   */
+  async isMemecoinImported(memecoin: Address): Promise<boolean> {
+    const poolKey = orderPoolKey({
+      currency0: memecoin,
+      currency1: FLETHAddress[this.chainId],
+      fee: 0,
+      tickSpacing: TICK_SPACING,
+      hooks: AnyPositionManagerAddress[this.chainId],
+    });
+
+    // check if pool's sqrtPriceX96 is not 0
+    const poolState = await this.readStateView.poolSlot0({
+      poolId: getPoolId(poolKey),
+    });
+
+    return poolState.sqrtPriceX96 !== 0n;
   }
 
   /**
@@ -2193,32 +2352,17 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @param params.verifier - Optional verifier to use for importing the memecoin
    * @returns Transaction response
    */
-  importMemecoin(params: {
-    memecoin: Address;
-    creatorFeeAllocationPercent: number;
-    initialMarketCapUSD: number;
-    verifier?: Verifier;
-  }) {
+  importMemecoin(params: ImportMemecoinParams) {
     return this.readWriteTokenImporter.initialize(params);
   }
 
+  /**
+   * Gets the calls needed to add liquidity to AnyPositionManager for external coins
+   * @param params - Parameters for adding liquidity
+   * @returns Array of calls with descriptions
+   */
   async getAddLiquidityCalls(
-    params:
-      | {
-          coinAddress: Address;
-          liquidityMode: LiquidityMode;
-          coinOrEthInputAmount: bigint;
-          inputToken: "coin" | "eth";
-          minMarketCap: string;
-          maxMarketCap: string;
-        }
-      | {
-          coinAddress: Address;
-          coinAmount: bigint;
-          flethAmount: bigint;
-          tickLower: number;
-          tickUpper: number;
-        }
+    params: GetAddLiquidityCallsParams
   ): Promise<CallWithDescription[]> {
     const { coinAddress } = params;
     const flethAddress = FLETHAddress[this.chainId];
@@ -2245,10 +2389,14 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       tickLower = params.tickLower;
       tickUpper = params.tickUpper;
 
-      const poolState = await this.readStateView.poolSlot0({
-        poolId: getPoolId(poolKey),
-      });
-      currentTick = poolState.tick;
+      if (params.currentTick) {
+        currentTick = params.currentTick;
+      } else {
+        const poolState = await this.readStateView.poolSlot0({
+          poolId: getPoolId(poolKey),
+        });
+        currentTick = poolState.tick;
+      }
     } else {
       // Calculate the amounts
       const calculated = await this.calculateAddLiquidityAmounts({
@@ -2258,6 +2406,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         inputToken: params.inputToken,
         minMarketCap: params.minMarketCap,
         maxMarketCap: params.maxMarketCap,
+        currentMarketCap: params.currentMarketCap,
       });
 
       coinAmount = calculated.coinAmount;
@@ -2595,5 +2744,38 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     });
 
     return calls;
+  }
+
+  /**
+   * Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
+   * @param params - Parameters for importing and adding liquidity
+   * @returns Array of calls with descriptions
+   */
+  async getImportAndAddLiquidityCalls(
+    params: ImportMemecoinParams &
+      GetAddLiquidityCallsParams & {
+        currentMarketCap: string;
+      }
+  ): Promise<CallWithDescription[]> {
+    const importParams = await this.readWriteTokenImporter.getInitializeParams({
+      memecoin: params.coinAddress,
+      creatorFeeAllocationPercent: params.creatorFeeAllocationPercent,
+      initialMarketCapUSD: params.initialMarketCapUSD,
+      verifier: params.verifier,
+    });
+
+    const addLiquidityCalls = await this.getAddLiquidityCalls(params);
+
+    return [
+      {
+        to: this.readWriteTokenImporter.contract.address,
+        data: this.readWriteTokenImporter.contract.encodeFunctionData(
+          "initialize",
+          importParams
+        ),
+        description: "Import Memecoin to Flaunch",
+      },
+      ...addLiquidityCalls,
+    ];
   }
 }

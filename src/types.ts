@@ -73,3 +73,29 @@ export enum Permissions {
   CLOSED = "closed",
   WHITELISTED = "whitelisted",
 }
+
+export interface ImportMemecoinParams {
+  memecoin: Address;
+  creatorFeeAllocationPercent: number;
+  initialMarketCapUSD: number;
+  verifier?: Verifier;
+}
+
+export type GetAddLiquidityCallsParams =
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      coinOrEthInputAmount: bigint;
+      inputToken: "coin" | "eth";
+      minMarketCap: string;
+      maxMarketCap: string;
+      currentMarketCap?: string;
+    }
+  | {
+      coinAddress: Address;
+      coinAmount: bigint;
+      flethAmount: bigint;
+      tickLower: number;
+      tickUpper: number;
+      currentTick?: number;
+    };
