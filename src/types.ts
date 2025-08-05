@@ -42,7 +42,7 @@ export interface IPFSParams {
 export enum FlaunchVersion {
   V1 = "V1",
   V1_1 = "V1_1",
-  V1_1_1 = "V1_1_1",
+  V1_2 = "V1_2",
   ANY = "ANY",
 }
 

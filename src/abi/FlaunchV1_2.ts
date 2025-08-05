@@ -1,4 +1,4 @@
-export const FlaunchV1_1_1Abi = [
+export const FlaunchV1_2Abi = [
   {
     inputs: [
       {

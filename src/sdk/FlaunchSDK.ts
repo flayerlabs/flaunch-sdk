@@ -46,9 +46,9 @@ import {
   ReferralEscrowAddress,
   TokenImporterAddress,
   UniV4PositionManagerAddress,
-  FlaunchPositionManagerV1_1_1Address,
-  FlaunchV1_1_1Address,
-  // V1.1.1 and AnyPositionManager addresses will be imported here when available
+  FlaunchPositionManagerV1_2Address,
+  FlaunchV1_2Address,
+  // V1.2 and AnyPositionManager addresses will be imported here when available
 } from "../addresses";
 import {
   ReadFlaunchPositionManager,
@@ -88,9 +88,9 @@ import {
   ReadWriteFlaunchPositionManagerV1_1,
 } from "clients/FlaunchPositionManagerV1_1Client";
 import {
-  ReadFlaunchPositionManagerV1_1_1,
-  ReadWriteFlaunchPositionManagerV1_1_1,
-} from "clients/FlaunchPositionManagerV1_1_1Client";
+  ReadFlaunchPositionManagerV1_2,
+  ReadWriteFlaunchPositionManagerV1_2,
+} from "clients/FlaunchPositionManagerV1_2Client";
 import {
   AnyFlaunchParams,
   ReadAnyPositionManager,
@@ -111,7 +111,7 @@ import {
 import { ReadBidWallV1_1 } from "clients/BidWallV1_1Client";
 import { ReadFairLaunchV1_1 } from "clients/FairLaunchV1_1Client";
 import { ReadFlaunchV1_1 } from "clients/FlaunchV1_1Client";
-import { ReadFlaunchV1_1_1 } from "clients/FlaunchV1_1_1Client";
+import { ReadFlaunchV1_2 } from "clients/FlaunchV1_2Client";
 import { ReadWriteTreasuryManagerFactory } from "clients/TreasuryManagerFactoryClient";
 import {
   ReadRevenueManager,
@@ -128,7 +128,6 @@ import {
   CoinMetadata,
   FlaunchVersion,
   LiquidityMode,
-  Verifier,
   Permissions,
   ImportMemecoinParams,
   GetAddLiquidityCallsParams,
@@ -156,8 +155,7 @@ import {
   getPermit2TypedData,
 } from "utils/universalRouter";
 import { resolveIPFS as defaultResolveIPFS } from "../helpers/ipfs";
-import { chainIdToChain, getPermissionsAddress } from "helpers";
-import { TreasuryManagerFactoryAbi } from "abi/TreasuryManagerFactory";
+import { getPermissionsAddress } from "helpers";
 import { ReadMulticall } from "clients/MulticallClient";
 import { MemecoinAbi, Permit2Abi } from "abi";
 import { FLETHAbi } from "abi/FLETH";
@@ -263,10 +261,10 @@ export class ReadFlaunchSDK {
   public readonly readPermit2: ReadPermit2;
 
   // These properties will be initialized when the clients are available
-  public readonly readPositionManagerV1_1_1: ReadFlaunchPositionManagerV1_1_1;
-  // public readonly readFairLaunchV1_1_1: ReadFairLaunchV1_1_1;
-  // public readonly readBidWallV1_1_1: ReadBidWallV1_1_1;
-  public readonly readFlaunchV1_1_1: ReadFlaunchV1_1_1;
+  public readonly readPositionManagerV1_2: ReadFlaunchPositionManagerV1_2;
+  // public readonly readFairLaunchV1_2: ReadFairLaunchV1_2;
+  // public readonly readBidWallV1_2: ReadBidWallV1_2;
+  public readonly readFlaunchV1_2: ReadFlaunchV1_2;
   // public readonly readAnyFlaunch: ReadAnyFlaunch;
 
   public resolveIPFS: (value: string) => string;
@@ -283,8 +281,8 @@ export class ReadFlaunchSDK {
       FlaunchPositionManagerV1_1Address[this.chainId],
       drift
     );
-    this.readPositionManagerV1_1_1 = new ReadFlaunchPositionManagerV1_1_1(
-      FlaunchPositionManagerV1_1_1Address[this.chainId],
+    this.readPositionManagerV1_2 = new ReadFlaunchPositionManagerV1_2(
+      FlaunchPositionManagerV1_2Address[this.chainId],
       drift
     );
     this.readAnyPositionManager = new ReadAnyPositionManager(
@@ -339,8 +337,8 @@ export class ReadFlaunchSDK {
       FlaunchV1_1Address[this.chainId],
       drift
     );
-    this.readFlaunchV1_1_1 = new ReadFlaunchV1_1_1(
-      FlaunchV1_1_1Address[this.chainId],
+    this.readFlaunchV1_2 = new ReadFlaunchV1_2(
+      FlaunchV1_2Address[this.chainId],
       drift
     );
     this.readQuoter = new ReadQuoter(
@@ -358,7 +356,7 @@ export class ReadFlaunchSDK {
    */
   async isValidCoin(coinAddress: Address) {
     return (
-      (await this.readPositionManagerV1_1_1.isValidCoin(coinAddress)) ||
+      (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) ||
       (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) ||
       (await this.readPositionManager.isValidCoin(coinAddress)) ||
       (await this.readAnyPositionManager.isValidCoin(coinAddress))
@@ -371,8 +369,8 @@ export class ReadFlaunchSDK {
    * @returns Promise<FlaunchVersion> - The version of the coin
    */
   async getCoinVersion(coinAddress: Address): Promise<FlaunchVersion> {
-    if (await this.readPositionManagerV1_1_1.isValidCoin(coinAddress)) {
-      return FlaunchVersion.V1_1_1;
+    if (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) {
+      return FlaunchVersion.V1_2;
     } else if (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) {
       return FlaunchVersion.V1_1;
     } else if (await this.readPositionManager.isValidCoin(coinAddress)) {
@@ -394,12 +392,12 @@ export class ReadFlaunchSDK {
         return this.readPositionManager;
       case FlaunchVersion.V1_1:
         return this.readPositionManagerV1_1;
-      case FlaunchVersion.V1_1_1:
-        return this.readPositionManagerV1_1_1;
+      case FlaunchVersion.V1_2:
+        return this.readPositionManagerV1_2;
       case FlaunchVersion.ANY:
         return this.readAnyPositionManager;
       default:
-        return this.readPositionManagerV1_1_1;
+        return this.readPositionManagerV1_2;
     }
   }
 
@@ -413,7 +411,7 @@ export class ReadFlaunchSDK {
         return this.readFairLaunch;
       case FlaunchVersion.V1_1:
         return this.readFairLaunchV1_1;
-      case FlaunchVersion.V1_1_1:
+      case FlaunchVersion.V1_2:
         return this.readFairLaunchV1_1;
       case FlaunchVersion.ANY:
         return this.readFairLaunchV1_1;
@@ -432,7 +430,7 @@ export class ReadFlaunchSDK {
         return this.readBidWall;
       case FlaunchVersion.V1_1:
         return this.readBidWallV1_1;
-      case FlaunchVersion.V1_1_1:
+      case FlaunchVersion.V1_2:
         return this.readBidWallV1_1;
       case FlaunchVersion.ANY:
         return this.readAnyBidWall;
@@ -451,8 +449,8 @@ export class ReadFlaunchSDK {
         return this.readFlaunch.contract.address;
       case FlaunchVersion.V1_1:
         return this.readFlaunchV1_1.contract.address;
-      case FlaunchVersion.V1_1_1:
-        return this.readFlaunchV1_1_1.contract.address;
+      case FlaunchVersion.V1_2:
+        return this.readFlaunchV1_2.contract.address;
       case FlaunchVersion.ANY:
         return this.readFlaunchV1_1.contract.address;
       default:

@@ -1,4 +1,4 @@
-export const FlaunchPositionManagerV1_1_1Abi = [
+export const FlaunchPositionManagerV1_2Abi = [
   {
     inputs: [
       {

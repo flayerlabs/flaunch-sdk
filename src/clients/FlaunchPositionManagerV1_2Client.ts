@@ -8,7 +8,7 @@ import {
   createDrift,
   HexString,
 } from "@delvtech/drift";
-import { FlaunchPositionManagerV1_1_1Abi } from "../abi/FlaunchPositionManagerV1_1_1";
+import { FlaunchPositionManagerV1_2Abi } from "../abi/FlaunchPositionManagerV1_2";
 import { encodeAbiParameters, parseUnits, zeroAddress, type Hex } from "viem";
 import { IPFSParams } from "../types";
 import { generateTokenUri } from "helpers/ipfs";
@@ -16,10 +16,10 @@ import { ReadInitialPrice } from "./InitialPriceClient";
 import { getAmountWithSlippage } from "utils/universalRouter";
 import { parseSwapData, type SwapLogArgs } from "utils/parseSwap";
 
-export type FlaunchPositionManagerV1_1_1ABI =
-  typeof FlaunchPositionManagerV1_1_1Abi;
+export type FlaunchPositionManagerV1_2ABI =
+  typeof FlaunchPositionManagerV1_2Abi;
 export type PoolCreatedLog = EventLog<
-  FlaunchPositionManagerV1_1_1ABI,
+  FlaunchPositionManagerV1_2ABI,
   "PoolCreated"
 > & {
   timestamp: number;
@@ -38,7 +38,7 @@ export interface WatchPoolCreatedParams {
 }
 
 export type BaseSwapLog = EventLog<
-  FlaunchPositionManagerV1_1_1ABI,
+  FlaunchPositionManagerV1_2ABI,
   "PoolSwap"
 > & {
   timestamp: number;
@@ -104,8 +104,8 @@ export interface FlaunchIPFSParams
   extends Omit<FlaunchParams, "tokenUri">,
     IPFSParams {}
 
-export class ReadFlaunchPositionManagerV1_1_1 {
-  public readonly contract: ReadContract<FlaunchPositionManagerV1_1_1ABI>;
+export class ReadFlaunchPositionManagerV1_2 {
+  public readonly contract: ReadContract<FlaunchPositionManagerV1_2ABI>;
   drift: Drift;
   public pollPoolCreatedNow?: () => Promise<void>;
   public pollPoolSwapNow?: () => Promise<void>;
@@ -117,7 +117,7 @@ export class ReadFlaunchPositionManagerV1_1_1 {
       throw new Error("Address is required");
     }
     this.contract = drift.contract({
-      abi: FlaunchPositionManagerV1_1_1Abi,
+      abi: FlaunchPositionManagerV1_2Abi,
       address,
     });
   }
@@ -392,8 +392,8 @@ export class ReadFlaunchPositionManagerV1_1_1 {
   }
 }
 
-export class ReadWriteFlaunchPositionManagerV1_1_1 extends ReadFlaunchPositionManagerV1_1_1 {
-  declare contract: ReadWriteContract<FlaunchPositionManagerV1_1_1ABI>;
+export class ReadWriteFlaunchPositionManagerV1_2 extends ReadFlaunchPositionManagerV1_2 {
+  declare contract: ReadWriteContract<FlaunchPositionManagerV1_2ABI>;
 
   constructor(
     address: Address,
