@@ -74,12 +74,20 @@ export enum Permissions {
   WHITELISTED = "whitelisted",
 }
 
-export interface ImportMemecoinParams {
-  coinAddress: Address;
-  creatorFeeAllocationPercent: number;
-  initialMarketCapUSD: number;
-  verifier?: Verifier;
-}
+// either initialMarketCapUSD or initialPriceUSD must be provided
+export type ImportMemecoinParams =
+  | {
+      coinAddress: Address;
+      creatorFeeAllocationPercent: number;
+      initialMarketCapUSD: number;
+      verifier?: Verifier;
+    }
+  | {
+      coinAddress: Address;
+      creatorFeeAllocationPercent: number;
+      initialPriceUSD: number;
+      verifier?: Verifier;
+    };
 
 export type GetAddLiquidityCallsParams =
   | {
@@ -90,6 +98,15 @@ export type GetAddLiquidityCallsParams =
       minMarketCap: string;
       maxMarketCap: string;
       initialMarketCapUSD?: number;
+    }
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      coinOrEthInputAmount: bigint;
+      inputToken: "coin" | "eth";
+      minPriceUSD: string;
+      maxPriceUSD: string;
+      initialPriceUSD?: number;
     }
   | {
       coinAddress: Address;

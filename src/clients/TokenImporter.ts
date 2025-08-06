@@ -9,7 +9,7 @@ import {
   createDrift,
 } from "@delvtech/drift";
 import { TokenImporterAbi } from "../abi/TokenImporter";
-import { zeroAddress, parseUnits } from "viem";
+import { zeroAddress, parseUnits, formatUnits } from "viem";
 import { Verifier } from "../types";
 import {
   ClankerWorldVerifierAddress,
@@ -18,6 +18,7 @@ import {
   WhitelistVerifierAddress,
   ZoraVerifierAddress,
 } from "addresses";
+import { ReadMemecoin } from "./MemecoinClient";
 
 export type TokenImporterABI = typeof TokenImporterAbi;
 
@@ -93,51 +94,68 @@ export class ReadWriteTokenImporter extends ReadTokenImporter {
     super(chainId, address, drift);
   }
 
-  async initialize({
-    coinAddress,
-    creatorFeeAllocationPercent,
-    initialMarketCapUSD,
-    verifier,
-  }: {
-    coinAddress: Address;
-    creatorFeeAllocationPercent: number;
-    initialMarketCapUSD: number;
-    verifier?: Verifier;
-  }) {
+  async initialize(
+    params:
+      | {
+          coinAddress: Address;
+          creatorFeeAllocationPercent: number;
+          initialMarketCapUSD: number;
+          verifier?: Verifier;
+        }
+      | {
+          coinAddress: Address;
+          creatorFeeAllocationPercent: number;
+          initialPriceUSD: number;
+          verifier?: Verifier;
+        }
+  ) {
     return this.contract.write(
       "initialize",
-      await this.getInitializeParams({
-        memecoin: coinAddress,
-        creatorFeeAllocationPercent,
-        initialMarketCapUSD,
-        verifier,
-      })
+      await this.getInitializeParams(params)
     );
   }
 
-  async getInitializeParams({
-    memecoin,
-    creatorFeeAllocationPercent,
-    initialMarketCapUSD,
-    verifier,
-  }: {
-    memecoin: Address;
-    creatorFeeAllocationPercent: number;
-    initialMarketCapUSD: number;
-    verifier?: Verifier;
-  }) {
+  async getInitializeParams(
+    params:
+      | {
+          coinAddress: Address;
+          creatorFeeAllocationPercent: number;
+          initialMarketCapUSD: number;
+          verifier?: Verifier;
+        }
+      | {
+          coinAddress: Address;
+          creatorFeeAllocationPercent: number;
+          initialPriceUSD: number;
+          verifier?: Verifier;
+        }
+  ) {
+    let initialMarketCapUSD: number;
+    if ("initialMarketCapUSD" in params) {
+      initialMarketCapUSD = params.initialMarketCapUSD;
+    } else {
+      const memecoin = new ReadMemecoin(params.coinAddress, this.drift);
+      const totalSupply = await memecoin.totalSupply();
+      const decimals = await memecoin.decimals();
+      const formattedTotalSupply = parseFloat(
+        formatUnits(totalSupply, decimals)
+      );
+
+      initialMarketCapUSD = params.initialPriceUSD * formattedTotalSupply;
+    }
+
     const initialMCapInUSDCWei = parseUnits(initialMarketCapUSD.toString(), 6);
-    const creatorFeeAllocationInBps = creatorFeeAllocationPercent * 100;
+    const creatorFeeAllocationInBps = params.creatorFeeAllocationPercent * 100;
 
     // Passing in the verifier here, as drift doesn't recognize the other initialize function without the verifier param
-    let _verifier = verifier
-      ? this.verifierAddress(verifier)
+    let _verifier = params.verifier
+      ? this.verifierAddress(params.verifier)
       : await this.contract.read("verifyMemecoin", {
-          _memecoin: memecoin,
+          _memecoin: params.coinAddress,
         });
 
     return {
-      _memecoin: memecoin,
+      _memecoin: params.coinAddress,
       _creatorFeeAllocation: creatorFeeAllocationInBps,
       _initialMarketCap: initialMCapInUSDCWei,
       _verifier,

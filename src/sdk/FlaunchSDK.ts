@@ -20,6 +20,7 @@ import {
   erc20Abi,
   encodeFunctionData,
   erc721Abi,
+  formatUnits,
 } from "viem";
 import axios from "axios";
 import {
@@ -1415,7 +1416,7 @@ export class ReadFlaunchSDK {
   /**
    * Gets basic coin information (total supply and decimals)
    */
-  private async getCoinInfo(coinAddress: Address): Promise<{
+  async getCoinInfo(coinAddress: Address): Promise<{
     totalSupply: bigint;
     decimals: number;
   }> {
@@ -1430,7 +1431,7 @@ export class ReadFlaunchSDK {
   /**
    * Gets market context information needed for tick calculations
    */
-  private async getMarketContext(
+  async getMarketContext(
     coinAddress: Address,
     coinDecimals: number
   ): Promise<{
@@ -1458,7 +1459,7 @@ export class ReadFlaunchSDK {
   /**
    * Converts market cap in USD to token price in ETH
    */
-  private marketCapToTokenPriceEth(
+  marketCapToTokenPriceEth(
     marketCapUsd: number,
     totalSupplyDecimal: number,
     ethUsdPrice: number
@@ -1470,7 +1471,7 @@ export class ReadFlaunchSDK {
   /**
    * Converts token price in ETH to tick
    */
-  private convertPriceToTick(
+  convertPriceToTick(
     priceEth: number,
     isFlethZero: boolean,
     decimals0: number,
@@ -1488,7 +1489,7 @@ export class ReadFlaunchSDK {
   /**
    * Calculates current tick from market cap if provided
    */
-  private calculateCurrentTickFromMarketCap(
+  calculateCurrentTickFromMarketCap(
     currentMarketCap: string | undefined,
     totalSupplyDecimal: number,
     marketContext: {
@@ -2397,16 +2398,40 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       }
     } else {
       // Calculate the amounts
+      let minMarketCap: string;
+      let maxMarketCap: string;
+      let initialMarketCapUSD: number | undefined;
+
+      if ("minMarketCap" in params) {
+        minMarketCap = params.minMarketCap;
+        maxMarketCap = params.maxMarketCap;
+        initialMarketCapUSD = params.initialMarketCapUSD;
+      } else {
+        const { totalSupply, decimals } = await this.getCoinInfo(coinAddress);
+        const formattedTotalSupply = parseFloat(
+          formatUnits(totalSupply, decimals)
+        );
+
+        minMarketCap = (
+          parseFloat(params.minPriceUSD) * formattedTotalSupply
+        ).toString();
+        maxMarketCap = (
+          parseFloat(params.maxPriceUSD) * formattedTotalSupply
+        ).toString();
+
+        if (params.initialPriceUSD) {
+          initialMarketCapUSD = params.initialPriceUSD * formattedTotalSupply;
+        }
+      }
+
       const calculated = await this.calculateAddLiquidityAmounts({
         coinAddress,
         liquidityMode: params.liquidityMode,
         coinOrEthInputAmount: params.coinOrEthInputAmount,
         inputToken: params.inputToken,
-        minMarketCap: params.minMarketCap,
-        maxMarketCap: params.maxMarketCap,
-        currentMarketCap: params.initialMarketCapUSD
-          ? params.initialMarketCapUSD.toString()
-          : undefined,
+        minMarketCap,
+        maxMarketCap,
+        currentMarketCap: initialMarketCapUSD?.toString(),
       });
 
       coinAmount = calculated.coinAmount;
@@ -2758,7 +2783,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       }
   ): Promise<CallWithDescription[]> {
     const importParams = await this.readWriteTokenImporter.getInitializeParams({
-      memecoin: params.coinAddress,
+      coinAddress: params.coinAddress,
       creatorFeeAllocationPercent: params.creatorFeeAllocationPercent,
       initialMarketCapUSD: params.initialMarketCapUSD,
       verifier: params.verifier,
