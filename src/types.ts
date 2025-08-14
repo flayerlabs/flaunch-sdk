@@ -89,6 +89,26 @@ export type ImportMemecoinParams =
       verifier?: Verifier;
     };
 
+export type CalculateAddLiquidityAmountsParams =
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      coinOrEthInputAmount: bigint;
+      inputToken: "coin" | "eth";
+      minMarketCap: string;
+      maxMarketCap: string;
+      currentMarketCap?: string;
+    }
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      coinOrEthInputAmount: bigint;
+      inputToken: "coin" | "eth";
+      minPriceUSD: string;
+      maxPriceUSD: string;
+      currentPriceUSD?: number;
+    };
+
 export type GetAddLiquidityCallsParams =
   | {
       coinAddress: Address;

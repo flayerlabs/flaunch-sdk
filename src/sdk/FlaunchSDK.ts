@@ -132,6 +132,7 @@ import {
   Permissions,
   ImportMemecoinParams,
   GetAddLiquidityCallsParams,
+  CalculateAddLiquidityAmountsParams,
 } from "types";
 import {
   getPoolId,
@@ -1635,29 +1636,46 @@ export class ReadFlaunchSDK {
     }
   }
 
-  async calculateAddLiquidityAmounts({
-    coinAddress,
-    liquidityMode,
-    coinOrEthInputAmount,
-    inputToken,
-    minMarketCap,
-    maxMarketCap,
-    currentMarketCap,
-  }: {
-    coinAddress: Address;
-    liquidityMode: LiquidityMode;
-    coinOrEthInputAmount: bigint;
-    inputToken: "coin" | "eth";
-    minMarketCap: string;
-    maxMarketCap: string;
-    currentMarketCap?: string;
-  }): Promise<{
+  async calculateAddLiquidityAmounts(
+    params: CalculateAddLiquidityAmountsParams
+  ): Promise<{
     coinAmount: bigint;
     ethAmount: bigint;
     tickLower: number;
     tickUpper: number;
     currentTick: number;
   }> {
+    const { coinAddress, liquidityMode, inputToken, coinOrEthInputAmount } =
+      params;
+
+    let minMarketCap: string;
+    let maxMarketCap: string;
+    let currentMarketCap: string | undefined;
+
+    if ("minMarketCap" in params) {
+      minMarketCap = params.minMarketCap;
+      maxMarketCap = params.maxMarketCap;
+      currentMarketCap = params.currentMarketCap;
+    } else {
+      const { totalSupply, decimals } = await this.getCoinInfo(coinAddress);
+      const formattedTotalSupply = parseFloat(
+        formatUnits(totalSupply, decimals)
+      );
+
+      minMarketCap = (
+        parseFloat(params.minPriceUSD) * formattedTotalSupply
+      ).toString();
+      maxMarketCap = (
+        parseFloat(params.maxPriceUSD) * formattedTotalSupply
+      ).toString();
+
+      if (params.currentPriceUSD) {
+        currentMarketCap = (
+          params.currentPriceUSD * formattedTotalSupply
+        ).toString();
+      }
+    }
+
     let { tickLower, tickUpper, currentTick } =
       await this.calculateAddLiquidityTicks({
         coinAddress,
