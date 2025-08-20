@@ -1685,8 +1685,18 @@ export class ReadFlaunchSDK {
         currentMarketCap,
       });
 
+    // get the current pool state for the coin
     if (!currentTick) {
-      // get the current pool state for AnyPositionManager pool for the coin
+      let version = params.version;
+      // if version is not provided, check on existing managers, else default to ANY
+      if (!version) {
+        try {
+          version = await this.getCoinVersion(coinAddress);
+        } catch {
+          version = FlaunchVersion.ANY;
+        }
+      }
+
       const poolState = await this.readStateView.poolSlot0({
         poolId: getPoolId(
           orderPoolKey({
@@ -1694,7 +1704,7 @@ export class ReadFlaunchSDK {
             currency1: FLETHAddress[this.chainId],
             fee: 0,
             tickSpacing: TICK_SPACING,
-            hooks: AnyPositionManagerAddress[this.chainId],
+            hooks: this.getPositionManagerAddress(version),
           })
         ),
       });
@@ -2390,12 +2400,21 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     let tickUpper: number;
     let currentTick: number;
 
+    let version = params.version;
+    if (!version) {
+      try {
+        version = await this.getCoinVersion(coinAddress);
+      } catch {
+        version = FlaunchVersion.ANY;
+      }
+    }
+
     const poolKey = orderPoolKey({
       currency0: coinAddress,
       currency1: flethAddress,
       fee: 0,
       tickSpacing: this.TICK_SPACING,
-      hooks: AnyPositionManagerAddress[this.chainId],
+      hooks: this.getPositionManagerAddress(version),
     });
 
     // Check if we need to calculate values or use direct values
@@ -2450,6 +2469,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         minMarketCap,
         maxMarketCap,
         currentMarketCap: initialMarketCapUSD?.toString(),
+        version,
       });
 
       coinAmount = calculated.coinAmount;
@@ -2807,7 +2827,10 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       verifier: params.verifier,
     });
 
-    const addLiquidityCalls = await this.getAddLiquidityCalls(params);
+    const addLiquidityCalls = await this.getAddLiquidityCalls({
+      ...params,
+      version: FlaunchVersion.ANY, // optimize to avoid fetching if not passed
+    });
 
     return [
       {

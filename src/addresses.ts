@@ -14,7 +14,7 @@ export const FlaunchPositionManagerV1_1Address: Addresses = {
 };
 
 export const FlaunchPositionManagerV1_2Address: Addresses = {
-  [base.id]: zeroAddress, // TODO: add mainnet address
+  [base.id]: "0x23321f11a6d44fd1ab790044fdfde5758c902fdc", // "1.3" from github releases
   [baseSepolia.id]: "0x4e7cb1e6800a7b297b38bddcecaf9ca5b6616fdc",
 };
 
@@ -95,7 +95,7 @@ export const FairLaunchAddress: Addresses = {
 
 // also supports AnyPositionManager & PositionManagerV1_2 (sepolia)
 export const FairLaunchV1_1Address: Addresses = {
-  [base.id]: "0x4dc442403e8c758425b93c59dc737da522f32640",
+  [base.id]: "0x4dc442403e8c758425b93C59Dc737da522f32640",
   [baseSepolia.id]: "0x7922c1ead7c5825fb52ed6b14f397d064508acbe",
 };
 
@@ -111,7 +111,7 @@ export const FlaunchV1_1Address: Addresses = {
 };
 
 export const FlaunchV1_2Address: Addresses = {
-  [base.id]: zeroAddress, // TODO: add mainnet address
+  [base.id]: "0x516af52d0c629b5e378da4dc64ecb0744ce10109", // "1.3" from github releases
   [baseSepolia.id]: "0xe2ef58a54ee79dac0D4A130ea58b340124DF9438",
 };
 
@@ -136,13 +136,14 @@ export const AnyBidWallAddress: Addresses = {
   [baseSepolia.id]: "0xcfF222eA42E43F46A98755db237E4c9C2CA9B772",
 };
 
+// @deprecated: FlaunchZap used instead
 export const FastFlaunchZapAddress: Addresses = {
   [base.id]: "0x68d967d25806fef4aa134db031cdcc55d3e20f92",
   [baseSepolia.id]: "0x821d9f6075e7971cc71c379081de9d532f5f9957",
 };
 
 export const FlaunchZapAddress: Addresses = {
-  [base.id]: "0x2bC8cbfE237AEddc7C296436fefe239A0A22dAbF",
+  [base.id]: "0xf9753e6e4fdd1869be40685690a28bff26b8b114",
   [baseSepolia.id]: "0x808DA25e8ecbCC2C0339B6A436AAEAe2021C235d",
 };
 

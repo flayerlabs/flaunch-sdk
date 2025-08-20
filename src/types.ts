@@ -78,15 +78,15 @@ export enum Permissions {
 export type ImportMemecoinParams =
   | {
       coinAddress: Address;
+      verifier?: Verifier;
       creatorFeeAllocationPercent: number;
       initialMarketCapUSD: number;
-      verifier?: Verifier;
     }
   | {
       coinAddress: Address;
+      verifier?: Verifier;
       creatorFeeAllocationPercent: number;
       initialPriceUSD: number;
-      verifier?: Verifier;
     };
 
 export type CalculateAddLiquidityAmountsParams =
@@ -98,6 +98,7 @@ export type CalculateAddLiquidityAmountsParams =
       minMarketCap: string;
       maxMarketCap: string;
       currentMarketCap?: string;
+      version?: FlaunchVersion;
     }
   | {
       coinAddress: Address;
@@ -107,6 +108,7 @@ export type CalculateAddLiquidityAmountsParams =
       minPriceUSD: string;
       maxPriceUSD: string;
       currentPriceUSD?: number;
+      version?: FlaunchVersion;
     };
 
 export type GetAddLiquidityCallsParams =
@@ -118,6 +120,7 @@ export type GetAddLiquidityCallsParams =
       minMarketCap: string;
       maxMarketCap: string;
       initialMarketCapUSD?: number;
+      version?: FlaunchVersion;
     }
   | {
       coinAddress: Address;
@@ -127,6 +130,7 @@ export type GetAddLiquidityCallsParams =
       minPriceUSD: string;
       maxPriceUSD: string;
       initialPriceUSD?: number;
+      version?: FlaunchVersion;
     }
   | {
       coinAddress: Address;
@@ -135,4 +139,5 @@ export type GetAddLiquidityCallsParams =
       tickLower: number;
       tickUpper: number;
       currentTick?: number;
+      version?: FlaunchVersion;
     };
