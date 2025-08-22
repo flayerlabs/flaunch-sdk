@@ -1,4 +1,4 @@
-import { Address, Call } from "viem";
+import { Address, Call, Hex } from "viem";
 import { PinataConfig } from "helpers/ipfs";
 
 export interface Addresses {
@@ -11,6 +11,10 @@ export interface PoolKey {
   fee: number;
   tickSpacing: number;
   hooks: Address;
+}
+
+export interface PoolWithHookData extends PoolKey {
+  hookData: Hex;
 }
 
 export interface CoinMetadata {

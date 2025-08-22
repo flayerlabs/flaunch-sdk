@@ -10,13 +10,8 @@ import {
 } from "@delvtech/drift";
 import { QuoterAbi } from "../abi/Quoter";
 import { formatUnits, parseEther, zeroAddress } from "viem";
-import {
-  FlaunchPositionManagerAddress,
-  FlaunchPositionManagerV1_1Address,
-  FLETHAddress,
-  FLETHHooksAddress,
-  USDCETHPoolKeys,
-} from "addresses";
+import { FLETHAddress, FLETHHooksAddress, USDCETHPoolKeys } from "addresses";
+import { PoolWithHookData } from "types";
 
 export type QuoterABI = typeof QuoterAbi;
 
@@ -48,117 +43,285 @@ export class ReadQuoter {
   }
 
   /**
-   * Gets a quote for selling an exact amount of tokens for ETH
+   * Gets a quote for selling an exact amount of tokens for ETH or outputToken
    * @param coinAddress - The address of the token to sell
    * @param amountIn - The exact amount of tokens to sell
    * @param positionManagerAddress - The address of the position manager to use
+   * @param intermediatePoolKey - Optional intermediate pool key to use containing outputToken and ETH as currencies
    * @returns Promise<bigint> - The expected amount of ETH to receive
    */
-  async getSellQuoteExactInput(
-    coinAddress: Address,
-    amountIn: bigint,
-    positionManagerAddress: Address
-  ) {
-    const res = await this.contract.simulateWrite("quoteExactInput", {
-      params: {
-        exactAmount: amountIn,
-        exactCurrency: coinAddress,
-        path: [
-          {
-            fee: 0,
-            tickSpacing: 60,
-            hooks: positionManagerAddress,
-            hookData: "0x",
-            intermediateCurrency: FLETHAddress[this.chainId],
-          },
-          {
-            fee: 0,
-            tickSpacing: 60,
-            hookData: "0x",
-            hooks: FLETHHooksAddress[this.chainId],
-            intermediateCurrency: zeroAddress,
-          },
-        ],
-      },
-    });
+  async getSellQuoteExactInput({
+    coinAddress,
+    amountIn,
+    positionManagerAddress,
+    intermediatePoolKey,
+  }: {
+    coinAddress: Address;
+    amountIn: bigint;
+    positionManagerAddress: Address;
+    intermediatePoolKey?: PoolWithHookData;
+  }) {
+    if (intermediatePoolKey) {
+      // verify that ETH exists in the intermediate pool key
+      if (
+        intermediatePoolKey.currency0 !== zeroAddress &&
+        intermediatePoolKey.currency1 !== zeroAddress
+      ) {
+        throw new Error(
+          "ETH must be one of the currencies in the intermediatePoolKey"
+        );
+      }
 
-    return res.amountOut;
+      const outputToken =
+        intermediatePoolKey.currency0 === zeroAddress
+          ? intermediatePoolKey.currency1
+          : intermediatePoolKey.currency0;
+
+      const res = await this.contract.simulateWrite("quoteExactInput", {
+        params: {
+          exactAmount: amountIn,
+          exactCurrency: coinAddress,
+          path: [
+            {
+              fee: 0,
+              tickSpacing: 60,
+              hooks: positionManagerAddress,
+              hookData: "0x",
+              intermediateCurrency: FLETHAddress[this.chainId],
+            },
+            {
+              fee: 0,
+              tickSpacing: 60,
+              hookData: "0x",
+              hooks: FLETHHooksAddress[this.chainId],
+              intermediateCurrency: zeroAddress,
+            },
+            {
+              fee: intermediatePoolKey.fee,
+              tickSpacing: intermediatePoolKey.tickSpacing,
+              hooks: intermediatePoolKey.hooks,
+              hookData: intermediatePoolKey.hookData,
+              intermediateCurrency: outputToken,
+            },
+          ],
+        },
+      });
+
+      return res.amountOut;
+    } else {
+      const res = await this.contract.simulateWrite("quoteExactInput", {
+        params: {
+          exactAmount: amountIn,
+          exactCurrency: coinAddress,
+          path: [
+            {
+              fee: 0,
+              tickSpacing: 60,
+              hooks: positionManagerAddress,
+              hookData: "0x",
+              intermediateCurrency: FLETHAddress[this.chainId],
+            },
+            {
+              fee: 0,
+              tickSpacing: 60,
+              hookData: "0x",
+              hooks: FLETHHooksAddress[this.chainId],
+              intermediateCurrency: zeroAddress,
+            },
+          ],
+        },
+      });
+
+      return res.amountOut;
+    }
   }
 
   /**
-   * Gets a quote for buying tokens with an exact amount of ETH
+   * Gets a quote for buying tokens with an exact amount of ETH or inputToken
    * @param coinAddress - The address of the token to buy
-   * @param ethIn - The exact amount of ETH to spend
+   * @param amountIn - The exact amount of ETH or inputToken to spend
    * @param positionManagerAddress - The address of the position manager to use
-   * @returns Promise<bigint> - The expected amount of tokens to receive
+   * @param intermediatePoolKey - Optional intermediate pool key to use containing inputToken and ETH as currencies
+   * @returns Promise<bigint> - The expected amount of coins to receive
    */
-  async getBuyQuoteExactInput(
-    coinAddress: Address,
-    ethIn: bigint,
-    positionManagerAddress: Address
-  ) {
-    const res = await this.contract.simulateWrite("quoteExactInput", {
-      params: {
-        exactAmount: ethIn,
-        exactCurrency: zeroAddress,
-        path: [
-          {
-            fee: 0,
-            tickSpacing: 60,
-            hookData: "0x",
-            hooks: FLETHHooksAddress[this.chainId],
-            intermediateCurrency: FLETHAddress[this.chainId],
-          },
-          {
-            fee: 0,
-            tickSpacing: 60,
-            hooks: positionManagerAddress,
-            hookData: "0x",
-            intermediateCurrency: coinAddress,
-          },
-        ],
-      },
-    });
+  async getBuyQuoteExactInput({
+    coinAddress,
+    amountIn,
+    positionManagerAddress,
+    intermediatePoolKey,
+  }: {
+    coinAddress: Address;
+    amountIn: bigint;
+    positionManagerAddress: Address;
+    intermediatePoolKey?: PoolWithHookData;
+  }) {
+    if (intermediatePoolKey) {
+      // verify that ETH exists in the intermediate pool key
+      if (
+        intermediatePoolKey.currency0 !== zeroAddress &&
+        intermediatePoolKey.currency1 !== zeroAddress
+      ) {
+        throw new Error(
+          "ETH must be one of the currencies in the intermediatePoolKey"
+        );
+      }
 
-    return res.amountOut;
+      const inputToken =
+        intermediatePoolKey.currency0 === zeroAddress
+          ? intermediatePoolKey.currency1
+          : intermediatePoolKey.currency0;
+
+      const res = await this.contract.simulateWrite("quoteExactInput", {
+        params: {
+          exactAmount: amountIn,
+          exactCurrency: inputToken,
+          path: [
+            {
+              fee: intermediatePoolKey.fee,
+              tickSpacing: intermediatePoolKey.tickSpacing,
+              hooks: intermediatePoolKey.hooks,
+              hookData: intermediatePoolKey.hookData,
+              intermediateCurrency: zeroAddress,
+            },
+            {
+              fee: 0,
+              tickSpacing: 60,
+              hookData: "0x",
+              hooks: FLETHHooksAddress[this.chainId],
+              intermediateCurrency: FLETHAddress[this.chainId],
+            },
+            {
+              fee: 0,
+              tickSpacing: 60,
+              hooks: positionManagerAddress,
+              hookData: "0x",
+              intermediateCurrency: coinAddress,
+            },
+          ],
+        },
+      });
+
+      return res.amountOut;
+    } else {
+      const res = await this.contract.simulateWrite("quoteExactInput", {
+        params: {
+          exactAmount: amountIn,
+          exactCurrency: zeroAddress,
+          path: [
+            {
+              fee: 0,
+              tickSpacing: 60,
+              hookData: "0x",
+              hooks: FLETHHooksAddress[this.chainId],
+              intermediateCurrency: FLETHAddress[this.chainId],
+            },
+            {
+              fee: 0,
+              tickSpacing: 60,
+              hooks: positionManagerAddress,
+              hookData: "0x",
+              intermediateCurrency: coinAddress,
+            },
+          ],
+        },
+      });
+
+      return res.amountOut;
+    }
   }
 
   /**
-   * Gets a quote for buying an exact amount of tokens with ETH
+   * Gets a quote for buying an exact amount of tokens with ETH or inputToken
    * @param coinAddress - The address of the token to buy
    * @param coinOut - The exact amount of tokens to receive
    * @param positionManagerAddress - The address of the position manager to use
-   * @returns Promise<bigint> - The required amount of ETH to spend
+   * @param intermediatePoolKey - Optional intermediate pool key to use containing inputToken and ETH as currencies
+   * @returns Promise<bigint> - The required amount of ETH or inputToken to spend
    */
-  async getBuyQuoteExactOutput(
-    coinAddress: Address,
-    coinOut: bigint,
-    positionManagerAddress: Address
-  ) {
-    const res = await this.contract.simulateWrite("quoteExactOutput", {
-      params: {
-        path: [
-          {
-            intermediateCurrency: zeroAddress,
-            fee: 0,
-            tickSpacing: 60,
-            hookData: "0x",
-            hooks: FLETHHooksAddress[this.chainId],
-          },
-          {
-            intermediateCurrency: FLETHAddress[this.chainId],
-            fee: 0,
-            tickSpacing: 60,
-            hooks: positionManagerAddress,
-            hookData: "0x",
-          },
-        ],
-        exactCurrency: coinAddress,
-        exactAmount: coinOut,
-      },
-    });
+  async getBuyQuoteExactOutput({
+    coinAddress,
+    coinOut,
+    positionManagerAddress,
+    intermediatePoolKey,
+  }: {
+    coinAddress: Address;
+    coinOut: bigint;
+    positionManagerAddress: Address;
+    intermediatePoolKey?: PoolWithHookData;
+  }) {
+    if (intermediatePoolKey) {
+      // verify that ETH exists in the intermediate pool key
+      if (
+        intermediatePoolKey.currency0 !== zeroAddress &&
+        intermediatePoolKey.currency1 !== zeroAddress
+      ) {
+        throw new Error(
+          "ETH must be one of the currencies in the intermediatePoolKey"
+        );
+      }
 
-    return res.amountIn;
+      const inputToken =
+        intermediatePoolKey.currency0 === zeroAddress
+          ? intermediatePoolKey.currency1
+          : intermediatePoolKey.currency0;
+
+      const res = await this.contract.simulateWrite("quoteExactOutput", {
+        params: {
+          path: [
+            {
+              intermediateCurrency: inputToken,
+              fee: intermediatePoolKey.fee,
+              tickSpacing: intermediatePoolKey.tickSpacing,
+              hookData: intermediatePoolKey.hookData,
+              hooks: intermediatePoolKey.hooks,
+            },
+            {
+              intermediateCurrency: zeroAddress,
+              fee: 0,
+              tickSpacing: 60,
+              hookData: "0x",
+              hooks: FLETHHooksAddress[this.chainId],
+            },
+            {
+              intermediateCurrency: FLETHAddress[this.chainId],
+              fee: 0,
+              tickSpacing: 60,
+              hooks: positionManagerAddress,
+              hookData: "0x",
+            },
+          ],
+          exactCurrency: coinAddress,
+          exactAmount: coinOut,
+        },
+      });
+
+      return res.amountIn;
+    } else {
+      const res = await this.contract.simulateWrite("quoteExactOutput", {
+        params: {
+          path: [
+            {
+              intermediateCurrency: zeroAddress,
+              fee: 0,
+              tickSpacing: 60,
+              hookData: "0x",
+              hooks: FLETHHooksAddress[this.chainId],
+            },
+            {
+              intermediateCurrency: FLETHAddress[this.chainId],
+              fee: 0,
+              tickSpacing: 60,
+              hooks: positionManagerAddress,
+              hookData: "0x",
+            },
+          ],
+          exactCurrency: coinAddress,
+          exactAmount: coinOut,
+        },
+      });
+
+      return res.amountIn;
+    }
   }
 
   /**

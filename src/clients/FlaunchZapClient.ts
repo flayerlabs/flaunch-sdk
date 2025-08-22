@@ -150,11 +150,11 @@ export class ReadFlaunchZap {
       (mcapInWei * params.premineAmount) / this.TOTAL_SUPPLY;
 
     // increase the premine cost by the slippage percent
-    const premineCostInWeiWithSlippage = getAmountWithSlippage(
-      premineCostInWei,
-      (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
-      "EXACT_OUT" // as we know the output premine amount
-    );
+    const premineCostInWeiWithSlippage = getAmountWithSlippage({
+      amount: premineCostInWei,
+      slippage: (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
+      swapType: "EXACT_OUT", // as we know the output premine amount
+    });
     return premineCostInWeiWithSlippage;
   }
 
@@ -170,11 +170,11 @@ export class ReadFlaunchZap {
     const flaunchingFee = await readInitialPrice.getFlaunchingFee(params);
 
     // increase the flaunching fee by the slippage percent
-    const flaunchingFeeWithSlippage = getAmountWithSlippage(
-      flaunchingFee,
-      (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
-      "EXACT_OUT"
-    );
+    const flaunchingFeeWithSlippage = getAmountWithSlippage({
+      amount: flaunchingFee,
+      slippage: (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
+      swapType: "EXACT_OUT",
+    });
     return flaunchingFeeWithSlippage;
   }
 

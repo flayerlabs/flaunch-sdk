@@ -148,11 +148,11 @@ export class ReadFlaunchPositionManagerV1_1 {
     const flaunchingFee = await readInitialPrice.getFlaunchingFee(params);
 
     // increase the flaunching fee by the slippage percent
-    const flaunchingFeeWithSlippage = getAmountWithSlippage(
-      flaunchingFee,
-      (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
-      "EXACT_OUT"
-    );
+    const flaunchingFeeWithSlippage = getAmountWithSlippage({
+      amount: flaunchingFee,
+      slippage: (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
+      swapType: "EXACT_OUT",
+    });
     return flaunchingFeeWithSlippage;
   }
 

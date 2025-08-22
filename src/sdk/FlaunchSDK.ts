@@ -81,7 +81,7 @@ import {
   DeployStakingManagerParams,
 } from "../clients/FlaunchZapClient";
 import { ReadFlaunch } from "../clients/FlaunchClient";
-import { ReadMemecoin } from "../clients/MemecoinClient";
+import { ReadMemecoin, ReadWriteMemecoin } from "../clients/MemecoinClient";
 import { ReadQuoter } from "clients/QuoterClient";
 import { ReadPermit2, ReadWritePermit2 } from "clients/Permit2Client";
 import {
@@ -133,6 +133,7 @@ import {
   ImportMemecoinParams,
   GetAddLiquidityCallsParams,
   CalculateAddLiquidityAmountsParams,
+  PoolWithHookData,
 } from "types";
 import {
   getPoolId,
@@ -150,8 +151,8 @@ import {
   getAmountsForLiquidity,
 } from "../utils/univ4";
 import {
-  ethToMemecoin,
-  memecoinToEthWithPermit2,
+  buyMemecoin,
+  sellMemecoinWithPermit2,
   getAmountWithSlippage,
   PermitSingle,
   getPermit2TypedData,
@@ -210,6 +211,9 @@ type BuyCoinBase = {
   coinAddress: Address;
   slippagePercent: number;
   referrer?: Address;
+  intermediatePoolKey?: PoolWithHookData;
+  permitSingle?: PermitSingle;
+  signature?: Hex;
 };
 
 type BuyCoinExactInParams = BuyCoinBase & {
@@ -230,8 +234,9 @@ type SellCoinParams = {
   coinAddress: Address;
   amountIn: bigint;
   slippagePercent: number;
-  ethOutMin?: bigint;
+  amountOutMin?: bigint;
   referrer?: Address;
+  intermediatePoolKey?: PoolWithHookData;
   permitSingle?: PermitSingle;
   signature?: HexString;
 };
@@ -1300,64 +1305,88 @@ export class ReadFlaunchSDK {
   /**
    * Gets a quote for selling an exact amount of tokens for ETH
    * @param coinAddress - The address of the token to sell
+   * @param version - Optional specify Flaunch version, if not provided, will determine automatically
    * @param amountIn - The exact amount of tokens to sell
-   * @param version - Optional specific version to use
+   * @param intermediatePoolKey - Optional intermediate pool key to use containing outputToken and ETH as currencies
    * @returns Promise<bigint> - The expected amount of ETH to receive
    */
-  async getSellQuoteExactInput(
-    coinAddress: Address,
-    amountIn: bigint,
-    version?: FlaunchVersion
-  ) {
+  async getSellQuoteExactInput({
+    coinAddress,
+    version,
+    amountIn,
+    intermediatePoolKey,
+  }: {
+    coinAddress: Address;
+    version?: FlaunchVersion;
+    amountIn: bigint;
+    intermediatePoolKey?: PoolWithHookData;
+  }) {
     const coinVersion = version || (await this.getCoinVersion(coinAddress));
 
-    return this.readQuoter.getSellQuoteExactInput(
+    return this.readQuoter.getSellQuoteExactInput({
       coinAddress,
       amountIn,
-      this.getPositionManagerAddress(coinVersion)
-    );
+      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      intermediatePoolKey,
+    });
   }
 
   /**
-   * Gets a quote for buying tokens with an exact amount of ETH
+   * Gets a quote for buying tokens with an exact amount of ETH or inputToken
    * @param coinAddress - The address of the token to buy
-   * @param ethIn - The exact amount of ETH to spend
-   * @param version - Optional specific version to use
-   * @returns Promise<bigint> - The expected amount of tokens to receive
+   * @param version - Optional specify Flaunch version, if not provided, will determine automatically
+   * @param amountIn - The exact amount of ETH or inputToken to spend
+   * @param intermediatePoolKey - Optional intermediate pool key to use containing inputToken and ETH as currencies
+   * @returns Promise<bigint> - The expected amount of coins to receive
    */
-  async getBuyQuoteExactInput(
-    coinAddress: Address,
-    amountIn: bigint,
-    version?: FlaunchVersion
-  ) {
+  async getBuyQuoteExactInput({
+    coinAddress,
+    version,
+    amountIn,
+    intermediatePoolKey,
+  }: {
+    coinAddress: Address;
+    version?: FlaunchVersion;
+    amountIn: bigint;
+    intermediatePoolKey?: PoolWithHookData;
+  }) {
     const coinVersion = version || (await this.getCoinVersion(coinAddress));
 
-    return this.readQuoter.getBuyQuoteExactInput(
+    return this.readQuoter.getBuyQuoteExactInput({
       coinAddress,
       amountIn,
-      this.getPositionManagerAddress(coinVersion)
-    );
+      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      intermediatePoolKey,
+    });
   }
 
   /**
-   * Gets a quote for buying an exact amount of tokens with ETH
+   * Gets a quote for buying an exact amount of tokens with ETH or inputToken
    * @param coinAddress - The address of the token to buy
+   * @param version - Optional specify Flaunch version, if not provided, will determine automatically
    * @param coinOut - The exact amount of tokens to receive
-   * @param version - Optional specific version to use
-   * @returns Promise<bigint> - The required amount of ETH to spend
+   * @param intermediatePoolKey - Optional intermediate pool key to use containing inputToken and ETH as currencies
+   * @returns Promise<bigint> - The required amount of ETH or inputToken to spend
    */
-  async getBuyQuoteExactOutput(
-    coinAddress: Address,
-    amountOut: bigint,
-    version?: FlaunchVersion
-  ) {
+  async getBuyQuoteExactOutput({
+    coinAddress,
+    amountOut,
+    version,
+    intermediatePoolKey,
+  }: {
+    coinAddress: Address;
+    amountOut: bigint;
+    version?: FlaunchVersion;
+    intermediatePoolKey?: PoolWithHookData;
+  }) {
     const coinVersion = version || (await this.getCoinVersion(coinAddress));
 
-    return this.readQuoter.getBuyQuoteExactOutput(
+    return this.readQuoter.getBuyQuoteExactOutput({
       coinAddress,
-      amountOut,
-      this.getPositionManagerAddress(coinVersion)
-    );
+      coinOut: amountOut,
+      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      intermediatePoolKey,
+    });
   }
 
   /**
@@ -2036,7 +2065,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   /**
-   * Buys a coin with ETH
+   * Buys a coin with ETH or custom inputToken via intermediatePoolKey
    * @param params - Parameters for buying the coin including amount, slippage, and referrer
    * @param version - Optional specific version to use. If not provided, will determine automatically
    * @returns Transaction response for the buy operation
@@ -2057,39 +2086,38 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     if (params.swapType === "EXACT_IN") {
       amountIn = params.amountIn;
       if (params.amountOutMin === undefined) {
-        // Currently only V1 and V1.1 are supported in the Quoter
-        amountOutMin = getAmountWithSlippage(
-          await this.readQuoter.getBuyQuoteExactInput(
-            params.coinAddress,
+        amountOutMin = getAmountWithSlippage({
+          amount: await this.readQuoter.getBuyQuoteExactInput({
+            coinAddress: params.coinAddress,
             amountIn,
-            this.getPositionManagerAddress(coinVersion)
-          ),
-          (params.slippagePercent / 100).toFixed(18).toString(),
-          params.swapType
-        );
+            positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+            intermediatePoolKey: params.intermediatePoolKey,
+          }),
+          slippage: (params.slippagePercent / 100).toFixed(18).toString(),
+          swapType: params.swapType,
+        });
       } else {
         amountOutMin = params.amountOutMin;
       }
     } else {
       amountOut = params.amountOut;
       if (params.amountInMax === undefined) {
-        // Currently only V1 and V1.1 are supported in the Quoter
-        amountInMax = getAmountWithSlippage(
-          await this.readQuoter.getBuyQuoteExactOutput(
-            params.coinAddress,
-            amountOut,
-            this.getPositionManagerAddress(coinVersion)
-          ),
-          (params.slippagePercent / 100).toFixed(18).toString(),
-          params.swapType
-        );
+        amountInMax = getAmountWithSlippage({
+          amount: await this.readQuoter.getBuyQuoteExactOutput({
+            coinAddress: params.coinAddress,
+            coinOut: amountOut,
+            positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+            intermediatePoolKey: params.intermediatePoolKey,
+          }),
+          slippage: (params.slippagePercent / 100).toFixed(18).toString(),
+          swapType: params.swapType,
+        });
       } else {
         amountInMax = params.amountInMax;
       }
     }
 
-    // When UniversalRouter supports isAny parameter, add it here
-    const { commands, inputs } = ethToMemecoin({
+    const { commands, inputs } = buyMemecoin({
       sender: sender,
       memecoin: params.coinAddress,
       chainId: this.chainId,
@@ -2100,6 +2128,9 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       amountOut: amountOut,
       amountInMax: amountInMax,
       positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      intermediatePoolKey: params.intermediatePoolKey,
+      permitSingle: params.permitSingle,
+      signature: params.signature,
     });
 
     return this.drift.adapter.write({
@@ -2110,7 +2141,11 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         commands,
         inputs,
       },
-      value: params.swapType === "EXACT_IN" ? amountIn : amountInMax,
+      value: params.intermediatePoolKey
+        ? 0n // 0 ETH as inputToken is in another currency
+        : params.swapType === "EXACT_IN"
+        ? amountIn
+        : amountInMax,
     });
   }
 
@@ -2124,37 +2159,37 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     const coinVersion =
       version || (await this.getCoinVersion(params.coinAddress));
 
-    let ethOutMin: bigint;
+    let amountOutMin: bigint;
 
     await this.readQuoter.contract.cache.clear();
 
-    if (params.ethOutMin === undefined) {
-      // Currently only V1 and V1.1 are supported in the Quoter
-      ethOutMin = getAmountWithSlippage(
-        await this.readQuoter.getSellQuoteExactInput(
-          params.coinAddress,
-          params.amountIn,
-          this.getPositionManagerAddress(coinVersion)
-        ),
-        (params.slippagePercent / 100).toFixed(18).toString(),
-        "EXACT_IN"
-      );
+    if (params.amountOutMin === undefined) {
+      amountOutMin = getAmountWithSlippage({
+        amount: await this.readQuoter.getSellQuoteExactInput({
+          coinAddress: params.coinAddress,
+          amountIn: params.amountIn,
+          positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+          intermediatePoolKey: params.intermediatePoolKey,
+        }),
+        slippage: (params.slippagePercent / 100).toFixed(18).toString(),
+        swapType: "EXACT_IN",
+      });
     } else {
-      ethOutMin = params.ethOutMin;
+      amountOutMin = params.amountOutMin;
     }
 
     await this.readPermit2.contract.cache.clear();
 
-    // When UniversalRouter supports isAny parameter, add it here
-    const { commands, inputs } = memecoinToEthWithPermit2({
+    const { commands, inputs } = sellMemecoinWithPermit2({
       chainId: this.chainId,
       memecoin: params.coinAddress,
       amountIn: params.amountIn,
-      ethOutMin,
+      amountOutMin,
       permitSingle: params.permitSingle,
       signature: params.signature,
       referrer: params.referrer ?? null,
       positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      intermediatePoolKey: params.intermediatePoolKey,
     });
 
     return this.drift.write({
@@ -2206,6 +2241,32 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       allowance: amount,
       nonce,
     };
+  }
+
+  /**
+   * Gets the allowance of an ERC20 token to Permit2 contract. Flaunch coins automatically have infinite approval for Permit2.
+   * this function is for external tokens.
+   * @param coinAddress - The address of the coin to check
+   * @returns Promise<bigint> - The allowance of the coin to Permit2
+   */
+  async getERC20AllowanceToPermit2(coinAddress: Address) {
+    const coin = new ReadMemecoin(coinAddress, this.drift);
+    return coin.allowance(
+      await this.drift.getSignerAddress(),
+      Permit2Address[this.chainId]
+    );
+  }
+
+  /**
+   * Sets the allowance of an ERC20 token to Permit2 contract. Flaunch coins automatically have infinite approval for Permit2.
+   * this function is for external tokens.
+   * @param coinAddress - The address of the coin to approve
+   * @param amount - The amount of the token to approve
+   * @returns Promise<Hex> - The transaction hash
+   */
+  async setERC20AllowanceToPermit2(coinAddress: Address, amount: bigint) {
+    const coin = new ReadWriteMemecoin(coinAddress, this.drift);
+    return coin.approve(Permit2Address[this.chainId], amount);
   }
 
   /**
