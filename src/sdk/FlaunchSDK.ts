@@ -2445,7 +2445,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   /**
-   * Gets the calls needed to add liquidity to AnyPositionManager for external coins
+   * Gets the calls needed to add liquidity to flaunch or imported coins
    * @param params - Parameters for adding liquidity
    * @returns Array of calls with descriptions
    */
