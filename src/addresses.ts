@@ -143,8 +143,8 @@ export const FastFlaunchZapAddress: Addresses = {
 };
 
 export const FlaunchZapAddress: Addresses = {
-  [base.id]: "0xf9753e6e4fdd1869be40685690a28bff26b8b114",
-  [baseSepolia.id]: "0x808DA25e8ecbCC2C0339B6A436AAEAe2021C235d",
+  [base.id]: "0xf9753e6e4fdd1869be40685690a28bff26b8b114", // FIXME: update address with _trustedFeeSigner param
+  [baseSepolia.id]: "0x808DA25e8ecbCC2C0339B6A436AAEAe2021C235d", // FIXME: update address with _trustedFeeSigner param
 };
 
 export const TreasuryManagerFactoryAddress: Addresses = {

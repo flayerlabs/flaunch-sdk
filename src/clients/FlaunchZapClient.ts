@@ -48,6 +48,8 @@ export interface FlaunchParams {
     enabled: boolean;
     walletCap?: bigint;
     txCap?: bigint;
+    // optional custom fee signer address
+    trustedFeeSigner?: Address;
     // need to pass signed message if trusted signer is enabled and premine requested.
     premineSignedMessage?: {
       deadline: number;
@@ -316,6 +318,8 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           initialPriceParams,
           feeCalculatorParams,
         },
+        _trustedFeeSigner:
+          params.trustedSignerSettings?.trustedFeeSigner ?? zeroAddress,
         _premineSwapHookData,
         _treasuryManagerParams: {
           ..._treasuryManagerParams,

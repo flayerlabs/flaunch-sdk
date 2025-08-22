@@ -1,253 +1,484 @@
 export const FlaunchZapAbi = [
   {
+    type: "constructor",
     inputs: [
       {
-        internalType: "contract PositionManager",
         name: "_positionManager",
         type: "address",
+        internalType: "contract PositionManager",
       },
       {
-        internalType: "contract Flaunch",
         name: "_flaunchContract",
         type: "address",
+        internalType: "contract Flaunch",
       },
-      { internalType: "contract IFLETH", name: "_flETH", type: "address" },
-      { internalType: "contract PoolSwap", name: "_poolSwap", type: "address" },
       {
-        internalType: "contract ITreasuryManagerFactory",
+        name: "_flETH",
+        type: "address",
+        internalType: "contract IFLETH",
+      },
+      {
+        name: "_poolSwap",
+        type: "address",
+        internalType: "contract PoolSwap",
+      },
+      {
         name: "_treasuryManagerFactory",
         type: "address",
+        internalType: "contract ITreasuryManagerFactory",
       },
       {
-        internalType: "contract IMerkleAirdrop",
         name: "_merkleAirdrop",
         type: "address",
+        internalType: "contract IMerkleAirdrop",
       },
       {
-        internalType: "contract WhitelistFairLaunch",
         name: "_whitelistFairLaunch",
         type: "address",
+        internalType: "contract WhitelistFairLaunch",
       },
     ],
     stateMutability: "nonpayable",
-    type: "constructor",
   },
-  { inputs: [], name: "CreatorCannotBeZero", type: "error" },
-  { inputs: [], name: "InsufficientMemecoinsForAirdrop", type: "error" },
   {
-    inputs: [
-      { internalType: "uint256", name: "_premineAmount", type: "uint256" },
-      { internalType: "uint256", name: "_slippage", type: "uint256" },
-      { internalType: "bytes", name: "_initialPriceParams", type: "bytes" },
-    ],
-    name: "calculateFee",
-    outputs: [
-      { internalType: "uint256", name: "ethRequired_", type: "uint256" },
-    ],
-    stateMutability: "view",
+    type: "receive",
+    stateMutability: "payable",
+  },
+  {
     type: "function",
-  },
-  {
+    name: "calculateFee",
     inputs: [
       {
-        internalType: "address",
+        name: "_premineAmount",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "_slippage",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "_initialPriceParams",
+        type: "bytes",
+        internalType: "bytes",
+      },
+    ],
+    outputs: [
+      {
+        name: "ethRequired_",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "deployAndInitializeManager",
+    inputs: [
+      {
         name: "_managerImplementation",
         type: "address",
+        internalType: "address",
       },
-      { internalType: "address", name: "_owner", type: "address" },
-      { internalType: "bytes", name: "_data", type: "bytes" },
-      { internalType: "address", name: "_permissions", type: "address" },
+      {
+        name: "_owner",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "_data",
+        type: "bytes",
+        internalType: "bytes",
+      },
+      {
+        name: "_permissions",
+        type: "address",
+        internalType: "address",
+      },
     ],
-    name: "deployAndInitializeManager",
     outputs: [
-      { internalType: "address payable", name: "manager_", type: "address" },
+      {
+        name: "manager_",
+        type: "address",
+        internalType: "address payable",
+      },
     ],
     stateMutability: "nonpayable",
-    type: "function",
   },
   {
-    inputs: [],
+    type: "function",
     name: "flETH",
-    outputs: [{ internalType: "contract IFLETH", name: "", type: "address" }],
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract IFLETH",
+      },
+    ],
     stateMutability: "view",
-    type: "function",
   },
   {
+    type: "function",
+    name: "flaunch",
     inputs: [
       {
-        components: [
-          { internalType: "string", name: "name", type: "string" },
-          { internalType: "string", name: "symbol", type: "string" },
-          { internalType: "string", name: "tokenUri", type: "string" },
-          {
-            internalType: "uint256",
-            name: "initialTokenFairLaunch",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "fairLaunchDuration",
-            type: "uint256",
-          },
-          { internalType: "uint256", name: "premineAmount", type: "uint256" },
-          { internalType: "address", name: "creator", type: "address" },
-          {
-            internalType: "uint24",
-            name: "creatorFeeAllocation",
-            type: "uint24",
-          },
-          { internalType: "uint256", name: "flaunchAt", type: "uint256" },
-          { internalType: "bytes", name: "initialPriceParams", type: "bytes" },
-          { internalType: "bytes", name: "feeCalculatorParams", type: "bytes" },
-        ],
-        internalType: "struct PositionManager.FlaunchParams",
         name: "_flaunchParams",
         type: "tuple",
-      },
-      { internalType: "bytes", name: "_premineSwapHookData", type: "bytes" },
-      {
+        internalType: "struct PositionManager.FlaunchParams",
         components: [
-          { internalType: "bytes32", name: "merkleRoot", type: "bytes32" },
-          { internalType: "string", name: "merkleIPFSHash", type: "string" },
-          { internalType: "uint256", name: "maxTokens", type: "uint256" },
+          {
+            name: "name",
+            type: "string",
+            internalType: "string",
+          },
+          {
+            name: "symbol",
+            type: "string",
+            internalType: "string",
+          },
+          {
+            name: "tokenUri",
+            type: "string",
+            internalType: "string",
+          },
+          {
+            name: "initialTokenFairLaunch",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "fairLaunchDuration",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "premineAmount",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "creator",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "creatorFeeAllocation",
+            type: "uint24",
+            internalType: "uint24",
+          },
+          {
+            name: "flaunchAt",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "initialPriceParams",
+            type: "bytes",
+            internalType: "bytes",
+          },
+          {
+            name: "feeCalculatorParams",
+            type: "bytes",
+            internalType: "bytes",
+          },
         ],
-        internalType: "struct FlaunchZap.WhitelistParams",
+      },
+      {
+        name: "_trustedFeeSigner",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "_premineSwapHookData",
+        type: "bytes",
+        internalType: "bytes",
+      },
+      {
         name: "_whitelistParams",
         type: "tuple",
+        internalType: "struct FlaunchZap.WhitelistParams",
+        components: [
+          {
+            name: "merkleRoot",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "merkleIPFSHash",
+            type: "string",
+            internalType: "string",
+          },
+          {
+            name: "maxTokens",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
       },
       {
-        components: [
-          { internalType: "uint256", name: "airdropIndex", type: "uint256" },
-          { internalType: "uint256", name: "airdropAmount", type: "uint256" },
-          { internalType: "uint256", name: "airdropEndTime", type: "uint256" },
-          { internalType: "bytes32", name: "merkleRoot", type: "bytes32" },
-          { internalType: "string", name: "merkleIPFSHash", type: "string" },
-        ],
-        internalType: "struct FlaunchZap.AirdropParams",
         name: "_airdropParams",
         type: "tuple",
+        internalType: "struct FlaunchZap.AirdropParams",
+        components: [
+          {
+            name: "airdropIndex",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "airdropAmount",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "airdropEndTime",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "merkleRoot",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "merkleIPFSHash",
+            type: "string",
+            internalType: "string",
+          },
+        ],
       },
       {
-        components: [
-          { internalType: "address", name: "manager", type: "address" },
-          { internalType: "address", name: "permissions", type: "address" },
-          { internalType: "bytes", name: "initializeData", type: "bytes" },
-          { internalType: "bytes", name: "depositData", type: "bytes" },
-        ],
-        internalType: "struct FlaunchZap.TreasuryManagerParams",
         name: "_treasuryManagerParams",
         type: "tuple",
+        internalType: "struct FlaunchZap.TreasuryManagerParams",
+        components: [
+          {
+            name: "manager",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "permissions",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "initializeData",
+            type: "bytes",
+            internalType: "bytes",
+          },
+          {
+            name: "depositData",
+            type: "bytes",
+            internalType: "bytes",
+          },
+        ],
       },
     ],
-    name: "flaunch",
     outputs: [
-      { internalType: "address", name: "memecoin_", type: "address" },
-      { internalType: "uint256", name: "ethSpent_", type: "uint256" },
-      { internalType: "address", name: "deployedManager_", type: "address" },
+      {
+        name: "memecoin_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "ethSpent_",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "deployedManager_",
+        type: "address",
+        internalType: "address",
+      },
     ],
     stateMutability: "payable",
-    type: "function",
   },
   {
+    type: "function",
+    name: "flaunch",
     inputs: [
       {
-        components: [
-          { internalType: "string", name: "name", type: "string" },
-          { internalType: "string", name: "symbol", type: "string" },
-          { internalType: "string", name: "tokenUri", type: "string" },
-          {
-            internalType: "uint256",
-            name: "initialTokenFairLaunch",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "fairLaunchDuration",
-            type: "uint256",
-          },
-          { internalType: "uint256", name: "premineAmount", type: "uint256" },
-          { internalType: "address", name: "creator", type: "address" },
-          {
-            internalType: "uint24",
-            name: "creatorFeeAllocation",
-            type: "uint24",
-          },
-          { internalType: "uint256", name: "flaunchAt", type: "uint256" },
-          { internalType: "bytes", name: "initialPriceParams", type: "bytes" },
-          { internalType: "bytes", name: "feeCalculatorParams", type: "bytes" },
-        ],
-        internalType: "struct PositionManager.FlaunchParams",
         name: "_flaunchParams",
         type: "tuple",
+        internalType: "struct PositionManager.FlaunchParams",
+        components: [
+          {
+            name: "name",
+            type: "string",
+            internalType: "string",
+          },
+          {
+            name: "symbol",
+            type: "string",
+            internalType: "string",
+          },
+          {
+            name: "tokenUri",
+            type: "string",
+            internalType: "string",
+          },
+          {
+            name: "initialTokenFairLaunch",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "fairLaunchDuration",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "premineAmount",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "creator",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "creatorFeeAllocation",
+            type: "uint24",
+            internalType: "uint24",
+          },
+          {
+            name: "flaunchAt",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "initialPriceParams",
+            type: "bytes",
+            internalType: "bytes",
+          },
+          {
+            name: "feeCalculatorParams",
+            type: "bytes",
+            internalType: "bytes",
+          },
+        ],
       },
-      { internalType: "bytes", name: "_premineSwapHookData", type: "bytes" },
+      {
+        name: "_trustedFeeSigner",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "_premineSwapHookData",
+        type: "bytes",
+        internalType: "bytes",
+      },
     ],
-    name: "flaunch",
     outputs: [
-      { internalType: "address", name: "memecoin_", type: "address" },
-      { internalType: "uint256", name: "ethSpent_", type: "uint256" },
-      { internalType: "address", name: "", type: "address" },
+      {
+        name: "memecoin_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "ethSpent_",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
     ],
     stateMutability: "payable",
-    type: "function",
   },
   {
-    inputs: [],
+    type: "function",
     name: "flaunchContract",
-    outputs: [{ internalType: "contract Flaunch", name: "", type: "address" }],
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract Flaunch",
+      },
+    ],
     stateMutability: "view",
-    type: "function",
   },
   {
-    inputs: [],
+    type: "function",
     name: "merkleAirdrop",
+    inputs: [],
     outputs: [
-      { internalType: "contract IMerkleAirdrop", name: "", type: "address" },
+      {
+        name: "",
+        type: "address",
+        internalType: "contract IMerkleAirdrop",
+      },
     ],
     stateMutability: "view",
-    type: "function",
   },
   {
-    inputs: [],
+    type: "function",
     name: "poolSwap",
-    outputs: [{ internalType: "contract PoolSwap", name: "", type: "address" }],
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract PoolSwap",
+      },
+    ],
     stateMutability: "view",
-    type: "function",
   },
   {
-    inputs: [],
+    type: "function",
     name: "positionManager",
+    inputs: [],
     outputs: [
-      { internalType: "contract PositionManager", name: "", type: "address" },
+      {
+        name: "",
+        type: "address",
+        internalType: "contract PositionManager",
+      },
     ],
     stateMutability: "view",
-    type: "function",
   },
   {
-    inputs: [],
+    type: "function",
     name: "treasuryManagerFactory",
+    inputs: [],
     outputs: [
       {
-        internalType: "contract ITreasuryManagerFactory",
         name: "",
         type: "address",
+        internalType: "contract ITreasuryManagerFactory",
       },
     ],
     stateMutability: "view",
-    type: "function",
   },
   {
-    inputs: [],
+    type: "function",
     name: "whitelistFairLaunch",
+    inputs: [],
     outputs: [
       {
-        internalType: "contract WhitelistFairLaunch",
         name: "",
         type: "address",
+        internalType: "contract WhitelistFairLaunch",
       },
     ],
     stateMutability: "view",
-    type: "function",
   },
-  { stateMutability: "payable", type: "receive" },
+  {
+    type: "error",
+    name: "CreatorCannotBeZero",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InsufficientMemecoinsForAirdrop",
+    inputs: [],
+  },
 ] as const;
