@@ -223,29 +223,153 @@ export const uploadImageToIPFS = async (params: {
   }
 };
 
-export const generateTokenUri = async (name: string, params: IPFSParams) => {
-  // 1. upload image to IPFS
-  const imageRes = await uploadImageToIPFS({
-    pinataConfig: params.pinataConfig,
-    base64Image: params.metadata.base64Image,
-  });
+/**
+ * Response interface for Flaunch API upload endpoints
+ */
+interface FlaunchUploadResponse {
+  ipfsHash: string;
+  [key: string]: any;
+}
 
-  // 2. upload metadata to IPFS
-  const coinMetadata: CoinMetadata = {
-    name,
-    description: params.metadata.description,
-    image: `ipfs://${imageRes.IpfsHash}`,
-    external_link: params.metadata.websiteUrl || "",
-    collaborators: [],
-    discordUrl: params.metadata.discordUrl || "",
-    twitterUrl: params.metadata.twitterUrl || "",
-    telegramUrl: params.metadata.telegramUrl || "",
-  };
+/**
+ * Request interface for Flaunch API metadata upload
+ */
+interface FlaunchMetadataRequest {
+  name: string;
+  symbol: string;
+  description: string;
+  imageIpfs: string;
+  websiteUrl?: string;
+  discordUrl?: string;
+  twitterUrl?: string;
+  telegramUrl?: string;
+}
 
-  const metadataRes = await uploadJsonToIPFS({
-    pinataConfig: params.pinataConfig,
-    json: coinMetadata,
-  });
+/**
+ * Uploads a base64 image to IPFS using the Flaunch API
+ * @param base64Image Base64 encoded image data
+ * @returns Upload response with IPFS hash
+ */
+export const uploadImageToFlaunchAPI = async (
+  base64Image: string
+): Promise<FlaunchUploadResponse> => {
+  try {
+    const response = await axios.post(
+      "https://web2-api.flaunch.gg/api/v1/upload-image",
+      { base64Image },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-  return `ipfs://${metadataRes.IpfsHash}`;
+    return {
+      ipfsHash: response.data.ipfsHash,
+      ...response.data,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(
+        `Failed to upload image to Flaunch API: ${
+          error.response?.data?.message || error.message
+        }`
+      );
+    }
+    throw error;
+  }
+};
+
+/**
+ * Uploads metadata to IPFS using the Flaunch API
+ * @param metadata The metadata object to upload
+ * @returns Upload response with IPFS hash
+ */
+export const uploadMetadataToFlaunchAPI = async (
+  metadata: FlaunchMetadataRequest
+): Promise<FlaunchUploadResponse> => {
+  try {
+    const response = await axios.post(
+      "https://web2-api.flaunch.gg/api/v1/upload-metadata",
+      metadata,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return {
+      ipfsHash: response.data.ipfsHash,
+      ...response.data,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(
+        `Failed to upload metadata to Flaunch API: ${
+          error.response?.data?.message || error.message
+        }`
+      );
+    }
+    throw error;
+  }
+};
+
+export const generateTokenUri = async (
+  name: string,
+  symbol: string,
+  params: IPFSParams
+) => {
+  let imageHash: string;
+  let metadataHash: string;
+
+  if (params.pinataConfig) {
+    // Use IPFS directly via Pinata
+    // 1. upload image to IPFS
+    const imageRes = await uploadImageToIPFS({
+      pinataConfig: params.pinataConfig,
+      base64Image: params.metadata.base64Image,
+    });
+    imageHash = imageRes.IpfsHash;
+
+    // 2. upload metadata to IPFS
+    const coinMetadata: CoinMetadata = {
+      name,
+      description: params.metadata.description,
+      image: `ipfs://${imageHash}`,
+      external_link: params.metadata.websiteUrl || "",
+      collaborators: [],
+      discordUrl: params.metadata.discordUrl || "",
+      twitterUrl: params.metadata.twitterUrl || "",
+      telegramUrl: params.metadata.telegramUrl || "",
+    };
+
+    const metadataRes = await uploadJsonToIPFS({
+      pinataConfig: params.pinataConfig,
+      json: coinMetadata,
+    });
+    metadataHash = metadataRes.IpfsHash;
+  } else {
+    // Use Flaunch API
+    // 1. upload image to Flaunch API
+    const imageRes = await uploadImageToFlaunchAPI(params.metadata.base64Image);
+    imageHash = imageRes.ipfsHash;
+
+    // 2. upload metadata to Flaunch API
+    const flaunchMetadata: FlaunchMetadataRequest = {
+      name,
+      symbol,
+      description: params.metadata.description,
+      imageIpfs: imageHash,
+      websiteUrl: params.metadata.websiteUrl,
+      discordUrl: params.metadata.discordUrl,
+      twitterUrl: params.metadata.twitterUrl,
+      telegramUrl: params.metadata.telegramUrl,
+    };
+
+    const metadataRes = await uploadMetadataToFlaunchAPI(flaunchMetadata);
+    metadataHash = metadataRes.ipfsHash;
+  }
+
+  return `ipfs://${metadataHash}`;
 };

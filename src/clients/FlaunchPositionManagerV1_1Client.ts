@@ -486,7 +486,7 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
     metadata,
     pinataConfig,
   }: FlaunchIPFSParams) {
-    const tokenUri = await generateTokenUri(name, {
+    const tokenUri = await generateTokenUri(name, symbol, {
       metadata,
       pinataConfig,
     });

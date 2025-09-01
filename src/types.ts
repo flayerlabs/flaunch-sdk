@@ -37,7 +37,7 @@ export interface IPFSParams {
     twitterUrl?: string;
     telegramUrl?: string;
   };
-  pinataConfig: PinataConfig;
+  pinataConfig?: PinataConfig;
 }
 
 /**

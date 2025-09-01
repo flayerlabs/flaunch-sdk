@@ -344,7 +344,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
   }
 
   async flaunchIPFS(params: FlaunchIPFSParams) {
-    const tokenUri = await generateTokenUri(params.name, {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
       metadata: params.metadata,
       pinataConfig: params.pinataConfig,
     });
@@ -393,7 +393,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
   async flaunchIPFSWithRevenueManager(
     params: FlaunchWithRevenueManagerIPFSParams
   ) {
-    const tokenUri = await generateTokenUri(params.name, {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
       metadata: params.metadata,
       pinataConfig: params.pinataConfig,
     });
@@ -487,7 +487,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
    * @returns Promise resolving to the transaction response for the flaunch creation
    */
   async flaunchIPFSWithSplitManager(params: FlaunchWithSplitManagerIPFSParams) {
-    const tokenUri = await generateTokenUri(params.name, {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
       metadata: params.metadata,
       pinataConfig: params.pinataConfig,
     });
