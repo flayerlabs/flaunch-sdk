@@ -145,3 +145,27 @@ export type GetAddLiquidityCallsParams =
       currentTick?: number;
       version?: FlaunchVersion;
     };
+
+export type CheckSingleSidedAddLiquidityParams =
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      minMarketCap: string;
+      maxMarketCap: string;
+      currentMarketCap?: string;
+      version?: FlaunchVersion;
+    }
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      minPriceUSD: string;
+      maxPriceUSD: string;
+      currentPriceUSD?: number;
+      version?: FlaunchVersion;
+    };
+
+export interface SingleSidedLiquidityInfo {
+  isSingleSided: boolean;
+  shouldHideCoinInput: boolean;
+  shouldHideETHInput: boolean;
+}

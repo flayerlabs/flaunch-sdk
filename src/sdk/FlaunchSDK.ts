@@ -133,6 +133,8 @@ import {
   ImportMemecoinParams,
   GetAddLiquidityCallsParams,
   CalculateAddLiquidityAmountsParams,
+  CheckSingleSidedAddLiquidityParams,
+  SingleSidedLiquidityInfo,
   PoolWithHookData,
 } from "types";
 import {
@@ -1665,6 +1667,119 @@ export class ReadFlaunchSDK {
     }
   }
 
+  async checkSingleSidedAddLiquidity(
+    params: CheckSingleSidedAddLiquidityParams
+  ): Promise<SingleSidedLiquidityInfo> {
+    const { coinAddress, liquidityMode } = params;
+
+    let minMarketCap: string;
+    let maxMarketCap: string;
+    let currentMarketCap: string | undefined;
+
+    if ("minMarketCap" in params) {
+      minMarketCap = params.minMarketCap;
+      maxMarketCap = params.maxMarketCap;
+      currentMarketCap = params.currentMarketCap;
+    } else {
+      const { totalSupply, decimals } = await this.getCoinInfo(coinAddress);
+      const formattedTotalSupply = parseFloat(
+        formatUnits(totalSupply, decimals)
+      );
+
+      minMarketCap = (
+        parseFloat(params.minPriceUSD) * formattedTotalSupply
+      ).toString();
+      maxMarketCap = (
+        parseFloat(params.maxPriceUSD) * formattedTotalSupply
+      ).toString();
+
+      if (params.currentPriceUSD) {
+        currentMarketCap = (
+          params.currentPriceUSD * formattedTotalSupply
+        ).toString();
+      }
+    }
+
+    let { tickLower, tickUpper, currentTick } =
+      await this.calculateAddLiquidityTicks({
+        coinAddress,
+        liquidityMode,
+        minMarketCap,
+        maxMarketCap,
+        currentMarketCap,
+      });
+
+    // If no current tick is provided from the above calculation, get it from the pool state
+    if (!currentTick) {
+      let version = params.version;
+      // if version is not provided, check on existing managers, else default to ANY
+      if (!version) {
+        try {
+          version = await this.getCoinVersion(coinAddress);
+        } catch {
+          version = FlaunchVersion.ANY;
+        }
+      }
+
+      const poolState = await this.readStateView.poolSlot0({
+        poolId: getPoolId(
+          orderPoolKey({
+            currency0: coinAddress,
+            currency1: FLETHAddress[this.chainId],
+            fee: 0,
+            tickSpacing: TICK_SPACING,
+            hooks: this.getPositionManagerAddress(version),
+          })
+        ),
+      });
+      currentTick = poolState.tick;
+    }
+
+    // Determine currency ordering
+    const isFlETHCurrency0 = this.flETHIsCurrencyZero(coinAddress);
+
+    // Check if position is single-sided
+    const isSingleSided = currentTick <= tickLower || currentTick >= tickUpper;
+
+    if (!isSingleSided) {
+      return {
+        isSingleSided: false,
+        shouldHideCoinInput: false,
+        shouldHideETHInput: false,
+      };
+    }
+
+    // Determine which input should be hidden based on current price position
+    let shouldHideCoinInput = false;
+    let shouldHideETHInput = false;
+
+    if (currentTick <= tickLower) {
+      // Current price is below the range - only the lower currency (currency0) is needed
+      if (isFlETHCurrency0) {
+        // flETH is currency0, so we need only flETH (ETH)
+        shouldHideCoinInput = true;
+      } else {
+        // Coin is currency0, so we need only coin
+        shouldHideETHInput = true;
+      }
+    } else if (currentTick >= tickUpper) {
+      // Current price is above the range - only the upper currency (currency1) is needed
+      if (isFlETHCurrency0) {
+        // flETH is currency0, so coin is currency1 and we need only coin
+        shouldHideETHInput = true;
+      } else {
+        // Coin is currency0, so flETH is currency1 and we need only flETH (ETH)
+        shouldHideCoinInput = true;
+      }
+    }
+
+    return {
+      isSingleSided: true,
+      shouldHideCoinInput,
+      shouldHideETHInput,
+    };
+  }
+
   async calculateAddLiquidityAmounts(
     params: CalculateAddLiquidityAmountsParams
   ): Promise<{
@@ -1820,9 +1935,35 @@ export class ReadFlaunchSDK {
       }
 
       // Map amount0/amount1 back to coin/eth amounts based on currency ordering
-      const [ethAmount, coinAmount] = isFlETHCurrency0
+      let [ethAmount, coinAmount] = isFlETHCurrency0
         ? [amount0Calculated, amount1Calculated]
         : [amount1Calculated, amount0Calculated];
+
+      // Check if this is single-sided liquidity and force unused token amounts to 0
+      const isSingleSided =
+        currentTick <= tickLower || currentTick >= tickUpper;
+
+      if (isSingleSided) {
+        if (currentTick <= tickLower) {
+          // Current price is below the range - only the lower currency (currency0) is needed
+          if (isFlETHCurrency0) {
+            // flETH is currency0, so we need only flETH (ETH), force coin amount to 0
+            coinAmount = 0n;
+          } else {
+            // Coin is currency0, so we need only coin, force ETH amount to 0
+            ethAmount = 0n;
+          }
+        } else if (currentTick >= tickUpper) {
+          // Current price is above the range - only the upper currency (currency1) is needed
+          if (isFlETHCurrency0) {
+            // flETH is currency0, so coin is currency1 and we need only coin, force ETH to 0
+            ethAmount = 0n;
+          } else {
+            // Coin is currency0, so flETH is currency1 and we need only flETH (ETH), force coin to 0
+            coinAmount = 0n;
+          }
+        }
+      }
 
       return {
         coinAmount,
