@@ -58,12 +58,12 @@ export const ZoraVerifierAddress: Addresses = {
 
 /** Permissions */
 export const ClosedPermissionsAddress: Addresses = {
-  [base.id]: "0x0000000000000000000000000000000000000000", // TODO: add mainnet address
+  [base.id]: "0x4dfc76A31A2a0110739611683a8b6C5201480fa1",
   [baseSepolia.id]: "0x551aeD820CAfaca2f9cD1C637AAc076D05a03AC2",
 };
 
 export const WhitelistedPermissionsAddress: Addresses = {
-  [base.id]: "0x0000000000000000000000000000000000000000", // TODO: add mainnet address
+  [base.id]: "0x828B58B2B2df8ff3221Fbe2b07e75a56a84493Cc",
   [baseSepolia.id]: "0xe8691E8f576A98c41EBB5E984207d4F51386621f",
 };
 /** =========== */

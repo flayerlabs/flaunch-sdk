@@ -556,8 +556,15 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
 
     const VALID_SHARE_TOTAL = 100_00000n; // 5 decimals as BigInt
 
+    const stakingManagerAddress = StakingManagerAddress[this.chainId];
+    if (stakingManagerAddress === zeroAddress) {
+      throw new Error(
+        `StakingManager not deployed on chainId: ${this.chainId}`
+      );
+    }
+
     return this.contract.write("deployAndInitializeManager", {
-      _managerImplementation: StakingManagerAddress[this.chainId],
+      _managerImplementation: stakingManagerAddress,
       _owner: params.managerOwner,
       _data: encodeAbiParameters(
         [
