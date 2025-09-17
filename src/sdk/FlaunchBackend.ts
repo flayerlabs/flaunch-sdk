@@ -37,7 +37,7 @@ export class FlaunchBackend {
    * @param deadlineFromNowInSeconds - The deadline from now in seconds
    * @param version - The version to get the position manager address for, defaults to the latest version if undefined
    * @param referrer - (optional) The referrer address for the swap
-   * @return The encoded hookData as hex string
+   * @return The hookData, deadline and signature
    */
   async generateHookDataWithSignature({
     userWallet,
@@ -51,7 +51,11 @@ export class FlaunchBackend {
     deadlineFromNowInSeconds: number;
     version?: FlaunchVersion;
     referrer?: Address;
-  }): Promise<Hex> {
+  }): Promise<{
+    hookData: Hex;
+    deadline: number;
+    signature: Hex;
+  }> {
     const poolId = getPoolId(
       orderPoolKey({
         currency0: FLETHAddress[this.chainId],
@@ -100,7 +104,11 @@ export class FlaunchBackend {
       ]
     );
 
-    return hookData;
+    return {
+      hookData,
+      deadline: Number(deadline),
+      signature,
+    };
   }
 
   /**
