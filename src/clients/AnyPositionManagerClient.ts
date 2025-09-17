@@ -377,8 +377,11 @@ export class ReadWriteAnyPositionManager extends ReadAnyPositionManager {
         {
           type: "uint256",
         },
+        {
+          type: "address",
+        },
       ],
-      [initialMCapInUSDCWei]
+      [initialMCapInUSDCWei, memecoin]
     );
 
     const creatorFeeAllocationInBps = creatorFeeAllocationPercent * 100;
