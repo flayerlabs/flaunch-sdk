@@ -130,6 +130,7 @@ export const buyMemecoin = (params: {
   // for approving the inputToken:
   permitSingle?: PermitSingle;
   signature?: Hex;
+  hookData?: Hex; // for swaps when TrustedSigner is enabled
 }) => {
   const flETH = FLETHAddress[params.chainId];
   const flETHHooks = FLETHHooksAddress[params.chainId];
@@ -186,10 +187,12 @@ export const buyMemecoin = (params: {
         fee: 0,
         tickSpacing: 60,
         hooks: flaunchHooks,
-        hookData: encodeAbiParameters(
-          [{ type: "address", name: "referrer" }],
-          [params.referrer ?? zeroAddress]
-        ),
+        hookData:
+          params.hookData ??
+          encodeAbiParameters(
+            [{ type: "address", name: "referrer" }],
+            [params.referrer ?? zeroAddress]
+          ),
       },
     ];
 
@@ -233,10 +236,12 @@ export const buyMemecoin = (params: {
         tickSpacing: 60,
         hooks: flaunchHooks,
         intermediateCurrency: flETH,
-        hookData: encodeAbiParameters(
-          [{ type: "address", name: "referrer" }],
-          [params.referrer ?? zeroAddress]
-        ) as Hex,
+        hookData:
+          params.hookData ??
+          (encodeAbiParameters(
+            [{ type: "address", name: "referrer" }],
+            [params.referrer ?? zeroAddress]
+          ) as Hex),
       },
     ];
 

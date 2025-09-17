@@ -122,6 +122,12 @@ export class ReadFlaunchPositionManagerV1_2 {
     });
   }
 
+  getFeeCalculator({ forFairLaunch }: { forFairLaunch: boolean }) {
+    return this.contract.read("getFeeCalculator", {
+      _isFairLaunch: forFairLaunch,
+    });
+  }
+
   async isValidCoin(coinAddress: Address) {
     const poolKey = await this.contract.read("poolKey", {
       _token: coinAddress,

@@ -164,6 +164,7 @@ import { getPermissionsAddress } from "helpers";
 import { ReadMulticall } from "clients/MulticallClient";
 import { MemecoinAbi, Permit2Abi } from "abi";
 import { FLETHAbi } from "abi/FLETH";
+import { ReadTrustedSignerFeeCalculator } from "clients/TrustedSignerFeeCalculatorClient";
 
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
@@ -216,6 +217,7 @@ type BuyCoinBase = {
   intermediatePoolKey?: PoolWithHookData;
   permitSingle?: PermitSingle;
   signature?: Hex;
+  hookData?: Hex; // for swaps when TrustedSigner is enabled
 };
 
 type BuyCoinExactInParams = BuyCoinBase & {
@@ -391,9 +393,10 @@ export class ReadFlaunchSDK {
     throw new Error(`Unknown coin version for address: ${coinAddress}`);
   }
 
+  // @note update FlaunchBackend as well when new version is added
   /**
-   * Gets the position manager address for a given version
-   * @param version - The version to get the position manager address for
+   * Gets the position manager instance for a given version
+   * @param version - The version to get the position manager instance for
    */
   getPositionManager(version: FlaunchVersion) {
     switch (version) {
@@ -411,8 +414,8 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Gets the fair launch address for a given version
-   * @param version - The version to get the fair launch address for
+   * Gets the fair launch instance for a given version
+   * @param version - The version to get the fair launch instance for
    */
   getFairLaunch(version: FlaunchVersion) {
     switch (version) {
@@ -430,8 +433,8 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Gets the bid wall address for a given version
-   * @param version - The version to get the bid wall address for
+   * Gets the bid wall instance for a given version
+   * @param version - The version to get the bid wall instance for
    */
   getBidWall(version: FlaunchVersion) {
     switch (version) {
@@ -891,6 +894,72 @@ export class ReadFlaunchSDK {
     return this.getFairLaunch(coinVersion).isFairLaunchActive({ poolId });
   }
 
+  async trustedPoolKeySignerStatus(
+    coinAddress: Address,
+    version?: FlaunchVersion
+  ): Promise<{
+    isCurrentlyEnabled: boolean;
+    trustedSignerEnabled: boolean;
+    signer: Address;
+    fairLaunchStartsAt: number;
+    fairLaunchEndsAt: number;
+    isFairLaunchActive: boolean;
+  }> {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+    if (coinVersion === FlaunchVersion.ANY) {
+      throw new Error("AnyPositionManager is not supported for TrustedSigner");
+    }
+
+    // TrustedSigner fee calculator is only active during fair launch
+    const fairLaunchInfo = await this.fairLaunchInfo(coinAddress, coinVersion);
+
+    // determine fair launch status
+    let isFairLaunchActive: boolean;
+    if (fairLaunchInfo.closed) {
+      isFairLaunchActive = false;
+    }
+    if (new Date().getTime() / 1000 > fairLaunchInfo.endsAt) {
+      isFairLaunchActive = false;
+    }
+    isFairLaunchActive = true;
+
+    const baseReturn = {
+      isFairLaunchActive,
+      fairLaunchStartsAt: Number(fairLaunchInfo.startsAt),
+      fairLaunchEndsAt: Number(fairLaunchInfo.endsAt),
+    };
+
+    const fairLaunchFeeCalculator = await (
+      this.getPositionManager(coinVersion) as ReadFlaunchPositionManagerV1_2
+    ).getFeeCalculator({ forFairLaunch: true });
+
+    try {
+      const trustedSignerFeeCalculator = new ReadTrustedSignerFeeCalculator(
+        fairLaunchFeeCalculator,
+        this.drift
+      );
+
+      const poolId = await this.poolId(coinAddress, coinVersion);
+      const trustedSigner =
+        await trustedSignerFeeCalculator.trustedPoolKeySigner({ poolId });
+
+      return {
+        isCurrentlyEnabled: trustedSigner.enabled && isFairLaunchActive,
+        trustedSignerEnabled: trustedSigner.enabled,
+        signer: trustedSigner.signer,
+        ...baseReturn,
+      };
+    } catch {
+      // might throw error in the future if the fair launch calculator is not the TrustedSignerFeeCalculator
+      return {
+        isCurrentlyEnabled: false,
+        trustedSignerEnabled: false,
+        signer: zeroAddress,
+        ...baseReturn,
+      };
+    }
+  }
+
   /**
    * Gets the duration of a fair launch for a given coin
    * @param coinAddress - The address of the coin
@@ -1339,6 +1408,8 @@ export class ReadFlaunchSDK {
    * @param version - Optional specify Flaunch version, if not provided, will determine automatically
    * @param amountIn - The exact amount of ETH or inputToken to spend
    * @param intermediatePoolKey - Optional intermediate pool key to use containing inputToken and ETH as currencies
+   * @param hookData - Optional hook data to use for the fleth <> coin swap. Only used when TrustedSigner is currently enabled
+   * @param userWallet - Optional user wallet to use for the swap. Only used when TrustedSigner is currently enabled
    * @returns Promise<bigint> - The expected amount of coins to receive
    */
   async getBuyQuoteExactInput({
@@ -1346,11 +1417,15 @@ export class ReadFlaunchSDK {
     version,
     amountIn,
     intermediatePoolKey,
+    hookData,
+    userWallet,
   }: {
     coinAddress: Address;
     version?: FlaunchVersion;
     amountIn: bigint;
     intermediatePoolKey?: PoolWithHookData;
+    hookData?: Hex;
+    userWallet?: Address;
   }) {
     const coinVersion = version || (await this.getCoinVersion(coinAddress));
 
@@ -1359,6 +1434,8 @@ export class ReadFlaunchSDK {
       amountIn,
       positionManagerAddress: this.getPositionManagerAddress(coinVersion),
       intermediatePoolKey,
+      hookData,
+      userWallet,
     });
   }
 
@@ -1368,6 +1445,8 @@ export class ReadFlaunchSDK {
    * @param version - Optional specify Flaunch version, if not provided, will determine automatically
    * @param coinOut - The exact amount of tokens to receive
    * @param intermediatePoolKey - Optional intermediate pool key to use containing inputToken and ETH as currencies
+   * @param hookData - Optional hook data to use for the fleth <> coin swap. Only used when TrustedSigner is currently enabled
+   * @param userWallet - Optional user wallet to use for the swap. Only used when TrustedSigner is currently enabled
    * @returns Promise<bigint> - The required amount of ETH or inputToken to spend
    */
   async getBuyQuoteExactOutput({
@@ -1375,11 +1454,15 @@ export class ReadFlaunchSDK {
     amountOut,
     version,
     intermediatePoolKey,
+    hookData,
+    userWallet,
   }: {
     coinAddress: Address;
     amountOut: bigint;
     version?: FlaunchVersion;
     intermediatePoolKey?: PoolWithHookData;
+    hookData?: Hex;
+    userWallet?: Address;
   }) {
     const coinVersion = version || (await this.getCoinVersion(coinAddress));
 
@@ -1388,6 +1471,8 @@ export class ReadFlaunchSDK {
       coinOut: amountOut,
       positionManagerAddress: this.getPositionManagerAddress(coinVersion),
       intermediatePoolKey,
+      hookData,
+      userWallet,
     });
   }
 
@@ -2233,6 +2318,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
             amountIn,
             positionManagerAddress: this.getPositionManagerAddress(coinVersion),
             intermediatePoolKey: params.intermediatePoolKey,
+            hookData: params.hookData,
+            userWallet: sender,
           }),
           slippage: (params.slippagePercent / 100).toFixed(18).toString(),
           swapType: params.swapType,
@@ -2249,6 +2336,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
             coinOut: amountOut,
             positionManagerAddress: this.getPositionManagerAddress(coinVersion),
             intermediatePoolKey: params.intermediatePoolKey,
+            hookData: params.hookData,
+            userWallet: sender,
           }),
           slippage: (params.slippagePercent / 100).toFixed(18).toString(),
           swapType: params.swapType,
@@ -2272,6 +2361,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       intermediatePoolKey: params.intermediatePoolKey,
       permitSingle: params.permitSingle,
       signature: params.signature,
+      hookData: params.hookData,
     });
 
     return this.drift.adapter.write({

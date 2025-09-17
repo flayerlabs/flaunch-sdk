@@ -1,0 +1,390 @@
+export const TrustedSignerFeeCalculatorAbi = [
+  {
+    inputs: [
+      { internalType: "address", name: "_nativeToken", type: "address" },
+      { internalType: "address", name: "_positionManager", type: "address" },
+    ],
+    stateMutability: "nonpayable",
+    type: "constructor",
+  },
+  { inputs: [], name: "AlreadyInitialized", type: "error" },
+  { inputs: [], name: "CallerNotPositionManager", type: "error" },
+  {
+    inputs: [{ internalType: "uint256", name: "_deadline", type: "uint256" }],
+    name: "DeadlineExpired",
+    type: "error",
+  },
+  { inputs: [], name: "InvalidPoolKey", type: "error" },
+  {
+    inputs: [
+      { internalType: "address", name: "_invalidSigner", type: "address" },
+    ],
+    name: "InvalidSigner",
+    type: "error",
+  },
+  { inputs: [], name: "NewOwnerIsZeroAddress", type: "error" },
+  { inputs: [], name: "NoHandoverRequest", type: "error" },
+  { inputs: [], name: "Reentrancy", type: "error" },
+  { inputs: [], name: "SignatureAlreadyUsed", type: "error" },
+  {
+    inputs: [{ internalType: "address", name: "_signer", type: "address" }],
+    name: "SignerAlreadyAdded",
+    type: "error",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_signer", type: "address" }],
+    name: "SignerDoesNotExist",
+    type: "error",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "_requestedAmount", type: "uint256" },
+      { internalType: "uint256", name: "_maxTokensOut", type: "uint256" },
+    ],
+    name: "TransactionCapExceeded",
+    type: "error",
+  },
+  { inputs: [], name: "Unauthorized", type: "error" },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "pendingOwner",
+        type: "address",
+      },
+    ],
+    name: "OwnershipHandoverCanceled",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "pendingOwner",
+        type: "address",
+      },
+    ],
+    name: "OwnershipHandoverRequested",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "oldOwner",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "OwnershipTransferred",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "PoolId",
+        name: "_poolId",
+        type: "bytes32",
+      },
+      {
+        components: [
+          { internalType: "bool", name: "enabled", type: "bool" },
+          { internalType: "uint256", name: "walletCap", type: "uint256" },
+          { internalType: "uint256", name: "txCap", type: "uint256" },
+        ],
+        indexed: false,
+        internalType: "struct TrustedSignerFeeCalculator.FairLaunchSettings",
+        name: "_settings",
+        type: "tuple",
+      },
+    ],
+    name: "PoolKeyFairLaunchSettingsUpdated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "PoolId",
+        name: "_poolId",
+        type: "bytes32",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "_signer",
+        type: "address",
+      },
+    ],
+    name: "PoolKeySignerUpdated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "_signer",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "bool",
+        name: "_isTrusted",
+        type: "bool",
+      },
+    ],
+    name: "TrustedSignerUpdated",
+    type: "event",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_signer", type: "address" }],
+    name: "addTrustedSigner",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "cancelOwnershipHandover",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "pendingOwner", type: "address" },
+    ],
+    name: "completeOwnershipHandover",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        components: [
+          { internalType: "Currency", name: "currency0", type: "address" },
+          { internalType: "Currency", name: "currency1", type: "address" },
+          { internalType: "uint24", name: "fee", type: "uint24" },
+          { internalType: "int24", name: "tickSpacing", type: "int24" },
+          { internalType: "contract IHooks", name: "hooks", type: "address" },
+        ],
+        internalType: "struct PoolKey",
+        name: "",
+        type: "tuple",
+      },
+      {
+        components: [
+          { internalType: "bool", name: "zeroForOne", type: "bool" },
+          { internalType: "int256", name: "amountSpecified", type: "int256" },
+          {
+            internalType: "uint160",
+            name: "sqrtPriceLimitX96",
+            type: "uint160",
+          },
+        ],
+        internalType: "struct IPoolManager.SwapParams",
+        name: "",
+        type: "tuple",
+      },
+      { internalType: "uint24", name: "_baseFee", type: "uint24" },
+    ],
+    name: "determineSwapFee",
+    outputs: [{ internalType: "uint24", name: "swapFee_", type: "uint24" }],
+    stateMutability: "pure",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "PoolId", name: "_poolId", type: "bytes32" }],
+    name: "fairLaunchSettings",
+    outputs: [
+      { internalType: "bool", name: "enabled", type: "bool" },
+      { internalType: "uint256", name: "walletCap", type: "uint256" },
+      { internalType: "uint256", name: "txCap", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_signer", type: "address" }],
+    name: "isTrustedSigner",
+    outputs: [{ internalType: "bool", name: "valid_", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "PoolId", name: "_poolId", type: "bytes32" },
+      { internalType: "address", name: "_origin", type: "address" },
+    ],
+    name: "maxTokensOut",
+    outputs: [
+      { internalType: "bool", name: "hasCap_", type: "bool" },
+      { internalType: "uint256", name: "maxTokensOut_", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "nativeToken",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "owner",
+    outputs: [{ internalType: "address", name: "result", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "pendingOwner", type: "address" },
+    ],
+    name: "ownershipHandoverExpiresAt",
+    outputs: [{ internalType: "uint256", name: "result", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "positionManager",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_signer", type: "address" }],
+    name: "removeTrustedSigner",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "renounceOwnership",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "requestOwnershipHandover",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "PoolId", name: "_poolId", type: "bytes32" },
+      { internalType: "bytes", name: "_params", type: "bytes" },
+    ],
+    name: "setFlaunchParams",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        components: [
+          { internalType: "Currency", name: "currency0", type: "address" },
+          { internalType: "Currency", name: "currency1", type: "address" },
+          { internalType: "uint24", name: "fee", type: "uint24" },
+          { internalType: "int24", name: "tickSpacing", type: "int24" },
+          { internalType: "contract IHooks", name: "hooks", type: "address" },
+        ],
+        internalType: "struct PoolKey",
+        name: "_poolKey",
+        type: "tuple",
+      },
+      { internalType: "address", name: "_signer", type: "address" },
+    ],
+    name: "setTrustedPoolKeySigner",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "_sender", type: "address" },
+      {
+        components: [
+          { internalType: "Currency", name: "currency0", type: "address" },
+          { internalType: "Currency", name: "currency1", type: "address" },
+          { internalType: "uint24", name: "fee", type: "uint24" },
+          { internalType: "int24", name: "tickSpacing", type: "int24" },
+          { internalType: "contract IHooks", name: "hooks", type: "address" },
+        ],
+        internalType: "struct PoolKey",
+        name: "_poolKey",
+        type: "tuple",
+      },
+      {
+        components: [
+          { internalType: "bool", name: "zeroForOne", type: "bool" },
+          { internalType: "int256", name: "amountSpecified", type: "int256" },
+          {
+            internalType: "uint160",
+            name: "sqrtPriceLimitX96",
+            type: "uint160",
+          },
+        ],
+        internalType: "struct IPoolManager.SwapParams",
+        name: "_params",
+        type: "tuple",
+      },
+      { internalType: "BalanceDelta", name: "", type: "int256" },
+      { internalType: "bytes", name: "_hookData", type: "bytes" },
+    ],
+    name: "trackSwap",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "newOwner", type: "address" }],
+    name: "transferOwnership",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "PoolId", name: "_poolId", type: "bytes32" }],
+    name: "trustedPoolKeySigner",
+    outputs: [
+      { internalType: "address", name: "signer", type: "address" },
+      { internalType: "bool", name: "enabled", type: "bool" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "PoolId", name: "_poolId", type: "bytes32" },
+      { internalType: "address", name: "_wallet", type: "address" },
+    ],
+    name: "walletPurchasedAmount",
+    outputs: [{ internalType: "uint256", name: "_amount", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;

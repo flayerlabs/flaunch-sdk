@@ -142,6 +142,8 @@ export class ReadQuoter {
    * @param amountIn - The exact amount of ETH or inputToken to spend
    * @param positionManagerAddress - The address of the position manager to use
    * @param intermediatePoolKey - Optional intermediate pool key to use containing inputToken and ETH as currencies
+   * @param hookData - Optional hook data to use for the fleth <> coin swap. Only used when TrustedSigner is currently enabled
+   * @param userWallet - Optional user wallet to use for the swap. Only used when TrustedSigner is currently enabled
    * @returns Promise<bigint> - The expected amount of coins to receive
    */
   async getBuyQuoteExactInput({
@@ -149,11 +151,15 @@ export class ReadQuoter {
     amountIn,
     positionManagerAddress,
     intermediatePoolKey,
+    hookData,
+    userWallet,
   }: {
     coinAddress: Address;
     amountIn: bigint;
     positionManagerAddress: Address;
     intermediatePoolKey?: PoolWithHookData;
+    hookData?: HexString;
+    userWallet?: Address;
   }) {
     if (intermediatePoolKey) {
       // verify that ETH exists in the intermediate pool key
@@ -171,60 +177,72 @@ export class ReadQuoter {
           ? intermediatePoolKey.currency1
           : intermediatePoolKey.currency0;
 
-      const res = await this.contract.simulateWrite("quoteExactInput", {
-        params: {
-          exactAmount: amountIn,
-          exactCurrency: inputToken,
-          path: [
-            {
-              fee: intermediatePoolKey.fee,
-              tickSpacing: intermediatePoolKey.tickSpacing,
-              hooks: intermediatePoolKey.hooks,
-              hookData: intermediatePoolKey.hookData,
-              intermediateCurrency: zeroAddress,
-            },
-            {
-              fee: 0,
-              tickSpacing: 60,
-              hookData: "0x",
-              hooks: FLETHHooksAddress[this.chainId],
-              intermediateCurrency: FLETHAddress[this.chainId],
-            },
-            {
-              fee: 0,
-              tickSpacing: 60,
-              hooks: positionManagerAddress,
-              hookData: "0x",
-              intermediateCurrency: coinAddress,
-            },
-          ],
+      const res = await this.contract.simulateWrite(
+        "quoteExactInput",
+        {
+          params: {
+            exactAmount: amountIn,
+            exactCurrency: inputToken,
+            path: [
+              {
+                fee: intermediatePoolKey.fee,
+                tickSpacing: intermediatePoolKey.tickSpacing,
+                hooks: intermediatePoolKey.hooks,
+                hookData: intermediatePoolKey.hookData,
+                intermediateCurrency: zeroAddress,
+              },
+              {
+                fee: 0,
+                tickSpacing: 60,
+                hookData: "0x",
+                hooks: FLETHHooksAddress[this.chainId],
+                intermediateCurrency: FLETHAddress[this.chainId],
+              },
+              {
+                fee: 0,
+                tickSpacing: 60,
+                hooks: positionManagerAddress,
+                hookData: hookData ?? "0x",
+                intermediateCurrency: coinAddress,
+              },
+            ],
+          },
         },
-      });
+        {
+          from: userWallet,
+        }
+      );
 
       return res.amountOut;
     } else {
-      const res = await this.contract.simulateWrite("quoteExactInput", {
-        params: {
-          exactAmount: amountIn,
-          exactCurrency: zeroAddress,
-          path: [
-            {
-              fee: 0,
-              tickSpacing: 60,
-              hookData: "0x",
-              hooks: FLETHHooksAddress[this.chainId],
-              intermediateCurrency: FLETHAddress[this.chainId],
-            },
-            {
-              fee: 0,
-              tickSpacing: 60,
-              hooks: positionManagerAddress,
-              hookData: "0x",
-              intermediateCurrency: coinAddress,
-            },
-          ],
+      const res = await this.contract.simulateWrite(
+        "quoteExactInput",
+        {
+          params: {
+            exactAmount: amountIn,
+            exactCurrency: zeroAddress,
+            path: [
+              {
+                fee: 0,
+                tickSpacing: 60,
+                hookData: "0x",
+                hooks: FLETHHooksAddress[this.chainId],
+                intermediateCurrency: FLETHAddress[this.chainId],
+              },
+              {
+                fee: 0,
+                tickSpacing: 60,
+                hooks: positionManagerAddress,
+                hookData: hookData ?? "0x",
+                intermediateCurrency: coinAddress,
+              },
+            ],
+          },
         },
-      });
+        {
+          from: userWallet,
+        }
+      );
 
       return res.amountOut;
     }
@@ -236,6 +254,8 @@ export class ReadQuoter {
    * @param coinOut - The exact amount of tokens to receive
    * @param positionManagerAddress - The address of the position manager to use
    * @param intermediatePoolKey - Optional intermediate pool key to use containing inputToken and ETH as currencies
+   * @param hookData - Optional hook data to use for the fleth <> coin swap. Only used when TrustedSigner is currently enabled
+   * @param userWallet - Optional user wallet to use for the swap. Only used when TrustedSigner is currently enabled
    * @returns Promise<bigint> - The required amount of ETH or inputToken to spend
    */
   async getBuyQuoteExactOutput({
@@ -243,11 +263,15 @@ export class ReadQuoter {
     coinOut,
     positionManagerAddress,
     intermediatePoolKey,
+    hookData,
+    userWallet,
   }: {
     coinAddress: Address;
     coinOut: bigint;
     positionManagerAddress: Address;
     intermediatePoolKey?: PoolWithHookData;
+    hookData?: HexString;
+    userWallet?: Address;
   }) {
     if (intermediatePoolKey) {
       // verify that ETH exists in the intermediate pool key
@@ -265,60 +289,72 @@ export class ReadQuoter {
           ? intermediatePoolKey.currency1
           : intermediatePoolKey.currency0;
 
-      const res = await this.contract.simulateWrite("quoteExactOutput", {
-        params: {
-          path: [
-            {
-              intermediateCurrency: inputToken,
-              fee: intermediatePoolKey.fee,
-              tickSpacing: intermediatePoolKey.tickSpacing,
-              hookData: intermediatePoolKey.hookData,
-              hooks: intermediatePoolKey.hooks,
-            },
-            {
-              intermediateCurrency: zeroAddress,
-              fee: 0,
-              tickSpacing: 60,
-              hookData: "0x",
-              hooks: FLETHHooksAddress[this.chainId],
-            },
-            {
-              intermediateCurrency: FLETHAddress[this.chainId],
-              fee: 0,
-              tickSpacing: 60,
-              hooks: positionManagerAddress,
-              hookData: "0x",
-            },
-          ],
-          exactCurrency: coinAddress,
-          exactAmount: coinOut,
+      const res = await this.contract.simulateWrite(
+        "quoteExactOutput",
+        {
+          params: {
+            path: [
+              {
+                intermediateCurrency: inputToken,
+                fee: intermediatePoolKey.fee,
+                tickSpacing: intermediatePoolKey.tickSpacing,
+                hookData: intermediatePoolKey.hookData,
+                hooks: intermediatePoolKey.hooks,
+              },
+              {
+                intermediateCurrency: zeroAddress,
+                fee: 0,
+                tickSpacing: 60,
+                hookData: "0x",
+                hooks: FLETHHooksAddress[this.chainId],
+              },
+              {
+                intermediateCurrency: FLETHAddress[this.chainId],
+                fee: 0,
+                tickSpacing: 60,
+                hooks: positionManagerAddress,
+                hookData: hookData ?? "0x",
+              },
+            ],
+            exactCurrency: coinAddress,
+            exactAmount: coinOut,
+          },
         },
-      });
+        {
+          from: userWallet,
+        }
+      );
 
       return res.amountIn;
     } else {
-      const res = await this.contract.simulateWrite("quoteExactOutput", {
-        params: {
-          path: [
-            {
-              intermediateCurrency: zeroAddress,
-              fee: 0,
-              tickSpacing: 60,
-              hookData: "0x",
-              hooks: FLETHHooksAddress[this.chainId],
-            },
-            {
-              intermediateCurrency: FLETHAddress[this.chainId],
-              fee: 0,
-              tickSpacing: 60,
-              hooks: positionManagerAddress,
-              hookData: "0x",
-            },
-          ],
-          exactCurrency: coinAddress,
-          exactAmount: coinOut,
+      const res = await this.contract.simulateWrite(
+        "quoteExactOutput",
+        {
+          params: {
+            path: [
+              {
+                intermediateCurrency: zeroAddress,
+                fee: 0,
+                tickSpacing: 60,
+                hookData: "0x",
+                hooks: FLETHHooksAddress[this.chainId],
+              },
+              {
+                intermediateCurrency: FLETHAddress[this.chainId],
+                fee: 0,
+                tickSpacing: 60,
+                hooks: positionManagerAddress,
+                hookData: hookData ?? "0x",
+              },
+            ],
+            exactCurrency: coinAddress,
+            exactAmount: coinOut,
+          },
         },
-      });
+        {
+          from: userWallet,
+        }
+      );
 
       return res.amountIn;
     }
