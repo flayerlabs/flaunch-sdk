@@ -2,6 +2,11 @@ import { base, baseSepolia } from "viem/chains";
 import { Addresses, PoolKey } from "./types";
 import { zeroAddress } from "viem";
 
+export const FlaunchZapAddress: Addresses = {
+  [base.id]: "0xe52dE1801C10cF709cc8e62d43D783AFe984b510",
+  [baseSepolia.id]: "0xf0Fd8Bb98c050607d999D6fFF9C617edD6673b75",
+};
+
 // only old V1.0: doesn't use FeeEscrow
 export const FlaunchPositionManagerAddress: Addresses = {
   [base.id]: "0x51Bba15255406Cfe7099a42183302640ba7dAFDC",
@@ -21,6 +26,74 @@ export const FlaunchPositionManagerV1_2Address: Addresses = {
 export const AnyPositionManagerAddress: Addresses = {
   [base.id]: "0x8DC3b85e1dc1C846ebf3971179a751896842e5dC",
   [baseSepolia.id]: "0xB4A535B9D35851972736495CC52FBfDaCF32e5dc",
+};
+
+export const FlaunchAddress: Addresses = {
+  [base.id]: "0xCc7A4A00072ccbeEEbd999edc812C0ce498Fb63B",
+  [baseSepolia.id]: "0x7D375C9133721083DF7b7e5Cb0Ed8Fc78862dfe3",
+};
+
+// also supports AnyPositionManager
+export const FlaunchV1_1Address: Addresses = {
+  [base.id]: "0xb4512bf57d50fbcb64a3adf8b17a79b2a204c18c",
+  [baseSepolia.id]: "0x96be8ff5e244294a34bfa507a39190dc7a839baa",
+};
+
+export const FlaunchV1_2Address: Addresses = {
+  [base.id]: "0x516af52d0c629b5e378da4dc64ecb0744ce10109", // "1.3" from github releases
+  [baseSepolia.id]: "0xe2ef58a54ee79dac0D4A130ea58b340124DF9438",
+};
+
+export const AnyFlaunchAddress: Addresses = {
+  [base.id]: "0xc5B2E8F197407263F4B62a35C71bFc394ecF95D5",
+  [baseSepolia.id]: "0x67Ee6C83956a75f67bD3Fc8Ca4080D95a145c7C9",
+};
+
+export const FairLaunchAddress: Addresses = {
+  [base.id]: "0xCc7A4A00072ccbeEEbd999edc812C0ce498Fb63B",
+  [baseSepolia.id]: "0x227Fc288aC56E169f2BfEA82e07F8635054d4136",
+};
+
+// also supports AnyPositionManager & PositionManagerV1_2 (sepolia)
+export const FairLaunchV1_1Address: Addresses = {
+  [base.id]: "0x4dc442403e8c758425b93C59Dc737da522f32640",
+  [baseSepolia.id]: "0x7922c1ead7c5825fb52ed6b14f397d064508acbe",
+};
+
+export const BidWallAddress: Addresses = {
+  [base.id]: "0x66681f10BA90496241A25e33380004f30Dfd8aa8",
+  [baseSepolia.id]: "0xa2107050ACEf4809c88Ab744F8e667605db5ACDB",
+};
+
+// also supports AnyPositionManager & PositionManagerV1_2 (sepolia)
+export const BidWallV1_1Address: Addresses = {
+  [base.id]: "0x7f22353d1634223a802D1c1Ea5308Ddf5DD0ef9c",
+  [baseSepolia.id]: "0x6f2fa01a05ff8b6efbfefd91a3b85aaf19265a00",
+};
+
+export const AnyBidWallAddress: Addresses = {
+  [base.id]: "0x2154c604df568A5285284D1c4918DC98C39240df",
+  [baseSepolia.id]: "0xcfF222eA42E43F46A98755db237E4c9C2CA9B772",
+};
+
+export const TreasuryManagerFactoryAddress: Addresses = {
+  [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763",
+  [baseSepolia.id]: "0xD2F3C6185e06925dCBE794C6574315b2202E9CcD",
+};
+
+export const RevenueManagerAddress: Addresses = {
+  [base.id]: "0x712fa8ddc7347b4b6b029aa21710f365cd02d898",
+  [baseSepolia.id]: "0x17E02501dE3e420347e7C5fCAe3AD787C5aea690",
+};
+
+export const AddressFeeSplitManagerAddress: Addresses = {
+  [base.id]: "0x6baa4ec493a9698dc7388c0f290e29ea3d149f99",
+  [baseSepolia.id]: "0xf72dcdee692c188de6b14c6213e849982e04069b",
+};
+
+export const StakingManagerAddress: Addresses = {
+  [base.id]: "0xB5dD2Fbca9b746a56cF9e5e2ADaBf8BEF0BAdBEA",
+  [baseSepolia.id]: "0x8Ea4074c38cA7a596C740DD9E9D7122ea8E78c3c",
 };
 
 /** Verifiers */
@@ -88,83 +161,10 @@ export const FLETHHooksAddress: Addresses = {
   [baseSepolia.id]: "0x4bd2ca15286c96e4e731337de8b375da6841e888",
 };
 
-export const FairLaunchAddress: Addresses = {
-  [base.id]: "0xCc7A4A00072ccbeEEbd999edc812C0ce498Fb63B",
-  [baseSepolia.id]: "0x227Fc288aC56E169f2BfEA82e07F8635054d4136",
-};
-
-// also supports AnyPositionManager & PositionManagerV1_2 (sepolia)
-export const FairLaunchV1_1Address: Addresses = {
-  [base.id]: "0x4dc442403e8c758425b93C59Dc737da522f32640",
-  [baseSepolia.id]: "0x7922c1ead7c5825fb52ed6b14f397d064508acbe",
-};
-
-export const FlaunchAddress: Addresses = {
-  [base.id]: "0xCc7A4A00072ccbeEEbd999edc812C0ce498Fb63B",
-  [baseSepolia.id]: "0x7D375C9133721083DF7b7e5Cb0Ed8Fc78862dfe3",
-};
-
-// also supports AnyPositionManager
-export const FlaunchV1_1Address: Addresses = {
-  [base.id]: "0xb4512bf57d50fbcb64a3adf8b17a79b2a204c18c",
-  [baseSepolia.id]: "0x96be8ff5e244294a34bfa507a39190dc7a839baa",
-};
-
-export const FlaunchV1_2Address: Addresses = {
-  [base.id]: "0x516af52d0c629b5e378da4dc64ecb0744ce10109", // "1.3" from github releases
-  [baseSepolia.id]: "0xe2ef58a54ee79dac0D4A130ea58b340124DF9438",
-};
-
-export const AnyFlaunchAddress: Addresses = {
-  [base.id]: "0xc5B2E8F197407263F4B62a35C71bFc394ecF95D5",
-  [baseSepolia.id]: "0x67Ee6C83956a75f67bD3Fc8Ca4080D95a145c7C9",
-};
-
-export const BidWallAddress: Addresses = {
-  [base.id]: "0x66681f10BA90496241A25e33380004f30Dfd8aa8",
-  [baseSepolia.id]: "0xa2107050ACEf4809c88Ab744F8e667605db5ACDB",
-};
-
-// also supports AnyPositionManager & PositionManagerV1_2 (sepolia)
-export const BidWallV1_1Address: Addresses = {
-  [base.id]: "0x7f22353d1634223a802D1c1Ea5308Ddf5DD0ef9c",
-  [baseSepolia.id]: "0x6f2fa01a05ff8b6efbfefd91a3b85aaf19265a00",
-};
-
-export const AnyBidWallAddress: Addresses = {
-  [base.id]: "0x2154c604df568A5285284D1c4918DC98C39240df",
-  [baseSepolia.id]: "0xcfF222eA42E43F46A98755db237E4c9C2CA9B772",
-};
-
 // @deprecated: FlaunchZap used instead
 export const FastFlaunchZapAddress: Addresses = {
   [base.id]: "0x68d967d25806fef4aa134db031cdcc55d3e20f92",
   [baseSepolia.id]: "0x821d9f6075e7971cc71c379081de9d532f5f9957",
-};
-
-export const FlaunchZapAddress: Addresses = {
-  [base.id]: "0xe52dE1801C10cF709cc8e62d43D783AFe984b510",
-  [baseSepolia.id]: "0xf0Fd8Bb98c050607d999D6fFF9C617edD6673b75",
-};
-
-export const TreasuryManagerFactoryAddress: Addresses = {
-  [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763",
-  [baseSepolia.id]: "0xD2F3C6185e06925dCBE794C6574315b2202E9CcD",
-};
-
-export const RevenueManagerAddress: Addresses = {
-  [base.id]: "0x712fa8ddc7347b4b6b029aa21710f365cd02d898",
-  [baseSepolia.id]: "0x17E02501dE3e420347e7C5fCAe3AD787C5aea690",
-};
-
-export const AddressFeeSplitManagerAddress: Addresses = {
-  [base.id]: "0x6baa4ec493a9698dc7388c0f290e29ea3d149f99",
-  [baseSepolia.id]: "0xf72dcdee692c188de6b14c6213e849982e04069b",
-};
-
-export const StakingManagerAddress: Addresses = {
-  [base.id]: "0x0000000000000000000000000000000000000000", // TODO: update mainnet address
-  [baseSepolia.id]: "0x8Ea4074c38cA7a596C740DD9E9D7122ea8E78c3c",
 };
 
 export const PoolManagerAddress: Addresses = {
