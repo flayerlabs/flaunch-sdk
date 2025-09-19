@@ -8,7 +8,12 @@ import {
   type HexString,
   createDrift,
 } from "@delvtech/drift";
-import { createPublicClient, encodeAbiParameters, http } from "viem";
+import {
+  createPublicClient,
+  encodeAbiParameters,
+  http,
+  parseEventLogs,
+} from "viem";
 import { TreasuryManagerFactoryAbi } from "../abi/TreasuryManagerFactory";
 import { chainIdToChain } from "helpers/chainIdToChain";
 
@@ -39,17 +44,17 @@ export class ReadTreasuryManagerFactory {
     // Wait for transaction receipt
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-    // Get the logs from the receipt and find the ManagerDeployed event
-    const events = await publicClient.getContractEvents({
-      address: this.contract.address,
+    // Parse the ManagerDeployed event from receipt logs
+    const parsedLogs = parseEventLogs({
       abi: TreasuryManagerFactoryAbi,
       eventName: "ManagerDeployed",
-      fromBlock: receipt.blockNumber,
-      toBlock: receipt.blockNumber,
+      logs: receipt.logs,
     });
 
     // Find the event from our transaction
-    const event = events.find((e) => e.transactionHash === hash);
+    const event = parsedLogs.find(
+      (log) => log.address.toLowerCase() === this.contract.address.toLowerCase()
+    );
     if (!event) {
       throw new Error("ManagerDeployed event not found in transaction logs");
     }
