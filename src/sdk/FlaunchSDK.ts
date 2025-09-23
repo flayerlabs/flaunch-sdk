@@ -788,7 +788,7 @@ export class ReadFlaunchSDK {
    * Calculates the coin price in USD based on the current ETH/USDC price
    * @param coinAddress - The address of the coin
    * @param version - Optional specific version to use. If not provided, will be determined automatically
-   * @returns Promise<string> - The price of the coin in USD with 2 decimal precision
+   * @returns Promise<string> - The price of the coin in USD with 18 decimal precision
    */
   async coinPriceInUSD({
     coinAddress,
@@ -803,7 +803,7 @@ export class ReadFlaunchSDK {
 
     const ethPerCoin = await this.coinPriceInETH(coinAddress, coinVersion);
     const ethPrice = await this.getETHUSDCPrice(drift);
-    return (parseFloat(ethPerCoin) * ethPrice).toFixed(2);
+    return (parseFloat(ethPerCoin) * ethPrice).toFixed(18);
   }
 
   async coinMarketCapInUSD({
