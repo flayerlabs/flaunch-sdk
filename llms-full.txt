@@ -23,13 +23,21 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
-  - [Read Operations](#read-operations-with-viem)
-  - [Write Operations](#write-operations-with-viem--wagmi)
-  - [Selling with Permit2](#selling-with-permit2)
+  - [Read Operations (with Viem)](#read-operations-with-viem)
+  - [Write Operations (with Viem + Wagmi)](#write-operations-with-viem--wagmi)
   - [Flaunching a Memecoin](#flaunching-a-memecoin)
-    - [How to generate Base64Image from file upload](#how-to-generate-base64image-from-user-uploaded-file)
+    - [How to generate `base64Image` from User uploaded file](#how-to-generate-base64image-from-user-uploaded-file)
   - [Flaunch with Address Fee Splits](#flaunch-with-address-fee-splits)
+  - [Buying a Flaunch coin](#buying-a-flaunch-coin)
+  - [Selling with Permit2](#selling-with-permit2)
+  - [Swap using USDC or other tokens by passing `intermediatePoolKey`](#swap-using-usdc-or-other-tokens-by-passing-intermediatepoolkey)
   - [Advanced Integration: Revenue Sharing with RevenueManager](#advanced-integration-revenue-sharing-with-revenuemanager)
+  - [Bot Protection during Fair Launch via TrustedSigner](#bot-protection-during-fair-launch-via-trustedsigner)
+  - [Groups](#groups)
+  - [Importing External Coins into Flaunch](#importing-external-coins-into-flaunch)
+  - [Adding Liquidity to Imported (or flaunch) coins](#adding-liquidity-to-imported-or-flaunch-coins)
+  - [Import AND Add Liquidity calls in a single batch](#import-and-add-liquidity-calls-in-a-single-batch)
+  - [`createFlaunchCalldata`: alternative to `createFlaunch`](#createflaunchcalldata-alternative-to-createflaunch-that-returns-the-tx-call-object-with-to-data-and-value-instead-of-directly-broadcasting-the-tx-from-walletclient)
   - [All SDK functions](#all-sdk-functions)
   - [React Hooks](#react-hooks)
 - [Flaunch Docs](#flaunch-reference)
@@ -125,8 +133,106 @@ const flaunchWrite = useMemo(() => {
     walletClient,
   }) as ReadWriteFlaunchSDK;
 }, [publicClient, walletClient]);
+```
 
-// Execute a buy transaction
+### Flaunching a Memecoin
+
+Flaunch your own memecoin with default parameters:
+
+_**Flaunches below $10k market caps don't incur any protocol fees!**_
+
+```ts
+const hash = await flaunchWrite.flaunchIPFS({
+  name: "Test",
+  symbol: "TEST",
+  fairLaunchPercent: 60, // 60%
+  fairLaunchDuration: 30 * 60, // 30 mins
+  initialMarketCapUSD: 10_000, // $10k
+  creator: address,
+  creatorFeeAllocationPercent: 80, // 80% to creator, 20% to community
+  metadata: {
+    base64Image: imageData, // refer to the code below, on how to generate this base64Image
+    description: "Your memecoin description",
+    // optional:
+    websiteUrl: "https://example.com/",
+    discordUrl: "https://discord.gg/example",
+    twitterUrl: "https://x.com/example",
+    telegramUrl: "https://t.me/example",
+  },
+});
+```
+
+#### How to generate `base64Image` from User uploaded file
+
+```tsx
+// handle image file input and convert into base64
+const handleImageChange = useCallback(
+  (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+
+      // read the file as base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+
+        // this can be passed to the flaunch function call
+        handleFlaunch({ imageData: base64String });
+
+        // use `storedImagePreview` to display the uploaded image with <image src={storedImagePreview} />
+        setStoredImagePreview(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  },
+  [setStoredImagePreview]
+);
+
+// File upload input
+<input
+  type="file"
+  accept="image/*"
+  onchange="handleImageChange(event)"
+  id="image-upload"
+/>;
+```
+
+### Flaunch with Address Fee Splits
+
+You can flaunch a coin and share the revenue with the creator and an array of recipients, each with a different percentage share.\
+Example below of a creator splitting 50% of their revenue with 2 addresses, with 30% and 70% share respectively:
+
+```ts
+await flaunchWrite.flaunchIPFSWithSplitManager({
+  name: "...",
+  symbol: "...",
+  metadata: {
+    base64Image: "...",
+  },
+  fairLaunchPercent: 40,
+  fairLaunchDuration: 30 * 60, // 30 mins
+  initialMarketCapUSD: 1_000,
+  creator: "0x...",
+  creatorFeeAllocationPercent: 100,
+  // **Note:** Split related params
+  creatorSplitPercent: 50,
+  splitReceivers: [
+    {
+      address: "0x123...",
+      percent: 30,
+    },
+    {
+      address: "0xabc...",
+      percent: 70,
+    },
+  ],
+});
+```
+
+### Buying a Flaunch coin
+
+```ts
+// Execute the buy transaction
 const buyTokens = async () => {
   const hash = await flaunchWrite.buyCoin({
     coinAddress,
@@ -185,107 +291,124 @@ if (allowance < parseEther(coinAmount)) {
 }
 ```
 
-### Flaunching a Memecoin
+### Swap using USDC or other tokens by passing `intermediatePoolKey`
 
-Flaunch your own memecoin with default parameters:
+An `intermediatePoolKey` can be specified for the swap, where one currency of the poolKey is required to be `ETH` and the other currency can be `USDC` or some other token for which you want to swap from or into.
+With the addition of this intermediate pool key, the swap gets routed as: `USDC -> ETH -> flETH -> Coin`
 
-_**Flaunches below $10k market caps don't incur any protocol fees!**_
+1. Buy Coin with USDC
 
 ```ts
-const hash = await flaunchWrite.flaunchIPFS({
-  name: "Test",
-  symbol: "TEST",
-  fairLaunchPercent: 60, // 60%
-  fairLaunchDuration: 30 * 60, // 30 mins
-  initialMarketCapUSD: 10_000, // $10k
-  creator: address,
-  creatorFeeAllocationPercent: 80, // 80% to creator, 20% to community
-  metadata: {
-    base64Image: imageData, // refer to the code below, on how to generate this base64Image
-    description: "Your memecoin description",
-    // optional:
-    websiteUrl: "https://example.com/",
-    discordUrl: "https://discord.gg/example",
-    twitterUrl: "https://x.com/example",
-    telegramUrl: "https://t.me/example",
+import { useSignTypedData } from "wagmi";
+const {
+  signTypedData,
+  status: sigStatus,
+  error: sigError,
+  data: signature,
+} = useSignTypedData();
+
+// flaunch coins by default have infinite approval for Permit2
+// this is required for external tokens like USDC
+const usdcAllowanceToPermit2 = await flaunchWrite.getERC20AllowanceToPermit2(
+  usdcAddress
+);
+if (usdcAllowanceToPermit2 < amount) {
+  // 1. max approve tx for Permit2 address to spend USDC
+  await flaunchWrite.setERC20AllowanceToPermit2(usdcAddress, maxUint256);
+}
+
+const { allowance: usdcPermit2Allowance } =
+  await flaunchWrite.getPermit2AllowanceAndNonce(usdcAddress);
+if (usdcPermit2Allowance < amount) {
+  // 2. sign permit2 signature to spend USDC for swap
+  const { typedData, permitSingle } = await flaunchWrite.getPermit2TypedData(
+    usdcAddress
+  );
+  signTypedData(typedData);
+}
+
+// 3. Buy flaunch coin with USDC
+await flaunchWrite.buyCoin({
+  coinAddress: coin,
+  slippagePercent: 5,
+  swapType: "EXACT_IN",
+  amountIn: amount, // USDC amount
+  // poolKey to route USDC to ETH swap
+  intermediatePoolKey: {
+    currency0: zeroAddress,
+    currency1: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC
+    fee: 500,
+    tickSpacing: 10,
+    hooks: zeroAddress,
+    hookData: "0x",
   },
-  pinataConfig: {
-    // Use one-time JWT for client-side uploads
-    // Refer: https://www.pinata.cloud/blog/how-to-upload-to-ipfs-from-the-frontend-with-signed-jwts/
-    jwt: pinataJWT,
-  },
+  permitSingle,
+  signature,
+  referrer: referrer,
 });
 ```
 
-#### How to generate `base64Image` from User uploaded file
+2. Sell coin for USDC
 
-```tsx
-// handle image file input and convert into base64
-const handleImageChange = useCallback(
-  (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+```ts
+import { useSignTypedData } from "wagmi";
+import { parseEther, Hex } from "viem";
 
-      // read the file as base64
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
+const {
+  signTypedData,
+  status: sigStatus,
+  error: sigError,
+  data: signature,
+} = useSignTypedData();
 
-        // this can be passed to the flaunch function call
-        handleFlaunch({ imageData: base64String });
-
-        // use `storedImagePreview` to display the uploaded image with <image src={storedImagePreview} />
-        setStoredImagePreview(base64String);
-      };
-      reader.readAsDataURL(file);
-    }
-  },
-  [setStoredImagePreview]
+// Check allowance and permit if needed
+const { allowance } = await flaunchWrite.getPermit2AllowanceAndNonce(
+  coinAddress
 );
 
-// File upload input
-<input
-  type="file"
-  accept="image/*"
-  onchange="handleImageChange(event)"
-  id="image-upload"
-/>;
+if (allowance < parseEther(coinAmount)) {
+  const { typedData, permitSingle } = await flaunchWrite.getPermit2TypedData(
+    coinAddress
+  );
+  signTypedData(typedData);
+
+  // then call this when signature is not undefined
+  const hash = await flaunchWrite.sellCoin({
+    coinAddress,
+    amountIn: parseEther(coinAmount),
+    slippagePercent: 5,
+    permitSingle,
+    signature,
+    // poolKey to route ETH to USDC swap
+    intermediatePoolKey: {
+      currency0: zeroAddress,
+      currency1: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC
+      fee: 500,
+      tickSpacing: 10,
+      hooks: zeroAddress,
+      hookData: "0x",
+    },
+  });
+} else {
+  // if already approved
+  const hash = await flaunchWrite.sellCoin({
+    coinAddress,
+    amountIn: parseEther(coinAmount),
+    slippagePercent: 5,
+    // poolKey to route ETH to USDC swap
+    intermediatePoolKey: {
+      currency0: zeroAddress,
+      currency1: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC
+      fee: 500,
+      tickSpacing: 10,
+      hooks: zeroAddress,
+      hookData: "0x",
+    },
+  });
+}
 ```
 
-### Flaunch with Address Fee Splits
-
-You can flaunch a coin and share the revenue with the creator and an array of recipients, each with a different percentage share.\
-Example below of a creator splitting 50% of their revenue with 2 addresses, with 30% and 70% share respectively:
-
-```ts
-await flaunchWrite.flaunchIPFSWithSplitManager({
-  name: "...",
-  symbol: "...",
-  metadata: {
-    base64Image: "...",
-  },
-  pinataConfig: {
-    jwt: "...",
-  },
-  fairLaunchPercent: 40,
-  fairLaunchDuration: 30 * 60, // 30 mins
-  initialMarketCapUSD: 1_000,
-  creator: "0x...",
-  creatorFeeAllocationPercent: 100,
-  // **Note:** Split related params
-  creatorSplitPercent: 50,
-  splitReceivers: [
-    {
-      address: "0x123...",
-      percent: 30,
-    },
-    {
-      address: "0xabc...",
-      percent: 70,
-    },
-  ],
-});
-```
+3. The quote functions `getSellQuoteExactInput`, `getBuyQuoteExactInput` and `getBuyQuoteExactOutput` also support passing optional `intermediatePoolKey`.
 
 ### Advanced Integration: Revenue Sharing with RevenueManager
 
@@ -310,9 +433,6 @@ await flaunchWrite.flaunchIPFSWithRevenueManager({
   symbol: "...",
   metadata: {
     base64Image: "...",
-  },
-  pinataConfig: {
-    jwt: "...",
   },
   fairLaunchPercent: 40,
   fairLaunchDuration: 30 * 60, // 30 mins
@@ -360,6 +480,444 @@ await flaunchWrite.revenueManagerCreatorClaimForTokens({
 ```
 
 Refer to the [RevenueManager Docs](https://docs.flaunch.gg/manager-types/revenuemanager) for detailed implementation guides and function references.
+
+### Bot Protection during Fair Launch via TrustedSigner
+
+1. The `flaunch` call can be modified to enable TrustedSigner. For coins where it's enabled in their fair launch period, the buy transactions revert if they don't include the hookData with the signature (unique to the coin & sender address).
+   It's upto your UI integration to use some captcha service or other sort of gating to allow the signature to be generated only for the selected users that are trying to buy the coin during it's fair launch.
+
+You can also limit the amount of coins that can be bought in a single swap tx, or even set per wallet caps.
+
+**Note:** If your have provided your custom `trustedFeeSigner`, then the signatures are expected to be signed by your address. The Flaunch UI won't be able to execute the swaps during fair launch in that case, as our UI won't have access to your keys.
+But you may leave the `trustedFeeSigner` param `undefined`, then the swaps can go through our UI. But you won't be able to generate valid signatures on end, as you won't access to our signer address.
+
+1.1. Without Premine
+
+```ts
+const hash = await flaunchWrite.flaunchIPFS({
+  name: "Test",
+  ...
+  trustedSignerSettings: {
+    enabled: true,
+    trustedFeeSigner: "0x..",
+    walletCap: parseEther("1000000"), // optional
+    txCap: parseEther("10000"),       // optional
+  }
+});
+```
+
+1.2. With Premine
+Refer to '2.' below to understand how to generate the deadline and signature, that needs to be passed here.
+
+```ts
+const hash = await flaunchWrite.flaunchIPFS({
+  name: "Test",
+  ...
+  premineAmount: 123..,
+  trustedSignerSettings: {
+    enabled: true,
+    trustedFeeSigner: "0x...",
+    walletCap: parseEther("1000000"), // optional
+    txCap: parseEther("10000"),       // optional
+    premineSignedMessage: {
+    	deadline: 1234..,
+    	signature: "0xabc...",
+    }
+  }
+});
+```
+
+2. Backend SDK to sign & generate hookData
+   As the signing happens via your secure privateKey, we have a separate `FlaunchBackend` exported from our SDK package that's intended to be run on your nodejs backend or API. The API can verify if the request is legit (post captcha verification), and then return the signed hookData to be used for the `buyCoin` transaction.
+
+```ts
+import { FlaunchBackend } from "@flaunch/sdk";
+
+const flaunchBackend = new FlaunchBackend(privateKeyHex, chain.id);
+
+const { hookData, deadline, signature } =
+  await flaunchBackend.generateHookDataWithSignature({
+    userWallet,
+    coinAddress,
+    referrer: referrer || undefined, // Optional parameter
+    deadlineFromNowInSeconds: 10 * 60, // 10 minutes in seconds
+  });
+
+// hookData would be passed to buyQuote and buyCoin functions
+// signature and deadline useful for passing to the flaunch call with premine, via `trustedSignerSettings.premineSignedMessage` parameter
+```
+
+3. Check TrustedSigner status for a coin
+
+```ts
+const {
+  isCurrentlyEnabled,
+  trustedSignerEnabled,
+  signer,
+  fairLaunchStartsAt,
+  fairLaunchEndsAt,
+  isFairLaunchActive,
+} = await flaunchRead.trustedPoolKeySignerStatus(coinAddress);
+
+// if `isCurrentlyEnabled` is true, then we need to sign & pass in the hookData for the swaps with the given `signer` address
+```
+
+4. Buy quotes with TrustedSigner
+
+```ts
+const quote = await flaunchRead.getBuyQuoteExactInput({
+  coinAddress: coin,
+  amountIn: amount,
+  // when trusted signer is currently enabled:
+  hookData, // from the backend SDK
+  userWallet: address,
+});
+```
+
+5. Buy coin transaction with TrustedSigner
+
+```ts
+await flaunchWrite.buyCoin({
+  coinAddress: coin,
+  slippagePercent: 5,
+  swapType: "EXACT_IN",
+  referrer: referrer,
+  // when trusted signer is currently enabled:
+  hookData, // from the backend SDK
+});
+```
+
+### Groups
+
+The technical side of Groups is handled by the StakingManager. It allows the creator to deposit their flaunch memestream into the manager, and then a defined ERC20 token can be staked by the user to earn their share of the ETH rewards from the memestream.
+
+1. Deploy your instance of the staking manager
+
+```ts
+import { Permissions } from "@flaunch/sdk";
+
+const stakingManagerInstance = await flaunchWrite.deployStakingManager({
+  managerOwner: ...,
+  stakingToken: ..., // The ERC20 token to stake
+  minEscrowDuration: ..., // The minimum duration (in seconds) that the creator's memestream NFT would be locked for
+  minStakeDuration: ..., // The minimum duration (in seconds) that the user's tokens would be locked for
+  creatorSharePercent: ..., // The % share that a creator will earn from their token
+  ownerSharePercent: ..., // The % share that the manager owner will earn from their token
+  // The Permissions can be OPEN, CLOSED, or WHITELISTED
+  // OPEN = anyone can stake
+  // CLOSED = no one except the managerOwner can stake
+  // WHITELISTED = only whitelisted addresses can stake
+  permissions: Permissions.OPEN,
+});
+```
+
+2. Setting permissions after a Group is deployed (can only be called by the manager owner)
+
+```ts
+await flaunchWrite.treasuryManagerSetPermissions(
+	treasuryManagerAddress: stakingManagerInstance,
+	permissions: Permissions.CLOSED
+);
+```
+
+3. Flaunch a new coin into your Group
+   3.1. Flaunching into your staking manager instance
+
+```ts
+const hash = await flaunchWrite.flaunchIPFS({
+  name: "Test",
+  ...
+  treasuryManagerParams: {
+  	manager: stakingManagerInstance
+  }
+});
+```
+
+3.2. Deploying a new staking manager instance, and flaunching a new coin into it in a single transaction
+
+```ts
+import { StakingManagerAddress } from "@flaunch/sdk";
+
+const hash = await flaunchWrite.flaunchIPFS({
+  name: "Test",
+  ...
+  treasuryManagerParams: {
+  	manager: StakingManagerAddress[chain.id],
+    permissions: Permissions.CLOSED
+  }
+});
+```
+
+Note: the `treasuryManagerParams.permissions` value is ignored if the `treasuryManagerParams.manager` is your manager instance instead.
+
+4. Add an already flaunched coin to a group
+
+```ts
+import { FlaunchVersion } from "@flaunch/sdk";
+
+// first approve then deposit
+const tokenId = 123;
+const isApproved = await flaunchRead.isFlaunchTokenApprovedForAll(
+  FlaunchVersion.V1_1_1,
+  owner,
+  treasuryManagerAddress
+);
+
+if (!isApproved) {
+  await flaunchWrite.setFlaunchTokenApprovalForAll(
+    FlaunchVersion.V1_1_1,
+    treasuryManagerAddress,
+    true
+  );
+}
+
+await flaunchWrite.addToTreasuryManager(
+  treasuryManagerAddress,
+  FlaunchVersion.V1_1_1,
+  tokenId
+);
+```
+
+### Importing External Coins into Flaunch
+
+You can import external ERC20 coins launched on other platforms like Zora, Virtuals, etc. into Flaunch to utilize the power of our Uniswap V4 hooks!
+
+1.1. Import with coin's current price
+
+```ts
+await flaunchWrite.importMemecoin({
+  coinAddress: "0x...", // ERC20 token contract address
+  creatorFeeAllocationPercent: 100, // Fee allocation to creator (0-100%)
+  initialPriceUSD: 1, // Starting price in USD
+});
+```
+
+1.2. Import with coin's current market cap. For memecoins, market caps are more human readable so you can pass it as follows
+
+```ts
+await flaunchWrite.importMemecoin({
+  coinAddress: "0x...", // ERC20 token contract address
+  creatorFeeAllocationPercent: 100, // Fee allocation to creator (0-100%)
+  initialMarketCapUSD: 10_000, // Starting market cap in USD
+});
+```
+
+**Note:** The Flaunch Version for imported coins is: `FlaunchVersion.ANY` where `import {FlaunchVersion} from "@flaunch/sdk"`
+
+**⚠️ Note:** The term "MarketCap" used throughout simply means `current coin price * ERC20.totalSupply()`. Some coins might show it as FDV, make sure to verify so that the Pool is initialized at the right price, and the liquidity gets provided at the expected range.
+
+1.3. Verify if a memecoin is imported into Flaunch
+
+```ts
+const isImported = await flaunchRead.isMemecoinImported(coinAddress);
+```
+
+### Adding Liquidity to Imported (or flaunch) coins
+
+When an external coin is imported into Flaunch's Uniswap V4 hooks, it has no liquidity in the pool. We can add liquidity by using the functions below.
+
+Note: for existing flaunch coins you can pass `version` param as `FlaunchVersion.V1_2`, if left blank then the SDK can determine it automatically, defaulting to `FlaunchVersion.ANY` for external coins
+
+1. Read call to calculate the Coin & ETH amounts required for providing liquidity, based on the liquidity range specified. The return values are useful for displaying on the UI, before sending the liquidity transaction.
+
+1.1. Full Range liquidity
+
+```ts
+const result = await flaunchRead.calculateAddLiquidityAmounts({
+  coinAddress: "0x...", // Token contract address
+  // version = FlaunchVersion.ANY for imported coins as they use our {AnyPositionManager}
+  version: FlaunchVersion.ANY, // optional (auto determines Flaunch version if not provided, else defaults to ANY if not found)
+  liquidityMode: LiquidityMode.FULL_RANGE,
+  coinOrEthInputAmount: parseEther("1"), // Input amount in wei
+  inputToken: "coin", // "coin" or "eth" - which token amount is specified
+  minMarketCap: "0", // not needed for FULL_RANGE
+  maxMarketCap: "0", // not needed for FULL_RANGE
+});
+// Returns: { coinAmount, ethAmount, tickLower, tickUpper, currentTick }
+```
+
+1.2. Concentrated Range liquidity
+1.2.1. With Market Cap inputs
+
+```ts
+const result = await flaunchRead.calculateAddLiquidityAmounts({
+  coinAddress: "0x...", // Token contract address
+  version: FlaunchVersion.ANY,
+  liquidityMode: LiquidityMode.CONCENTRATED,
+  coinOrEthInputAmount: parseEther("1"), // Input amount in wei
+  inputToken: "coin", // "coin" or "eth" - which token amount is specified
+  minMarketCap: "1000000", // $1M
+  maxMarketCap: "5000000", // $5M
+});
+// Returns: { coinAmount, ethAmount, tickLower, tickUpper, currentTick }
+```
+
+1.2.2. With Coin Price inputs
+
+```ts
+const result = await flaunchRead.calculateAddLiquidityAmounts({
+  coinAddress: "0x...", // Token contract address
+  version: FlaunchVersion.ANY,
+  liquidityMode: LiquidityMode.CONCENTRATED,
+  coinOrEthInputAmount: parseEther("1"), // Input amount in wei
+  inputToken: "coin", // "coin" or "eth" - which token amount is specified
+  minPriceUSD: "1",
+  maxPriceUSD: "5",
+});
+// Returns: { coinAmount, ethAmount, tickLower, tickUpper, currentTick }
+```
+
+1.2.3. `checkSingleSidedAddLiquidity`: helper check function to detect which token input to hide during single-sided concentrated liquidity addition.
+
+Based on the specified concentrated range, we can determine which token (memecoin or ETH) to hide on the UI, as the liquidity would be single-sided
+
+```ts
+const { isSingleSided, shouldHideCoinInput, shouldHideETHInput } = await flaunchRead.checkSingleSidedAddLiquidity({
+  coinAddress,
+  liquidityMode: LiquidityMode.CONCENTRATED,
+  // Option 1: can pass market caps
+  minMarketCap: "1000000", // $1M
+  maxMarketCap: "5000000", // $5M
+  currentMarketCap: "1000000" // (optional) can be queried from the pool if not specified
+  // OR Option 2: or can pass price
+  minPriceUSD: "1",
+  maxPriceUSD: "5",
+  currentPriceUSD: 0.001, // (optional) can be queried from the pool if not specified
+});
+```
+
+2. Add Liquidity Transactions
+   Adding liquidity is a multi-step process, but we have abstracted away all the complexities. With wallets supporting ERCs 5792 & 7702, users would only get one wallet popup to confirm the transactions. See code snippet below at 2.3. for the same
+
+2.1. With Market Cap inputs
+
+```ts
+const addLiqCalls = await flaunchWrite.getAddLiquidityCalls({
+  coinAddress: "0x...", // Same parameters as calculateAddLiquidityAmounts
+  version: FlaunchVersion.ANY, // optional
+  liquidityMode: LiquidityMode.CONCENTRATED,
+  coinOrEthInputAmount: parseEther("1"),
+  inputToken: "coin",
+  minMarketCap: "1000000", // $1M
+  maxMarketCap: "5000000", // $5M
+});
+// Returns: CallWithDescription[] - Array of transaction calls with descriptions
+```
+
+2.2. With Coin Price inputs
+
+```ts
+const addLiqCalls = await flaunchWrite.getAddLiquidityCalls({
+  coinAddress: "0x...", // Same parameters as calculateAddLiquidityAmounts
+  version: FlaunchVersion.ANY, // optional
+  liquidityMode: LiquidityMode.CONCENTRATED,
+  coinOrEthInputAmount: parseEther("1"),
+  inputToken: "coin",
+  minPriceUSD: "1",
+  maxPriceUSD: "5",
+});
+```
+
+2.3. Sending the transactions as a single batch to the Wallet via ERC-5792 and wagmi
+
+**Note:** if the user's connected wallet doesn't support ERC-5792 (can be checked via `useCapabilities`), then you can simply loop through the `addLiqCalls` array and use `useSendTransaction` to send the transactions individually. The calls have a description to show on the UI if they'd be sent sequentially.
+
+```ts
+import { useSendCalls } from "wagmi";
+
+const { sendCalls } = useSendCalls();
+
+const calls = addLiqCalls.map((call) => ({
+  to: call.to as `0x${string}`,
+  value: call.value,
+  data: call.data as `0x${string}`,
+}));
+
+await sendCalls({ calls });
+```
+
+### Import AND Add Liquidity calls in a single batch
+
+1. This allows an external coin to be live on flaunch, and be tradeable instantly with the liquidity being provided in the same transaction batch.
+
+💡 Tip: To mimic the traditional flaunch liquidity curve, the coin creator can provide liquidity from current market cap to a higher market cap. This makes the liquidity addition to be single-sided, entirely being in their coin with no ETH required. As people buy into the pool and the price goes up, the liquidity position accumulates ETH while selling the coins from the position.
+
+Note: As a flaunch liquidity provider, you won't accumulate the trading fees. The fees are only accumulated to the Creator or split based on the TreasuryManager used.
+
+1.1. With Market Cap inputs
+
+```ts
+const importAndAddLiqCalls = await flaunchWrite.getImportAndAddLiquidityCalls({
+  coinAddress: "0x...", // ERC20 token contract address
+  creatorFeeAllocationPercent: 100, // Fee allocation to creator (0-100%)
+  initialMarketCapUSD: 10_000, // Starting market cap in USD
+  liquidityMode: LiquidityMode.CONCENTRATED,
+  coinOrEthInputAmount: parseEther("1"), // Input amount in wei
+  inputToken: "coin", // "coin" or "eth" - which token amount is specified
+  minMarketCap: "1000000", // $1M
+  maxMarketCap: "5000000", // $5M
+});
+// Returns: CallWithDescription[] - Array of transaction calls with descriptions
+
+// === send these calls to user's wallet as a batch ===
+import { useSendCalls } from "wagmi";
+
+const { sendCalls } = useSendCalls();
+
+const calls = importAndAddLiqCalls.map((call) => ({
+  to: call.to as `0x${string}`,
+  value: call.value,
+  data: call.data as `0x${string}`,
+}));
+
+await sendCalls({ calls });
+```
+
+1.2. With Coin Price inputs
+
+```ts
+const importAndAddLiqCalls = await flaunchWrite.getImportAndAddLiquidityCalls({
+  coinAddress: "0x...", // ERC20 token contract address
+  creatorFeeAllocationPercent: 100, // Fee allocation to creator (0-100%)
+  initialPriceUSD: 1, // Starting price in USD
+  liquidityMode: LiquidityMode.CONCENTRATED,
+  coinOrEthInputAmount: parseEther("1"), // Input amount in wei
+  inputToken: "coin", // "coin" or "eth" - which token amount is specified
+  minPriceUSD: "1",
+  maxPriceUSD: "5",
+});
+```
+
+### `createFlaunchCalldata`: alternative to `createFlaunch` that returns the tx call object with to, data, and value instead of directly broadcasting the tx from walletClient
+
+To support custom signers that might not be compatible with our `walletClient` approach, or to enable account abstraction and batching on your wallet signer's end we have `createFlaunchCalldata` that returns the tx object, leaving the tx broadcasting to be flexible & handled on your end.
+
+All the write calls must go via `parseCall` as shown below, read calls are made normally as before
+
+```ts
+import { createFlaunchCalldata, parseCall } from "@flaunch/sdk";
+
+// 1. Can create read-only SDK (similar to createFlaunch without walletClient)
+const flaunchRead = createFlaunchCalldata({
+  publicClient,
+});
+
+// 2. Create read-write SDK for call generation
+const flaunchCalldata = createFlaunchCalldata({
+  publicClient,
+  walletAddress,
+});
+
+const call = await parseCall(() =>
+  flaunchCalldata.setERC20AllowanceToPermit2(usdcAddress, maxUint256)
+);
+
+console.log("Call:", {
+  to: call.to,
+  value: call.value.toString(),
+  data: call.data,
+});
+```
 
 ### All SDK functions
 
@@ -415,7 +973,106 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.8.2 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.0-beta.3 / Exports / FlaunchBackend
+
+# Class: FlaunchBackend
+
+Backend class for interacting with Flaunch protocol for generating hookData with signature for swaps.
+Doesn't require any publicClient or walletClient to be initialized.
+
+## Table of contents
+
+### Constructors
+
+- constructor
+
+### Properties
+
+- chainId
+- signerPrivateKey
+
+### Methods
+
+- generateHookDataWithSignature
+- getPositionManagerAddress
+
+## Constructors
+
+### constructor
+
+• **new FlaunchBackend**(`signerPrivateKey`, `chainId`): `FlaunchBackend`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `signerPrivateKey` | \`0x$\{string}\` |
+| `chainId` | `number` |
+
+Returns
+
+`FlaunchBackend`
+
+## Properties
+
+### chainId
+
+• `Readonly` **chainId**: `number`
+
+___
+
+### signerPrivateKey
+
+• **signerPrivateKey**: \`0x$\{string}\`
+
+## Methods
+
+### generateHookDataWithSignature
+
+▸ **generateHookDataWithSignature**(`«destructured»`): `Promise`\<\{ `deadline`: `number` ; `hookData`: \`0x$\{string}\` ; `signature`: \`0x$\{string}\`  }\>
+
+Generates the hookData for swaps when TrustedSigner is enabled for a coin during fair launch
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `deadlineFromNowInSeconds` | `number` |
+| › `referrer?` | \`0x$\{string}\` |
+| › `userWallet` | \`0x$\{string}\` |
+| › `version?` | `FlaunchVersion` |
+
+Returns
+
+`Promise`\<\{ `deadline`: `number` ; `hookData`: \`0x$\{string}\` ; `signature`: \`0x$\{string}\`  }\>
+
+The hookData, deadline and signature
+
+___
+
+### getPositionManagerAddress
+
+▸ **getPositionManagerAddress**(`version?`): \`0x$\{string}\`
+
+Gets the position manager address for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version?` | `FlaunchVersion` | The version to get the position manager address for, defaults to the latest version if undefined |
+
+Returns
+
+\`0x$\{string}\`
+
+
+
+---
+
+@flaunch/sdk - v0.9.0-beta.3 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -447,11 +1104,13 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readFeeEscrow
 - readFlaunch
 - readFlaunchV1\_1
+- readFlaunchV1\_2
 - readFlaunchZap
 - readPermit2
 - readPoolManager
 - readPositionManager
 - readPositionManagerV1\_1
+- readPositionManagerV1\_2
 - readQuoter
 - readReferralEscrow
 - readStateView
@@ -461,9 +1120,14 @@ Base class for interacting with Flaunch protocol in read-only mode
 ### Methods
 
 - bidWallPosition
+- calculateAddLiquidityAmounts
+- calculateAddLiquidityTicks
+- calculateCurrentTickFromMarketCap
+- checkSingleSidedAddLiquidity
 - coinMarketCapInUSD
 - coinPriceInETH
 - coinPriceInUSD
+- convertPriceToTick
 - creatorRevenue
 - currentTick
 - ethRequiredToFlaunch
@@ -476,6 +1140,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getBidWallAddress
 - getBuyQuoteExactInput
 - getBuyQuoteExactOutput
+- getCoinInfo
 - getCoinMetadata
 - getCoinMetadataFromTokenId
 - getCoinMetadataFromTokenIds
@@ -485,6 +1150,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getFairLaunchAddress
 - getFlaunchAddress
 - getFlaunchingFee
+- getMarketContext
 - getPositionManager
 - getPositionManagerAddress
 - getSellQuoteExactInput
@@ -492,7 +1158,9 @@ Base class for interacting with Flaunch protocol in read-only mode
 - initialTick
 - isFairLaunchActive
 - isFlaunchTokenApprovedForAll
+- isMemecoinImported
 - isValidCoin
+- marketCapToTokenPriceEth
 - parseSwapTx
 - pollPoolCreatedNow
 - pollPoolSwapNow
@@ -507,6 +1175,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - setIPFSResolver
 - tokenImporterVerifyMemecoin
 - treasuryManagerInfo
+- trustedPoolKeySignerStatus
 - watchPoolCreated
 - watchPoolSwap
 
@@ -601,6 +1270,12 @@ ___
 
 ___
 
+### readFlaunchV1\_2
+
+• `Readonly` **readFlaunchV1\_2**: `ReadFlaunchV1_2`
+
+___
+
 ### readFlaunchZap
 
 • `Readonly` **readFlaunchZap**: `ReadFlaunchZap`
@@ -628,6 +1303,12 @@ ___
 ### readPositionManagerV1\_1
 
 • `Readonly` **readPositionManagerV1\_1**: `ReadFlaunchPositionManagerV1_1`
+
+___
+
+### readPositionManagerV1\_2
+
+• `Readonly` **readPositionManagerV1\_2**: `ReadFlaunchPositionManagerV1_2`
 
 ___
 
@@ -696,6 +1377,83 @@ Promise<{flETHAmount: bigint, coinAmount: bigint, pendingEth: bigint, tickLower:
 
 ___
 
+### calculateAddLiquidityAmounts
+
+▸ **calculateAddLiquidityAmounts**(`params`): `Promise`\<\{ `coinAmount`: `bigint` ; `currentTick`: `number` ; `ethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `CalculateAddLiquidityAmountsParams` |
+
+Returns
+
+`Promise`\<\{ `coinAmount`: `bigint` ; `currentTick`: `number` ; `ethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+___
+
+### calculateAddLiquidityTicks
+
+▸ **calculateAddLiquidityTicks**(`«destructured»`): `Promise`\<\{ `coinDecimals`: `number` ; `coinTotalSupply`: `bigint` ; `currentTick?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `currentMarketCap?` | `string` |
+| › `liquidityMode` | `LiquidityMode` |
+| › `maxMarketCap` | `string` |
+| › `minMarketCap` | `string` |
+
+Returns
+
+`Promise`\<\{ `coinDecimals`: `number` ; `coinTotalSupply`: `bigint` ; `currentTick?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+___
+
+### calculateCurrentTickFromMarketCap
+
+▸ **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `totalSupplyDecimal`, `marketContext`): `undefined` \| `number`
+
+Calculates current tick from market cap if provided
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `currentMarketCap` | `undefined` \| `string` |
+| `totalSupplyDecimal` | `number` |
+| `marketContext` | `Object` |
+| `marketContext.decimals0` | `number` |
+| `marketContext.decimals1` | `number` |
+| `marketContext.ethUsdPrice` | `number` |
+| `marketContext.isFlethZero` | `boolean` |
+
+Returns
+
+`undefined` \| `number`
+
+___
+
+### checkSingleSidedAddLiquidity
+
+▸ **checkSingleSidedAddLiquidity**(`params`): `Promise`\<`SingleSidedLiquidityInfo`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `CheckSingleSidedAddLiquidityParams` |
+
+Returns
+
+`Promise`\<`SingleSidedLiquidityInfo`\>
+
+___
+
 ### coinMarketCapInUSD
 
 ▸ **coinMarketCapInUSD**(`«destructured»`): `Promise`\<`string`\>
@@ -755,7 +1513,28 @@ Returns
 
 `Promise`\<`string`\>
 
-Promise<string> - The price of the coin in USD with 2 decimal precision
+Promise<string> - The price of the coin in USD with 18 decimal precision
+
+___
+
+### convertPriceToTick
+
+▸ **convertPriceToTick**(`priceEth`, `isFlethZero`, `decimals0`, `decimals1`): `number`
+
+Converts token price in ETH to tick
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `priceEth` | `number` |
+| `isFlethZero` | `boolean` |
+| `decimals0` | `number` |
+| `decimals1` | `number` |
+
+Returns
+
+`number`
 
 ___
 
@@ -932,13 +1711,13 @@ ___
 
 ▸ **getBidWall**(`version`): `ReadBidWall` \| `AnyBidWall` \| `ReadBidWallV1_1`
 
-Gets the bid wall address for a given version
+Gets the bid wall instance for a given version
 
 Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `version` | `FlaunchVersion` | The version to get the bid wall address for |
+| `version` | `FlaunchVersion` | The version to get the bid wall instance for |
 
 Returns
 
@@ -964,45 +1743,71 @@ ___
 
 ### getBuyQuoteExactInput
 
-▸ **getBuyQuoteExactInput**(`coinAddress`, `amountIn`, `version?`): `Promise`\<`bigint`\>
+▸ **getBuyQuoteExactInput**(`«destructured»`): `Promise`\<`bigint`\>
 
-Gets a quote for buying tokens with an exact amount of ETH
+Gets a quote for buying tokens with an exact amount of ETH or inputToken
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
-| `amountIn` | `bigint` | - |
-| `version?` | `FlaunchVersion` | Optional specific version to use |
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `amountIn` | `bigint` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `hookData?` | \`0x$\{string}\` |
+| › `intermediatePoolKey?` | `PoolWithHookData` |
+| › `userWallet?` | \`0x$\{string}\` |
+| › `version?` | `FlaunchVersion` |
 
 Returns
 
 `Promise`\<`bigint`\>
 
-Promise<bigint> - The expected amount of tokens to receive
+Promise<bigint> - The expected amount of coins to receive
 
 ___
 
 ### getBuyQuoteExactOutput
 
-▸ **getBuyQuoteExactOutput**(`coinAddress`, `amountOut`, `version?`): `Promise`\<`bigint`\>
+▸ **getBuyQuoteExactOutput**(`«destructured»`): `Promise`\<`bigint`\>
 
-Gets a quote for buying an exact amount of tokens with ETH
+Gets a quote for buying an exact amount of tokens with ETH or inputToken
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
-| `amountOut` | `bigint` | - |
-| `version?` | `FlaunchVersion` | Optional specific version to use |
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `amountOut` | `bigint` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `hookData?` | \`0x$\{string}\` |
+| › `intermediatePoolKey?` | `PoolWithHookData` |
+| › `userWallet?` | \`0x$\{string}\` |
+| › `version?` | `FlaunchVersion` |
 
 Returns
 
 `Promise`\<`bigint`\>
 
-Promise<bigint> - The required amount of ETH to spend
+Promise<bigint> - The required amount of ETH or inputToken to spend
+
+___
+
+### getCoinInfo
+
+▸ **getCoinInfo**(`coinAddress`): `Promise`\<\{ `decimals`: `number` ; `totalSupply`: `bigint`  }\>
+
+Gets basic coin information (total supply and decimals)
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\{ `decimals`: `number` ; `totalSupply`: `bigint`  }\>
 
 ___
 
@@ -1113,13 +1918,13 @@ ___
 
 ▸ **getFairLaunch**(`version`): `ReadFairLaunch` \| `ReadFairLaunchV1_1`
 
-Gets the fair launch address for a given version
+Gets the fair launch instance for a given version
 
 Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `version` | `FlaunchVersion` | The version to get the fair launch address for |
+| `version` | `FlaunchVersion` | The version to get the fair launch instance for |
 
 Returns
 
@@ -1184,21 +1989,40 @@ Promise<bigint> - The flaunching fee
 
 ___
 
+### getMarketContext
+
+▸ **getMarketContext**(`coinAddress`, `coinDecimals`): `Promise`\<\{ `decimals0`: `number` ; `decimals1`: `number` ; `ethUsdPrice`: `number` ; `isFlethZero`: `boolean`  }\>
+
+Gets market context information needed for tick calculations
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+| `coinDecimals` | `number` |
+
+Returns
+
+`Promise`\<\{ `decimals0`: `number` ; `decimals1`: `number` ; `ethUsdPrice`: `number` ; `isFlethZero`: `boolean`  }\>
+
+___
+
 ### getPositionManager
 
-▸ **getPositionManager**(`version`): `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadAnyPositionManager`
+▸ **getPositionManager**(`version`): `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
-Gets the position manager address for a given version
+Gets the position manager instance for a given version
 
 Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `version` | `FlaunchVersion` | The version to get the position manager address for |
+| `version` | `FlaunchVersion` | The version to get the position manager instance for |
 
 Returns
 
-`ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadAnyPositionManager`
+`ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
 ___
 
@@ -1220,17 +2044,19 @@ ___
 
 ### getSellQuoteExactInput
 
-▸ **getSellQuoteExactInput**(`coinAddress`, `amountIn`, `version?`): `Promise`\<`bigint`\>
+▸ **getSellQuoteExactInput**(`«destructured»`): `Promise`\<`bigint`\>
 
 Gets a quote for selling an exact amount of tokens for ETH
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `coinAddress` | \`0x$\{string}\` | The address of the token to sell |
-| `amountIn` | `bigint` | The exact amount of tokens to sell |
-| `version?` | `FlaunchVersion` | Optional specific version to use |
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `amountIn` | `bigint` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `intermediatePoolKey?` | `PoolWithHookData` |
+| › `version?` | `FlaunchVersion` |
 
 Returns
 
@@ -1322,6 +2148,26 @@ Promise<boolean> - True if operator is approved for all tokens
 
 ___
 
+### isMemecoinImported
+
+▸ **isMemecoinImported**(`memecoin`): `Promise`\<`boolean`\>
+
+Checks if an external memecoin has been imported to Flaunch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `memecoin` | \`0x$\{string}\` | The address of the memecoin to check |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if the memecoin has been imported
+
+___
+
 ### isValidCoin
 
 ▸ **isValidCoin**(`coinAddress`): `Promise`\<`boolean`\>
@@ -1339,6 +2185,26 @@ Returns
 `Promise`\<`boolean`\>
 
 Promise<boolean> - True if the coin is valid, false otherwise
+
+___
+
+### marketCapToTokenPriceEth
+
+▸ **marketCapToTokenPriceEth**(`marketCapUsd`, `totalSupplyDecimal`, `ethUsdPrice`): `number`
+
+Converts market cap in USD to token price in ETH
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `marketCapUsd` | `number` |
+| `totalSupplyDecimal` | `number` |
+| `ethUsdPrice` | `number` |
+
+Returns
+
+`number`
 
 ___
 
@@ -1645,6 +2511,23 @@ Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner 
 
 ___
 
+### trustedPoolKeySignerStatus
+
+▸ **trustedPoolKeySignerStatus**(`coinAddress`, `version?`): `Promise`\<\{ `fairLaunchEndsAt`: `number` ; `fairLaunchStartsAt`: `number` ; `isCurrentlyEnabled`: `boolean` ; `isFairLaunchActive`: `boolean` ; `signer`: \`0x$\{string}\` ; `trustedSignerEnabled`: `boolean`  }\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+| `version?` | `FlaunchVersion` |
+
+Returns
+
+`Promise`\<\{ `fairLaunchEndsAt`: `number` ; `fairLaunchStartsAt`: `number` ; `isCurrentlyEnabled`: `boolean` ; `isFairLaunchActive`: `boolean` ; `signer`: \`0x$\{string}\` ; `trustedSignerEnabled`: `boolean`  }\>
+
+___
+
 ### watchPoolCreated
 
 ▸ **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
@@ -1689,7 +2572,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.0-beta.3 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -1721,11 +2604,13 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readFeeEscrow
 - readFlaunch
 - readFlaunchV1\_1
+- readFlaunchV1\_2
 - readFlaunchZap
 - readPermit2
 - readPoolManager
 - readPositionManager
 - readPositionManagerV1\_1
+- readPositionManagerV1\_2
 - readQuoter
 - readReferralEscrow
 - readStateView
@@ -1747,14 +2632,20 @@ Base class for interacting with Flaunch protocol in read-only mode
 - anyFlaunch
 - bidWallPosition
 - buyCoin
+- calculateAddLiquidityAmounts
+- calculateAddLiquidityTicks
+- calculateCurrentTickFromMarketCap
+- checkSingleSidedAddLiquidity
 - claimReferralBalance
 - coinBalance
 - coinMarketCapInUSD
 - coinPriceInETH
 - coinPriceInUSD
+- convertPriceToTick
 - creatorRevenue
 - currentTick
 - deployRevenueManager
+- deployStakingManager
 - ethRequiredToFlaunch
 - fairLaunchCoinOnlyPosition
 - fairLaunchDuration
@@ -1767,19 +2658,24 @@ Base class for interacting with Flaunch protocol in read-only mode
 - flaunchIPFSWithSplitManager
 - flaunchWithRevenueManager
 - flaunchWithSplitManager
+- getAddLiquidityCalls
 - getBidWall
 - getBidWallAddress
 - getBuyQuoteExactInput
 - getBuyQuoteExactOutput
+- getCoinInfo
 - getCoinMetadata
 - getCoinMetadataFromTokenId
 - getCoinMetadataFromTokenIds
 - getCoinVersion
+- getERC20AllowanceToPermit2
 - getETHUSDCPrice
 - getFairLaunch
 - getFairLaunchAddress
 - getFlaunchAddress
 - getFlaunchingFee
+- getImportAndAddLiquidityCalls
+- getMarketContext
 - getPermit2AllowanceAndNonce
 - getPermit2TypedData
 - getPositionManager
@@ -1790,7 +2686,9 @@ Base class for interacting with Flaunch protocol in read-only mode
 - initialTick
 - isFairLaunchActive
 - isFlaunchTokenApprovedForAll
+- isMemecoinImported
 - isValidCoin
+- marketCapToTokenPriceEth
 - parseSwapTx
 - pollPoolCreatedNow
 - pollPoolSwapNow
@@ -1806,12 +2704,14 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerProtocolClaim
 - revenueManagerTokensCount
 - sellCoin
+- setERC20AllowanceToPermit2
 - setFlaunchTokenApprovalForAll
 - setIPFSResolver
 - tokenImporterVerifyMemecoin
 - treasuryManagerInfo
 - treasuryManagerSetPermissions
 - treasuryManagerTransferOwnership
+- trustedPoolKeySignerStatus
 - watchPoolCreated
 - watchPoolSwap
 - withdrawCreatorRevenue
@@ -1959,6 +2859,16 @@ ReadFlaunchSDK.readFlaunchV1_1
 
 ___
 
+### readFlaunchV1\_2
+
+• `Readonly` **readFlaunchV1\_2**: `ReadFlaunchV1_2`
+
+Inherited from
+
+ReadFlaunchSDK.readFlaunchV1_2
+
+___
+
 ### readFlaunchZap
 
 • `Readonly` **readFlaunchZap**: `ReadFlaunchZap`
@@ -2006,6 +2916,16 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readPositionManagerV1_1
+
+___
+
+### readPositionManagerV1\_2
+
+• `Readonly` **readPositionManagerV1\_2**: `ReadFlaunchPositionManagerV1_2`
+
+Inherited from
+
+ReadFlaunchSDK.readPositionManagerV1_2
 
 ___
 
@@ -2200,7 +3120,7 @@ ___
 
 ▸ **buyCoin**(`params`, `version?`): `Promise`\<\`0x$\{string}\`\>
 
-Buys a coin with ETH
+Buys a coin with ETH or custom inputToken via intermediatePoolKey
 
 Parameters
 
@@ -2214,6 +3134,99 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response for the buy operation
+
+___
+
+### calculateAddLiquidityAmounts
+
+▸ **calculateAddLiquidityAmounts**(`params`): `Promise`\<\{ `coinAmount`: `bigint` ; `currentTick`: `number` ; `ethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `CalculateAddLiquidityAmountsParams` |
+
+Returns
+
+`Promise`\<\{ `coinAmount`: `bigint` ; `currentTick`: `number` ; `ethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Inherited from
+
+ReadFlaunchSDK.calculateAddLiquidityAmounts
+
+___
+
+### calculateAddLiquidityTicks
+
+▸ **calculateAddLiquidityTicks**(`«destructured»`): `Promise`\<\{ `coinDecimals`: `number` ; `coinTotalSupply`: `bigint` ; `currentTick?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `currentMarketCap?` | `string` |
+| › `liquidityMode` | `LiquidityMode` |
+| › `maxMarketCap` | `string` |
+| › `minMarketCap` | `string` |
+
+Returns
+
+`Promise`\<\{ `coinDecimals`: `number` ; `coinTotalSupply`: `bigint` ; `currentTick?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+Inherited from
+
+ReadFlaunchSDK.calculateAddLiquidityTicks
+
+___
+
+### calculateCurrentTickFromMarketCap
+
+▸ **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `totalSupplyDecimal`, `marketContext`): `undefined` \| `number`
+
+Calculates current tick from market cap if provided
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `currentMarketCap` | `undefined` \| `string` |
+| `totalSupplyDecimal` | `number` |
+| `marketContext` | `Object` |
+| `marketContext.decimals0` | `number` |
+| `marketContext.decimals1` | `number` |
+| `marketContext.ethUsdPrice` | `number` |
+| `marketContext.isFlethZero` | `boolean` |
+
+Returns
+
+`undefined` \| `number`
+
+Inherited from
+
+ReadFlaunchSDK.calculateCurrentTickFromMarketCap
+
+___
+
+### checkSingleSidedAddLiquidity
+
+▸ **checkSingleSidedAddLiquidity**(`params`): `Promise`\<`SingleSidedLiquidityInfo`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `CheckSingleSidedAddLiquidityParams` |
+
+Returns
+
+`Promise`\<`SingleSidedLiquidityInfo`\>
+
+Inherited from
+
+ReadFlaunchSDK.checkSingleSidedAddLiquidity
 
 ___
 
@@ -2325,11 +3338,36 @@ Returns
 
 `Promise`\<`string`\>
 
-Promise<string> - The price of the coin in USD with 2 decimal precision
+Promise<string> - The price of the coin in USD with 18 decimal precision
 
 Inherited from
 
 ReadFlaunchSDK.coinPriceInUSD
+
+___
+
+### convertPriceToTick
+
+▸ **convertPriceToTick**(`priceEth`, `isFlethZero`, `decimals0`, `decimals1`): `number`
+
+Converts token price in ETH to tick
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `priceEth` | `number` |
+| `isFlethZero` | `boolean` |
+| `decimals0` | `number` |
+| `decimals1` | `number` |
+
+Returns
+
+`number`
+
+Inherited from
+
+ReadFlaunchSDK.convertPriceToTick
 
 ___
 
@@ -2393,15 +3431,33 @@ Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `params` | `Object` | Parameters for deploying the revenue manager |
-| `params.protocolFeePercent` | `number` | The percentage of the protocol fee |
-| `params.protocolRecipient` | \`0x$\{string}\` | The address of the protocol recipient |
+| `params` | `DeployRevenueManagerParams` | Parameters for deploying the revenue manager |
 
 Returns
 
 `Promise`\<\`0x$\{string}\`\>
 
 Address of the deployed revenue manager
+
+___
+
+### deployStakingManager
+
+▸ **deployStakingManager**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Deploys a new staking manager
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `DeployStakingManagerParams` | Parameters for deploying the staking manager |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Address of the deployed staking manager
 
 ___
 
@@ -2684,17 +3740,37 @@ Transaction response
 
 ___
 
-### getBidWall
+### getAddLiquidityCalls
 
-▸ **getBidWall**(`version`): `ReadBidWall` \| `AnyBidWall` \| `ReadBidWallV1_1`
+▸ **getAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Gets the bid wall address for a given version
+Gets the calls needed to add liquidity to flaunch or imported coins
 
 Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `version` | `FlaunchVersion` | The version to get the bid wall address for |
+| `params` | `GetAddLiquidityCallsParams` | Parameters for adding liquidity |
+
+Returns
+
+`Promise`\<`CallWithDescription`[]\>
+
+Array of calls with descriptions
+
+___
+
+### getBidWall
+
+▸ **getBidWall**(`version`): `ReadBidWall` \| `AnyBidWall` \| `ReadBidWallV1_1`
+
+Gets the bid wall instance for a given version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `version` | `FlaunchVersion` | The version to get the bid wall instance for |
 
 Returns
 
@@ -2728,23 +3804,27 @@ ___
 
 ### getBuyQuoteExactInput
 
-▸ **getBuyQuoteExactInput**(`coinAddress`, `amountIn`, `version?`): `Promise`\<`bigint`\>
+▸ **getBuyQuoteExactInput**(`«destructured»`): `Promise`\<`bigint`\>
 
-Gets a quote for buying tokens with an exact amount of ETH
+Gets a quote for buying tokens with an exact amount of ETH or inputToken
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
-| `amountIn` | `bigint` | - |
-| `version?` | `FlaunchVersion` | Optional specific version to use |
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `amountIn` | `bigint` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `hookData?` | \`0x$\{string}\` |
+| › `intermediatePoolKey?` | `PoolWithHookData` |
+| › `userWallet?` | \`0x$\{string}\` |
+| › `version?` | `FlaunchVersion` |
 
 Returns
 
 `Promise`\<`bigint`\>
 
-Promise<bigint> - The expected amount of tokens to receive
+Promise<bigint> - The expected amount of coins to receive
 
 Inherited from
 
@@ -2754,27 +3834,53 @@ ___
 
 ### getBuyQuoteExactOutput
 
-▸ **getBuyQuoteExactOutput**(`coinAddress`, `amountOut`, `version?`): `Promise`\<`bigint`\>
+▸ **getBuyQuoteExactOutput**(`«destructured»`): `Promise`\<`bigint`\>
 
-Gets a quote for buying an exact amount of tokens with ETH
+Gets a quote for buying an exact amount of tokens with ETH or inputToken
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `coinAddress` | \`0x$\{string}\` | The address of the token to buy |
-| `amountOut` | `bigint` | - |
-| `version?` | `FlaunchVersion` | Optional specific version to use |
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `amountOut` | `bigint` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `hookData?` | \`0x$\{string}\` |
+| › `intermediatePoolKey?` | `PoolWithHookData` |
+| › `userWallet?` | \`0x$\{string}\` |
+| › `version?` | `FlaunchVersion` |
 
 Returns
 
 `Promise`\<`bigint`\>
 
-Promise<bigint> - The required amount of ETH to spend
+Promise<bigint> - The required amount of ETH or inputToken to spend
 
 Inherited from
 
 ReadFlaunchSDK.getBuyQuoteExactOutput
+
+___
+
+### getCoinInfo
+
+▸ **getCoinInfo**(`coinAddress`): `Promise`\<\{ `decimals`: `number` ; `totalSupply`: `bigint`  }\>
+
+Gets basic coin information (total supply and decimals)
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\{ `decimals`: `number` ; `totalSupply`: `bigint`  }\>
+
+Inherited from
+
+ReadFlaunchSDK.getCoinInfo
 
 ___
 
@@ -2877,6 +3983,27 @@ ReadFlaunchSDK.getCoinVersion
 
 ___
 
+### getERC20AllowanceToPermit2
+
+▸ **getERC20AllowanceToPermit2**(`coinAddress`): `Promise`\<`bigint`\>
+
+Gets the allowance of an ERC20 token to Permit2 contract. Flaunch coins automatically have infinite approval for Permit2.
+this function is for external tokens.
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to check |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Promise<bigint> - The allowance of the coin to Permit2
+
+___
+
 ### getETHUSDCPrice
 
 ▸ **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
@@ -2905,13 +4032,13 @@ ___
 
 ▸ **getFairLaunch**(`version`): `ReadFairLaunch` \| `ReadFairLaunchV1_1`
 
-Gets the fair launch address for a given version
+Gets the fair launch instance for a given version
 
 Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `version` | `FlaunchVersion` | The version to get the fair launch address for |
+| `version` | `FlaunchVersion` | The version to get the fair launch instance for |
 
 Returns
 
@@ -2992,6 +4119,49 @@ ReadFlaunchSDK.getFlaunchingFee
 
 ___
 
+### getImportAndAddLiquidityCalls
+
+▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
+
+Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `ImportMemecoinParams` & GetAddLiquidityCallsParams & \{ initialMarketCapUSD: number; } | Parameters for importing and adding liquidity |
+
+Returns
+
+`Promise`\<`CallWithDescription`[]\>
+
+Array of calls with descriptions
+
+___
+
+### getMarketContext
+
+▸ **getMarketContext**(`coinAddress`, `coinDecimals`): `Promise`\<\{ `decimals0`: `number` ; `decimals1`: `number` ; `ethUsdPrice`: `number` ; `isFlethZero`: `boolean`  }\>
+
+Gets market context information needed for tick calculations
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+| `coinDecimals` | `number` |
+
+Returns
+
+`Promise`\<\{ `decimals0`: `number` ; `decimals1`: `number` ; `ethUsdPrice`: `number` ; `isFlethZero`: `boolean`  }\>
+
+Inherited from
+
+ReadFlaunchSDK.getMarketContext
+
+___
+
 ### getPermit2AllowanceAndNonce
 
 ▸ **getPermit2AllowanceAndNonce**(`coinAddress`): `Promise`\<\{ `allowance`: `bigint` = amount; `nonce`: `number`  }\>
@@ -3035,19 +4205,19 @@ ___
 
 ### getPositionManager
 
-▸ **getPositionManager**(`version`): `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadAnyPositionManager`
+▸ **getPositionManager**(`version`): `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
-Gets the position manager address for a given version
+Gets the position manager instance for a given version
 
 Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `version` | `FlaunchVersion` | The version to get the position manager address for |
+| `version` | `FlaunchVersion` | The version to get the position manager instance for |
 
 Returns
 
-`ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadAnyPositionManager`
+`ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
 Inherited from
 
@@ -3077,17 +4247,19 @@ ___
 
 ### getSellQuoteExactInput
 
-▸ **getSellQuoteExactInput**(`coinAddress`, `amountIn`, `version?`): `Promise`\<`bigint`\>
+▸ **getSellQuoteExactInput**(`«destructured»`): `Promise`\<`bigint`\>
 
 Gets a quote for selling an exact amount of tokens for ETH
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `coinAddress` | \`0x$\{string}\` | The address of the token to sell |
-| `amountIn` | `bigint` | The exact amount of tokens to sell |
-| `version?` | `FlaunchVersion` | Optional specific version to use |
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `amountIn` | `bigint` |
+| › `coinAddress` | \`0x$\{string}\` |
+| › `intermediatePoolKey?` | `PoolWithHookData` |
+| › `version?` | `FlaunchVersion` |
 
 Returns
 
@@ -3109,13 +4281,9 @@ Imports a memecoin into the TokenImporter
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `Object` | - |
-| `params.creatorFeeAllocationPercent` | `number` | The creator fee allocation percentage |
-| `params.initialMarketCapUSD` | `number` | The initial market cap in USD |
-| `params.memecoin` | \`0x$\{string}\` | The address of the memecoin to import |
-| `params.verifier?` | `Verifier` | Optional verifier to use for importing the memecoin |
+| Name | Type |
+| :------ | :------ |
+| `params` | `ImportMemecoinParams` |
 
 Returns
 
@@ -3223,6 +4391,30 @@ ReadFlaunchSDK.isFlaunchTokenApprovedForAll
 
 ___
 
+### isMemecoinImported
+
+▸ **isMemecoinImported**(`memecoin`): `Promise`\<`boolean`\>
+
+Checks if an external memecoin has been imported to Flaunch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `memecoin` | \`0x$\{string}\` | The address of the memecoin to check |
+
+Returns
+
+`Promise`\<`boolean`\>
+
+Promise<boolean> - True if the memecoin has been imported
+
+Inherited from
+
+ReadFlaunchSDK.isMemecoinImported
+
+___
+
 ### isValidCoin
 
 ▸ **isValidCoin**(`coinAddress`): `Promise`\<`boolean`\>
@@ -3244,6 +4436,30 @@ Promise<boolean> - True if the coin is valid, false otherwise
 Inherited from
 
 ReadFlaunchSDK.isValidCoin
+
+___
+
+### marketCapToTokenPriceEth
+
+▸ **marketCapToTokenPriceEth**(`marketCapUsd`, `totalSupplyDecimal`, `ethUsdPrice`): `number`
+
+Converts market cap in USD to token price in ETH
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `marketCapUsd` | `number` |
+| `totalSupplyDecimal` | `number` |
+| `ethUsdPrice` | `number` |
+
+Returns
+
+`number`
+
+Inherited from
+
+ReadFlaunchSDK.marketCapToTokenPriceEth
 
 ___
 
@@ -3616,6 +4832,28 @@ Transaction response for the sell operation
 
 ___
 
+### setERC20AllowanceToPermit2
+
+▸ **setERC20AllowanceToPermit2**(`coinAddress`, `amount`): `Promise`\<\`0x$\{string}\`\>
+
+Sets the allowance of an ERC20 token to Permit2 contract. Flaunch coins automatically have infinite approval for Permit2.
+this function is for external tokens.
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The address of the coin to approve |
+| `amount` | `bigint` | The amount of the token to approve |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Promise<Hex> - The transaction hash
+
+___
+
 ### setFlaunchTokenApprovalForAll
 
 ▸ **setFlaunchTokenApprovalForAll**(`version`, `operator`, `approved`): `Promise`\<\`0x$\{string}\`\>
@@ -3755,6 +4993,27 @@ Transaction response
 
 ___
 
+### trustedPoolKeySignerStatus
+
+▸ **trustedPoolKeySignerStatus**(`coinAddress`, `version?`): `Promise`\<\{ `fairLaunchEndsAt`: `number` ; `fairLaunchStartsAt`: `number` ; `isCurrentlyEnabled`: `boolean` ; `isFairLaunchActive`: `boolean` ; `signer`: \`0x$\{string}\` ; `trustedSignerEnabled`: `boolean`  }\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+| `version?` | `FlaunchVersion` |
+
+Returns
+
+`Promise`\<\{ `fairLaunchEndsAt`: `number` ; `fairLaunchStartsAt`: `number` ; `isCurrentlyEnabled`: `boolean` ; `isFairLaunchActive`: `boolean` ; `signer`: \`0x$\{string}\` ; `trustedSignerEnabled`: `boolean`  }\>
+
+Inherited from
+
+ReadFlaunchSDK.trustedPoolKeySignerStatus
+
+___
+
 ### watchPoolCreated
 
 ▸ **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void` ; `pollPoolCreatedNow`: () => `Promise`\<`void`\> = pollEvents }\>
@@ -3829,7 +5088,7 @@ Transaction response
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.0-beta.3 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -3842,7 +5101,7 @@ Enumeration of Flaunch contract versions
 - ANY
 - V1
 - V1\_1
-- V1\_1\_1
+- V1\_2
 
 ## Enumeration Members
 
@@ -3864,15 +5123,42 @@ ___
 
 ___
 
-### V1\_1\_1
+### V1\_2
 
-• **V1\_1\_1** = ``"V1_1_1"``
+• **V1\_2** = ``"V1_2"``
 
 
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / Permissions
+@flaunch/sdk - v0.9.0-beta.3 / Exports / LiquidityMode
+
+# Enumeration: LiquidityMode
+
+## Table of contents
+
+### Enumeration Members
+
+- CONCENTRATED
+- FULL\_RANGE
+
+## Enumeration Members
+
+### CONCENTRATED
+
+• **CONCENTRATED** = ``"concentrated"``
+
+___
+
+### FULL\_RANGE
+
+• **FULL\_RANGE** = ``"full-range"``
+
+
+
+---
+
+@flaunch/sdk - v0.9.0-beta.3 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -3908,7 +5194,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / Verifier
+@flaunch/sdk - v0.9.0-beta.3 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -3958,7 +5244,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / Addresses
+@flaunch/sdk - v0.9.0-beta.3 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -3969,7 +5255,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / BuySwapData
+@flaunch/sdk - v0.9.0-beta.3 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -4004,7 +5290,41 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.0-beta.3 / Exports / CallData
+
+# Interface: CallData
+
+## Table of contents
+
+### Properties
+
+- data
+- to
+- value
+
+## Properties
+
+### data
+
+• **data**: \`0x$\{string}\`
+
+___
+
+### to
+
+• **to**: \`0x$\{string}\`
+
+___
+
+### value
+
+• **value**: `bigint`
+
+
+
+---
+
+@flaunch/sdk - v0.9.0-beta.3 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -4073,7 +5393,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / IPFSParams
+@flaunch/sdk - v0.9.0-beta.3 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -4105,13 +5425,13 @@ ___
 
 ### pinataConfig
 
-• **pinataConfig**: `PinataConfig`
+• `Optional` **pinataConfig**: `PinataConfig`
 
 
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / PinataConfig
+@flaunch/sdk - v0.9.0-beta.3 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -4131,9 +5451,15 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / PoolKey
+@flaunch/sdk - v0.9.0-beta.3 / Exports / PoolKey
 
 # Interface: PoolKey
+
+## Hierarchy
+
+- **`PoolKey`**
+
+  ↳ `PoolWithHookData`
 
 ## Table of contents
 
@@ -4179,7 +5505,88 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / SellSwapData
+@flaunch/sdk - v0.9.0-beta.3 / Exports / PoolWithHookData
+
+# Interface: PoolWithHookData
+
+## Hierarchy
+
+- `PoolKey`
+
+  ↳ **`PoolWithHookData`**
+
+## Table of contents
+
+### Properties
+
+- currency0
+- currency1
+- fee
+- hookData
+- hooks
+- tickSpacing
+
+## Properties
+
+### currency0
+
+• **currency0**: \`0x$\{string}\`
+
+Inherited from
+
+PoolKey.currency0
+
+___
+
+### currency1
+
+• **currency1**: \`0x$\{string}\`
+
+Inherited from
+
+PoolKey.currency1
+
+___
+
+### fee
+
+• **fee**: `number`
+
+Inherited from
+
+PoolKey.fee
+
+___
+
+### hookData
+
+• **hookData**: \`0x$\{string}\`
+
+___
+
+### hooks
+
+• **hooks**: \`0x$\{string}\`
+
+Inherited from
+
+PoolKey.hooks
+
+___
+
+### tickSpacing
+
+• **tickSpacing**: `number`
+
+Inherited from
+
+PoolKey.tickSpacing
+
+
+
+---
+
+@flaunch/sdk - v0.9.0-beta.3 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -4214,7 +5621,41 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / SwapFees
+@flaunch/sdk - v0.9.0-beta.3 / Exports / SingleSidedLiquidityInfo
+
+# Interface: SingleSidedLiquidityInfo
+
+## Table of contents
+
+### Properties
+
+- isSingleSided
+- shouldHideCoinInput
+- shouldHideETHInput
+
+## Properties
+
+### isSingleSided
+
+• **isSingleSided**: `boolean`
+
+___
+
+### shouldHideCoinInput
+
+• **shouldHideCoinInput**: `boolean`
+
+___
+
+### shouldHideETHInput
+
+• **shouldHideETHInput**: `boolean`
+
+
+
+---
+
+@flaunch/sdk - v0.9.0-beta.3 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -4241,7 +5682,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.0-beta.3 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -4338,20 +5779,22 @@ ___
 
 ---
 
-@flaunch/sdk - v0.8.2 / Exports
+@flaunch/sdk - v0.9.0-beta.3 / Exports
 
-# @flaunch/sdk - v0.8.2
+# @flaunch/sdk - v0.9.0-beta.3
 
 ## Table of contents
 
 ### Enumerations
 
 - FlaunchVersion
+- LiquidityMode
 - Permissions
 - Verifier
 
 ### Classes
 
+- FlaunchBackend
 - ReadFlaunchSDK
 - ReadWriteFlaunchSDK
 
@@ -4359,11 +5802,14 @@ ___
 
 - Addresses
 - BuySwapData
+- CallData
 - CoinMetadata
 - IPFSParams
 - PinataConfig
 - PoolKey
+- PoolWithHookData
 - SellSwapData
+- SingleSidedLiquidityInfo
 - SwapFees
 - SwapLogArgs
 
@@ -4371,7 +5817,15 @@ ___
 
 - BaseSwapLog
 - BuySwapLog
+- CalculateAddLiquidityAmountsParams
+- CallDataMethod
+- CallDataResult
+- CallWithDescription
+- CheckSingleSidedAddLiquidityParams
+- CreateFlaunchCalldataParams
 - CreateFlaunchParams
+- GetAddLiquidityCallsParams
+- ImportMemecoinParams
 - ParsedSwapData
 - PermitDetails
 - PermitSingle
@@ -4399,51 +5853,70 @@ ___
 - FlaunchAddress
 - FlaunchPositionManagerAddress
 - FlaunchPositionManagerV1\_1Address
+- FlaunchPositionManagerV1\_2Address
 - FlaunchSDK
 - FlaunchV1\_1Address
+- FlaunchV1\_2Address
 - FlaunchZapAddress
 - PERMIT\_DETAILS
 - PERMIT\_TYPES
 - Permit2Address
 - PoolManagerAddress
+- Q192
+- Q96
 - QuoterAddress
 - ReferralEscrowAddress
 - RevenueManagerAddress
+- StakingManagerAddress
 - StateViewAddress
 - TICK\_SPACING
 - TickFinder
 - TokenImporterAddress
 - TreasuryManagerFactoryAddress
 - USDCETHPoolKeys
+- UniV4PositionManagerAddress
 - UniversalRouterAddress
 - VirtualsVerifierAddress
 - WhitelistVerifierAddress
 - WhitelistedPermissionsAddress
 - ZoraVerifierAddress
 - chainIdToChain
+- encodedCallAbi
 
 ### Functions
 
+- buyMemecoin
 - bytes32ToUint256
 - calculateUnderlyingTokenBalances
+- createCallDataWalletClient
 - createDrift
 - createFlaunch
-- ethToMemecoin
+- createFlaunchCalldata
+- decodeCallData
 - generateTokenUri
 - getAmountWithSlippage
+- getAmountsForLiquidity
+- getLiquidityFromAmounts
+- getNearestUsableTick
 - getPermissionsAddress
 - getPermit2TypedData
 - getPoolId
 - getSqrtPriceX96FromTick
 - getValidTick
-- memecoinToEthWithPermit2
+- maxLiquidityForAmount0Precise
+- maxLiquidityForAmount1
 - orderPoolKey
+- parseCall
 - parseSwapData
+- priceRatioToTick
 - resolveIPFS
+- sellMemecoinWithPermit2
 - uint256ToBytes32
 - uploadFileToIPFS
+- uploadImageToFlaunchAPI
 - uploadImageToIPFS
 - uploadJsonToIPFS
+- uploadMetadataToFlaunchAPI
 
 ## Type Aliases
 
@@ -4459,6 +5932,73 @@ ___
 
 ___
 
+### CalculateAddLiquidityAmountsParams
+
+Ƭ **CalculateAddLiquidityAmountsParams**: \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `currentMarketCap?`: `string` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `currentPriceUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `version?`: `FlaunchVersion`  }
+
+___
+
+### CallDataMethod
+
+Ƭ **CallDataMethod**\<`T`\>: (...`args`: `T`) => `Promise`\<`Hex`\>
+
+Type helper for SDK methods that return encoded calldata
+
+Type parameters
+
+| Name | Type |
+| :------ | :------ |
+| `T` | extends `any`[] = `any`[] |
+
+Type declaration
+
+▸ (`...args`): `Promise`\<`Hex`\>
+
+#Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `...args` | `T` |
+
+#Returns
+
+`Promise`\<`Hex`\>
+
+___
+
+### CallDataResult
+
+Ƭ **CallDataResult**: `Promise`\<`CallData`\>
+
+Type helper for the result of a calldata operation
+
+___
+
+### CallWithDescription
+
+Ƭ **CallWithDescription**: `Call` & \{ `description?`: `string`  }
+
+___
+
+### CheckSingleSidedAddLiquidityParams
+
+Ƭ **CheckSingleSidedAddLiquidityParams**: \{ `coinAddress`: `Address` ; `currentMarketCap?`: `string` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `currentPriceUSD?`: `number` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `version?`: `FlaunchVersion`  }
+
+___
+
+### CreateFlaunchCalldataParams
+
+Ƭ **CreateFlaunchCalldataParams**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `publicClient` | `PublicClient` |
+| `walletAddress?` | `Address` |
+
+___
+
 ### CreateFlaunchParams
 
 Ƭ **CreateFlaunchParams**: `Object`
@@ -4469,6 +6009,18 @@ Type declaration
 | :------ | :------ |
 | `publicClient` | `PublicClient` |
 | `walletClient?` | `WalletClient` |
+
+___
+
+### GetAddLiquidityCallsParams
+
+Ƭ **GetAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number` ; `version?`: `FlaunchVersion`  }
+
+___
+
+### ImportMemecoinParams
+
+Ƭ **ImportMemecoinParams**: \{ `coinAddress`: `Address` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `verifier?`: `Verifier`  } \| \{ `coinAddress`: `Address` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `verifier?`: `Verifier`  }
 
 ___
 
@@ -4637,6 +6189,12 @@ ___
 
 ___
 
+### FlaunchPositionManagerV1\_2Address
+
+• `Const` **FlaunchPositionManagerV1\_2Address**: `Addresses`
+
+___
+
 ### FlaunchSDK
 
 • `Const` **FlaunchSDK**: `Object`
@@ -4653,6 +6211,12 @@ ___
 ### FlaunchV1\_1Address
 
 • `Const` **FlaunchV1\_1Address**: `Addresses`
+
+___
+
+### FlaunchV1\_2Address
+
+• `Const` **FlaunchV1\_2Address**: `Addresses`
 
 ___
 
@@ -4693,6 +6257,18 @@ ___
 
 ___
 
+### Q192
+
+• `Const` **Q192**: `bigint`
+
+___
+
+### Q96
+
+• `Const` **Q96**: `bigint`
+
+___
+
 ### QuoterAddress
 
 • `Const` **QuoterAddress**: `Addresses`
@@ -4708,6 +6284,12 @@ ___
 ### RevenueManagerAddress
 
 • `Const` **RevenueManagerAddress**: `Addresses`
+
+___
+
+### StakingManagerAddress
+
+• `Const` **StakingManagerAddress**: `Addresses`
 
 ___
 
@@ -4760,6 +6342,12 @@ Index signature
 
 ___
 
+### UniV4PositionManagerAddress
+
+• `Const` **UniV4PositionManagerAddress**: `Addresses`
+
+___
+
 ### UniversalRouterAddress
 
 • `Const` **UniversalRouterAddress**: `Addresses`
@@ -4798,7 +6386,49 @@ Index signature
 
 ▪ [key: `number`]: `Chain`
 
+___
+
+### encodedCallAbi
+
+• `Const` **encodedCallAbi**: readonly [{}]
+
 ## Functions
+
+### buyMemecoin
+
+▸ **buyMemecoin**(`params`): `Object`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amountIn?` | `bigint` |
+| `params.amountInMax?` | `bigint` |
+| `params.amountOut?` | `bigint` |
+| `params.amountOutMin?` | `bigint` |
+| `params.chainId` | `number` |
+| `params.hookData?` | \`0x$\{string}\` |
+| `params.intermediatePoolKey?` | `PoolWithHookData` |
+| `params.memecoin` | \`0x$\{string}\` |
+| `params.permitSingle?` | `PermitSingle` |
+| `params.positionManagerAddress` | \`0x$\{string}\` |
+| `params.referrer` | ``null`` \| \`0x$\{string}\` |
+| `params.sender` | \`0x$\{string}\` |
+| `params.signature?` | \`0x$\{string}\` |
+| `params.swapType` | ``"EXACT_IN"`` \| ``"EXACT_OUT"`` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `calldata` | \`0x$\{string}\` |
+| `commands` | \`0x$\{string}\` |
+| `inputs` | \`0x$\{string}\`[] |
+
+___
 
 ### bytes32ToUint256
 
@@ -4837,6 +6467,25 @@ Returns
 | :------ | :------ |
 | `amount0` | `bigint` |
 | `amount1` | `bigint` |
+
+___
+
+### createCallDataWalletClient
+
+▸ **createCallDataWalletClient**(`publicClient`, `walletAddress`): `WalletClient`
+
+Creates a custom wallet client that returns encoded calldata instead of broadcasting transactions
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `publicClient` | `Object` |
+| `walletAddress` | \`0x$\{string}\` |
+
+Returns
+
+`WalletClient`
 
 ___
 
@@ -4928,47 +6577,80 @@ Error if publicClient.chain is not configured
 
 ___
 
-### ethToMemecoin
+### createFlaunchCalldata
 
-▸ **ethToMemecoin**(`params`): `Object`
+▸ **createFlaunchCalldata**(`params`): `ReadFlaunchSDK`
+
+Creates a read-only Flaunch SDK instance with only public client
 
 Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `params` | `Object` |
-| `params.amountIn?` | `bigint` |
-| `params.amountInMax?` | `bigint` |
-| `params.amountOut?` | `bigint` |
-| `params.amountOutMin?` | `bigint` |
-| `params.chainId` | `number` |
-| `params.memecoin` | \`0x$\{string}\` |
-| `params.positionManagerAddress` | \`0x$\{string}\` |
-| `params.referrer` | ``null`` \| \`0x$\{string}\` |
-| `params.sender` | \`0x$\{string}\` |
-| `params.swapType` | ``"EXACT_IN"`` \| ``"EXACT_OUT"`` |
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Omit`\<`CreateFlaunchCalldataParams`, ``"walletAddress"``\> | Parameters with only publicClient |
 
 Returns
 
-`Object`
+`ReadFlaunchSDK`
 
-| Name | Type |
-| :------ | :------ |
-| `calldata` | \`0x$\{string}\` |
-| `commands` | \`0x$\{string}\` |
-| `inputs` | \`0x$\{string}\`[] |
+ReadFlaunchSDK for read-only operations
+
+**`Throws`**
+
+Error if publicClient.chain is not configured
+
+▸ **createFlaunchCalldata**(`params`): `ReadWriteFlaunchSDK`
+
+Creates a read-write Flaunch SDK instance that returns encoded calldata instead of broadcasting transactions
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Required`\<`CreateFlaunchCalldataParams`\> | Parameters containing publicClient and walletAddress |
+
+Returns
+
+`ReadWriteFlaunchSDK`
+
+ReadWriteFlaunchSDK instance configured for calldata generation
+
+**`Throws`**
+
+Error if publicClient.chain is not configured
+
+___
+
+### decodeCallData
+
+▸ **decodeCallData**(`encodedCall`): `CallData`
+
+Decodes the result from SDK methods into transaction object
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `encodedCall` | \`0x$\{string}\` | The result returned by SDK methods |
+
+Returns
+
+`CallData`
+
+Call data containing to, value, and data
 
 ___
 
 ### generateTokenUri
 
-▸ **generateTokenUri**(`name`, `params`): `Promise`\<`string`\>
+▸ **generateTokenUri**(`name`, `symbol`, `params`): `Promise`\<`string`\>
 
 Parameters
 
 | Name | Type |
 | :------ | :------ |
 | `name` | `string` |
+| `symbol` | `string` |
 | `params` | `IPFSParams` |
 
 Returns
@@ -4979,15 +6661,16 @@ ___
 
 ### getAmountWithSlippage
 
-▸ **getAmountWithSlippage**(`amount`, `slippage`, `swapType`): `bigint`
+▸ **getAmountWithSlippage**(`«destructured»`): `bigint`
 
 Parameters
 
 | Name | Type |
 | :------ | :------ |
-| `amount` | `undefined` \| `bigint` |
-| `slippage` | `string` |
-| `swapType` | ``"EXACT_IN"`` \| ``"EXACT_OUT"`` |
+| `«destructured»` | `Object` |
+| › `amount` | `undefined` \| `bigint` |
+| › `slippage` | `string` |
+| › `swapType` | ``"EXACT_IN"`` \| ``"EXACT_OUT"`` |
 
 Returns
 
@@ -4996,6 +6679,75 @@ Returns
 **`Dev`**
 
 EXACT_OUT adds the slippage, EXACT_IN removes it
+
+___
+
+### getAmountsForLiquidity
+
+▸ **getAmountsForLiquidity**(`params`): `Object`
+
+Calculate the actual amounts needed for a given liquidity
+This prevents MaximumAmountExceeded errors by ensuring we provide sufficient maximums
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.currentTick` | `number` |
+| `params.liquidity` | `bigint` |
+| `params.tickLower` | `number` |
+| `params.tickUpper` | `number` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `amount0` | `bigint` |
+| `amount1` | `bigint` |
+
+___
+
+### getLiquidityFromAmounts
+
+▸ **getLiquidityFromAmounts**(`params`): `bigint`
+
+Accurate liquidity calculation using proper Uniswap v3/v4 math
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amount0` | `bigint` |
+| `params.amount1` | `bigint` |
+| `params.currentTick` | `number` |
+| `params.tickLower` | `number` |
+| `params.tickUpper` | `number` |
+
+Returns
+
+`bigint`
+
+___
+
+### getNearestUsableTick
+
+▸ **getNearestUsableTick**(`«destructured»`): `number`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `Object` |
+| › `tick` | `number` |
+| › `tickSpacing` | `number` |
+
+Returns
+
+`number`
 
 ___
 
@@ -5092,12 +6844,12 @@ ___
 
 Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `«destructured»` | `Object` |
-| › `roundDown` | `boolean` |
-| › `tick` | `number` |
-| › `tickSpacing` | `number` |
+| Name | Type | Default value |
+| :------ | :------ | :------ |
+| `«destructured»` | `Object` | `undefined` |
+| › `roundDown?` | `boolean` | `true` |
+| › `tick` | `number` | `undefined` |
+| › `tickSpacing` | `number` | `undefined` |
 
 Returns
 
@@ -5105,33 +6857,48 @@ Returns
 
 ___
 
-### memecoinToEthWithPermit2
+### maxLiquidityForAmount0Precise
 
-▸ **memecoinToEthWithPermit2**(`params`): `Object`
+▸ **maxLiquidityForAmount0Precise**(`sqrtRatioAX96`, `sqrtRatioBX96`, `amount0`): `bigint`
+
+Returns a precise maximum amount of liquidity received for a given amount of token 0 by dividing by Q64 instead of Q96 in the intermediate step,
+and shifting the subtracted ratio left by 32 bits.
 
 Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `params` | `Object` |
-| `params.amountIn` | `bigint` |
-| `params.chainId` | `number` |
-| `params.ethOutMin` | `bigint` |
-| `params.memecoin` | \`0x$\{string}\` |
-| `params.permitSingle` | `undefined` \| `PermitSingle` |
-| `params.positionManagerAddress` | \`0x$\{string}\` |
-| `params.referrer` | ``null`` \| \`0x$\{string}\` |
-| `params.signature` | `undefined` \| \`0x$\{string}\` |
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `sqrtRatioAX96` | `bigint` | The price at the lower boundary |
+| `sqrtRatioBX96` | `bigint` | The price at the upper boundary |
+| `amount0` | `bigint` | The token0 amount |
 
 Returns
 
-`Object`
+`bigint`
 
-| Name | Type |
-| :------ | :------ |
-| `calldata` | \`0x$\{string}\` |
-| `commands` | \`0x$\{string}\` |
-| `inputs` | \`0x$\{string}\`[] |
+liquidity for amount0, precise
+
+___
+
+### maxLiquidityForAmount1
+
+▸ **maxLiquidityForAmount1**(`sqrtRatioAX96`, `sqrtRatioBX96`, `amount1`): `bigint`
+
+Computes the maximum amount of liquidity received for a given amount of token1
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `sqrtRatioAX96` | `bigint` | The price at the lower tick boundary |
+| `sqrtRatioBX96` | `bigint` | The price at the upper tick boundary |
+| `amount1` | `bigint` | The token1 amount |
+
+Returns
+
+`bigint`
+
+liquidity for amount1
 
 ___
 
@@ -5159,6 +6926,32 @@ Returns
 
 ___
 
+### parseCall
+
+▸ **parseCall**\<`T`\>(`sdkMethod`): `Promise`\<`CallData`\>
+
+Convenience function to call an SDK method and automatically parse the result as transaction object
+
+Type parameters
+
+| Name | Type |
+| :------ | :------ |
+| `T` | extends (...`args`: `any`[]) => `Promise`\<\`0x$\{string}\`\> |
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `sdkMethod` | `T` | A function that returns a Promise<Hex> (encoded calldata) |
+
+Returns
+
+`Promise`\<`CallData`\>
+
+Promise<CallData> with decoded transaction parameters
+
+___
+
 ### parseSwapData
 
 ▸ **parseSwapData**(`args`, `flETHIsCurrencyZero`): `ParsedSwapData`
@@ -5180,6 +6973,28 @@ Parsed swap data with type and delta information
 
 ___
 
+### priceRatioToTick
+
+▸ **priceRatioToTick**(`«destructured»`): `number`
+
+Parameters
+
+| Name | Type | Default value |
+| :------ | :------ | :------ |
+| `«destructured»` | `Object` | `undefined` |
+| › `decimals0` | `number` | `undefined` |
+| › `decimals1` | `number` | `undefined` |
+| › `isDirection1Per0` | `boolean` | `undefined` |
+| › `priceInput` | `string` | `undefined` |
+| › `shouldGetNearestUsableTick?` | `boolean` | `true` |
+| › `spacing` | `number` | `undefined` |
+
+Returns
+
+`number`
+
+___
+
 ### resolveIPFS
 
 ▸ **resolveIPFS**(`value`): `string`
@@ -5193,6 +7008,37 @@ Parameters
 Returns
 
 `string`
+
+___
+
+### sellMemecoinWithPermit2
+
+▸ **sellMemecoinWithPermit2**(`params`): `Object`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amountIn` | `bigint` |
+| `params.amountOutMin` | `bigint` |
+| `params.chainId` | `number` |
+| `params.intermediatePoolKey?` | `PoolWithHookData` |
+| `params.memecoin` | \`0x$\{string}\` |
+| `params.permitSingle?` | `PermitSingle` |
+| `params.positionManagerAddress` | \`0x$\{string}\` |
+| `params.referrer` | ``null`` \| \`0x$\{string}\` |
+| `params.signature?` | \`0x$\{string}\` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `calldata` | \`0x$\{string}\` |
+| `commands` | \`0x$\{string}\` |
+| `inputs` | \`0x$\{string}\`[] |
 
 ___
 
@@ -5233,6 +7079,26 @@ Returns
 `Promise`\<`UploadResponse`\>
 
 Upload response with CID and other details
+
+___
+
+### uploadImageToFlaunchAPI
+
+▸ **uploadImageToFlaunchAPI**(`base64Image`): `Promise`\<`FlaunchUploadResponse`\>
+
+Uploads a base64 image to IPFS using the Flaunch API
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `base64Image` | `string` | Base64 encoded image data |
+
+Returns
+
+`Promise`\<`FlaunchUploadResponse`\>
+
+Upload response with IPFS hash
 
 ___
 
@@ -5281,6 +7147,26 @@ Returns
 `Promise`\<`UploadResponse`\>
 
 Upload response with CID and other details
+
+___
+
+### uploadMetadataToFlaunchAPI
+
+▸ **uploadMetadataToFlaunchAPI**(`metadata`): `Promise`\<`FlaunchUploadResponse`\>
+
+Uploads metadata to IPFS using the Flaunch API
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `metadata` | `FlaunchMetadataRequest` | The metadata object to upload |
+
+Returns
+
+`Promise`\<`FlaunchUploadResponse`\>
+
+Upload response with IPFS hash
 
 
 
