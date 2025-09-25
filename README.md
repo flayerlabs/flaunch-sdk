@@ -706,6 +706,12 @@ await flaunchWrite.importMemecoin({
 
 **⚠️ Note:** The term "MarketCap" used throughout simply means `current coin price * ERC20.totalSupply()`. Some coins might show it as FDV, make sure to verify so that the Pool is initialized at the right price, and the liquidity gets provided at the expected range.
 
+1.3. Verify if a memecoin is imported into Flaunch
+
+```ts
+const isImported = await flaunchRead.isMemecoinImported(coinAddress);
+```
+
 ### Adding Liquidity to Imported (or flaunch) coins
 
 When an external coin is imported into Flaunch's Uniswap V4 hooks, it has no liquidity in the pool. We can add liquidity by using the functions below.

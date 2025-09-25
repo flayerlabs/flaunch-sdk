@@ -2,6 +2,83 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.0] - 2025-09-25
+
+### Added
+
+- **Comprehensive Liquidity Management System** for imported and flaunch coins
+
+  - New `calculateAddLiquidityAmounts()` method for calculating optimal coin and ETH amounts for liquidity provision
+  - `checkSingleSidedAddLiquidity()` helper to detect which token input to hide for single-sided liquidity
+  - `getAddLiquidityCalls()` method for generating multi-step liquidity addition transaction calls
+  - Support for both full-range and concentrated liquidity strategies via `LiquidityMode` enum
+  - Flexible input methods: specify amounts by market cap, coin price, or exact token amounts
+  - ERC-5792 batch transaction support for streamlined user experience with compatible wallets
+
+- **Advanced Bot Protection System** with TrustedSigner functionality
+
+  - New `FlaunchBackend` class for server-side signature generation and bot protection
+  - `generateHookDataWithSignature()` method for creating authenticated swap signatures
+  - `trustedPoolKeySignerStatus()` to check bot protection status for any coin
+  - Enhanced fair launch protection with configurable `walletCap` and `txCap` during flaunch
+  - Integration with premine functionality via `premineSignedMessage` parameter
+
+- **Multi-Token Trading Support** via intermediate pool routing
+
+  - `intermediatePoolKey` parameter in buy/sell functions enabling USDC, USDT, and other token swaps
+  - Automatic routing: `USDC -> ETH -> flETH -> Coin` for seamless non-ETH trading
+  - Support in all quote functions: `getSellQuoteExactInput()`, `getBuyQuoteExactInput()`, `getBuyQuoteExactOutput()`
+  - Enhanced trading accessibility for users without ETH holdings
+
+- **Groups and Treasury Management System**
+
+  - `deployStakingManager()` for creating group functionality with configurable staking parameters
+  - Permission system with `Permissions` enum (OPEN, CLOSED, WHITELISTED) and `getPermissionsAddress()` helper
+  - `treasuryManagerSetPermissions()` for dynamic permission management
+  - `addToTreasuryManager()` for adding existing coins to groups
+  - `treasuryManagerParams` support in flaunch methods for direct group creation or depositing into existing manager instance
+  - `isFlaunchTokenApprovedForAll()` and `setFlaunchTokenApprovalForAll()` for NFT approval management
+
+- **Account Abstraction and Custom Signer Support**
+
+  - New `createFlaunchCalldata()` function for generating transaction call objects instead of broadcasting
+  - `parseCall()` utility for extracting call data from SDK method calls
+  - `CallData` interface with `to`, `value`, and `data` properties for external transaction handling
+  - `createCallDataWalletClient()` for custom wallet client implementation
+  - Enhanced support for account abstraction wallets and external transaction batching
+
+- **Enhanced Import System** for external memecoins
+
+  - `getImportAndAddLiquidityCalls()` for atomic import and liquidity addition in single transaction batch
+  - Dual input methods: import by `initialMarketCapUSD` or `initialPriceUSD`
+  - `isMemecoinImported()` check function for import status verification
+
+- **Developer Experience Improvements**
+  - **Simplified IPFS Integration**: Pinata configuration now optional, defaults to Flaunch API for uploads
+  - `getERC20AllowanceToPermit2()` and `setERC20AllowanceToPermit2()` for external token approval management
+  - Updated smart contract addresses in `addresses.ts`
+  - `getManagerDeployedAddressFromTx()` utility for extracting deployed manager addresses from transaction receipts
+
+### Changed
+
+- **Version Naming Standardization**: Renamed `FlaunchVersion.V1_1_1` to `FlaunchVersion.V1_2` for consistency
+- **Enhanced IPFS Upload System**: Made `pinataConfig` optional in `IPFSParams` interface, defaulting to Flaunch API
+- **Improved SDK Architecture**: Enhanced multi-version support with better contract address management
+- **Updated Contract Address Mappings**: Added comprehensive mainnet addresses for all new contracts:
+  - `StakingManagerAddress`, `ClosedPermissionsAddress`, `WhitelistedPermissionsAddress`
+  - Updated `FlaunchZapAddress` with trusted signer support
+  - New `FlaunchV1_2Address` and `FlaunchPositionManagerV1_2Address` mappings
+- **Enhanced Type System**: Added comprehensive types for liquidity management, permissions, and call data generation
+- **Improved Error Handling**: Better validation and error messages across all new functionality
+
+### Fixed
+
+- **High-Precision Price Calculations**: Fixed `coinPriceInUSD()` to return 18-decimal precision for accurate price representation
+- **Manager Deployment Detection**: Updated `getManagerDeployedAddressFromTx()` to use transaction receipt logs directly for more reliable address extraction
+- **Single-Sided Liquidity Calculations**: Fixed amount calculations for single-sided liquidity positions to force correct zero amounts
+- **AnyPositionManager Integration**: Updated `initialPriceParams` to include memecoin address for proper external coin support
+- **Liquidity Transaction Optimization**: Removed unnecessary transaction calls from liquidity addition flows for gas efficiency
+
 ## [0.8.2] - 2025-07-01
 
 ### Added
