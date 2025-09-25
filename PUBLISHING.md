@@ -20,54 +20,7 @@ We follow [Semantic Versioning](https://semver.org/) (SemVer) with the following
 
 ## Publishing Process
 
-### 1. Update the Version
-
-Use the pnpm version command to update the version in package.json:
-
-```bash
-# For bug fixes
-pnpm version patch
-
-# For breaking changes in pre-1.0 or new features in post-1.0
-pnpm version minor
-
-# For breaking changes in post-1.0
-pnpm version major
-```
-
-This command will:
-
-- Update the version in package.json
-- Create a git commit with the message "@flaunch/sdk v{version}"
-- Create a git tag with the name "@flaunch/sdk@{version}"
-
-### 2. Push Changes to GitHub
-
-Push both the commit and the tag to GitHub:
-
-```bash
-git push && git push --tags
-```
-
-### 3. Build and Publish the Package
-
-Build the package and publish it to npm:
-
-```bash
-pnpm publish
-```
-
-The `pnpm publish` command will automatically run the build script (via prepublishOnly) before publishing.
-
-### 4.
-
-Update the llm docs:
-
-```bash
-pnpm docs:llms
-```
-
-### 5.
+### 1.
 
 Update CHANGELOG.md by running this prompt:
 
@@ -184,6 +137,53 @@ Format: `## [VERSION] - YYYY-MM-DD`
 This approach ensures the changelog accurately reflects the actual code changes rather than just commit message summaries.
 
 ````
+
+### 2.
+
+Update the llm docs:
+
+```bash
+pnpm docs:llms
+```
+
+### 3. Update the Version
+
+Use the pnpm version command to update the version in package.json:
+
+```bash
+# For bug fixes
+pnpm version patch
+
+# For breaking changes in pre-1.0 or new features in post-1.0
+pnpm version minor
+
+# For breaking changes in post-1.0
+pnpm version major
+```
+
+This command will:
+
+- Update the version in package.json
+- Create a git commit with the message "@flaunch/sdk v{version}"
+- Create a git tag with the name "@flaunch/sdk@{version}"
+
+### 4. Push Changes to GitHub
+
+Push both the commit and the tag to GitHub:
+
+```bash
+git push && git push --tags
+```
+
+### 5. Build and Publish the Package
+
+Build the package and publish it to npm:
+
+```bash
+pnpm publish
+```
+
+The `pnpm publish` command will automatically run the build script (via prepublishOnly) before publishing.
 
 ## Beta Version Publishing
 
