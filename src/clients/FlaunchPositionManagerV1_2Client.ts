@@ -8,17 +8,18 @@ import {
   createDrift,
   HexString,
 } from "@delvtech/drift";
-import { FlaunchPositionManagerAbi } from "../abi/FlaunchPositionManager";
+import { FlaunchPositionManagerV1_2Abi } from "../abi/FlaunchPositionManagerV1_2";
 import { encodeAbiParameters, parseUnits, zeroAddress, type Hex } from "viem";
 import { IPFSParams } from "../types";
 import { generateTokenUri } from "helpers/ipfs";
+import { ReadInitialPrice } from "./InitialPriceClient";
 import { getAmountWithSlippage } from "utils/universalRouter";
 import { parseSwapData, type SwapLogArgs } from "utils/parseSwap";
-import { ReadInitialPrice } from "./InitialPriceClient";
 
-export type FlaunchPositionManagerABI = typeof FlaunchPositionManagerAbi;
+export type FlaunchPositionManagerV1_2ABI =
+  typeof FlaunchPositionManagerV1_2Abi;
 export type PoolCreatedLog = EventLog<
-  FlaunchPositionManagerABI,
+  FlaunchPositionManagerV1_2ABI,
   "PoolCreated"
 > & {
   timestamp: number;
@@ -36,7 +37,10 @@ export interface WatchPoolCreatedParams {
   startBlockNumber?: bigint;
 }
 
-export type BaseSwapLog = EventLog<FlaunchPositionManagerABI, "PoolSwap"> & {
+export type BaseSwapLog = EventLog<
+  FlaunchPositionManagerV1_2ABI,
+  "PoolSwap"
+> & {
   timestamp: number;
 };
 
@@ -89,6 +93,7 @@ export interface FlaunchParams {
   symbol: string;
   tokenUri: string;
   fairLaunchPercent: number;
+  fairLaunchDuration: bigint;
   initialMarketCapUSD: number;
   creator: Address;
   creatorFeeAllocationPercent: number;
@@ -99,8 +104,8 @@ export interface FlaunchIPFSParams
   extends Omit<FlaunchParams, "tokenUri">,
     IPFSParams {}
 
-export class ReadFlaunchPositionManager {
-  public readonly contract: ReadContract<FlaunchPositionManagerABI>;
+export class ReadFlaunchPositionManagerV1_2 {
+  public readonly contract: ReadContract<FlaunchPositionManagerV1_2ABI>;
   drift: Drift;
   public pollPoolCreatedNow?: () => Promise<void>;
   public pollPoolSwapNow?: () => Promise<void>;
@@ -112,7 +117,7 @@ export class ReadFlaunchPositionManager {
       throw new Error("Address is required");
     }
     this.contract = drift.contract({
-      abi: FlaunchPositionManagerAbi,
+      abi: FlaunchPositionManagerV1_2Abi,
       address,
     });
   }
@@ -131,14 +136,9 @@ export class ReadFlaunchPositionManager {
     return poolKey.tickSpacing !== 0;
   }
 
-  /**
-   * Gets the ETH balance for the creator to claim
-   * @param creator - The address of the creator to check
-   * @returns The balance of the creator
-   */
-  creatorBalance(creator: Address) {
-    return this.contract.read("balances", {
-      _recipient: creator,
+  getFlaunchingMarketCap(initialPriceParams: HexString) {
+    return this.contract.read("getFlaunchingMarketCap", {
+      _initialPriceParams: initialPriceParams,
     });
   }
 
@@ -392,10 +392,14 @@ export class ReadFlaunchPositionManager {
       pollPoolSwapNow: pollEvents,
     };
   }
+
+  initialPrice() {
+    return this.contract.read("initialPrice");
+  }
 }
 
-export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager {
-  declare contract: ReadWriteContract<FlaunchPositionManagerABI>;
+export class ReadWriteFlaunchPositionManagerV1_2 extends ReadFlaunchPositionManagerV1_2 {
+  declare contract: ReadWriteContract<FlaunchPositionManagerV1_2ABI>;
 
   constructor(
     address: Address,
@@ -404,11 +408,16 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
     super(address, drift);
   }
 
+  /**
+   * Flaunches a new token directly from the position manager.
+   * For premine support, flaunch via the FlaunchZapClient.
+   */
   async flaunch({
     name,
     symbol,
     tokenUri,
     fairLaunchPercent,
+    fairLaunchDuration,
     initialMarketCapUSD,
     creator,
     creatorFeeAllocationPercent,
@@ -447,6 +456,7 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
           tokenUri,
           initialTokenFairLaunch:
             (this.TOTAL_SUPPLY * fairLaunchInBps) / 10_000n,
+          fairLaunchDuration,
           premineAmount: 0n,
           creator,
           creatorFeeAllocation: creatorFeeAllocationInBps,
@@ -466,10 +476,15 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
     );
   }
 
+  /**
+   * Flaunches a new token directly from the position manager by uploading the token metadata to IPFS.
+   * For premine support, flaunch via the FlaunchZapClient.
+   */
   async flaunchIPFS({
     name,
     symbol,
     fairLaunchPercent,
+    fairLaunchDuration,
     initialMarketCapUSD,
     creator,
     creatorFeeAllocationPercent,
@@ -487,22 +502,11 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
       symbol,
       tokenUri,
       fairLaunchPercent,
+      fairLaunchDuration,
       initialMarketCapUSD,
       creator,
       creatorFeeAllocationPercent,
       flaunchAt,
-    });
-  }
-
-  /**
-   * Withdraws the creator's share of the revenue
-   * @param recipient - The address to withdraw the revenue to
-   * @returns Transaction response
-   */
-  withdrawFees(recipient: Address) {
-    return this.contract.write("withdrawFees", {
-      _recipient: recipient,
-      _unwrap: true,
     });
   }
 }

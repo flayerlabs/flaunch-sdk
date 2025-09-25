@@ -122,6 +122,12 @@ export class ReadFlaunchPositionManagerV1_1 {
     });
   }
 
+  getFeeCalculator({ forFairLaunch }: { forFairLaunch: boolean }) {
+    return this.contract.read("getFeeCalculator", {
+      _isFairLaunch: forFairLaunch,
+    });
+  }
+
   async isValidCoin(coinAddress: Address) {
     const poolKey = await this.contract.read("poolKey", {
       _token: coinAddress,
@@ -148,11 +154,11 @@ export class ReadFlaunchPositionManagerV1_1 {
     const flaunchingFee = await readInitialPrice.getFlaunchingFee(params);
 
     // increase the flaunching fee by the slippage percent
-    const flaunchingFeeWithSlippage = getAmountWithSlippage(
-      flaunchingFee,
-      (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
-      "EXACT_OUT"
-    );
+    const flaunchingFeeWithSlippage = getAmountWithSlippage({
+      amount: flaunchingFee,
+      slippage: (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
+      swapType: "EXACT_OUT",
+    });
     return flaunchingFeeWithSlippage;
   }
 
@@ -486,7 +492,7 @@ export class ReadWriteFlaunchPositionManagerV1_1 extends ReadFlaunchPositionMana
     metadata,
     pinataConfig,
   }: FlaunchIPFSParams) {
-    const tokenUri = await generateTokenUri(name, {
+    const tokenUri = await generateTokenUri(name, symbol, {
       metadata,
       pinataConfig,
     });

@@ -12,7 +12,9 @@ import { FlaunchZapAbi } from "../abi/FlaunchZap";
 import { parseUnits, zeroAddress, zeroHash } from "viem";
 import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
-import { IPFSParams } from "../types";
+import { getPermissionsAddress } from "../helpers/permissions";
+import { IPFSParams, Permissions } from "../types";
+import { RevenueManagerAddress, StakingManagerAddress } from "addresses";
 import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
 import {
   AddressFeeSplitManagerAddress,
@@ -36,8 +38,23 @@ export interface FlaunchParams {
   premineAmount?: bigint;
   treasuryManagerParams?: {
     manager?: Address;
+    // @note the permissions are only set when a new treasury manager is deployed. Defaults to OPEN.
+    permissions?: Permissions;
     initializeData?: HexString;
     depositData?: HexString;
+  };
+  // for bot protection during fair launch
+  trustedSignerSettings?: {
+    enabled: boolean;
+    walletCap?: bigint;
+    txCap?: bigint;
+    // optional custom fee signer address
+    trustedFeeSigner?: Address;
+    // need to pass signed message if trusted signer is enabled and premine requested.
+    premineSignedMessage?: {
+      deadline: number;
+      signature: HexString;
+    };
   };
 }
 
@@ -48,6 +65,9 @@ export interface FlaunchIPFSParams
 export interface FlaunchWithRevenueManagerParams
   extends Omit<FlaunchParams, "treasuryManagerParams"> {
   revenueManagerInstanceAddress: Address;
+  treasuryManagerParams?: {
+    permissions?: Permissions;
+  };
 }
 
 export interface FlaunchWithRevenueManagerIPFSParams
@@ -61,11 +81,30 @@ export interface FlaunchWithSplitManagerParams
     address: Address;
     percent: number;
   }[];
+  treasuryManagerParams?: {
+    permissions?: Permissions;
+  };
 }
 
 export interface FlaunchWithSplitManagerIPFSParams
   extends Omit<FlaunchWithSplitManagerParams, "tokenUri">,
     IPFSParams {}
+
+export interface DeployRevenueManagerParams {
+  protocolRecipient: Address;
+  protocolFeePercent: number;
+  permissions?: Permissions;
+}
+
+export interface DeployStakingManagerParams {
+  managerOwner: Address;
+  stakingToken: Address;
+  minEscrowDuration: bigint;
+  minStakeDuration: bigint;
+  creatorSharePercent: number;
+  ownerSharePercent: number;
+  permissions?: Permissions;
+}
 
 /**
  * Base client for interacting with the FlaunchZap contract in read-only mode
@@ -113,11 +152,11 @@ export class ReadFlaunchZap {
       (mcapInWei * params.premineAmount) / this.TOTAL_SUPPLY;
 
     // increase the premine cost by the slippage percent
-    const premineCostInWeiWithSlippage = getAmountWithSlippage(
-      premineCostInWei,
-      (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
-      "EXACT_OUT" // as we know the output premine amount
-    );
+    const premineCostInWeiWithSlippage = getAmountWithSlippage({
+      amount: premineCostInWei,
+      slippage: (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
+      swapType: "EXACT_OUT", // as we know the output premine amount
+    });
     return premineCostInWeiWithSlippage;
   }
 
@@ -133,11 +172,11 @@ export class ReadFlaunchZap {
     const flaunchingFee = await readInitialPrice.getFlaunchingFee(params);
 
     // increase the flaunching fee by the slippage percent
-    const flaunchingFeeWithSlippage = getAmountWithSlippage(
-      flaunchingFee,
-      (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
-      "EXACT_OUT"
-    );
+    const flaunchingFeeWithSlippage = getAmountWithSlippage({
+      amount: flaunchingFee,
+      slippage: (params.slippagePercent ?? 0 / 100).toFixed(18).toString(),
+      swapType: "EXACT_OUT",
+    });
     return flaunchingFeeWithSlippage;
   }
 
@@ -203,19 +242,64 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
 
     const _treasuryManagerParams: {
       manager: Address;
+      permissions: Permissions;
       initializeData: HexString;
       depositData: HexString;
     } = params.treasuryManagerParams
       ? {
           manager: params.treasuryManagerParams.manager ?? zeroAddress,
+          permissions:
+            params.treasuryManagerParams.permissions ?? Permissions.OPEN,
           initializeData: params.treasuryManagerParams.initializeData ?? "0x",
           depositData: params.treasuryManagerParams.depositData ?? "0x",
         }
       : {
           manager: zeroAddress,
+          permissions: Permissions.OPEN,
           initializeData: "0x",
           depositData: "0x",
         };
+
+    const feeCalculatorParams = params.trustedSignerSettings
+      ? encodeAbiParameters(
+          [
+            { type: "bool", name: "enabled" },
+            { type: "uint256", name: "walletCap" },
+            { type: "uint256", name: "txCap" },
+          ],
+          [
+            params.trustedSignerSettings.enabled,
+            params.trustedSignerSettings.walletCap ?? 0n,
+            params.trustedSignerSettings.txCap ?? 0n,
+          ]
+        )
+      : "0x";
+
+    const _premineSwapHookData = params.trustedSignerSettings?.enabled
+      ? encodeAbiParameters(
+          [
+            { type: "address", name: "referrer" },
+            {
+              type: "tuple",
+              components: [
+                { type: "uint256", name: "deadline" },
+                { type: "bytes", name: "signature" },
+              ],
+            },
+          ],
+          [
+            zeroAddress,
+            {
+              deadline: BigInt(
+                params.trustedSignerSettings.premineSignedMessage?.deadline ?? 0
+              ),
+              signature:
+                params.trustedSignerSettings.premineSignedMessage?.signature ??
+                "0x",
+            },
+          ]
+        )
+      : "0x";
 
     return this.contract.write(
       "flaunch",
@@ -232,9 +316,18 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           creatorFeeAllocation: creatorFeeAllocationInBps,
           flaunchAt: params.flaunchAt ?? 0n,
           initialPriceParams,
-          feeCalculatorParams: "0x",
+          feeCalculatorParams,
         },
-        _treasuryManagerParams,
+        _trustedFeeSigner:
+          params.trustedSignerSettings?.trustedFeeSigner ?? zeroAddress,
+        _premineSwapHookData,
+        _treasuryManagerParams: {
+          ..._treasuryManagerParams,
+          permissions: getPermissionsAddress(
+            _treasuryManagerParams.permissions,
+            this.chainId
+          ),
+        },
         _whitelistParams: {
           merkleRoot: zeroHash,
           merkleIPFSHash: "",
@@ -255,7 +348,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
   }
 
   async flaunchIPFS(params: FlaunchIPFSParams) {
-    const tokenUri = await generateTokenUri(params.name, {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
       metadata: params.metadata,
       pinataConfig: params.pinataConfig,
     });
@@ -284,67 +377,16 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
    * @returns Transaction response for the flaunch creation
    */
   async flaunchWithRevenueManager(params: FlaunchWithRevenueManagerParams) {
-    const initialMCapInUSDCWei = parseUnits(
-      params.initialMarketCapUSD.toString(),
-      6
-    );
-    const initialPriceParams = encodeAbiParameters(
-      [
-        {
-          type: "uint256",
-        },
-      ],
-      [initialMCapInUSDCWei]
-    );
-
-    const fairLaunchInBps = BigInt(params.fairLaunchPercent * 100);
-    const creatorFeeAllocationInBps = params.creatorFeeAllocationPercent * 100;
-
-    const ethRequired = await this.ethRequiredToFlaunch({
-      premineAmount: params.premineAmount ?? 0n,
-      initialPriceParams,
-      slippagePercent: 5,
-    });
-
-    return this.contract.write(
-      "flaunch",
-      {
-        _flaunchParams: {
-          name: params.name,
-          symbol: params.symbol,
-          tokenUri: params.tokenUri,
-          initialTokenFairLaunch:
-            (this.TOTAL_SUPPLY * fairLaunchInBps) / 10_000n,
-          fairLaunchDuration: BigInt(params.fairLaunchDuration),
-          premineAmount: params.premineAmount ?? 0n,
-          creator: params.creator,
-          creatorFeeAllocation: creatorFeeAllocationInBps,
-          flaunchAt: params.flaunchAt ?? 0n,
-          initialPriceParams,
-          feeCalculatorParams: "0x",
-        },
-        _treasuryManagerParams: {
-          manager: params.revenueManagerInstanceAddress,
-          initializeData: "0x",
-          depositData: "0x",
-        },
-        _whitelistParams: {
-          merkleRoot: zeroHash,
-          merkleIPFSHash: "",
-          maxTokens: 0n,
-        },
-        _airdropParams: {
-          airdropIndex: 0n,
-          airdropAmount: 0n,
-          airdropEndTime: 0n,
-          merkleRoot: zeroHash,
-          merkleIPFSHash: "",
-        },
+    return this.flaunch({
+      ...params,
+      treasuryManagerParams: {
+        manager: params.revenueManagerInstanceAddress,
+        permissions:
+          params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+        initializeData: "0x",
+        depositData: "0x",
       },
-      {
-        value: ethRequired,
-      }
-    );
+    });
   }
 
   /**
@@ -355,7 +397,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
   async flaunchIPFSWithRevenueManager(
     params: FlaunchWithRevenueManagerIPFSParams
   ) {
-    const tokenUri = await generateTokenUri(params.name, {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
       metadata: params.metadata,
       pinataConfig: params.pinataConfig,
     });
@@ -386,28 +428,6 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
    * @returns Transaction response for the flaunch creation
    */
   async flaunchWithSplitManager(params: FlaunchWithSplitManagerParams) {
-    const initialMCapInUSDCWei = parseUnits(
-      params.initialMarketCapUSD.toString(),
-      6
-    );
-    const initialPriceParams = encodeAbiParameters(
-      [
-        {
-          type: "uint256",
-        },
-      ],
-      [initialMCapInUSDCWei]
-    );
-
-    const fairLaunchInBps = BigInt(params.fairLaunchPercent * 100);
-    const creatorFeeAllocationInBps = params.creatorFeeAllocationPercent * 100;
-
-    const ethRequired = await this.ethRequiredToFlaunch({
-      premineAmount: params.premineAmount ?? 0n,
-      initialPriceParams,
-      slippagePercent: 5,
-    });
-
     const VALID_SHARE_TOTAL = 100_00000n; // 5 decimals as BigInt
     let creatorShare =
       (BigInt(params.creatorSplitPercent) * VALID_SHARE_TOTAL) / 100n;
@@ -453,45 +473,16 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
       ]
     );
 
-    return this.contract.write(
-      "flaunch",
-      {
-        _flaunchParams: {
-          name: params.name,
-          symbol: params.symbol,
-          tokenUri: params.tokenUri,
-          initialTokenFairLaunch:
-            (this.TOTAL_SUPPLY * fairLaunchInBps) / 10_000n,
-          fairLaunchDuration: BigInt(params.fairLaunchDuration),
-          premineAmount: params.premineAmount ?? 0n,
-          creator: params.creator,
-          creatorFeeAllocation: creatorFeeAllocationInBps,
-          flaunchAt: params.flaunchAt ?? 0n,
-          initialPriceParams,
-          feeCalculatorParams: "0x",
-        },
-        _treasuryManagerParams: {
-          manager: AddressFeeSplitManagerAddress[this.chainId],
-          initializeData,
-          depositData: "0x",
-        },
-        _whitelistParams: {
-          merkleRoot: zeroHash,
-          merkleIPFSHash: "",
-          maxTokens: 0n,
-        },
-        _airdropParams: {
-          airdropIndex: 0n,
-          airdropAmount: 0n,
-          airdropEndTime: 0n,
-          merkleRoot: zeroHash,
-          merkleIPFSHash: "",
-        },
+    return this.flaunch({
+      ...params,
+      treasuryManagerParams: {
+        manager: AddressFeeSplitManagerAddress[this.chainId],
+        permissions:
+          params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+        initializeData,
+        depositData: "0x",
       },
-      {
-        value: ethRequired,
-      }
-    );
+    });
   }
 
   /**
@@ -500,7 +491,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
    * @returns Promise resolving to the transaction response for the flaunch creation
    */
   async flaunchIPFSWithSplitManager(params: FlaunchWithSplitManagerIPFSParams) {
-    const tokenUri = await generateTokenUri(params.name, {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
       metadata: params.metadata,
       pinataConfig: params.pinataConfig,
     });
@@ -508,6 +499,103 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
     return this.flaunchWithSplitManager({
       ...params,
       tokenUri,
+    });
+  }
+
+  /**
+   * Deploys a new revenue manager
+   * @param params - Parameters for deploying the revenue manager
+   * @param params.protocolRecipient - The address of the protocol recipient
+   * @param params.protocolFeePercent - The percentage of the protocol fee
+   * @param params.permissions - The permissions for the revenue manager
+   * @returns Transaction response
+   */
+  deployRevenueManager(params: DeployRevenueManagerParams) {
+    const permissionsAddress = getPermissionsAddress(
+      params.permissions ?? Permissions.OPEN,
+      this.chainId
+    );
+
+    return this.contract.write("deployAndInitializeManager", {
+      _managerImplementation: RevenueManagerAddress[this.chainId],
+      _owner: params.protocolRecipient,
+      _data: encodeAbiParameters(
+        [
+          {
+            type: "tuple",
+            components: [
+              { type: "address", name: "protocolRecipient" },
+              { type: "uint256", name: "protocolFee" },
+            ],
+          },
+        ],
+        [
+          {
+            protocolRecipient: params.protocolRecipient,
+            protocolFee: BigInt(params.protocolFeePercent * 100), // Convert percentage to basis points
+          },
+        ]
+      ),
+      _permissions: permissionsAddress,
+    });
+  }
+
+  /**
+   * Deploys a new staking manager
+   * @param params - Parameters for deploying the staking manager
+   * @param params.managerOwner - The address of the manager owner
+   * @param params.stakingToken - The address of the token to be staked
+   * @param params.minEscrowDuration - The minimum duration (in seconds) that the creator's NFT is locked for
+   * @param params.minStakeDuration - The minimum duration (in seconds) that the user's tokens are locked for
+   * @param params.creatorSharePercent - The % share that a creator will earn from their token
+   * @param params.ownerSharePercent - The % share that the manager owner will earn from their token
+   * @param params.permissions - The permissions for the staking manager
+   * @returns Transaction response
+   */
+  deployStakingManager(params: DeployStakingManagerParams) {
+    const permissionsAddress = getPermissionsAddress(
+      params.permissions ?? Permissions.OPEN,
+      this.chainId
+    );
+
+    const VALID_SHARE_TOTAL = 100_00000n; // 5 decimals as BigInt
+
+    const stakingManagerAddress = StakingManagerAddress[this.chainId];
+    if (stakingManagerAddress === zeroAddress) {
+      throw new Error(
+        `StakingManager not deployed on chainId: ${this.chainId}`
+      );
+    }
+
+    return this.contract.write("deployAndInitializeManager", {
+      _managerImplementation: stakingManagerAddress,
+      _owner: params.managerOwner,
+      _data: encodeAbiParameters(
+        [
+          {
+            type: "tuple",
+            components: [
+              { type: "address", name: "stakingToken" },
+              { type: "uint256", name: "minEscrowDuration" },
+              { type: "uint256", name: "minStakeDuration" },
+              { type: "uint256", name: "creatorShare" },
+              { type: "uint256", name: "ownerShare" },
+            ],
+          },
+        ],
+        [
+          {
+            stakingToken: params.stakingToken,
+            minEscrowDuration: params.minEscrowDuration,
+            minStakeDuration: params.minStakeDuration,
+            creatorShare:
+              (BigInt(params.creatorSharePercent) * VALID_SHARE_TOTAL) / 100n,
+            ownerShare:
+              (BigInt(params.ownerSharePercent) * VALID_SHARE_TOTAL) / 100n,
+          },
+        ]
+      ),
+      _permissions: permissionsAddress,
     });
   }
 }

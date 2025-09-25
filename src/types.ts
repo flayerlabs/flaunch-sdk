@@ -1,4 +1,4 @@
-import { Address } from "viem";
+import { Address, Call, Hex } from "viem";
 import { PinataConfig } from "helpers/ipfs";
 
 export interface Addresses {
@@ -11,6 +11,10 @@ export interface PoolKey {
   fee: number;
   tickSpacing: number;
   hooks: Address;
+}
+
+export interface PoolWithHookData extends PoolKey {
+  hookData: Hex;
 }
 
 export interface CoinMetadata {
@@ -33,7 +37,7 @@ export interface IPFSParams {
     twitterUrl?: string;
     telegramUrl?: string;
   };
-  pinataConfig: PinataConfig;
+  pinataConfig?: PinataConfig;
 }
 
 /**
@@ -42,7 +46,7 @@ export interface IPFSParams {
 export enum FlaunchVersion {
   V1 = "V1",
   V1_1 = "V1_1",
-  V1_1_1 = "V1_1_1",
+  V1_2 = "V1_2",
   ANY = "ANY",
 }
 
@@ -55,4 +59,113 @@ export enum Verifier {
   VIRTUALS = "virtuals",
   WHITELIST = "whitelist",
   ZORA = "zora",
+}
+
+export enum LiquidityMode {
+  FULL_RANGE = "full-range",
+  CONCENTRATED = "concentrated",
+}
+
+export type CallWithDescription = Call & {
+  description?: string;
+};
+/**
+ * Enumeration of Permissions for TreasuryManagers. Defaults to OPEN.
+ */
+export enum Permissions {
+  OPEN = "open",
+  CLOSED = "closed",
+  WHITELISTED = "whitelisted",
+}
+
+// either initialMarketCapUSD or initialPriceUSD must be provided
+export type ImportMemecoinParams =
+  | {
+      coinAddress: Address;
+      verifier?: Verifier;
+      creatorFeeAllocationPercent: number;
+      initialMarketCapUSD: number;
+    }
+  | {
+      coinAddress: Address;
+      verifier?: Verifier;
+      creatorFeeAllocationPercent: number;
+      initialPriceUSD: number;
+    };
+
+export type CalculateAddLiquidityAmountsParams =
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      coinOrEthInputAmount: bigint;
+      inputToken: "coin" | "eth";
+      minMarketCap: string;
+      maxMarketCap: string;
+      currentMarketCap?: string;
+      version?: FlaunchVersion;
+    }
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      coinOrEthInputAmount: bigint;
+      inputToken: "coin" | "eth";
+      minPriceUSD: string;
+      maxPriceUSD: string;
+      currentPriceUSD?: number;
+      version?: FlaunchVersion;
+    };
+
+export type GetAddLiquidityCallsParams =
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      coinOrEthInputAmount: bigint;
+      inputToken: "coin" | "eth";
+      minMarketCap: string;
+      maxMarketCap: string;
+      initialMarketCapUSD?: number;
+      version?: FlaunchVersion;
+    }
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      coinOrEthInputAmount: bigint;
+      inputToken: "coin" | "eth";
+      minPriceUSD: string;
+      maxPriceUSD: string;
+      initialPriceUSD?: number;
+      version?: FlaunchVersion;
+    }
+  | {
+      coinAddress: Address;
+      coinAmount: bigint;
+      flethAmount: bigint;
+      tickLower: number;
+      tickUpper: number;
+      currentTick?: number;
+      version?: FlaunchVersion;
+    };
+
+export type CheckSingleSidedAddLiquidityParams =
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      minMarketCap: string;
+      maxMarketCap: string;
+      currentMarketCap?: string;
+      version?: FlaunchVersion;
+    }
+  | {
+      coinAddress: Address;
+      liquidityMode: LiquidityMode;
+      minPriceUSD: string;
+      maxPriceUSD: string;
+      currentPriceUSD?: number;
+      version?: FlaunchVersion;
+    };
+
+export interface SingleSidedLiquidityInfo {
+  isSingleSided: boolean;
+  shouldHideCoinInput: boolean;
+  shouldHideETHInput: boolean;
 }

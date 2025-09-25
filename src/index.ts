@@ -21,6 +21,23 @@ export { createFlaunch } from "./sdk/factory";
 export type { CreateFlaunchParams } from "./sdk/factory";
 export { createDrift } from "./sdk/drift";
 
+// Calldata generation exports
+export {
+  createFlaunchCalldata,
+  decodeCallData,
+  parseCall,
+  createCallDataWalletClient,
+  encodedCallAbi,
+} from "./sdk/calldata";
+export type {
+  CreateFlaunchCalldataParams,
+  CallData,
+  CallDataMethod,
+  CallDataResult,
+} from "./sdk/calldata";
+
+export { FlaunchBackend } from "./sdk/FlaunchBackend";
+
 export const FlaunchSDK = {
   ReadFlaunchSDK,
   ReadWriteFlaunchSDK,

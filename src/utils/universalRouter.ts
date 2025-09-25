@@ -10,14 +10,13 @@ import {
   zeroAddress,
 } from "viem";
 import {
-  FlaunchPositionManagerAddress,
-  FlaunchPositionManagerV1_1Address,
   FLETHAddress,
   FLETHHooksAddress,
   Permit2Address,
   UniversalRouterAddress,
 } from "addresses";
 import { UniversalRouterAbi } from "../abi/UniversalRouter";
+import { PoolWithHookData } from "types";
 
 export type PermitDetails = {
   token: Address;
@@ -92,11 +91,15 @@ const URCommands = {
 /**
  * @dev EXACT_OUT adds the slippage, EXACT_IN removes it
  */
-export const getAmountWithSlippage = (
-  amount: bigint | undefined,
-  slippage: string,
-  swapType: "EXACT_IN" | "EXACT_OUT"
-) => {
+export const getAmountWithSlippage = ({
+  amount,
+  slippage,
+  swapType,
+}: {
+  amount: bigint | undefined;
+  slippage: string;
+  swapType: "EXACT_IN" | "EXACT_OUT";
+}) => {
   if (amount == null) {
     return 0n;
   }
@@ -112,7 +115,7 @@ export const getAmountWithSlippage = (
 
 const ETH = zeroAddress;
 
-export const ethToMemecoin = (params: {
+export const buyMemecoin = (params: {
   sender: Address;
   memecoin: Address;
   chainId: number;
@@ -123,6 +126,11 @@ export const ethToMemecoin = (params: {
   amountOut?: bigint; // Required for 'EXACT_OUT' swap
   amountInMax?: bigint; // Required for 'EXACT_OUT' swap
   positionManagerAddress: Address;
+  intermediatePoolKey?: PoolWithHookData; // Optional intermediate pool key to use containing inputToken and ETH as currencies
+  // for approving the inputToken:
+  permitSingle?: PermitSingle;
+  signature?: Hex;
+  hookData?: Hex; // for swaps when TrustedSigner is enabled
 }) => {
   const flETH = FLETHAddress[params.chainId];
   const flETHHooks = FLETHHooksAddress[params.chainId];
@@ -136,9 +144,26 @@ export const ethToMemecoin = (params: {
     V4Actions.SETTLE_ALL +
     V4Actions.TAKE_ALL) as Hex;
 
-  // Initialize variables for path and v4Params
-  let path;
+  // Initialize variable for v4Params
   let v4Params;
+
+  // verify that ETH exists in the intermediate pool key, if it's provided
+  if (
+    params.intermediatePoolKey &&
+    params.intermediatePoolKey.currency0 !== ETH &&
+    params.intermediatePoolKey.currency1 !== ETH
+  ) {
+    throw new Error(
+      "ETH must be one of the currencies in the intermediatePoolKey"
+    );
+  }
+
+  // if not intermediate pool key, ETH is the input token
+  const inputToken = params.intermediatePoolKey
+    ? params.intermediatePoolKey.currency0 === ETH
+      ? params.intermediatePoolKey.currency1
+      : params.intermediatePoolKey.currency0
+    : ETH;
 
   // Configure path and parameters based on swapType
   if (params.swapType === "EXACT_IN") {
@@ -148,32 +173,45 @@ export const ethToMemecoin = (params: {
       );
     }
 
-    // Path for 'EXACT_IN' swap
-    path = [
+    // Base Path for 'EXACT_IN' swap
+    const basePath = [
       {
         intermediateCurrency: flETH,
         fee: 0,
         tickSpacing: 60,
         hooks: flETHHooks,
-        hookData: "0x" as Address,
+        hookData: "0x" as Hex,
       },
       {
         intermediateCurrency: params.memecoin,
         fee: 0,
         tickSpacing: 60,
         hooks: flaunchHooks,
-        hookData: encodeAbiParameters(
-          [{ type: "address", name: "referrer" }],
-          [params.referrer ?? zeroAddress]
-        ),
+        hookData:
+          params.hookData ??
+          encodeAbiParameters(
+            [{ type: "address", name: "referrer" }],
+            [params.referrer ?? zeroAddress]
+          ),
       },
     ];
 
     // Parameters for 'EXACT_IN' swap
     v4Params = encodeAbiParameters(IV4RouterAbiExactInput, [
       {
-        currencyIn: ETH,
-        path: path,
+        currencyIn: inputToken,
+        path: params.intermediatePoolKey
+          ? [
+              {
+                intermediateCurrency: ETH,
+                fee: params.intermediatePoolKey.fee,
+                tickSpacing: params.intermediatePoolKey.tickSpacing,
+                hooks: params.intermediatePoolKey.hooks,
+                hookData: params.intermediatePoolKey.hookData,
+              },
+              ...basePath,
+            ]
+          : basePath,
         amountIn: params.amountIn,
         amountOutMinimum: params.amountOutMin,
       },
@@ -185,12 +223,11 @@ export const ethToMemecoin = (params: {
       );
     }
 
-    // Path for 'EXACT_OUT' swap
-    path = [
+    const basePath = [
       {
         fee: 0,
         tickSpacing: 60,
-        hookData: "0x" as `0x${string}`,
+        hookData: "0x" as Hex,
         hooks: flETHHooks,
         intermediateCurrency: ETH,
       },
@@ -199,10 +236,12 @@ export const ethToMemecoin = (params: {
         tickSpacing: 60,
         hooks: flaunchHooks,
         intermediateCurrency: flETH,
-        hookData: encodeAbiParameters(
-          [{ type: "address", name: "referrer" }],
-          [params.referrer ?? zeroAddress]
-        ) as `0x${string}`,
+        hookData:
+          params.hookData ??
+          (encodeAbiParameters(
+            [{ type: "address", name: "referrer" }],
+            [params.referrer ?? zeroAddress]
+          ) as Hex),
       },
     ];
 
@@ -210,7 +249,18 @@ export const ethToMemecoin = (params: {
     v4Params = encodeAbiParameters(IV4RouterAbiExactOutput, [
       {
         currencyOut: params.memecoin,
-        path: path,
+        path: params.intermediatePoolKey
+          ? [
+              {
+                fee: params.intermediatePoolKey.fee,
+                tickSpacing: params.intermediatePoolKey.tickSpacing,
+                hookData: params.intermediatePoolKey.hookData,
+                hooks: params.intermediatePoolKey.hooks,
+                intermediateCurrency: inputToken,
+              },
+              ...basePath,
+            ]
+          : basePath,
         amountOut: params.amountOut,
         amountInMaximum: params.amountInMax,
       },
@@ -230,7 +280,7 @@ export const ethToMemecoin = (params: {
       },
     ],
     [
-      ETH,
+      inputToken,
       params.swapType === "EXACT_IN"
         ? params.amountIn ?? maxUint256
         : params.amountInMax ?? maxUint256,
@@ -265,43 +315,90 @@ export const ethToMemecoin = (params: {
     [v4Actions, [v4Params, settleParams, takeParams]]
   );
 
-  // Commands for Universal Router
-  const urCommands = ("0x" + URCommands.V4_SWAP + URCommands.SWEEP) as Hex;
-  const sweepInput = encodeAbiParameters(
-    [
-      { type: "address", name: "token" },
-      { type: "address", name: "recipient" },
-      { type: "uint160", name: "amountIn" },
-    ],
-    [ETH, params.sender, 0n]
-  );
+  if (params.intermediatePoolKey && params.signature && params.permitSingle) {
+    // Commands for Universal Router
+    const urCommands = ("0x" +
+      URCommands.PERMIT2_PERMIT +
+      URCommands.V4_SWAP) as Hex;
 
-  // Encode calldata for Universal Router
-  const inputs = [v4RouterData, sweepInput];
-  const urExecuteCalldata = encodeFunctionData({
-    abi: UniversalRouterAbi,
-    functionName: "execute",
-    args: [urCommands, inputs],
-  });
+    const permit2PermitInput = encodeAbiParameters(
+      [
+        {
+          type: "tuple",
+          components: [
+            {
+              type: "tuple",
+              components: [
+                { type: "address", name: "token" },
+                { type: "uint160", name: "amount" },
+                { type: "uint48", name: "expiration" },
+                { type: "uint48", name: "nonce" },
+              ],
+              name: "details",
+            },
+            { type: "address", name: "spender" },
+            { type: "uint256", name: "sigDeadline" },
+          ],
+          name: "PermitSingle",
+        },
+        { type: "bytes", name: "signature" },
+      ],
+      [params.permitSingle, params.signature]
+    );
 
-  return {
-    calldata: urExecuteCalldata,
-    commands: urCommands,
-    inputs,
-  };
+    // Encode calldata for Universal Router
+    const inputs = [permit2PermitInput, v4RouterData];
+    const urExecuteCalldata = encodeFunctionData({
+      abi: UniversalRouterAbi,
+      functionName: "execute",
+      args: [urCommands, inputs],
+    });
+
+    return {
+      calldata: urExecuteCalldata,
+      commands: urCommands,
+      inputs,
+    };
+  } else {
+    // Commands for Universal Router
+    const urCommands = ("0x" + URCommands.V4_SWAP + URCommands.SWEEP) as Hex;
+    const sweepInput = encodeAbiParameters(
+      [
+        { type: "address", name: "token" },
+        { type: "address", name: "recipient" },
+        { type: "uint160", name: "amountIn" },
+      ],
+      [ETH, params.sender, 0n]
+    );
+
+    // Encode calldata for Universal Router
+    const inputs = [v4RouterData, sweepInput];
+    const urExecuteCalldata = encodeFunctionData({
+      abi: UniversalRouterAbi,
+      functionName: "execute",
+      args: [urCommands, inputs],
+    });
+
+    return {
+      calldata: urExecuteCalldata,
+      commands: urCommands,
+      inputs,
+    };
+  }
 };
 
 // @notice Beofre calling the UniversalRouter the user must have:
 // 1. Given the Permit2 contract allowance to spend the memecoin
-export const memecoinToEthWithPermit2 = (params: {
+export const sellMemecoinWithPermit2 = (params: {
   chainId: number;
   memecoin: Address;
   amountIn: bigint;
-  ethOutMin: bigint;
-  permitSingle: PermitSingle | undefined;
-  signature: Hex | undefined;
+  amountOutMin: bigint;
+  permitSingle?: PermitSingle;
+  signature?: Hex;
   referrer: Address | null;
   positionManagerAddress: Address;
+  intermediatePoolKey?: PoolWithHookData; // Optional intermediate pool key to use containing outputToken and ETH as currencies
 }) => {
   const flETH = FLETHAddress[params.chainId];
 
@@ -311,35 +408,67 @@ export const memecoinToEthWithPermit2 = (params: {
     V4Actions.SWAP_EXACT_IN +
     V4Actions.SETTLE_ALL +
     V4Actions.TAKE_ALL) as Hex;
+
+  // verify that ETH exists in the intermediate pool key, if it's provided
+  if (
+    params.intermediatePoolKey &&
+    params.intermediatePoolKey.currency0 !== ETH &&
+    params.intermediatePoolKey.currency1 !== ETH
+  ) {
+    throw new Error(
+      "ETH must be one of the currencies in the intermediatePoolKey"
+    );
+  }
+
+  // if not intermediate pool key, ETH is the output token
+  const outputToken = params.intermediatePoolKey
+    ? params.intermediatePoolKey.currency0 === ETH
+      ? params.intermediatePoolKey.currency1
+      : params.intermediatePoolKey.currency0
+    : ETH;
+
+  const basePath = [
+    {
+      intermediateCurrency: flETH,
+      fee: 0,
+      tickSpacing: 60,
+      hooks: flaunchHooks,
+      hookData: encodeAbiParameters(
+        [
+          {
+            type: "address",
+            name: "referrer",
+          },
+        ],
+        [params.referrer ?? zeroAddress]
+      ),
+    },
+    {
+      intermediateCurrency: ETH,
+      fee: 0,
+      tickSpacing: 60,
+      hooks: flETHHooks,
+      hookData: "0x" as Hex,
+    },
+  ];
+
   const v4ExactInputParams = encodeAbiParameters(IV4RouterAbiExactInput, [
     {
       currencyIn: params.memecoin,
-      path: [
-        {
-          intermediateCurrency: flETH,
-          fee: 0,
-          tickSpacing: 60,
-          hooks: flaunchHooks,
-          hookData: encodeAbiParameters(
-            [
-              {
-                type: "address",
-                name: "referrer",
-              },
-            ],
-            [params.referrer ?? zeroAddress]
-          ),
-        },
-        {
-          intermediateCurrency: ETH,
-          fee: 0,
-          tickSpacing: 60,
-          hooks: flETHHooks,
-          hookData: "0x",
-        },
-      ],
+      path: params.intermediatePoolKey
+        ? [
+            ...basePath,
+            {
+              intermediateCurrency: outputToken,
+              fee: params.intermediatePoolKey.fee,
+              tickSpacing: params.intermediatePoolKey.tickSpacing,
+              hooks: params.intermediatePoolKey.hooks,
+              hookData: params.intermediatePoolKey.hookData,
+            },
+          ]
+        : basePath,
       amountIn: params.amountIn,
-      amountOutMinimum: params.ethOutMin,
+      amountOutMinimum: params.amountOutMin,
     },
   ]);
 
@@ -368,7 +497,7 @@ export const memecoinToEthWithPermit2 = (params: {
         name: "minAmount",
       },
     ],
-    [ETH, params.ethOutMin]
+    [outputToken, params.amountOutMin]
   );
 
   const v4RouterData = encodeAbiParameters(

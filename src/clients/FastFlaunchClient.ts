@@ -106,7 +106,7 @@ export class ReadWriteFastFlaunchZap extends ReadFastFlaunchZap {
     metadata,
     pinataConfig,
   }: FastFlaunchIPFSParams) {
-    const tokenUri = await generateTokenUri(name, {
+    const tokenUri = await generateTokenUri(name, symbol, {
       metadata,
       pinataConfig,
     });

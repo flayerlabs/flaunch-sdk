@@ -20,54 +20,7 @@ We follow [Semantic Versioning](https://semver.org/) (SemVer) with the following
 
 ## Publishing Process
 
-### 1. Update the Version
-
-Use the pnpm version command to update the version in package.json:
-
-```bash
-# For bug fixes
-pnpm version patch
-
-# For breaking changes in pre-1.0 or new features in post-1.0
-pnpm version minor
-
-# For breaking changes in post-1.0
-pnpm version major
-```
-
-This command will:
-
-- Update the version in package.json
-- Create a git commit with the message "@flaunch/sdk v{version}"
-- Create a git tag with the name "@flaunch/sdk@{version}"
-
-### 2. Push Changes to GitHub
-
-Push both the commit and the tag to GitHub:
-
-```bash
-git push && git push --tags
-```
-
-### 3. Build and Publish the Package
-
-Build the package and publish it to npm:
-
-```bash
-pnpm publish
-```
-
-The `pnpm publish` command will automatically run the build script (via prepublishOnly) before publishing.
-
-### 4.
-
-Update the llm docs:
-
-```bash
-pnpm docs:llms
-```
-
-### 5.
+### 1.
 
 Update CHANGELOG.md by running this prompt:
 
@@ -184,6 +137,135 @@ Format: `## [VERSION] - YYYY-MM-DD`
 This approach ensures the changelog accurately reflects the actual code changes rather than just commit message summaries.
 
 ````
+
+### 2.
+
+Update the llm docs:
+
+```bash
+pnpm docs:llms
+```
+
+### 3. Update the Version
+
+Use the pnpm version command to update the version in package.json:
+
+```bash
+# For bug fixes
+pnpm version patch
+
+# For breaking changes in pre-1.0 or new features in post-1.0
+pnpm version minor
+
+# For breaking changes in post-1.0
+pnpm version major
+```
+
+This command will:
+
+- Update the version in package.json
+- Create a git commit with the message "@flaunch/sdk v{version}"
+- Create a git tag with the name "@flaunch/sdk@{version}"
+
+### 4. Push Changes to GitHub
+
+Push both the commit and the tag to GitHub:
+
+```bash
+git push && git push --tags
+```
+
+### 5. Build and Publish the Package
+
+Build the package and publish it to npm:
+
+```bash
+pnpm publish
+```
+
+The `pnpm publish` command will automatically run the build script (via prepublishOnly) before publishing.
+
+## Beta Version Publishing
+
+Beta versions allow you to publish pre-release versions for testing without affecting the stable release channel. Users who don't specify a version will continue to get the latest stable version, while those who explicitly want the beta can install it.
+
+### 1. Creating a Beta Version
+
+Update your version to include a beta suffix:
+
+```bash
+# Option 1: Increment patch version with beta suffix
+pnpm version 0.8.3-beta.0
+
+# Option 2: Increment minor version with beta suffix
+pnpm version 0.9.0-beta.0
+
+# Option 3: Use npm version command with prerelease
+pnpm version prerelease --preid=beta
+```
+
+### 2. Publishing the Beta Version
+
+Publish with the `beta` tag instead of `latest`:
+
+```bash
+pnpm publish --tag beta
+```
+
+### 3. How Users Install Different Versions
+
+After publishing, users can install versions as follows:
+
+```bash
+# Latest stable version (current latest)
+npm install @flaunch/sdk
+
+# Beta version explicitly by tag
+npm install @flaunch/sdk@beta
+
+# Beta version explicitly by version number
+npm install @flaunch/sdk@0.8.3-beta.0
+```
+
+### 4. Verifying Beta Publication
+
+Check that your beta version was published correctly:
+
+```bash
+# View all versions and their tags
+npm view @flaunch/sdk versions --json
+npm view @flaunch/sdk dist-tags
+```
+
+### 5. Publishing Additional Beta Versions
+
+If you need to publish more beta versions, increment the beta number:
+
+```bash
+pnpm version 0.8.3-beta.1
+pnpm publish --tag beta
+```
+
+### 6. Promoting Beta to Stable
+
+When ready to make the beta version stable:
+
+```bash
+# Remove the beta suffix
+pnpm version 0.8.3
+
+# Publish as latest (default tag)
+pnpm publish
+```
+
+### Important Notes for Beta Versions
+
+- Your `prepublishOnly` script will automatically build the package before publishing
+- The `latest` tag will remain on the previous stable version until you publish a new stable version
+- Users who don't specify a version will continue to get the current stable version
+- Beta versions are discoverable but won't be installed by default
+- Beta versions should still follow semantic versioning principles
+- Consider updating documentation to mention beta availability when appropriate
 
 ## Configuration
 

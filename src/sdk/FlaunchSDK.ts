@@ -16,7 +16,11 @@ import {
   type GetContractEventsReturnType,
   encodeAbiParameters,
   parseUnits,
-  parseEther,
+  formatEther,
+  erc20Abi,
+  encodeFunctionData,
+  erc721Abi,
+  formatUnits,
 } from "viem";
 import axios from "axios";
 import {
@@ -42,7 +46,10 @@ import {
   FeeEscrowAddress,
   ReferralEscrowAddress,
   TokenImporterAddress,
-  // V1.1.1 and AnyPositionManager addresses will be imported here when available
+  UniV4PositionManagerAddress,
+  FlaunchPositionManagerV1_2Address,
+  FlaunchV1_2Address,
+  // V1.2 and AnyPositionManager addresses will be imported here when available
 } from "../addresses";
 import {
   ReadFlaunchPositionManager,
@@ -70,15 +77,21 @@ import {
   FlaunchWithRevenueManagerIPFSParams,
   FlaunchWithSplitManagerParams,
   FlaunchWithSplitManagerIPFSParams,
+  DeployRevenueManagerParams,
+  DeployStakingManagerParams,
 } from "../clients/FlaunchZapClient";
 import { ReadFlaunch } from "../clients/FlaunchClient";
-import { ReadMemecoin } from "../clients/MemecoinClient";
+import { ReadMemecoin, ReadWriteMemecoin } from "../clients/MemecoinClient";
 import { ReadQuoter } from "clients/QuoterClient";
 import { ReadPermit2, ReadWritePermit2 } from "clients/Permit2Client";
 import {
   ReadFlaunchPositionManagerV1_1,
   ReadWriteFlaunchPositionManagerV1_1,
 } from "clients/FlaunchPositionManagerV1_1Client";
+import {
+  ReadFlaunchPositionManagerV1_2,
+  ReadWriteFlaunchPositionManagerV1_2,
+} from "clients/FlaunchPositionManagerV1_2Client";
 import {
   AnyFlaunchParams,
   ReadAnyPositionManager,
@@ -99,14 +112,31 @@ import {
 import { ReadBidWallV1_1 } from "clients/BidWallV1_1Client";
 import { ReadFairLaunchV1_1 } from "clients/FairLaunchV1_1Client";
 import { ReadFlaunchV1_1 } from "clients/FlaunchV1_1Client";
+import { ReadFlaunchV1_2 } from "clients/FlaunchV1_2Client";
 import { ReadWriteTreasuryManagerFactory } from "clients/TreasuryManagerFactoryClient";
 import {
   ReadRevenueManager,
   ReadWriteRevenueManager,
 } from "clients/RevenueManagerClient";
 import { ReadInitialPrice } from "clients/InitialPriceClient";
+import {
+  ReadTreasuryManager,
+  ReadWriteTreasuryManager,
+} from "clients/TreasuryManagerClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
-import { CoinMetadata, FlaunchVersion, Verifier } from "types";
+import {
+  CallWithDescription,
+  CoinMetadata,
+  FlaunchVersion,
+  LiquidityMode,
+  Permissions,
+  ImportMemecoinParams,
+  GetAddLiquidityCallsParams,
+  CalculateAddLiquidityAmountsParams,
+  CheckSingleSidedAddLiquidityParams,
+  SingleSidedLiquidityInfo,
+  PoolWithHookData,
+} from "types";
 import {
   getPoolId,
   orderPoolKey,
@@ -114,19 +144,27 @@ import {
   calculateUnderlyingTokenBalances,
   TickFinder,
   TICK_SPACING,
+  getNearestUsableTick,
+  priceRatioToTick,
+  getSqrtPriceX96FromTick,
+  Q96,
+  Q192,
+  getLiquidityFromAmounts,
+  getAmountsForLiquidity,
 } from "../utils/univ4";
 import {
-  ethToMemecoin,
-  memecoinToEthWithPermit2,
+  buyMemecoin,
+  sellMemecoinWithPermit2,
   getAmountWithSlippage,
   PermitSingle,
   getPermit2TypedData,
 } from "utils/universalRouter";
 import { resolveIPFS as defaultResolveIPFS } from "../helpers/ipfs";
-import { chainIdToChain } from "helpers";
-import { TreasuryManagerFactoryAbi } from "abi/TreasuryManagerFactory";
+import { getPermissionsAddress } from "helpers";
 import { ReadMulticall } from "clients/MulticallClient";
-import { MemecoinAbi } from "abi";
+import { MemecoinAbi, Permit2Abi } from "abi";
+import { FLETHAbi } from "abi/FLETH";
+import { ReadTrustedSignerFeeCalculator } from "clients/TrustedSignerFeeCalculatorClient";
 
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
@@ -176,6 +214,10 @@ type BuyCoinBase = {
   coinAddress: Address;
   slippagePercent: number;
   referrer?: Address;
+  intermediatePoolKey?: PoolWithHookData;
+  permitSingle?: PermitSingle;
+  signature?: Hex;
+  hookData?: Hex; // for swaps when TrustedSigner is enabled
 };
 
 type BuyCoinExactInParams = BuyCoinBase & {
@@ -196,8 +238,9 @@ type SellCoinParams = {
   coinAddress: Address;
   amountIn: bigint;
   slippagePercent: number;
-  ethOutMin?: bigint;
+  amountOutMin?: bigint;
   referrer?: Address;
+  intermediatePoolKey?: PoolWithHookData;
   permitSingle?: PermitSingle;
   signature?: HexString;
 };
@@ -229,10 +272,10 @@ export class ReadFlaunchSDK {
   public readonly readPermit2: ReadPermit2;
 
   // These properties will be initialized when the clients are available
-  // public readonly readPositionManagerV1_1_1: ReadFlaunchPositionManagerV1_1_1;
-  // public readonly readFairLaunchV1_1_1: ReadFairLaunchV1_1_1;
-  // public readonly readBidWallV1_1_1: ReadBidWallV1_1_1;
-  // public readonly readFlaunchV1_1_1: ReadFlaunchV1_1_1;
+  public readonly readPositionManagerV1_2: ReadFlaunchPositionManagerV1_2;
+  // public readonly readFairLaunchV1_2: ReadFairLaunchV1_2;
+  // public readonly readBidWallV1_2: ReadBidWallV1_2;
+  public readonly readFlaunchV1_2: ReadFlaunchV1_2;
   // public readonly readAnyFlaunch: ReadAnyFlaunch;
 
   public resolveIPFS: (value: string) => string;
@@ -247,6 +290,10 @@ export class ReadFlaunchSDK {
     );
     this.readPositionManagerV1_1 = new ReadFlaunchPositionManagerV1_1(
       FlaunchPositionManagerV1_1Address[this.chainId],
+      drift
+    );
+    this.readPositionManagerV1_2 = new ReadFlaunchPositionManagerV1_2(
+      FlaunchPositionManagerV1_2Address[this.chainId],
       drift
     );
     this.readAnyPositionManager = new ReadAnyPositionManager(
@@ -301,6 +348,10 @@ export class ReadFlaunchSDK {
       FlaunchV1_1Address[this.chainId],
       drift
     );
+    this.readFlaunchV1_2 = new ReadFlaunchV1_2(
+      FlaunchV1_2Address[this.chainId],
+      drift
+    );
     this.readQuoter = new ReadQuoter(
       this.chainId,
       QuoterAddress[this.chainId],
@@ -316,6 +367,7 @@ export class ReadFlaunchSDK {
    */
   async isValidCoin(coinAddress: Address) {
     return (
+      (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) ||
       (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) ||
       (await this.readPositionManager.isValidCoin(coinAddress)) ||
       (await this.readAnyPositionManager.isValidCoin(coinAddress))
@@ -328,10 +380,12 @@ export class ReadFlaunchSDK {
    * @returns Promise<FlaunchVersion> - The version of the coin
    */
   async getCoinVersion(coinAddress: Address): Promise<FlaunchVersion> {
-    if (await this.readPositionManager.isValidCoin(coinAddress)) {
-      return FlaunchVersion.V1;
+    if (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) {
+      return FlaunchVersion.V1_2;
     } else if (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) {
       return FlaunchVersion.V1_1;
+    } else if (await this.readPositionManager.isValidCoin(coinAddress)) {
+      return FlaunchVersion.V1;
     } else if (await this.readAnyPositionManager.isValidCoin(coinAddress)) {
       return FlaunchVersion.ANY;
     }
@@ -339,10 +393,10 @@ export class ReadFlaunchSDK {
     throw new Error(`Unknown coin version for address: ${coinAddress}`);
   }
 
-  // TODO: update these get functions to support V1.1.1
+  // @note update FlaunchBackend as well when new version is added
   /**
-   * Gets the position manager address for a given version
-   * @param version - The version to get the position manager address for
+   * Gets the position manager instance for a given version
+   * @param version - The version to get the position manager instance for
    */
   getPositionManager(version: FlaunchVersion) {
     switch (version) {
@@ -350,16 +404,18 @@ export class ReadFlaunchSDK {
         return this.readPositionManager;
       case FlaunchVersion.V1_1:
         return this.readPositionManagerV1_1;
+      case FlaunchVersion.V1_2:
+        return this.readPositionManagerV1_2;
       case FlaunchVersion.ANY:
         return this.readAnyPositionManager;
       default:
-        return this.readPositionManagerV1_1;
+        return this.readPositionManagerV1_2;
     }
   }
 
   /**
-   * Gets the fair launch address for a given version
-   * @param version - The version to get the fair launch address for
+   * Gets the fair launch instance for a given version
+   * @param version - The version to get the fair launch instance for
    */
   getFairLaunch(version: FlaunchVersion) {
     switch (version) {
@@ -367,6 +423,8 @@ export class ReadFlaunchSDK {
         return this.readFairLaunch;
       case FlaunchVersion.V1_1:
         return this.readFairLaunchV1_1;
+      case FlaunchVersion.V1_2:
+        return this.readFairLaunchV1_1;
       case FlaunchVersion.ANY:
         return this.readFairLaunchV1_1;
       default:
@@ -375,8 +433,8 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Gets the bid wall address for a given version
-   * @param version - The version to get the bid wall address for
+   * Gets the bid wall instance for a given version
+   * @param version - The version to get the bid wall instance for
    */
   getBidWall(version: FlaunchVersion) {
     switch (version) {
@@ -384,10 +442,31 @@ export class ReadFlaunchSDK {
         return this.readBidWall;
       case FlaunchVersion.V1_1:
         return this.readBidWallV1_1;
+      case FlaunchVersion.V1_2:
+        return this.readBidWallV1_1;
       case FlaunchVersion.ANY:
         return this.readAnyBidWall;
       default:
         return this.readBidWallV1_1;
+    }
+  }
+
+  /**
+   * Gets the flaunch contract address for a given version
+   * @param version - The version to get the flaunch contract address for
+   */
+  getFlaunchAddress(version: FlaunchVersion) {
+    switch (version) {
+      case FlaunchVersion.V1:
+        return this.readFlaunch.contract.address;
+      case FlaunchVersion.V1_1:
+        return this.readFlaunchV1_1.contract.address;
+      case FlaunchVersion.V1_2:
+        return this.readFlaunchV1_2.contract.address;
+      case FlaunchVersion.ANY:
+        return this.readFlaunchV1_1.contract.address;
+      default:
+        return this.readFlaunchV1_1.contract.address;
     }
   }
 
@@ -709,7 +788,7 @@ export class ReadFlaunchSDK {
    * Calculates the coin price in USD based on the current ETH/USDC price
    * @param coinAddress - The address of the coin
    * @param version - Optional specific version to use. If not provided, will be determined automatically
-   * @returns Promise<string> - The price of the coin in USD with 2 decimal precision
+   * @returns Promise<string> - The price of the coin in USD with 18 decimal precision
    */
   async coinPriceInUSD({
     coinAddress,
@@ -724,7 +803,7 @@ export class ReadFlaunchSDK {
 
     const ethPerCoin = await this.coinPriceInETH(coinAddress, coinVersion);
     const ethPrice = await this.getETHUSDCPrice(drift);
-    return (parseFloat(ethPerCoin) * ethPrice).toFixed(2);
+    return (parseFloat(ethPerCoin) * ethPrice).toFixed(18);
   }
 
   async coinMarketCapInUSD({
@@ -813,6 +892,72 @@ export class ReadFlaunchSDK {
 
     const poolId = await this.poolId(coinAddress, coinVersion);
     return this.getFairLaunch(coinVersion).isFairLaunchActive({ poolId });
+  }
+
+  async trustedPoolKeySignerStatus(
+    coinAddress: Address,
+    version?: FlaunchVersion
+  ): Promise<{
+    isCurrentlyEnabled: boolean;
+    trustedSignerEnabled: boolean;
+    signer: Address;
+    fairLaunchStartsAt: number;
+    fairLaunchEndsAt: number;
+    isFairLaunchActive: boolean;
+  }> {
+    const coinVersion = version || (await this.getCoinVersion(coinAddress));
+    if (coinVersion === FlaunchVersion.ANY) {
+      throw new Error("AnyPositionManager is not supported for TrustedSigner");
+    }
+
+    // TrustedSigner fee calculator is only active during fair launch
+    const fairLaunchInfo = await this.fairLaunchInfo(coinAddress, coinVersion);
+
+    // determine fair launch status
+    let isFairLaunchActive: boolean;
+    if (fairLaunchInfo.closed) {
+      isFairLaunchActive = false;
+    }
+    if (new Date().getTime() / 1000 > fairLaunchInfo.endsAt) {
+      isFairLaunchActive = false;
+    }
+    isFairLaunchActive = true;
+
+    const baseReturn = {
+      isFairLaunchActive,
+      fairLaunchStartsAt: Number(fairLaunchInfo.startsAt),
+      fairLaunchEndsAt: Number(fairLaunchInfo.endsAt),
+    };
+
+    const fairLaunchFeeCalculator = await (
+      this.getPositionManager(coinVersion) as ReadFlaunchPositionManagerV1_2
+    ).getFeeCalculator({ forFairLaunch: true });
+
+    try {
+      const trustedSignerFeeCalculator = new ReadTrustedSignerFeeCalculator(
+        fairLaunchFeeCalculator,
+        this.drift
+      );
+
+      const poolId = await this.poolId(coinAddress, coinVersion);
+      const trustedSigner =
+        await trustedSignerFeeCalculator.trustedPoolKeySigner({ poolId });
+
+      return {
+        isCurrentlyEnabled: trustedSigner.enabled && isFairLaunchActive,
+        trustedSignerEnabled: trustedSigner.enabled,
+        signer: trustedSigner.signer,
+        ...baseReturn,
+      };
+    } catch {
+      // might throw error in the future if the fair launch calculator is not the TrustedSignerFeeCalculator
+      return {
+        isCurrentlyEnabled: false,
+        trustedSignerEnabled: false,
+        signer: zeroAddress,
+        ...baseReturn,
+      };
+    }
   }
 
   /**
@@ -1116,6 +1261,28 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets treasury manager information including owner and permissions
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @returns Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
+   */
+  async treasuryManagerInfo(treasuryManagerAddress: Address) {
+    const readTreasuryManager = new ReadTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+
+    const [managerOwner, permissions] = await Promise.all([
+      readTreasuryManager.managerOwner(),
+      readTreasuryManager.permissions(),
+    ]);
+
+    return {
+      managerOwner,
+      permissions,
+    };
+  }
+
+  /**
    * Gets the pool ID for a given coin
    * @param coinAddress - The address of the coin
    * @param version - Optional specific version to use
@@ -1209,64 +1376,104 @@ export class ReadFlaunchSDK {
   /**
    * Gets a quote for selling an exact amount of tokens for ETH
    * @param coinAddress - The address of the token to sell
+   * @param version - Optional specify Flaunch version, if not provided, will determine automatically
    * @param amountIn - The exact amount of tokens to sell
-   * @param version - Optional specific version to use
+   * @param intermediatePoolKey - Optional intermediate pool key to use containing outputToken and ETH as currencies
    * @returns Promise<bigint> - The expected amount of ETH to receive
    */
-  async getSellQuoteExactInput(
-    coinAddress: Address,
-    amountIn: bigint,
-    version?: FlaunchVersion
-  ) {
+  async getSellQuoteExactInput({
+    coinAddress,
+    version,
+    amountIn,
+    intermediatePoolKey,
+  }: {
+    coinAddress: Address;
+    version?: FlaunchVersion;
+    amountIn: bigint;
+    intermediatePoolKey?: PoolWithHookData;
+  }) {
     const coinVersion = version || (await this.getCoinVersion(coinAddress));
 
-    return this.readQuoter.getSellQuoteExactInput(
+    return this.readQuoter.getSellQuoteExactInput({
       coinAddress,
       amountIn,
-      this.getPositionManagerAddress(coinVersion)
-    );
+      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      intermediatePoolKey,
+    });
   }
 
   /**
-   * Gets a quote for buying tokens with an exact amount of ETH
+   * Gets a quote for buying tokens with an exact amount of ETH or inputToken
    * @param coinAddress - The address of the token to buy
-   * @param ethIn - The exact amount of ETH to spend
-   * @param version - Optional specific version to use
-   * @returns Promise<bigint> - The expected amount of tokens to receive
+   * @param version - Optional specify Flaunch version, if not provided, will determine automatically
+   * @param amountIn - The exact amount of ETH or inputToken to spend
+   * @param intermediatePoolKey - Optional intermediate pool key to use containing inputToken and ETH as currencies
+   * @param hookData - Optional hook data to use for the fleth <> coin swap. Only used when TrustedSigner is currently enabled
+   * @param userWallet - Optional user wallet to use for the swap. Only used when TrustedSigner is currently enabled
+   * @returns Promise<bigint> - The expected amount of coins to receive
    */
-  async getBuyQuoteExactInput(
-    coinAddress: Address,
-    amountIn: bigint,
-    version?: FlaunchVersion
-  ) {
+  async getBuyQuoteExactInput({
+    coinAddress,
+    version,
+    amountIn,
+    intermediatePoolKey,
+    hookData,
+    userWallet,
+  }: {
+    coinAddress: Address;
+    version?: FlaunchVersion;
+    amountIn: bigint;
+    intermediatePoolKey?: PoolWithHookData;
+    hookData?: Hex;
+    userWallet?: Address;
+  }) {
     const coinVersion = version || (await this.getCoinVersion(coinAddress));
 
-    return this.readQuoter.getBuyQuoteExactInput(
+    return this.readQuoter.getBuyQuoteExactInput({
       coinAddress,
       amountIn,
-      this.getPositionManagerAddress(coinVersion)
-    );
+      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      intermediatePoolKey,
+      hookData,
+      userWallet,
+    });
   }
 
   /**
-   * Gets a quote for buying an exact amount of tokens with ETH
+   * Gets a quote for buying an exact amount of tokens with ETH or inputToken
    * @param coinAddress - The address of the token to buy
+   * @param version - Optional specify Flaunch version, if not provided, will determine automatically
    * @param coinOut - The exact amount of tokens to receive
-   * @param version - Optional specific version to use
-   * @returns Promise<bigint> - The required amount of ETH to spend
+   * @param intermediatePoolKey - Optional intermediate pool key to use containing inputToken and ETH as currencies
+   * @param hookData - Optional hook data to use for the fleth <> coin swap. Only used when TrustedSigner is currently enabled
+   * @param userWallet - Optional user wallet to use for the swap. Only used when TrustedSigner is currently enabled
+   * @returns Promise<bigint> - The required amount of ETH or inputToken to spend
    */
-  async getBuyQuoteExactOutput(
-    coinAddress: Address,
-    amountOut: bigint,
-    version?: FlaunchVersion
-  ) {
+  async getBuyQuoteExactOutput({
+    coinAddress,
+    amountOut,
+    version,
+    intermediatePoolKey,
+    hookData,
+    userWallet,
+  }: {
+    coinAddress: Address;
+    amountOut: bigint;
+    version?: FlaunchVersion;
+    intermediatePoolKey?: PoolWithHookData;
+    hookData?: Hex;
+    userWallet?: Address;
+  }) {
     const coinVersion = version || (await this.getCoinVersion(coinAddress));
 
-    return this.readQuoter.getBuyQuoteExactOutput(
+    return this.readQuoter.getBuyQuoteExactOutput({
       coinAddress,
-      amountOut,
-      this.getPositionManagerAddress(coinVersion)
-    );
+      coinOut: amountOut,
+      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      intermediatePoolKey,
+      hookData,
+      userWallet,
+    });
   }
 
   /**
@@ -1321,6 +1528,583 @@ export class ReadFlaunchSDK {
    */
   tokenImporterVerifyMemecoin(memecoin: Address) {
     return this.readTokenImporter.verifyMemecoin(memecoin);
+  }
+
+  /**
+   * Gets basic coin information (total supply and decimals)
+   */
+  async getCoinInfo(coinAddress: Address): Promise<{
+    totalSupply: bigint;
+    decimals: number;
+  }> {
+    const memecoin = new ReadMemecoin(coinAddress, this.drift);
+    const [totalSupply, decimals] = await Promise.all([
+      memecoin.totalSupply(),
+      memecoin.decimals(),
+    ]);
+    return { totalSupply, decimals };
+  }
+
+  /**
+   * Gets market context information needed for tick calculations
+   */
+  async getMarketContext(
+    coinAddress: Address,
+    coinDecimals: number
+  ): Promise<{
+    ethUsdPrice: number;
+    isFlethZero: boolean;
+    decimals0: number;
+    decimals1: number;
+  }> {
+    const ethUsdPrice = await this.getETHUSDCPrice();
+    const isFlethZero = this.flETHIsCurrencyZero(coinAddress);
+    const flETHDecimals = 18; // flETH has 18 decimals
+
+    // Determine decimals based on token ordering
+    const decimals0 = isFlethZero ? flETHDecimals : coinDecimals;
+    const decimals1 = isFlethZero ? coinDecimals : flETHDecimals;
+
+    return {
+      ethUsdPrice,
+      isFlethZero,
+      decimals0,
+      decimals1,
+    };
+  }
+
+  /**
+   * Converts market cap in USD to token price in ETH
+   */
+  marketCapToTokenPriceEth(
+    marketCapUsd: number,
+    totalSupplyDecimal: number,
+    ethUsdPrice: number
+  ): number {
+    const tokenPriceUsd = marketCapUsd / totalSupplyDecimal;
+    return tokenPriceUsd / ethUsdPrice;
+  }
+
+  /**
+   * Converts token price in ETH to tick
+   */
+  convertPriceToTick(
+    priceEth: number,
+    isFlethZero: boolean,
+    decimals0: number,
+    decimals1: number
+  ): number {
+    return priceRatioToTick({
+      priceInput: priceEth.toString(),
+      isDirection1Per0: !isFlethZero,
+      decimals0,
+      decimals1,
+      spacing: TICK_SPACING,
+    });
+  }
+
+  /**
+   * Calculates current tick from market cap if provided
+   */
+  calculateCurrentTickFromMarketCap(
+    currentMarketCap: string | undefined,
+    totalSupplyDecimal: number,
+    marketContext: {
+      ethUsdPrice: number;
+      isFlethZero: boolean;
+      decimals0: number;
+      decimals1: number;
+    }
+  ): number | undefined {
+    if (!currentMarketCap) {
+      return undefined;
+    }
+
+    const currentMarketCapNum = parseFloat(currentMarketCap);
+    const currentTokenPriceEth = this.marketCapToTokenPriceEth(
+      currentMarketCapNum,
+      totalSupplyDecimal,
+      marketContext.ethUsdPrice
+    );
+
+    return this.convertPriceToTick(
+      currentTokenPriceEth,
+      marketContext.isFlethZero,
+      marketContext.decimals0,
+      marketContext.decimals1
+    );
+  }
+
+  async calculateAddLiquidityTicks({
+    coinAddress,
+    liquidityMode,
+    minMarketCap,
+    maxMarketCap,
+    currentMarketCap,
+  }: {
+    coinAddress: Address;
+    liquidityMode: LiquidityMode;
+    minMarketCap: string;
+    maxMarketCap: string;
+    currentMarketCap?: string;
+  }): Promise<{
+    tickLower: number;
+    tickUpper: number;
+    currentTick?: number;
+    coinTotalSupply: bigint;
+    coinDecimals: number;
+  }> {
+    // Get coin information
+    const { totalSupply: coinTotalSupply, decimals: coinDecimals } =
+      await this.getCoinInfo(coinAddress);
+
+    // Convert total supply to decimal format
+    const totalSupplyDecimal = parseFloat(formatEther(coinTotalSupply));
+
+    if (liquidityMode === LiquidityMode.FULL_RANGE) {
+      let currentTick: number | undefined;
+
+      if (currentMarketCap) {
+        const marketContext = await this.getMarketContext(
+          coinAddress,
+          coinDecimals
+        );
+        currentTick = this.calculateCurrentTickFromMarketCap(
+          currentMarketCap,
+          totalSupplyDecimal,
+          marketContext
+        );
+      }
+
+      return {
+        tickLower: getNearestUsableTick({
+          tick: TickFinder.MIN_TICK,
+          tickSpacing: TICK_SPACING,
+        }),
+        tickUpper: getNearestUsableTick({
+          tick: TickFinder.MAX_TICK,
+          tickSpacing: TICK_SPACING,
+        }),
+        currentTick,
+        coinTotalSupply,
+        coinDecimals,
+      };
+    } else {
+      // Get market context
+      const marketContext = await this.getMarketContext(
+        coinAddress,
+        coinDecimals
+      );
+
+      const minMarketCapNum = parseFloat(minMarketCap);
+      const maxMarketCapNum = parseFloat(maxMarketCap);
+
+      if (
+        minMarketCapNum <= 0 ||
+        maxMarketCapNum <= 0 ||
+        minMarketCapNum >= maxMarketCapNum
+      ) {
+        throw new Error(
+          "[ReadFlaunchSDK.addLiquidityCalculateTicks]: Invalid market cap range"
+        );
+      }
+
+      // Convert market caps to token prices in ETH
+      const minTokenPriceEth = this.marketCapToTokenPriceEth(
+        minMarketCapNum,
+        totalSupplyDecimal,
+        marketContext.ethUsdPrice
+      );
+      const maxTokenPriceEth = this.marketCapToTokenPriceEth(
+        maxMarketCapNum,
+        totalSupplyDecimal,
+        marketContext.ethUsdPrice
+      );
+
+      // Convert to ticks
+      const minTick = this.convertPriceToTick(
+        minTokenPriceEth,
+        marketContext.isFlethZero,
+        marketContext.decimals0,
+        marketContext.decimals1
+      );
+      const maxTick = this.convertPriceToTick(
+        maxTokenPriceEth,
+        marketContext.isFlethZero,
+        marketContext.decimals0,
+        marketContext.decimals1
+      );
+
+      // Calculate current tick if provided
+      const currentTick = this.calculateCurrentTickFromMarketCap(
+        currentMarketCap,
+        totalSupplyDecimal,
+        marketContext
+      );
+
+      return {
+        tickLower: Math.min(minTick, maxTick),
+        tickUpper: Math.max(minTick, maxTick),
+        currentTick,
+        coinTotalSupply,
+        coinDecimals,
+      };
+    }
+  }
+
+  async checkSingleSidedAddLiquidity(
+    params: CheckSingleSidedAddLiquidityParams
+  ): Promise<SingleSidedLiquidityInfo> {
+    const { coinAddress, liquidityMode } = params;
+
+    let minMarketCap: string;
+    let maxMarketCap: string;
+    let currentMarketCap: string | undefined;
+
+    if ("minMarketCap" in params) {
+      minMarketCap = params.minMarketCap;
+      maxMarketCap = params.maxMarketCap;
+      currentMarketCap = params.currentMarketCap;
+    } else {
+      const { totalSupply, decimals } = await this.getCoinInfo(coinAddress);
+      const formattedTotalSupply = parseFloat(
+        formatUnits(totalSupply, decimals)
+      );
+
+      minMarketCap = (
+        parseFloat(params.minPriceUSD) * formattedTotalSupply
+      ).toString();
+      maxMarketCap = (
+        parseFloat(params.maxPriceUSD) * formattedTotalSupply
+      ).toString();
+
+      if (params.currentPriceUSD) {
+        currentMarketCap = (
+          params.currentPriceUSD * formattedTotalSupply
+        ).toString();
+      }
+    }
+
+    let { tickLower, tickUpper, currentTick } =
+      await this.calculateAddLiquidityTicks({
+        coinAddress,
+        liquidityMode,
+        minMarketCap,
+        maxMarketCap,
+        currentMarketCap,
+      });
+
+    // If no current tick is provided from the above calculation, get it from the pool state
+    if (!currentTick) {
+      let version = params.version;
+      // if version is not provided, check on existing managers, else default to ANY
+      if (!version) {
+        try {
+          version = await this.getCoinVersion(coinAddress);
+        } catch {
+          version = FlaunchVersion.ANY;
+        }
+      }
+
+      const poolState = await this.readStateView.poolSlot0({
+        poolId: getPoolId(
+          orderPoolKey({
+            currency0: coinAddress,
+            currency1: FLETHAddress[this.chainId],
+            fee: 0,
+            tickSpacing: TICK_SPACING,
+            hooks: this.getPositionManagerAddress(version),
+          })
+        ),
+      });
+      currentTick = poolState.tick;
+    }
+
+    // Determine currency ordering
+    const isFlETHCurrency0 = this.flETHIsCurrencyZero(coinAddress);
+
+    // Check if position is single-sided
+    const isSingleSided = currentTick <= tickLower || currentTick >= tickUpper;
+
+    if (!isSingleSided) {
+      return {
+        isSingleSided: false,
+        shouldHideCoinInput: false,
+        shouldHideETHInput: false,
+      };
+    }
+
+    // Determine which input should be hidden based on current price position
+    let shouldHideCoinInput = false;
+    let shouldHideETHInput = false;
+
+    if (currentTick <= tickLower) {
+      // Current price is below the range - only the lower currency (currency0) is needed
+      if (isFlETHCurrency0) {
+        // flETH is currency0, so we need only flETH (ETH)
+        shouldHideCoinInput = true;
+      } else {
+        // Coin is currency0, so we need only coin
+        shouldHideETHInput = true;
+      }
+    } else if (currentTick >= tickUpper) {
+      // Current price is above the range - only the upper currency (currency1) is needed
+      if (isFlETHCurrency0) {
+        // flETH is currency0, so coin is currency1 and we need only coin
+        shouldHideETHInput = true;
+      } else {
+        // Coin is currency0, so flETH is currency1 and we need only flETH (ETH)
+        shouldHideCoinInput = true;
+      }
+    }
+
+    return {
+      isSingleSided: true,
+      shouldHideCoinInput,
+      shouldHideETHInput,
+    };
+  }
+
+  async calculateAddLiquidityAmounts(
+    params: CalculateAddLiquidityAmountsParams
+  ): Promise<{
+    coinAmount: bigint;
+    ethAmount: bigint;
+    tickLower: number;
+    tickUpper: number;
+    currentTick: number;
+  }> {
+    const { coinAddress, liquidityMode, inputToken, coinOrEthInputAmount } =
+      params;
+
+    let minMarketCap: string;
+    let maxMarketCap: string;
+    let currentMarketCap: string | undefined;
+
+    if ("minMarketCap" in params) {
+      minMarketCap = params.minMarketCap;
+      maxMarketCap = params.maxMarketCap;
+      currentMarketCap = params.currentMarketCap;
+    } else {
+      const { totalSupply, decimals } = await this.getCoinInfo(coinAddress);
+      const formattedTotalSupply = parseFloat(
+        formatUnits(totalSupply, decimals)
+      );
+
+      minMarketCap = (
+        parseFloat(params.minPriceUSD) * formattedTotalSupply
+      ).toString();
+      maxMarketCap = (
+        parseFloat(params.maxPriceUSD) * formattedTotalSupply
+      ).toString();
+
+      if (params.currentPriceUSD) {
+        currentMarketCap = (
+          params.currentPriceUSD * formattedTotalSupply
+        ).toString();
+      }
+    }
+
+    let { tickLower, tickUpper, currentTick } =
+      await this.calculateAddLiquidityTicks({
+        coinAddress,
+        liquidityMode,
+        minMarketCap,
+        maxMarketCap,
+        currentMarketCap,
+      });
+
+    // get the current pool state for the coin
+    if (!currentTick) {
+      let version = params.version;
+      // if version is not provided, check on existing managers, else default to ANY
+      if (!version) {
+        try {
+          version = await this.getCoinVersion(coinAddress);
+        } catch {
+          version = FlaunchVersion.ANY;
+        }
+      }
+
+      const poolState = await this.readStateView.poolSlot0({
+        poolId: getPoolId(
+          orderPoolKey({
+            currency0: coinAddress,
+            currency1: FLETHAddress[this.chainId],
+            fee: 0,
+            tickSpacing: TICK_SPACING,
+            hooks: this.getPositionManagerAddress(version),
+          })
+        ),
+      });
+      currentTick = poolState.tick;
+    }
+
+    // Determine currency ordering
+    const isFlETHCurrency0 = this.flETHIsCurrencyZero(coinAddress);
+
+    try {
+      const sqrtRatioCurrentX96 = getSqrtPriceX96FromTick(currentTick);
+      let sqrtRatioLowerX96 = getSqrtPriceX96FromTick(tickLower);
+      let sqrtRatioUpperX96 = getSqrtPriceX96FromTick(tickUpper);
+
+      if (sqrtRatioLowerX96 > sqrtRatioUpperX96) {
+        [sqrtRatioLowerX96, sqrtRatioUpperX96] = [
+          sqrtRatioUpperX96,
+          sqrtRatioLowerX96,
+        ];
+      }
+
+      let amount0Calculated: bigint;
+      let amount1Calculated: bigint;
+
+      // Determine which calculation to use based on input token and currency ordering
+      const isCoinInput = inputToken === "coin";
+      const inputAmount = coinOrEthInputAmount;
+
+      if (
+        (isCoinInput && !isFlETHCurrency0) || // coin input and coin is currency0
+        (!isCoinInput && isFlETHCurrency0) // eth input and flETH is currency0
+      ) {
+        // We have amount0 and need to calculate amount1
+        amount0Calculated = inputAmount;
+
+        if (sqrtRatioCurrentX96 <= sqrtRatioLowerX96) {
+          // Current price below range - no currency1 needed
+          amount1Calculated = 0n;
+        } else if (sqrtRatioCurrentX96 >= sqrtRatioUpperX96) {
+          // Current price above range - proportional amount1 needed
+          const ratio = (sqrtRatioUpperX96 * sqrtRatioUpperX96) / Q96;
+          amount1Calculated = (inputAmount * ratio) / Q96;
+        } else {
+          // Current price in range - proportional amounts
+          const intermediate1 =
+            (sqrtRatioUpperX96 *
+              sqrtRatioCurrentX96 *
+              (sqrtRatioCurrentX96 - sqrtRatioLowerX96)) /
+            Q96;
+          const intermediate2 =
+            (Q192 * (sqrtRatioUpperX96 - sqrtRatioCurrentX96)) / Q96;
+          if (intermediate2 > 0n) {
+            amount1Calculated = (inputAmount * intermediate1) / intermediate2;
+          } else {
+            amount1Calculated = 0n;
+          }
+        }
+      } else {
+        // We have amount1 and need to calculate amount0
+        amount1Calculated = inputAmount;
+
+        if (sqrtRatioCurrentX96 <= sqrtRatioLowerX96) {
+          // Current price below range - proportional amount0 needed
+          const ratio = (sqrtRatioLowerX96 * sqrtRatioLowerX96) / Q96;
+          amount0Calculated = (inputAmount * Q96) / ratio;
+        } else if (sqrtRatioCurrentX96 >= sqrtRatioUpperX96) {
+          // Current price above range - no amount0 needed
+          amount0Calculated = 0n;
+        } else {
+          // Current price in range - proportional amounts
+          const intermediate1 =
+            (sqrtRatioUpperX96 *
+              sqrtRatioCurrentX96 *
+              (sqrtRatioCurrentX96 - sqrtRatioLowerX96)) /
+            Q96;
+          const intermediate2 =
+            (Q192 * (sqrtRatioUpperX96 - sqrtRatioCurrentX96)) / Q96;
+          if (intermediate1 > 0n) {
+            amount0Calculated = (inputAmount * intermediate2) / intermediate1;
+          } else {
+            amount0Calculated = 0n;
+          }
+        }
+      }
+
+      // Map amount0/amount1 back to coin/eth amounts based on currency ordering
+      let [ethAmount, coinAmount] = isFlETHCurrency0
+        ? [amount0Calculated, amount1Calculated]
+        : [amount1Calculated, amount0Calculated];
+
+      // Check if this is single-sided liquidity and force unused token amounts to 0
+      const isSingleSided =
+        currentTick <= tickLower || currentTick >= tickUpper;
+
+      if (isSingleSided) {
+        if (currentTick <= tickLower) {
+          // Current price is below the range - only the lower currency (currency0) is needed
+          if (isFlETHCurrency0) {
+            // flETH is currency0, so we need only flETH (ETH), force coin amount to 0
+            coinAmount = 0n;
+          } else {
+            // Coin is currency0, so we need only coin, force ETH amount to 0
+            ethAmount = 0n;
+          }
+        } else if (currentTick >= tickUpper) {
+          // Current price is above the range - only the upper currency (currency1) is needed
+          if (isFlETHCurrency0) {
+            // flETH is currency0, so coin is currency1 and we need only coin, force ETH to 0
+            ethAmount = 0n;
+          } else {
+            // Coin is currency0, so flETH is currency1 and we need only flETH (ETH), force coin to 0
+            coinAmount = 0n;
+          }
+        }
+      }
+
+      return {
+        coinAmount,
+        ethAmount,
+        tickLower,
+        tickUpper,
+        currentTick,
+      };
+    } catch (error) {
+      console.error("Error calculating liquidity amounts:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Checks if an external memecoin has been imported to Flaunch
+   * @param memecoin - The address of the memecoin to check
+   * @returns Promise<boolean> - True if the memecoin has been imported
+   */
+  async isMemecoinImported(memecoin: Address): Promise<boolean> {
+    const poolKey = orderPoolKey({
+      currency0: memecoin,
+      currency1: FLETHAddress[this.chainId],
+      fee: 0,
+      tickSpacing: TICK_SPACING,
+      hooks: AnyPositionManagerAddress[this.chainId],
+    });
+
+    // check if pool's sqrtPriceX96 is not 0
+    const poolState = await this.readStateView.poolSlot0({
+      poolId: getPoolId(poolKey),
+    });
+
+    return poolState.sqrtPriceX96 !== 0n;
+  }
+
+  /**
+   * Checks if an operator is approved for all flaunch tokens of an owner
+   * @param version - The flaunch version to determine the correct contract address
+   * @param owner - The owner address to check
+   * @param operator - The operator address to check
+   * @returns Promise<boolean> - True if operator is approved for all tokens
+   */
+  async isFlaunchTokenApprovedForAll(
+    version: FlaunchVersion,
+    owner: Address,
+    operator: Address
+  ) {
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    return this.drift.read({
+      abi: erc721Abi,
+      address: flaunchAddress,
+      fn: "isApprovedForAll",
+      args: { owner, operator },
+    });
   }
 }
 
@@ -1384,40 +2168,39 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @param params - Parameters for deploying the revenue manager
    * @param params.protocolRecipient - The address of the protocol recipient
    * @param params.protocolFeePercent - The percentage of the protocol fee
+   * @param params.permissions - The permissions for the revenue manager
    * @returns Address of the deployed revenue manager
    */
-  async deployRevenueManager(params: {
-    protocolRecipient: Address;
-    protocolFeePercent: number;
-  }): Promise<Address> {
-    const hash =
-      await this.readWriteTreasuryManagerFactory.deployRevenueManager(params);
+  async deployRevenueManager(
+    params: DeployRevenueManagerParams
+  ): Promise<Address> {
+    const hash = await this.readWriteFlaunchZap.deployRevenueManager(params);
 
-    // Create a public client to get the transaction receipt with logs
-    const publicClient = createPublicClient({
-      chain: chainIdToChain[this.chainId],
-      transport: http(),
-    });
+    return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
+      hash
+    );
+  }
 
-    // Wait for transaction receipt
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  /**
+   * Deploys a new staking manager
+   * @param params - Parameters for deploying the staking manager
+   * @param params.managerOwner - The address of the manager owner
+   * @param params.stakingToken - The address of the token to be staked
+   * @param params.minEscrowDuration - The minimum duration (in seconds) that the creator's NFT is locked for
+   * @param params.minStakeDuration - The minimum duration (in seconds) that the user's tokens are locked for
+   * @param params.creatorSharePercent - The % share that a creator will earn from their token
+   * @param params.ownerSharePercent - The % share that the manager owner will earn from their token
+   * @param params.permissions - The permissions for the staking manager
+   * @returns Address of the deployed staking manager
+   */
+  async deployStakingManager(
+    params: DeployStakingManagerParams
+  ): Promise<Address> {
+    const hash = await this.readWriteFlaunchZap.deployStakingManager(params);
 
-    // Get the logs from the receipt and find the ManagerDeployed event
-    const events = await publicClient.getContractEvents({
-      address: this.readWriteTreasuryManagerFactory.contract.address,
-      abi: TreasuryManagerFactoryAbi,
-      eventName: "ManagerDeployed",
-      fromBlock: receipt.blockNumber,
-      toBlock: receipt.blockNumber,
-    });
-
-    // Find the event from our transaction
-    const event = events.find((e) => e.transactionHash === hash);
-    if (!event) {
-      throw new Error("ManagerDeployed event not found in transaction logs");
-    }
-
-    return event.args._manager as Address;
+    return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
+      hash
+    );
   }
 
   /**
@@ -1508,7 +2291,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   /**
-   * Buys a coin with ETH
+   * Buys a coin with ETH or custom inputToken via intermediatePoolKey
    * @param params - Parameters for buying the coin including amount, slippage, and referrer
    * @param version - Optional specific version to use. If not provided, will determine automatically
    * @returns Transaction response for the buy operation
@@ -1529,39 +2312,42 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     if (params.swapType === "EXACT_IN") {
       amountIn = params.amountIn;
       if (params.amountOutMin === undefined) {
-        // Currently only V1 and V1.1 are supported in the Quoter
-        amountOutMin = getAmountWithSlippage(
-          await this.readQuoter.getBuyQuoteExactInput(
-            params.coinAddress,
+        amountOutMin = getAmountWithSlippage({
+          amount: await this.readQuoter.getBuyQuoteExactInput({
+            coinAddress: params.coinAddress,
             amountIn,
-            this.getPositionManagerAddress(coinVersion)
-          ),
-          (params.slippagePercent / 100).toFixed(18).toString(),
-          params.swapType
-        );
+            positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+            intermediatePoolKey: params.intermediatePoolKey,
+            hookData: params.hookData,
+            userWallet: sender,
+          }),
+          slippage: (params.slippagePercent / 100).toFixed(18).toString(),
+          swapType: params.swapType,
+        });
       } else {
         amountOutMin = params.amountOutMin;
       }
     } else {
       amountOut = params.amountOut;
       if (params.amountInMax === undefined) {
-        // Currently only V1 and V1.1 are supported in the Quoter
-        amountInMax = getAmountWithSlippage(
-          await this.readQuoter.getBuyQuoteExactOutput(
-            params.coinAddress,
-            amountOut,
-            this.getPositionManagerAddress(coinVersion)
-          ),
-          (params.slippagePercent / 100).toFixed(18).toString(),
-          params.swapType
-        );
+        amountInMax = getAmountWithSlippage({
+          amount: await this.readQuoter.getBuyQuoteExactOutput({
+            coinAddress: params.coinAddress,
+            coinOut: amountOut,
+            positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+            intermediatePoolKey: params.intermediatePoolKey,
+            hookData: params.hookData,
+            userWallet: sender,
+          }),
+          slippage: (params.slippagePercent / 100).toFixed(18).toString(),
+          swapType: params.swapType,
+        });
       } else {
         amountInMax = params.amountInMax;
       }
     }
 
-    // When UniversalRouter supports isAny parameter, add it here
-    const { commands, inputs } = ethToMemecoin({
+    const { commands, inputs } = buyMemecoin({
       sender: sender,
       memecoin: params.coinAddress,
       chainId: this.chainId,
@@ -1572,6 +2358,10 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       amountOut: amountOut,
       amountInMax: amountInMax,
       positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      intermediatePoolKey: params.intermediatePoolKey,
+      permitSingle: params.permitSingle,
+      signature: params.signature,
+      hookData: params.hookData,
     });
 
     return this.drift.adapter.write({
@@ -1582,7 +2372,11 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         commands,
         inputs,
       },
-      value: params.swapType === "EXACT_IN" ? amountIn : amountInMax,
+      value: params.intermediatePoolKey
+        ? 0n // 0 ETH as inputToken is in another currency
+        : params.swapType === "EXACT_IN"
+        ? amountIn
+        : amountInMax,
     });
   }
 
@@ -1596,37 +2390,37 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     const coinVersion =
       version || (await this.getCoinVersion(params.coinAddress));
 
-    let ethOutMin: bigint;
+    let amountOutMin: bigint;
 
     await this.readQuoter.contract.cache.clear();
 
-    if (params.ethOutMin === undefined) {
-      // Currently only V1 and V1.1 are supported in the Quoter
-      ethOutMin = getAmountWithSlippage(
-        await this.readQuoter.getSellQuoteExactInput(
-          params.coinAddress,
-          params.amountIn,
-          this.getPositionManagerAddress(coinVersion)
-        ),
-        (params.slippagePercent / 100).toFixed(18).toString(),
-        "EXACT_IN"
-      );
+    if (params.amountOutMin === undefined) {
+      amountOutMin = getAmountWithSlippage({
+        amount: await this.readQuoter.getSellQuoteExactInput({
+          coinAddress: params.coinAddress,
+          amountIn: params.amountIn,
+          positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+          intermediatePoolKey: params.intermediatePoolKey,
+        }),
+        slippage: (params.slippagePercent / 100).toFixed(18).toString(),
+        swapType: "EXACT_IN",
+      });
     } else {
-      ethOutMin = params.ethOutMin;
+      amountOutMin = params.amountOutMin;
     }
 
     await this.readPermit2.contract.cache.clear();
 
-    // When UniversalRouter supports isAny parameter, add it here
-    const { commands, inputs } = memecoinToEthWithPermit2({
+    const { commands, inputs } = sellMemecoinWithPermit2({
       chainId: this.chainId,
       memecoin: params.coinAddress,
       amountIn: params.amountIn,
-      ethOutMin,
+      amountOutMin,
       permitSingle: params.permitSingle,
       signature: params.signature,
       referrer: params.referrer ?? null,
       positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      intermediatePoolKey: params.intermediatePoolKey,
     });
 
     return this.drift.write({
@@ -1678,6 +2472,32 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       allowance: amount,
       nonce,
     };
+  }
+
+  /**
+   * Gets the allowance of an ERC20 token to Permit2 contract. Flaunch coins automatically have infinite approval for Permit2.
+   * this function is for external tokens.
+   * @param coinAddress - The address of the coin to check
+   * @returns Promise<bigint> - The allowance of the coin to Permit2
+   */
+  async getERC20AllowanceToPermit2(coinAddress: Address) {
+    const coin = new ReadMemecoin(coinAddress, this.drift);
+    return coin.allowance(
+      await this.drift.getSignerAddress(),
+      Permit2Address[this.chainId]
+    );
+  }
+
+  /**
+   * Sets the allowance of an ERC20 token to Permit2 contract. Flaunch coins automatically have infinite approval for Permit2.
+   * this function is for external tokens.
+   * @param coinAddress - The address of the coin to approve
+   * @param amount - The amount of the token to approve
+   * @returns Promise<Hex> - The transaction hash
+   */
+  async setERC20AllowanceToPermit2(coinAddress: Address, amount: bigint) {
+    const coin = new ReadWriteMemecoin(coinAddress, this.drift);
+    return coin.approve(Permit2Address[this.chainId], amount);
   }
 
   /**
@@ -1753,19 +2573,567 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   /**
+   * Sets the permissions contract address for a treasury manager
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @param permissions - The permissions enum value to set
+   * @returns Transaction response
+   */
+  treasuryManagerSetPermissions(
+    treasuryManagerAddress: Address,
+    permissions: Permissions
+  ) {
+    const readWriteTreasuryManager = new ReadWriteTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+    const permissionsAddress = getPermissionsAddress(permissions, this.chainId);
+    return readWriteTreasuryManager.setPermissions(permissionsAddress);
+  }
+
+  /**
+   * Transfers the ownership of a treasury manager to a new address
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @param newManagerOwner - The address of the new manager owner
+   * @returns Transaction response
+   */
+  treasuryManagerTransferOwnership(
+    treasuryManagerAddress: Address,
+    newManagerOwner: Address
+  ) {
+    const readWriteTreasuryManager = new ReadWriteTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+    return readWriteTreasuryManager.transferManagerOwnership(newManagerOwner);
+  }
+
+  /**
+   * Sets approval for all flaunch tokens to an operator
+   * @param version - The flaunch version to determine the correct contract address
+   * @param operator - The operator address to approve/revoke
+   * @param approved - Whether to approve or revoke approval
+   * @returns Transaction response
+   */
+  async setFlaunchTokenApprovalForAll(
+    version: FlaunchVersion,
+    operator: Address,
+    approved: boolean
+  ) {
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    return this.drift.write({
+      abi: erc721Abi,
+      address: flaunchAddress,
+      fn: "setApprovalForAll",
+      args: { operator, approved },
+    });
+  }
+
+  /**
+   * Adds an existing flaunch token to a treasury manager. NFT approval must be given prior to calling this function.
+   * @param treasuryManagerAddress - The address of the treasury manager
+   * @param version - The flaunch version to determine the correct contract address
+   * @param tokenId - The token ID to deposit
+   * @param creator - Optional creator address. If not provided, uses the connected wallet address
+   * @param data - Optional additional data for the deposit (defaults to empty bytes)
+   * @returns Transaction response
+   */
+  async addToTreasuryManager(
+    treasuryManagerAddress: Address,
+    version: FlaunchVersion,
+    tokenId: bigint,
+    creator?: Address,
+    data: `0x${string}` = "0x"
+  ) {
+    const readWriteTreasuryManager = new ReadWriteTreasuryManager(
+      treasuryManagerAddress,
+      this.drift
+    );
+
+    // Get the flaunch contract address based on version
+    const flaunchAddress = this.getFlaunchAddress(version);
+
+    const flaunchToken = {
+      flaunch: flaunchAddress,
+      tokenId,
+    };
+
+    const creatorAddress = creator ?? (await this.drift.getSignerAddress());
+
+    return readWriteTreasuryManager.deposit(flaunchToken, creatorAddress, data);
+  }
+
+  /**
    * Imports a memecoin into the TokenImporter
-   * @param params.memecoin - The address of the memecoin to import
+   * @param params.coinAddress - The address of the memecoin to import
    * @param params.creatorFeeAllocationPercent - The creator fee allocation percentage
    * @param params.initialMarketCapUSD - The initial market cap in USD
    * @param params.verifier - Optional verifier to use for importing the memecoin
    * @returns Transaction response
    */
-  importMemecoin(params: {
-    memecoin: Address;
-    creatorFeeAllocationPercent: number;
-    initialMarketCapUSD: number;
-    verifier?: Verifier;
-  }) {
+  importMemecoin(params: ImportMemecoinParams) {
     return this.readWriteTokenImporter.initialize(params);
+  }
+
+  /**
+   * Gets the calls needed to add liquidity to flaunch or imported coins
+   * @param params - Parameters for adding liquidity
+   * @returns Array of calls with descriptions
+   */
+  async getAddLiquidityCalls(
+    params: GetAddLiquidityCallsParams
+  ): Promise<CallWithDescription[]> {
+    const { coinAddress } = params;
+    const flethAddress = FLETHAddress[this.chainId];
+
+    let coinAmount: bigint;
+    let flethAmount: bigint;
+    let tickLower: number;
+    let tickUpper: number;
+    let currentTick: number;
+
+    let version = params.version;
+    if (!version) {
+      try {
+        version = await this.getCoinVersion(coinAddress);
+      } catch {
+        version = FlaunchVersion.ANY;
+      }
+    }
+
+    const poolKey = orderPoolKey({
+      currency0: coinAddress,
+      currency1: flethAddress,
+      fee: 0,
+      tickSpacing: this.TICK_SPACING,
+      hooks: this.getPositionManagerAddress(version),
+    });
+
+    // Check if we need to calculate values or use direct values
+    if ("tickLower" in params) {
+      // Use the directly provided values
+      coinAmount = params.coinAmount;
+      flethAmount = params.flethAmount;
+      tickLower = params.tickLower;
+      tickUpper = params.tickUpper;
+
+      if (params.currentTick) {
+        currentTick = params.currentTick;
+      } else {
+        const poolState = await this.readStateView.poolSlot0({
+          poolId: getPoolId(poolKey),
+        });
+        currentTick = poolState.tick;
+      }
+    } else {
+      // Calculate the amounts
+      let minMarketCap: string;
+      let maxMarketCap: string;
+      let initialMarketCapUSD: number | undefined;
+
+      if ("minMarketCap" in params) {
+        minMarketCap = params.minMarketCap;
+        maxMarketCap = params.maxMarketCap;
+        initialMarketCapUSD = params.initialMarketCapUSD;
+      } else {
+        const { totalSupply, decimals } = await this.getCoinInfo(coinAddress);
+        const formattedTotalSupply = parseFloat(
+          formatUnits(totalSupply, decimals)
+        );
+
+        minMarketCap = (
+          parseFloat(params.minPriceUSD) * formattedTotalSupply
+        ).toString();
+        maxMarketCap = (
+          parseFloat(params.maxPriceUSD) * formattedTotalSupply
+        ).toString();
+
+        if (params.initialPriceUSD) {
+          initialMarketCapUSD = params.initialPriceUSD * formattedTotalSupply;
+        }
+      }
+
+      const calculated = await this.calculateAddLiquidityAmounts({
+        coinAddress,
+        liquidityMode: params.liquidityMode,
+        coinOrEthInputAmount: params.coinOrEthInputAmount,
+        inputToken: params.inputToken,
+        minMarketCap,
+        maxMarketCap,
+        currentMarketCap: initialMarketCapUSD?.toString(),
+        version,
+      });
+
+      coinAmount = calculated.coinAmount;
+      flethAmount = calculated.ethAmount;
+      tickLower = calculated.tickLower;
+      tickUpper = calculated.tickUpper;
+      currentTick = calculated.currentTick;
+    }
+
+    // Fetch approvals via multicall
+    const userAddress = await this.drift.getSignerAddress();
+    const permit2Address = Permit2Address[this.chainId];
+
+    const results = await this.drift.multicall({
+      calls: [
+        // coin -> permit2
+        {
+          address: coinAddress,
+          abi: erc20Abi,
+          fn: "allowance",
+          args: {
+            owner: userAddress,
+            spender: permit2Address,
+          },
+        },
+        // flETH -> permit2
+        {
+          address: flethAddress,
+          abi: erc20Abi,
+          fn: "allowance",
+          args: {
+            owner: userAddress,
+            spender: permit2Address,
+          },
+        },
+        // coin --permit2--> uni position manager
+        {
+          address: permit2Address,
+          abi: Permit2Abi,
+          fn: "allowance",
+          args: {
+            0: userAddress,
+            1: coinAddress,
+            2: UniV4PositionManagerAddress[this.chainId],
+          },
+        },
+        // flETH --permit2--> uni position manager
+        {
+          address: permit2Address,
+          abi: Permit2Abi,
+          fn: "allowance",
+          args: {
+            0: userAddress,
+            1: flethAddress,
+            2: UniV4PositionManagerAddress[this.chainId],
+          },
+        },
+        // coin symbol
+        {
+          address: coinAddress,
+          abi: erc20Abi,
+          fn: "symbol",
+        },
+      ],
+    });
+    const coinToPermit2 = results[0].value!;
+    const flethToPermit2 = results[1].value!;
+    const permit2ToUniPosManagerCoinAllowance = results[2].value!;
+    const permit2ToUniPosManagerFlethAllowance = results[3].value!;
+    const coinSymbol = results[4].value!;
+
+    const needsCoinApproval = coinToPermit2 < coinAmount;
+    const needsFlethApproval = flethToPermit2 < flethAmount;
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    const needsCoinPermit2Approval =
+      permit2ToUniPosManagerCoinAllowance.amount < coinAmount ||
+      permit2ToUniPosManagerCoinAllowance.expiration <= currentTime;
+    const needsFlethPermit2Approval =
+      flethAmount > 0n &&
+      (permit2ToUniPosManagerFlethAllowance.amount < flethAmount ||
+        permit2ToUniPosManagerFlethAllowance.expiration <= currentTime);
+
+    const calls: CallWithDescription[] = [];
+
+    // 1. Coin approval to Permit2
+    if (needsCoinApproval) {
+      calls.push({
+        to: coinAddress,
+        description: `Approve ${coinSymbol} for Permit2`,
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [permit2Address, coinAmount],
+        }),
+      });
+    }
+    // 2. flETH approval to Permit2 (after wrapping)
+    if (needsFlethApproval) {
+      calls.push({
+        to: flethAddress,
+        description: `Approve flETH for Permit2`,
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [permit2Address, flethAmount],
+        }),
+      });
+    }
+    // 3. Permit2 approval for coin to uni position manager
+    const expiration = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+    if (needsCoinPermit2Approval) {
+      calls.push({
+        to: permit2Address,
+        description: `Permit2 approval for ${coinSymbol} to UniV4PositionManager`,
+        data: encodeFunctionData({
+          abi: Permit2Abi,
+          functionName: "approve",
+          args: [
+            coinAddress,
+            UniV4PositionManagerAddress[this.chainId],
+            coinAmount,
+            expiration,
+          ],
+        }),
+      });
+    }
+    // 4. Permit2 approval for flETH to uni position manager
+    if (needsFlethPermit2Approval) {
+      calls.push({
+        to: permit2Address,
+        description: `Permit2 approval for flETH to UniV4PositionManager`,
+        data: encodeFunctionData({
+          abi: Permit2Abi,
+          functionName: "approve",
+          args: [
+            flethAddress,
+            UniV4PositionManagerAddress[this.chainId],
+            flethAmount,
+            expiration,
+          ],
+        }),
+      });
+    }
+
+    // 5. Wrap ETH to flETH
+    if (flethAmount > 0n) {
+      calls.push({
+        to: flethAddress,
+        description: "Wrap ETH to flETH",
+        data: encodeFunctionData({
+          abi: FLETHAbi,
+          functionName: "deposit",
+          args: [0n], // wethAmount = 0, we're only sending ETH
+        }),
+        value: flethAmount,
+      });
+    }
+
+    // === generate add liquidity call ===
+    // Determine amounts for each currency based on pool key ordering
+    const amount0 =
+      poolKey.currency0 === coinAddress ? coinAmount : flethAmount;
+    const amount1 =
+      poolKey.currency0 === coinAddress ? flethAmount : coinAmount;
+
+    // Calculate liquidity first using user's input amounts
+    const initialLiquidity = getLiquidityFromAmounts({
+      currentTick,
+      tickLower,
+      tickUpper,
+      amount0,
+      amount1,
+    });
+
+    // Calculate the actual amounts needed for this liquidity
+    const actualAmounts = getAmountsForLiquidity({
+      currentTick,
+      tickLower,
+      tickUpper,
+      liquidity: initialLiquidity,
+    });
+
+    // Check if actual amounts exceed user input - if so, constrain them
+    let finalLiquidity = initialLiquidity;
+    let finalAmount0 = actualAmounts.amount0;
+    let finalAmount1 = actualAmounts.amount1;
+
+    // If actual amounts exceed user input, we need to recalculate with constraints
+    if (actualAmounts.amount0 > amount0 || actualAmounts.amount1 > amount1) {
+      console.log("Actual amounts exceed user input, constraining...");
+
+      // Calculate liquidity constrained by each amount separately
+      const liquidity0Constrained = getLiquidityFromAmounts({
+        currentTick,
+        tickLower,
+        tickUpper,
+        amount0,
+        amount1: 0n, // Only constrain by amount0
+      });
+
+      const liquidity1Constrained = getLiquidityFromAmounts({
+        currentTick,
+        tickLower,
+        tickUpper,
+        amount0: 0n, // Only constrain by amount1
+        amount1,
+      });
+
+      // Use the smaller liquidity to ensure we don't exceed either amount
+      finalLiquidity =
+        liquidity0Constrained < liquidity1Constrained
+          ? liquidity0Constrained
+          : liquidity1Constrained;
+
+      // Recalculate amounts for the constrained liquidity
+      const constrainedAmounts = getAmountsForLiquidity({
+        currentTick,
+        tickLower,
+        tickUpper,
+        liquidity: finalLiquidity,
+      });
+
+      finalAmount0 = constrainedAmounts.amount0;
+      finalAmount1 = constrainedAmounts.amount1;
+    }
+
+    // IMPORTANT: Add conservative buffer to account for contract rounding differences
+    // Reduce liquidity by 0.05% to ensure contract calculations stay within user bounds
+    const liquidityBuffer = finalLiquidity / 2000n; // 0.05%
+    const conservativeLiquidity =
+      finalLiquidity - (liquidityBuffer > 1n ? liquidityBuffer : 1n);
+
+    // Use conservative liquidity but keep user's original amounts as maximums
+    // The conservative liquidity ensures the contract won't need more than user provided
+    if (currentTick !== undefined) {
+      // If pool is already initialized then use conservative liquidity
+      // as a new pool would accept any liquidity amounts given by us
+      finalLiquidity = conservativeLiquidity;
+    }
+    finalAmount0 = amount0; // Use user's full amount as maximum
+    finalAmount1 = amount1; // Use user's full amount as maximum
+
+    // Prepare mint position parameters (following swiss-knife pattern)
+    const V4PMActions = {
+      MINT_POSITION: "02",
+      SETTLE_PAIR: "0d",
+    };
+
+    const v4Actions = ("0x" +
+      V4PMActions.MINT_POSITION +
+      V4PMActions.SETTLE_PAIR) as Hex;
+
+    // Validate hookData format
+    const validHookData = "0x" as Hex; // Empty hook data for now
+
+    const UniV4PM_MintPositionAbi = [
+      {
+        type: "tuple",
+        components: [
+          { type: "address", name: "currency0" },
+          { type: "address", name: "currency1" },
+          { type: "uint24", name: "fee" },
+          { type: "int24", name: "tickSpacing" },
+          { type: "address", name: "hooks" },
+        ],
+      },
+      { type: "int24", name: "tickLower" },
+      { type: "int24", name: "tickUpper" },
+      { type: "uint256", name: "liquidity" },
+      { type: "uint128", name: "amount0Max" },
+      { type: "uint128", name: "amount1Max" },
+      { type: "address", name: "owner" },
+      { type: "bytes", name: "hookData" },
+    ] as const;
+
+    const UniV4PM_SettlePairAbi = [
+      {
+        type: "tuple",
+        components: [
+          { type: "address", name: "currency0" },
+          { type: "address", name: "currency1" },
+        ],
+      },
+    ] as const;
+
+    const mintPositionParams = encodeAbiParameters(UniV4PM_MintPositionAbi, [
+      poolKey,
+      tickLower,
+      tickUpper,
+      finalLiquidity,
+      finalAmount0,
+      finalAmount1,
+      userAddress,
+      validHookData,
+    ]);
+
+    const settlePairParams = encodeAbiParameters(UniV4PM_SettlePairAbi, [
+      {
+        currency0: poolKey.currency0,
+        currency1: poolKey.currency1,
+      },
+    ]);
+
+    // 6. Add liquidity
+    calls.push({
+      to: UniV4PositionManagerAddress[this.chainId],
+      data: encodeFunctionData({
+        abi: [
+          {
+            inputs: [
+              { internalType: "bytes", name: "unlockData", type: "bytes" },
+              { internalType: "uint256", name: "deadline", type: "uint256" },
+            ],
+            name: "modifyLiquidities",
+            outputs: [],
+            stateMutability: "payable",
+            type: "function",
+          },
+        ],
+        functionName: "modifyLiquidities",
+        args: [
+          encodeAbiParameters(
+            [
+              { type: "bytes", name: "actions" },
+              { type: "bytes[]", name: "params" },
+            ],
+            [v4Actions, [mintPositionParams, settlePairParams]]
+          ),
+          BigInt(Math.floor(Date.now() / 1000) + 3600), // 1 hour deadline
+        ],
+      }),
+      value: 0n,
+      description: "Add Liquidity",
+    });
+
+    return calls;
+  }
+
+  /**
+   * Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
+   * @param params - Parameters for importing and adding liquidity
+   * @returns Array of calls with descriptions
+   */
+  async getImportAndAddLiquidityCalls(
+    params: ImportMemecoinParams &
+      GetAddLiquidityCallsParams & {
+        initialMarketCapUSD: number;
+      }
+  ): Promise<CallWithDescription[]> {
+    const importParams = await this.readWriteTokenImporter.getInitializeParams({
+      coinAddress: params.coinAddress,
+      creatorFeeAllocationPercent: params.creatorFeeAllocationPercent,
+      initialMarketCapUSD: params.initialMarketCapUSD,
+      verifier: params.verifier,
+    });
+
+    const addLiquidityCalls = await this.getAddLiquidityCalls({
+      ...params,
+      version: FlaunchVersion.ANY, // optimize to avoid fetching if not passed
+    });
+
+    return [
+      {
+        to: this.readWriteTokenImporter.contract.address,
+        data: this.readWriteTokenImporter.contract.encodeFunctionData(
+          "initialize",
+          importParams
+        ),
+        description: "Import Memecoin to Flaunch",
+      },
+      ...addLiquidityCalls,
+    ];
   }
 }
