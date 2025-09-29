@@ -2,6 +2,17 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.1] - 2025-09-29
+
+### Fixed
+
+- **RPC Endpoint Reliability Issues** for Transaction Receipts from hash
+  - Update `getManagerDeployedAddressFromTx()` method to use provided `publicClient` instead of creating new public client with default endpoints
+  - Added optional `publicClient` parameter to `ReadTreasuryManagerFactory` and `ReadWriteTreasuryManagerFactory` constructors
+  - Updated `ReadFlaunchSDK` and `ReadWriteFlaunchSDK` constructors to accept and utilize optional `publicClient` parameter
+  - Modified `createFlaunch()` factory function to pass provided `publicClient` to SDK instances
+  - Resolves issues with unreliable public RPC endpoints when extracting deployed manager addresses from transaction receipts
+
 ## [0.9.0] - 2025-09-25
 
 ### Added
