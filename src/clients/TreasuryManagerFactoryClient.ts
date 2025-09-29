@@ -10,6 +10,7 @@ import {
 } from "@delvtech/drift";
 import {
   createPublicClient,
+  type PublicClient,
   encodeAbiParameters,
   http,
   parseEventLogs,
@@ -22,8 +23,14 @@ export type TreasuryManagerFactoryABI = typeof TreasuryManagerFactoryAbi;
 export class ReadTreasuryManagerFactory {
   chainId: number;
   public readonly contract: ReadContract<TreasuryManagerFactoryABI>;
+  public readonly publicClient: PublicClient | undefined;
 
-  constructor(chainId: number, address: Address, drift: Drift = createDrift()) {
+  constructor(
+    chainId: number,
+    address: Address,
+    drift: Drift = createDrift(),
+    publicClient?: PublicClient
+  ) {
     if (!address) {
       throw new Error("Address is required");
     }
@@ -32,17 +39,16 @@ export class ReadTreasuryManagerFactory {
       address,
     });
     this.chainId = chainId;
+    this.publicClient = publicClient;
   }
 
   async getManagerDeployedAddressFromTx(hash: HexString) {
-    // Create a public client to get the transaction receipt with logs
-    const publicClient = createPublicClient({
-      chain: chainIdToChain[this.chainId],
-      transport: http(),
-    });
-
     // Wait for transaction receipt
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (!this.publicClient) {
+      throw new Error("Public client is required");
+    }
+
+    const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
 
     // Parse the ManagerDeployed event from receipt logs
     const parsedLogs = parseEventLogs({
@@ -66,7 +72,12 @@ export class ReadTreasuryManagerFactory {
 export class ReadWriteTreasuryManagerFactory extends ReadTreasuryManagerFactory {
   declare contract: ReadWriteContract<TreasuryManagerFactoryABI>;
 
-  constructor(chainId: number, address: Address, drift: Drift = createDrift()) {
-    super(chainId, address, drift);
+  constructor(
+    chainId: number,
+    address: Address,
+    drift: Drift = createDrift(),
+    publicClient?: PublicClient
+  ) {
+    super(chainId, address, drift, publicClient);
   }
 }

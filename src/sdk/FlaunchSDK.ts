@@ -7,6 +7,7 @@ import {
 } from "@delvtech/drift";
 import {
   createPublicClient,
+  type PublicClient,
   decodeEventLog,
   http,
   zeroAddress,
@@ -251,6 +252,7 @@ type SellCoinParams = {
 export class ReadFlaunchSDK {
   public readonly drift: Drift;
   public readonly chainId: number;
+  public readonly publicClient: PublicClient | undefined;
   public readonly TICK_SPACING = TICK_SPACING;
   public readonly readPositionManager: ReadFlaunchPositionManager;
   public readonly readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
@@ -280,9 +282,14 @@ export class ReadFlaunchSDK {
 
   public resolveIPFS: (value: string) => string;
 
-  constructor(chainId: number, drift: Drift = createDrift()) {
+  constructor(
+    chainId: number,
+    drift: Drift = createDrift(),
+    publicClient?: PublicClient
+  ) {
     this.chainId = chainId;
     this.drift = drift;
+    this.publicClient = publicClient;
     this.resolveIPFS = defaultResolveIPFS;
     this.readPositionManager = new ReadFlaunchPositionManager(
       FlaunchPositionManagerAddress[this.chainId],
@@ -2120,8 +2127,12 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   public readonly readWriteTreasuryManagerFactory: ReadWriteTreasuryManagerFactory;
   public readonly readWritePermit2: ReadWritePermit2;
 
-  constructor(chainId: number, drift: Drift<ReadWriteAdapter> = createDrift()) {
-    super(chainId, drift);
+  constructor(
+    chainId: number,
+    drift: Drift<ReadWriteAdapter> = createDrift(),
+    publicClient?: PublicClient
+  ) {
+    super(chainId, drift, publicClient);
     this.readWritePositionManager = new ReadWriteFlaunchPositionManager(
       FlaunchPositionManagerAddress[this.chainId],
       drift
@@ -2155,7 +2166,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     this.readWriteTreasuryManagerFactory = new ReadWriteTreasuryManagerFactory(
       this.chainId,
       TreasuryManagerFactoryAddress[this.chainId],
-      drift
+      drift,
+      this.publicClient
     );
     this.readWritePermit2 = new ReadWritePermit2(
       Permit2Address[this.chainId],

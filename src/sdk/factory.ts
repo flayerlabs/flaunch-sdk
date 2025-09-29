@@ -46,7 +46,8 @@ export function createFlaunch(params: CreateFlaunchParams) {
   return walletClient
     ? new ReadWriteFlaunchSDK(
         chainId,
-        createDrift({ publicClient, walletClient })
+        createDrift({ publicClient, walletClient }),
+        publicClient
       )
-    : new ReadFlaunchSDK(chainId, createDrift({ publicClient }));
+    : new ReadFlaunchSDK(chainId, createDrift({ publicClient }), publicClient);
 }
