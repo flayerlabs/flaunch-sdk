@@ -2,6 +2,12 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.3] - 2025-10-01
+
+### Fixed
+
+- Updated manager contract addresses.
+
 ## [0.9.2] - 2025-10-01
 
 ### Fixed
