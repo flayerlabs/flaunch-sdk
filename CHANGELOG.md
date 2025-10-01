@@ -2,6 +2,12 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.2] - 2025-10-01
+
+### Fixed
+
+- Updated manager contract addresses to support legacy flaunch V1 coins. The new managers utilize our FeeEscrowRegistry contract.
+
 ## [0.9.1] - 2025-09-29
 
 ### Fixed
