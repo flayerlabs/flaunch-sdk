@@ -82,18 +82,18 @@ export const TreasuryManagerFactoryAddress: Addresses = {
 };
 
 export const RevenueManagerAddress: Addresses = {
-  [base.id]: "0x4Fb9dE6bbe970A49C19fB967F937351728C01b8f",
-  [baseSepolia.id]: "0x34077816CC8EAb21FF8E87FDC35b95F1602A2221",
+  [base.id]: "0xb6c0cca8b3a354fa0f348c121657f4a952e92b3d",
+  [baseSepolia.id]: "0xd32b7236f45b787d808a65bb3e2160aa3a9ced09",
 };
 
 export const AddressFeeSplitManagerAddress: Addresses = {
-  [base.id]: "0xC3F4E72DE4D37988F12C101b0766Fd8462F6Faf9",
-  [baseSepolia.id]: "0x487583E8543ac9D68f11824ED611645Ca088c07F",
+  [base.id]: "0xabde686e8a710ade941189d634596215ba78334b",
+  [baseSepolia.id]: "0x3e0edadf33085d47e53212aff8a85ed292fe201c",
 };
 
 export const StakingManagerAddress: Addresses = {
-  [base.id]: "0x3C3BC8e63DF9CCd5cdaa01F6833B2e4dCdB40bF0",
-  [baseSepolia.id]: "0x9ebBe3f8b72494aB00144a8844dbeA8B8817c323",
+  [base.id]: "0x540677596a3aa2d75f2eb1e791b8f27ec4a9622d",
+  [baseSepolia.id]: "0xfaff975c1cf48767e053d0777309578c6b3ae44c",
 };
 
 /** Verifiers */
