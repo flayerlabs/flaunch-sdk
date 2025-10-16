@@ -99,7 +99,7 @@ export const StakingManagerAddress: Addresses = {
 /** Verifiers */
 export const TokenImporterAddress: Addresses = {
   [base.id]: "0xb47af90ae61bc916ea4b4bacffae4570e7435842",
-  [baseSepolia.id]: "0xb4955a396ef07c124a59164c30d63e96a103a98b",
+  [baseSepolia.id]: "0x7981369D21975F39773f289F759F7d7CE1097139",
 };
 
 export const ClankerWorldVerifierAddress: Addresses = {
