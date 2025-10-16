@@ -2,6 +2,12 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.5] - 2025-10-16
+
+### Fixed
+
+- Updated Token Importer contract address for base sepolia.
+
 ## [0.9.4] - 2025-10-01
 
 ### Fixed
