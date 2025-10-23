@@ -77,6 +77,7 @@ export interface FlaunchWithRevenueManagerIPFSParams
 export interface FlaunchWithSplitManagerParams
   extends Omit<FlaunchParams, "treasuryManagerParams"> {
   creatorSplitPercent: number;
+  managerOwnerSplitPercent: number;
   splitReceivers: {
     address: Address;
     percent: number;
@@ -419,18 +420,21 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
    * @param params.initialMarketCapUSD - Initial market cap in USD
    * @param params.creator - Address of the token creator
    * @param params.creatorFeeAllocationPercent - Percentage of fees allocated to creator (0-100)
-   * @param params.creatorSplitPercent - Percentage of fees allocated to creator (0-100)
+   * @param params.creatorSplitPercent - Split percentage of the fees for the creator (0-100)
+   * @param params.managerOwnerSplitPercent - Split percentage of the fees for the manager owner (0-100)
    * @param params.splitReceivers - List of recipients and their percentage of the fees
    * @param params.flaunchAt - Optional timestamp when the flaunch should start
    * @param params.premineAmount - Optional amount of tokens to premine
-   * @param params.creatorSplitPercent - Split percentage of the fees for the creator (0-100)
-   * @param params.splitReceivers - List of recipients and their percentage of the fees
+   * @param params.treasuryManagerParams - Optional treasury manager configuration
    * @returns Transaction response for the flaunch creation
    */
   async flaunchWithSplitManager(params: FlaunchWithSplitManagerParams) {
     const VALID_SHARE_TOTAL = 100_00000n; // 5 decimals as BigInt
     let creatorShare =
       (BigInt(params.creatorSplitPercent) * VALID_SHARE_TOTAL) / 100n;
+    const managerOwnerShare =
+      (BigInt(params.managerOwnerSplitPercent) * VALID_SHARE_TOTAL) / 100n;
+
     const recipientShares = params.splitReceivers.map((receiver) => {
       return {
         recipient: receiver.address,
@@ -444,7 +448,8 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
     );
 
     // if there's a remainder (due to rounding errors), add it to the creator share
-    const remainderShares = VALID_SHARE_TOTAL - totalRecipientShares;
+    const remainderShares =
+      VALID_SHARE_TOTAL - totalRecipientShares - managerOwnerShare;
     creatorShare += remainderShares;
 
     const initializeData = encodeAbiParameters(
@@ -454,6 +459,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
           name: "params",
           components: [
             { type: "uint256", name: "creatorShare" },
+            { type: "uint256", name: "ownerShare" },
             {
               type: "tuple[]",
               name: "recipientShares",
@@ -468,6 +474,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
       [
         {
           creatorShare,
+          ownerShare: managerOwnerShare,
           recipientShares,
         },
       ]
