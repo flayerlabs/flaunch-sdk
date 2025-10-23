@@ -2,6 +2,13 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.6] - 2025-10-23
+
+### Changed
+
+- **AddressFeeSplitManager** - Added `managerOwnerSplitPercent` parameter to `FlaunchWithSplitManagerParams` interface and updated `flaunchWithSplitManager()` method to support separate manager owner fee allocation
+  - **BREAKING CHANGE**: The `managerOwnerSplitPercent` parameter is now required
+
 ## [0.9.5] - 2025-10-16
 
 ### Fixed
