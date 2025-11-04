@@ -346,6 +346,11 @@ export function maxLiquidityForAmount0Precise(
     [sqrtRatioAX96, sqrtRatioBX96] = [sqrtRatioBX96, sqrtRatioAX96];
   }
 
+  // Handle edge case where sqrt ratios are equal (division by zero)
+  if (sqrtRatioAX96 === sqrtRatioBX96) {
+    return 0n;
+  }
+
   const Q96 = 2n ** 96n;
   const numerator = amount0 * sqrtRatioAX96 * sqrtRatioBX96;
   const denominator = Q96 * (sqrtRatioBX96 - sqrtRatioAX96);
@@ -368,6 +373,12 @@ export function maxLiquidityForAmount1(
   if (sqrtRatioAX96 > sqrtRatioBX96) {
     [sqrtRatioAX96, sqrtRatioBX96] = [sqrtRatioBX96, sqrtRatioAX96];
   }
+
+  // Handle edge case where sqrt ratios are equal (division by zero)
+  if (sqrtRatioAX96 === sqrtRatioBX96) {
+    return 0n;
+  }
+
   const Q96 = 2n ** 96n;
   return (amount1 * Q96) / (sqrtRatioBX96 - sqrtRatioAX96);
 }
