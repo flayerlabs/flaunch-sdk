@@ -2,6 +2,35 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.8] - 2025-11-05
+
+### Added
+
+- **Import and Add Single-Sided Coin Liquidity in a single batch**
+
+  - New `getImportAndSingleSidedCoinAddLiquidityCalls()` method enabling atomic import and single-sided coin liquidity provision in one transaction batch
+  - Supports both `initialMarketCapUSD` and `initialPriceUSD` parameter inputs for flexible pricing
+  - Provides liquidity from current price to infinity, perfect for creators who want instant tradability without ETH requirements
+  - As coin price increases, the position automatically sells coins and accumulates ETH
+
+- **Enhanced Type System** for better developer experience
+
+  - New `Flatten<T>` utility type for improved TypeScript IntelliSense and cleaner type definitions
+  - Comprehensive parameter types: `ImportAndSingleSidedCoinAddLiquidityWithMarketCap` and `ImportAndSingleSidedCoinAddLiquidityWithPrice`
+  - Enhanced `ImportAndAddLiquidityParams` union types for better overload support
+
+- **Function Overloads** for `getImportAndAddLiquidityCalls()`
+  - Multiple method signatures supporting different parameter combinations
+  - `ImportAndAddLiquidityWithMarketCap`, `ImportAndAddLiquidityWithPrice`, and `ImportAndAddLiquidityWithExactAmounts` overloads
+  - Better IntelliSense and type safety for different use cases
+
+### Changed
+
+- **Improved Single-Sided Liquidity Parameters**
+
+  - `GetSingleSidedCoinAddLiquidityCallsParams` now supports optional `initialMarketCapUSD` and `initialPriceUSD` parameters
+  - Enhanced flexibility for providing liquidity on uninitialized pools
+
 ## [0.9.7] - 2025-11-04
 
 ### Added

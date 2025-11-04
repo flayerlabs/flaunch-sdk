@@ -37,6 +37,7 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
   - [Importing External Coins into Flaunch](#importing-external-coins-into-flaunch)
   - [Adding Liquidity to Imported (or flaunch) coins](#adding-liquidity-to-imported-or-flaunch-coins)
   - [Import AND Add Liquidity calls in a single batch](#import-and-add-liquidity-calls-in-a-single-batch)
+  - [Import AND Add Single-Sided Coin Liquidity calls in a single batch](#import-and-add-single-sided-coin-liquidity-calls-in-a-single-batch)
   - [`createFlaunchCalldata`: alternative to `createFlaunch`](#createflaunchcalldata-alternative-to-createflaunch-that-returns-the-tx-call-object-with-to-data-and-value-instead-of-directly-broadcasting-the-tx-from-walletclient)
   - [All SDK functions](#all-sdk-functions)
   - [React Hooks](#react-hooks)
@@ -902,6 +903,57 @@ const importAndAddLiqCalls = await flaunchWrite.getImportAndAddLiquidityCalls({
 });
 ```
 
+### Import AND Add Single-Sided Coin Liquidity calls in a single batch
+
+This allows importing an external coin and providing single-sided coin liquidity (from current price to infinity) in one transaction batch. This is perfect for coin creators who want their imported tokens to be instantly tradeable with single-sided liquidity that doesn't require ETH.
+
+💡 **Key Benefits:**
+
+- No ETH required for liquidity provision
+- Liquidity is provided from current price to infinity
+- As price increases, the position automatically sells coins and accumulates ETH
+- Instant tradeability after import
+
+  2.1. With Market Cap inputs
+
+```ts
+const importAndSingleSidedCalls =
+  await flaunchWrite.getImportAndSingleSidedCoinAddLiquidityCalls({
+    coinAddress: "0x...", // ERC20 token contract address
+    verifier: Verifier.CLANKER, // Optional verifier
+    creatorFeeAllocationPercent: 100, // Fee allocation to creator (0-100%)
+    coinAmount: parseEther("1000000"), // Amount of coins to provide as liquidity
+    initialMarketCapUSD: 10_000, // Starting market cap in USD
+  });
+// Returns: CallWithDescription[] - Array of transaction calls with descriptions
+
+// === send these calls to user's wallet as a batch ===
+import { useSendCalls } from "wagmi";
+
+const { sendCalls } = useSendCalls();
+
+const calls = importAndSingleSidedCalls.map((call) => ({
+  to: call.to as `0x${string}`,
+  value: call.value,
+  data: call.data as `0x${string}`,
+}));
+
+await sendCalls({ calls });
+```
+
+2.2. With Coin Price inputs
+
+```ts
+const importAndSingleSidedCalls =
+  await flaunchWrite.getImportAndSingleSidedCoinAddLiquidityCalls({
+    coinAddress: "0x...", // ERC20 token contract address
+    verifier: Verifier.CLANKER, // Optional verifier
+    creatorFeeAllocationPercent: 100, // Fee allocation to creator (0-100%)
+    coinAmount: parseEther("1000000"), // Amount of coins to provide as liquidity
+    initialPriceUSD: 0.001, // Starting price in USD
+  });
+```
+
 ### `createFlaunchCalldata`: alternative to `createFlaunch` that returns the tx call object with to, data, and value instead of directly broadcasting the tx from walletClient
 
 To support custom signers that might not be compatible with our `walletClient` approach, or to enable account abstraction and batching on your wallet signer's end we have `createFlaunchCalldata` that returns the tx object, leaving the tx broadcasting to be flexible & handled on your end.
@@ -987,7 +1039,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.6 / Exports / FlaunchBackend
+@flaunch/sdk - v0.9.7 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1086,7 +1138,7 @@ Returns
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.7 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -1440,7 +1492,7 @@ ___
 
 ### calculateCurrentTickFromMarketCap
 
-▸ **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `totalSupplyDecimal`, `marketContext`): `undefined` \| `number`
+▸ **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `formattedTotalSupplyInDecimals`, `marketContext`): `undefined` \| `number`
 
 Calculates current tick from market cap if provided
 
@@ -1449,7 +1501,7 @@ Parameters
 | Name | Type |
 | :------ | :------ |
 | `currentMarketCap` | `undefined` \| `string` |
-| `totalSupplyDecimal` | `number` |
+| `formattedTotalSupplyInDecimals` | `number` |
 | `marketContext` | `Object` |
 | `marketContext.decimals0` | `number` |
 | `marketContext.decimals1` | `number` |
@@ -1869,7 +1921,7 @@ ___
 
 ### getCoinInfo
 
-▸ **getCoinInfo**(`coinAddress`): `Promise`\<\{ `decimals`: `number` ; `totalSupply`: `bigint`  }\>
+▸ **getCoinInfo**(`coinAddress`): `Promise`\<\{ `decimals`: `number` ; `formattedTotalSupplyInDecimals`: `number` ; `totalSupply`: `bigint`  }\>
 
 Gets basic coin information (total supply and decimals)
 
@@ -1881,7 +1933,7 @@ Parameters
 
 Returns
 
-`Promise`\<\{ `decimals`: `number` ; `totalSupply`: `bigint`  }\>
+`Promise`\<\{ `decimals`: `number` ; `formattedTotalSupplyInDecimals`: `number` ; `totalSupply`: `bigint`  }\>
 
 ___
 
@@ -2264,7 +2316,7 @@ ___
 
 ### marketCapToTokenPriceEth
 
-▸ **marketCapToTokenPriceEth**(`marketCapUsd`, `totalSupplyDecimal`, `ethUsdPrice`): `number`
+▸ **marketCapToTokenPriceEth**(`marketCapUsd`, `formattedTotalSupplyInDecimals`, `ethUsdPrice`): `number`
 
 Converts market cap in USD to token price in ETH
 
@@ -2273,7 +2325,7 @@ Parameters
 | Name | Type |
 | :------ | :------ |
 | `marketCapUsd` | `number` |
-| `totalSupplyDecimal` | `number` |
+| `formattedTotalSupplyInDecimals` | `number` |
 | `ethUsdPrice` | `number` |
 
 Returns
@@ -2646,7 +2698,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.7 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -2754,6 +2806,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getFlaunchAddress
 - getFlaunchingFee
 - getImportAndAddLiquidityCalls
+- getImportAndSingleSidedCoinAddLiquidityCalls
 - getMarketContext
 - getPermit2AllowanceAndNonce
 - getPermit2TypedData
@@ -3305,7 +3358,7 @@ ___
 
 ### calculateCurrentTickFromMarketCap
 
-▸ **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `totalSupplyDecimal`, `marketContext`): `undefined` \| `number`
+▸ **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `formattedTotalSupplyInDecimals`, `marketContext`): `undefined` \| `number`
 
 Calculates current tick from market cap if provided
 
@@ -3314,7 +3367,7 @@ Parameters
 | Name | Type |
 | :------ | :------ |
 | `currentMarketCap` | `undefined` \| `string` |
-| `totalSupplyDecimal` | `number` |
+| `formattedTotalSupplyInDecimals` | `number` |
 | `marketContext` | `Object` |
 | `marketContext.decimals0` | `number` |
 | `marketContext.decimals1` | `number` |
@@ -4069,7 +4122,7 @@ ___
 
 ### getCoinInfo
 
-▸ **getCoinInfo**(`coinAddress`): `Promise`\<\{ `decimals`: `number` ; `totalSupply`: `bigint`  }\>
+▸ **getCoinInfo**(`coinAddress`): `Promise`\<\{ `decimals`: `number` ; `formattedTotalSupplyInDecimals`: `number` ; `totalSupply`: `bigint`  }\>
 
 Gets basic coin information (total supply and decimals)
 
@@ -4081,7 +4134,7 @@ Parameters
 
 Returns
 
-`Promise`\<\{ `decimals`: `number` ; `totalSupply`: `bigint`  }\>
+`Promise`\<\{ `decimals`: `number` ; `formattedTotalSupplyInDecimals`: `number` ; `totalSupply`: `bigint`  }\>
 
 Inherited from
 
@@ -4334,13 +4387,193 @@ Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `params` | `ImportMemecoinParams` & GetAddLiquidityCallsParams & \{ initialMarketCapUSD: number; } | Parameters for importing and adding liquidity |
+| `params` | `Object` | Parameters for importing and adding liquidity with market cap constraints |
+| `params.coinAddress` | \`0x$\{string}\` | - |
+| `params.coinOrEthInputAmount` | `bigint` | - |
+| `params.creatorFeeAllocationPercent` | `number` | - |
+| `params.initialMarketCapUSD` | `number` | - |
+| `params.inputToken` | ``"coin"`` \| ``"eth"`` | - |
+| `params.liquidityMode` | `LiquidityMode` | - |
+| `params.maxMarketCap` | `string` | - |
+| `params.minMarketCap` | `string` | - |
+| `params.verifier?` | `Verifier` | - |
+| `params.version?` | `FlaunchVersion` | - |
 
 Returns
 
 `Promise`\<`CallWithDescription`[]\>
 
 Array of calls with descriptions
+
+**`Example`**
+
+```typescript
+const calls = await sdk.getImportAndAddLiquidityCalls({
+  coinAddress: "0x...",
+  verifier: Verifier.CLANKER,
+  creatorFeeAllocationPercent: 5,
+  liquidityMode: LiquidityMode.CONCENTRATED,
+  coinOrEthInputAmount: parseEther("1"),
+  inputToken: "eth",
+  minMarketCap: "10000",
+  maxMarketCap: "100000",
+  initialMarketCapUSD: 50000
+});
+```
+
+▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
+
+Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Parameters for importing and adding liquidity with price constraints |
+| `params.coinAddress` | \`0x$\{string}\` | - |
+| `params.coinOrEthInputAmount` | `bigint` | - |
+| `params.creatorFeeAllocationPercent` | `number` | - |
+| `params.initialPriceUSD` | `number` | - |
+| `params.inputToken` | ``"coin"`` \| ``"eth"`` | - |
+| `params.liquidityMode` | `LiquidityMode` | - |
+| `params.maxPriceUSD` | `string` | - |
+| `params.minPriceUSD` | `string` | - |
+| `params.verifier?` | `Verifier` | - |
+| `params.version?` | `FlaunchVersion` | - |
+
+Returns
+
+`Promise`\<`CallWithDescription`[]\>
+
+Array of calls with descriptions
+
+**`Example`**
+
+```typescript
+const calls = await sdk.getImportAndAddLiquidityCalls({
+  coinAddress: "0x...",
+  verifier: Verifier.CLANKER,
+  creatorFeeAllocationPercent: 5,
+  liquidityMode: LiquidityMode.CONCENTRATED,
+  coinOrEthInputAmount: parseEther("1"),
+  inputToken: "eth",
+  minPriceUSD: "0.0001",
+  maxPriceUSD: "0.001",
+  initialPriceUSD: 0.0005
+});
+```
+
+▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
+
+Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Parameters for importing and adding liquidity with exact amounts |
+| `params.coinAddress` | \`0x$\{string}\` | - |
+| `params.coinAmount` | `bigint` | - |
+| `params.creatorFeeAllocationPercent` | `number` | - |
+| `params.currentTick?` | `number` | - |
+| `params.flethAmount` | `bigint` | - |
+| `params.tickLower` | `number` | - |
+| `params.tickUpper` | `number` | - |
+| `params.verifier?` | `Verifier` | - |
+| `params.version?` | `FlaunchVersion` | - |
+
+Returns
+
+`Promise`\<`CallWithDescription`[]\>
+
+Array of calls with descriptions
+
+**`Example`**
+
+```typescript
+const calls = await sdk.getImportAndAddLiquidityCalls({
+  coinAddress: "0x...",
+  verifier: Verifier.CLANKER,
+  creatorFeeAllocationPercent: 5,
+  coinAmount: parseEther("1000"),
+  flethAmount: parseEther("0.5"),
+  tickLower: -887220,
+  tickUpper: 887220,
+  currentTick: 0
+});
+```
+
+___
+
+### getImportAndSingleSidedCoinAddLiquidityCalls
+
+▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
+
+Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Parameters for importing and adding liquidity with initial market cap |
+| `params.coinAddress` | \`0x$\{string}\` | - |
+| `params.coinAmount` | `bigint` | - |
+| `params.creatorFeeAllocationPercent` | `number` | - |
+| `params.initialMarketCapUSD` | `number` | - |
+| `params.verifier?` | `Verifier` | - |
+| `params.version?` | `FlaunchVersion` | - |
+
+Returns
+
+`Promise`\<`CallWithDescription`[]\>
+
+Array of calls with descriptions
+
+**`Example`**
+
+```typescript
+const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
+  coinAddress: "0x...",
+  verifier: Verifier.CLANKER,
+  creatorFeeAllocationPercent: 5,
+  coinAmount: parseEther("1000"),
+  initialMarketCapUSD: 50000
+});
+```
+
+▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
+
+Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | Parameters for importing and adding liquidity with initial price |
+| `params.coinAddress` | \`0x$\{string}\` | - |
+| `params.coinAmount` | `bigint` | - |
+| `params.creatorFeeAllocationPercent` | `number` | - |
+| `params.initialPriceUSD` | `number` | - |
+| `params.verifier?` | `Verifier` | - |
+| `params.version?` | `FlaunchVersion` | - |
+
+Returns
+
+`Promise`\<`CallWithDescription`[]\>
+
+Array of calls with descriptions
+
+**`Example`**
+
+```typescript
+const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
+  coinAddress: "0x...",
+  verifier: Verifier.CLANKER,
+  creatorFeeAllocationPercent: 5,
+  coinAmount: parseEther("1000"),
+  initialPriceUSD: 0.001
+});
+```
 
 ___
 
@@ -4666,7 +4899,7 @@ ___
 
 ### marketCapToTokenPriceEth
 
-▸ **marketCapToTokenPriceEth**(`marketCapUsd`, `totalSupplyDecimal`, `ethUsdPrice`): `number`
+▸ **marketCapToTokenPriceEth**(`marketCapUsd`, `formattedTotalSupplyInDecimals`, `ethUsdPrice`): `number`
 
 Converts market cap in USD to token price in ETH
 
@@ -4675,7 +4908,7 @@ Parameters
 | Name | Type |
 | :------ | :------ |
 | `marketCapUsd` | `number` |
-| `totalSupplyDecimal` | `number` |
+| `formattedTotalSupplyInDecimals` | `number` |
 | `ethUsdPrice` | `number` |
 
 Returns
@@ -5313,7 +5546,7 @@ Transaction response
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.7 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -5356,7 +5589,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / LiquidityMode
+@flaunch/sdk - v0.9.7 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -5383,7 +5616,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / Permissions
+@flaunch/sdk - v0.9.7 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -5419,7 +5652,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / Verifier
+@flaunch/sdk - v0.9.7 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -5469,7 +5702,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / Addresses
+@flaunch/sdk - v0.9.7 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -5480,7 +5713,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / BuySwapData
+@flaunch/sdk - v0.9.7 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -5515,7 +5748,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / CallData
+@flaunch/sdk - v0.9.7 / Exports / CallData
 
 # Interface: CallData
 
@@ -5549,7 +5782,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.7 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -5618,7 +5851,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / IPFSParams
+@flaunch/sdk - v0.9.7 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -5656,7 +5889,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / PinataConfig
+@flaunch/sdk - v0.9.7 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -5676,7 +5909,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / PoolKey
+@flaunch/sdk - v0.9.7 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -5730,7 +5963,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / PoolWithHookData
+@flaunch/sdk - v0.9.7 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -5811,7 +6044,7 @@ PoolKey.tickSpacing
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / SellSwapData
+@flaunch/sdk - v0.9.7 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -5846,7 +6079,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.9.7 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -5880,7 +6113,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / SwapFees
+@flaunch/sdk - v0.9.7 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -5907,7 +6140,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.7 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -6004,9 +6237,9 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.6 / Exports
+@flaunch/sdk - v0.9.7 / Exports
 
-# @flaunch/sdk - v0.9.6
+# @flaunch/sdk - v0.9.7
 
 ## Table of contents
 
@@ -6051,6 +6284,13 @@ ___
 - CreateFlaunchParams
 - GetAddLiquidityCallsParams
 - GetSingleSidedCoinAddLiquidityCallsParams
+- ImportAndAddLiquidityParams
+- ImportAndAddLiquidityWithExactAmounts
+- ImportAndAddLiquidityWithMarketCap
+- ImportAndAddLiquidityWithPrice
+- ImportAndSingleSidedCoinAddLiquidityParams
+- ImportAndSingleSidedCoinAddLiquidityWithMarketCap
+- ImportAndSingleSidedCoinAddLiquidityWithPrice
 - ImportMemecoinParams
 - ParsedSwapData
 - PermitDetails
@@ -6246,15 +6486,49 @@ ___
 
 ### GetSingleSidedCoinAddLiquidityCallsParams
 
-Ƭ **GetSingleSidedCoinAddLiquidityCallsParams**: `Object`
+Ƭ **GetSingleSidedCoinAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `version?`: `FlaunchVersion`  }
 
-Type declaration
+___
 
-| Name | Type |
-| :------ | :------ |
-| `coinAddress` | `Address` |
-| `coinAmount` | `bigint` |
-| `version?` | `FlaunchVersion` |
+### ImportAndAddLiquidityParams
+
+Ƭ **ImportAndAddLiquidityParams**: `ImportAndAddLiquidityWithMarketCap` \| `ImportAndAddLiquidityWithPrice` \| `ImportAndAddLiquidityWithExactAmounts`
+
+___
+
+### ImportAndAddLiquidityWithExactAmounts
+
+Ƭ **ImportAndAddLiquidityWithExactAmounts**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
+
+___
+
+### ImportAndAddLiquidityWithMarketCap
+
+Ƭ **ImportAndAddLiquidityWithMarketCap**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
+
+___
+
+### ImportAndAddLiquidityWithPrice
+
+Ƭ **ImportAndAddLiquidityWithPrice**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
+
+___
+
+### ImportAndSingleSidedCoinAddLiquidityParams
+
+Ƭ **ImportAndSingleSidedCoinAddLiquidityParams**: `ImportAndSingleSidedCoinAddLiquidityWithMarketCap` \| `ImportAndSingleSidedCoinAddLiquidityWithPrice`
+
+___
+
+### ImportAndSingleSidedCoinAddLiquidityWithMarketCap
+
+Ƭ **ImportAndSingleSidedCoinAddLiquidityWithMarketCap**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
+
+___
+
+### ImportAndSingleSidedCoinAddLiquidityWithPrice
+
+Ƭ **ImportAndSingleSidedCoinAddLiquidityWithPrice**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
 ___
 
