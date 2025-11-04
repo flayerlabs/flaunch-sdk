@@ -836,6 +836,20 @@ const calls = addLiqCalls.map((call) => ({
 await sendCalls({ calls });
 ```
 
+3. **Single-Sided Coin Liquidity (Current Price to Infinity)**
+
+You can easily provide single-sided coin liquidity from the current price to infinity.
+
+```ts
+const singleSidedCalls = await flaunchWrite.getSingleSidedCoinAddLiquidityCalls(
+  {
+    coinAddress: "0x...", // Token contract address
+    coinAmount: parseEther("1000000"), // Amount of coins to provide as liquidity
+    version: FlaunchVersion.V1_2, // optional (auto-determines if not provided)
+  }
+);
+```
+
 ### Import AND Add Liquidity calls in a single batch
 
 1. This allows an external coin to be live on flaunch, and be tradeable instantly with the liquidity being provided in the same transaction batch.
@@ -973,7 +987,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.5 / Exports / FlaunchBackend
+@flaunch/sdk - v0.9.6 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1072,7 +1086,7 @@ Returns
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.6 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -1129,8 +1143,10 @@ Base class for interacting with Flaunch protocol in read-only mode
 - coinPriceInETH
 - coinPriceInUSD
 - convertPriceToTick
+- createPoolKey
 - creatorRevenue
 - currentTick
+- determineCoinVersion
 - ethRequiredToFlaunch
 - fairLaunchCoinOnlyPosition
 - fairLaunchDuration
@@ -1546,6 +1562,35 @@ Returns
 
 ___
 
+### createPoolKey
+
+▸ **createPoolKey**(`coinAddress`, `version`): `Object`
+
+Creates a pool key for the given coin and version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The coin address |
+| `version` | `FlaunchVersion` | The version to use for position manager |
+
+Returns
+
+`Object`
+
+The ordered pool key
+
+| Name | Type |
+| :------ | :------ |
+| `currency0` | \`0x$\{string}\` |
+| `currency1` | \`0x$\{string}\` |
+| `fee` | `number` |
+| `hooks` | \`0x$\{string}\` |
+| `tickSpacing` | `number` |
+
+___
+
 ### creatorRevenue
 
 ▸ **creatorRevenue**(`creator`, `isV1?`): `Promise`\<`bigint`\>
@@ -1585,6 +1630,27 @@ Returns
 `Promise`\<`number`\>
 
 Promise<number> - The current tick of the pool
+
+___
+
+### determineCoinVersion
+
+▸ **determineCoinVersion**(`coinAddress`, `version?`): `Promise`\<`FlaunchVersion`\>
+
+Determines the version for a coin, using provided version or fetching it
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The coin address |
+| `version?` | `FlaunchVersion` | Optional version, if not provided will be fetched |
+
+Returns
+
+`Promise`\<`FlaunchVersion`\>
+
+The determined version
 
 ___
 
@@ -2580,7 +2646,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.6 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -2643,6 +2709,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - buyCoin
 - calculateAddLiquidityAmounts
 - calculateAddLiquidityTicks
+- calculateConstrainedLiquidity
 - calculateCurrentTickFromMarketCap
 - checkSingleSidedAddLiquidity
 - claimReferralBalance
@@ -2651,10 +2718,13 @@ Base class for interacting with Flaunch protocol in read-only mode
 - coinPriceInETH
 - coinPriceInUSD
 - convertPriceToTick
+- createLiquidityCall
+- createPoolKey
 - creatorRevenue
 - currentTick
 - deployRevenueManager
 - deployStakingManager
+- determineCoinVersion
 - ethRequiredToFlaunch
 - fairLaunchCoinOnlyPosition
 - fairLaunchDuration
@@ -2690,6 +2760,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getPositionManager
 - getPositionManagerAddress
 - getSellQuoteExactInput
+- getSingleSidedCoinAddLiquidityCalls
 - importMemecoin
 - initialSqrtPriceX96
 - initialTick
@@ -3202,6 +3273,36 @@ ReadFlaunchSDK.calculateAddLiquidityTicks
 
 ___
 
+### calculateConstrainedLiquidity
+
+▸ **calculateConstrainedLiquidity**(`currentTick`, `tickLower`, `tickUpper`, `amount0`, `amount1`): `Object`
+
+Calculates and constrains liquidity amounts for a position
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `currentTick` | `number` | Current pool tick |
+| `tickLower` | `number` | Lower tick of the position |
+| `tickUpper` | `number` | Upper tick of the position |
+| `amount0` | `bigint` | Amount of currency0 |
+| `amount1` | `bigint` | Amount of currency1 |
+
+Returns
+
+`Object`
+
+Final liquidity and amounts
+
+| Name | Type |
+| :------ | :------ |
+| `finalAmount0` | `bigint` |
+| `finalAmount1` | `bigint` |
+| `finalLiquidity` | `bigint` |
+
+___
+
 ### calculateCurrentTickFromMarketCap
 
 ▸ **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `totalSupplyDecimal`, `marketContext`): `undefined` \| `number`
@@ -3391,6 +3492,65 @@ ReadFlaunchSDK.convertPriceToTick
 
 ___
 
+### createLiquidityCall
+
+▸ **createLiquidityCall**(`poolKey`, `tickLower`, `tickUpper`, `finalLiquidity`, `finalAmount0`, `finalAmount1`, `userAddress`): `CallWithDescription`
+
+Creates the UniV4 Position Manager liquidity call
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `poolKey` | `any` | The pool key |
+| `tickLower` | `number` | Lower tick of the position |
+| `tickUpper` | `number` | Upper tick of the position |
+| `finalLiquidity` | `bigint` | Final liquidity amount |
+| `finalAmount0` | `bigint` | Final amount of currency0 |
+| `finalAmount1` | `bigint` | Final amount of currency1 |
+| `userAddress` | `string` | User's address |
+
+Returns
+
+`CallWithDescription`
+
+CallWithDescription for adding liquidity
+
+___
+
+### createPoolKey
+
+▸ **createPoolKey**(`coinAddress`, `version`): `Object`
+
+Creates a pool key for the given coin and version
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The coin address |
+| `version` | `FlaunchVersion` | The version to use for position manager |
+
+Returns
+
+`Object`
+
+The ordered pool key
+
+| Name | Type |
+| :------ | :------ |
+| `currency0` | \`0x$\{string}\` |
+| `currency1` | \`0x$\{string}\` |
+| `fee` | `number` |
+| `hooks` | \`0x$\{string}\` |
+| `tickSpacing` | `number` |
+
+Inherited from
+
+ReadFlaunchSDK.createPoolKey
+
+___
+
 ### creatorRevenue
 
 ▸ **creatorRevenue**(`creator`, `isV1?`): `Promise`\<`bigint`\>
@@ -3478,6 +3638,31 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Address of the deployed staking manager
+
+___
+
+### determineCoinVersion
+
+▸ **determineCoinVersion**(`coinAddress`, `version?`): `Promise`\<`FlaunchVersion`\>
+
+Determines the version for a coin, using provided version or fetching it
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The coin address |
+| `version?` | `FlaunchVersion` | Optional version, if not provided will be fetched |
+
+Returns
+
+`Promise`\<`FlaunchVersion`\>
+
+The determined version
+
+Inherited from
+
+ReadFlaunchSDK.determineCoinVersion
 
 ___
 
@@ -4290,6 +4475,26 @@ Promise<bigint> - The expected amount of ETH to receive
 Inherited from
 
 ReadFlaunchSDK.getSellQuoteExactInput
+
+___
+
+### getSingleSidedCoinAddLiquidityCalls
+
+▸ **getSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
+
+Gets the calls needed to add single-sided liquidity in coin from current tick to infinity
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `GetSingleSidedCoinAddLiquidityCallsParams` | Parameters for adding single-sided liquidity |
+
+Returns
+
+`Promise`\<`CallWithDescription`[]\>
+
+Array of calls with descriptions
 
 ___
 
@@ -5108,7 +5313,7 @@ Transaction response
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.6 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -5151,7 +5356,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / LiquidityMode
+@flaunch/sdk - v0.9.6 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -5178,7 +5383,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / Permissions
+@flaunch/sdk - v0.9.6 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -5214,7 +5419,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / Verifier
+@flaunch/sdk - v0.9.6 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -5264,7 +5469,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / Addresses
+@flaunch/sdk - v0.9.6 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -5275,7 +5480,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / BuySwapData
+@flaunch/sdk - v0.9.6 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -5310,7 +5515,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / CallData
+@flaunch/sdk - v0.9.6 / Exports / CallData
 
 # Interface: CallData
 
@@ -5344,7 +5549,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.6 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -5413,7 +5618,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / IPFSParams
+@flaunch/sdk - v0.9.6 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -5451,7 +5656,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / PinataConfig
+@flaunch/sdk - v0.9.6 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -5471,7 +5676,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / PoolKey
+@flaunch/sdk - v0.9.6 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -5525,7 +5730,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / PoolWithHookData
+@flaunch/sdk - v0.9.6 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -5606,7 +5811,7 @@ PoolKey.tickSpacing
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / SellSwapData
+@flaunch/sdk - v0.9.6 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -5641,7 +5846,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.9.6 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -5675,7 +5880,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / SwapFees
+@flaunch/sdk - v0.9.6 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -5702,7 +5907,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.6 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -5799,9 +6004,9 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.5 / Exports
+@flaunch/sdk - v0.9.6 / Exports
 
-# @flaunch/sdk - v0.9.5
+# @flaunch/sdk - v0.9.6
 
 ## Table of contents
 
@@ -5845,6 +6050,7 @@ ___
 - CreateFlaunchCalldataParams
 - CreateFlaunchParams
 - GetAddLiquidityCallsParams
+- GetSingleSidedCoinAddLiquidityCallsParams
 - ImportMemecoinParams
 - ParsedSwapData
 - PermitDetails
@@ -6035,6 +6241,20 @@ ___
 ### GetAddLiquidityCallsParams
 
 Ƭ **GetAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number` ; `version?`: `FlaunchVersion`  }
+
+___
+
+### GetSingleSidedCoinAddLiquidityCallsParams
+
+Ƭ **GetSingleSidedCoinAddLiquidityCallsParams**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | `Address` |
+| `coinAmount` | `bigint` |
+| `version?` | `FlaunchVersion` |
 
 ___
 
