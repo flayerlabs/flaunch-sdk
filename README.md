@@ -836,6 +836,20 @@ const calls = addLiqCalls.map((call) => ({
 await sendCalls({ calls });
 ```
 
+3. **Single-Sided Coin Liquidity (Current Price to Infinity)**
+
+You can easily provide single-sided coin liquidity from the current price to infinity.
+
+```ts
+const singleSidedCalls = await flaunchWrite.getSingleSidedCoinAddLiquidityCalls(
+  {
+    coinAddress: "0x...", // Token contract address
+    coinAmount: parseEther("1000000"), // Amount of coins to provide as liquidity
+    version: FlaunchVersion.V1_2, // optional (auto-determines if not provided)
+  }
+);
+```
+
 ### Import AND Add Liquidity calls in a single batch
 
 1. This allows an external coin to be live on flaunch, and be tradeable instantly with the liquidity being provided in the same transaction batch.

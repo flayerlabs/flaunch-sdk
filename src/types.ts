@@ -146,6 +146,12 @@ export type GetAddLiquidityCallsParams =
       version?: FlaunchVersion;
     };
 
+export type GetSingleSidedCoinAddLiquidityCallsParams = {
+  coinAddress: Address;
+  coinAmount: bigint;
+  version?: FlaunchVersion;
+};
+
 export type CheckSingleSidedAddLiquidityParams =
   | {
       coinAddress: Address;
