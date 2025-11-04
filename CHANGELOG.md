@@ -2,6 +2,19 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.7] - 2025-11-04
+
+### Added
+
+- **Single-Sided Coin Liquidity System** for providing coin-only liquidity from current price to infinity
+  - New `getSingleSidedCoinAddLiquidityCalls()` method enabling users to provide single-sided coin liquidity that becomes active as coin price increases
+
+### Fixed
+
+- **UniV4 Math Division by Zero Protection** - Added edge case handling in liquidity calculation functions
+  - Fixed `maxLiquidityForAmount0Precise()` and `maxLiquidityForAmount1()` to prevent division by zero when `tickLower` or `tickUpper` matches the current tick
+  - Added safety check for when sqrt ratios are equal, returning `0n` to prevent mathematical errors
+
 ## [0.9.6] - 2025-10-23
 
 ### Changed
