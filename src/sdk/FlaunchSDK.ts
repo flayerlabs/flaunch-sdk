@@ -6,18 +6,11 @@ import {
   type Address,
 } from "@delvtech/drift";
 import {
-  createPublicClient,
   type PublicClient,
-  decodeEventLog,
-  http,
   zeroAddress,
   Hex,
-  type TransactionReceipt,
-  type Log,
-  type GetContractEventsReturnType,
   encodeAbiParameters,
   parseUnits,
-  formatEther,
   erc20Abi,
   encodeFunctionData,
   erc721Abi,
@@ -138,6 +131,13 @@ import {
   SingleSidedLiquidityInfo,
   PoolWithHookData,
   GetSingleSidedCoinAddLiquidityCallsParams,
+  ImportAndAddLiquidityParams,
+  ImportAndSingleSidedCoinAddLiquidityParams,
+  ImportAndSingleSidedCoinAddLiquidityWithMarketCap,
+  ImportAndSingleSidedCoinAddLiquidityWithPrice,
+  ImportAndAddLiquidityWithMarketCap,
+  ImportAndAddLiquidityWithPrice,
+  ImportAndAddLiquidityWithExactAmounts,
 } from "types";
 import {
   getPoolId,
@@ -1540,13 +1540,17 @@ export class ReadFlaunchSDK {
   async getCoinInfo(coinAddress: Address): Promise<{
     totalSupply: bigint;
     decimals: number;
+    formattedTotalSupplyInDecimals: number;
   }> {
     const memecoin = new ReadMemecoin(coinAddress, this.drift);
     const [totalSupply, decimals] = await Promise.all([
       memecoin.totalSupply(),
       memecoin.decimals(),
     ]);
-    return { totalSupply, decimals };
+    const formattedTotalSupplyInDecimals = parseFloat(
+      formatUnits(totalSupply, decimals)
+    );
+    return { totalSupply, decimals, formattedTotalSupplyInDecimals };
   }
 
   /**
@@ -1582,10 +1586,10 @@ export class ReadFlaunchSDK {
    */
   marketCapToTokenPriceEth(
     marketCapUsd: number,
-    totalSupplyDecimal: number,
+    formattedTotalSupplyInDecimals: number,
     ethUsdPrice: number
   ): number {
-    const tokenPriceUsd = marketCapUsd / totalSupplyDecimal;
+    const tokenPriceUsd = marketCapUsd / formattedTotalSupplyInDecimals;
     return tokenPriceUsd / ethUsdPrice;
   }
 
@@ -1612,7 +1616,7 @@ export class ReadFlaunchSDK {
    */
   calculateCurrentTickFromMarketCap(
     currentMarketCap: string | undefined,
-    totalSupplyDecimal: number,
+    formattedTotalSupplyInDecimals: number,
     marketContext: {
       ethUsdPrice: number;
       isFlethZero: boolean;
@@ -1627,7 +1631,7 @@ export class ReadFlaunchSDK {
     const currentMarketCapNum = parseFloat(currentMarketCap);
     const currentTokenPriceEth = this.marketCapToTokenPriceEth(
       currentMarketCapNum,
-      totalSupplyDecimal,
+      formattedTotalSupplyInDecimals,
       marketContext.ethUsdPrice
     );
 
@@ -1659,11 +1663,11 @@ export class ReadFlaunchSDK {
     coinDecimals: number;
   }> {
     // Get coin information
-    const { totalSupply: coinTotalSupply, decimals: coinDecimals } =
-      await this.getCoinInfo(coinAddress);
-
-    // Convert total supply to decimal format
-    const totalSupplyDecimal = parseFloat(formatEther(coinTotalSupply));
+    const {
+      totalSupply: coinTotalSupply,
+      decimals: coinDecimals,
+      formattedTotalSupplyInDecimals,
+    } = await this.getCoinInfo(coinAddress);
 
     if (liquidityMode === LiquidityMode.FULL_RANGE) {
       let currentTick: number | undefined;
@@ -1675,7 +1679,7 @@ export class ReadFlaunchSDK {
         );
         currentTick = this.calculateCurrentTickFromMarketCap(
           currentMarketCap,
-          totalSupplyDecimal,
+          formattedTotalSupplyInDecimals,
           marketContext
         );
       }
@@ -1716,12 +1720,12 @@ export class ReadFlaunchSDK {
       // Convert market caps to token prices in ETH
       const minTokenPriceEth = this.marketCapToTokenPriceEth(
         minMarketCapNum,
-        totalSupplyDecimal,
+        formattedTotalSupplyInDecimals,
         marketContext.ethUsdPrice
       );
       const maxTokenPriceEth = this.marketCapToTokenPriceEth(
         maxMarketCapNum,
-        totalSupplyDecimal,
+        formattedTotalSupplyInDecimals,
         marketContext.ethUsdPrice
       );
 
@@ -1742,7 +1746,7 @@ export class ReadFlaunchSDK {
       // Calculate current tick if provided
       const currentTick = this.calculateCurrentTickFromMarketCap(
         currentMarketCap,
-        totalSupplyDecimal,
+        formattedTotalSupplyInDecimals,
         marketContext
       );
 
@@ -1770,21 +1774,20 @@ export class ReadFlaunchSDK {
       maxMarketCap = params.maxMarketCap;
       currentMarketCap = params.currentMarketCap;
     } else {
-      const { totalSupply, decimals } = await this.getCoinInfo(coinAddress);
-      const formattedTotalSupply = parseFloat(
-        formatUnits(totalSupply, decimals)
+      const { formattedTotalSupplyInDecimals } = await this.getCoinInfo(
+        coinAddress
       );
 
       minMarketCap = (
-        parseFloat(params.minPriceUSD) * formattedTotalSupply
+        parseFloat(params.minPriceUSD) * formattedTotalSupplyInDecimals
       ).toString();
       maxMarketCap = (
-        parseFloat(params.maxPriceUSD) * formattedTotalSupply
+        parseFloat(params.maxPriceUSD) * formattedTotalSupplyInDecimals
       ).toString();
 
       if (params.currentPriceUSD) {
         currentMarketCap = (
-          params.currentPriceUSD * formattedTotalSupply
+          params.currentPriceUSD * formattedTotalSupplyInDecimals
         ).toString();
       }
     }
@@ -1877,21 +1880,20 @@ export class ReadFlaunchSDK {
       maxMarketCap = params.maxMarketCap;
       currentMarketCap = params.currentMarketCap;
     } else {
-      const { totalSupply, decimals } = await this.getCoinInfo(coinAddress);
-      const formattedTotalSupply = parseFloat(
-        formatUnits(totalSupply, decimals)
+      const { formattedTotalSupplyInDecimals } = await this.getCoinInfo(
+        coinAddress
       );
 
       minMarketCap = (
-        parseFloat(params.minPriceUSD) * formattedTotalSupply
+        parseFloat(params.minPriceUSD) * formattedTotalSupplyInDecimals
       ).toString();
       maxMarketCap = (
-        parseFloat(params.maxPriceUSD) * formattedTotalSupply
+        parseFloat(params.maxPriceUSD) * formattedTotalSupplyInDecimals
       ).toString();
 
       if (params.currentPriceUSD) {
         currentMarketCap = (
-          params.currentPriceUSD * formattedTotalSupply
+          params.currentPriceUSD * formattedTotalSupplyInDecimals
         ).toString();
       }
     }
@@ -2749,20 +2751,20 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         maxMarketCap = params.maxMarketCap;
         initialMarketCapUSD = params.initialMarketCapUSD;
       } else {
-        const { totalSupply, decimals } = await this.getCoinInfo(coinAddress);
-        const formattedTotalSupply = parseFloat(
-          formatUnits(totalSupply, decimals)
+        const { formattedTotalSupplyInDecimals } = await this.getCoinInfo(
+          coinAddress
         );
 
         minMarketCap = (
-          parseFloat(params.minPriceUSD) * formattedTotalSupply
+          parseFloat(params.minPriceUSD) * formattedTotalSupplyInDecimals
         ).toString();
         maxMarketCap = (
-          parseFloat(params.maxPriceUSD) * formattedTotalSupply
+          parseFloat(params.maxPriceUSD) * formattedTotalSupplyInDecimals
         ).toString();
 
         if (params.initialPriceUSD) {
-          initialMarketCapUSD = params.initialPriceUSD * formattedTotalSupply;
+          initialMarketCapUSD =
+            params.initialPriceUSD * formattedTotalSupplyInDecimals;
         }
       }
 
@@ -2969,21 +2971,103 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
 
   /**
    * Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
-   * @param params - Parameters for importing and adding liquidity
+   * @param params - Parameters for importing and adding liquidity with market cap constraints
    * @returns Array of calls with descriptions
+   *
+   * @example
+   * ```typescript
+   * const calls = await sdk.getImportAndAddLiquidityCalls({
+   *   coinAddress: "0x...",
+   *   verifier: Verifier.CLANKER,
+   *   creatorFeeAllocationPercent: 5,
+   *   liquidityMode: LiquidityMode.CONCENTRATED,
+   *   coinOrEthInputAmount: parseEther("1"),
+   *   inputToken: "eth",
+   *   minMarketCap: "10000",
+   *   maxMarketCap: "100000",
+   *   initialMarketCapUSD: 50000
+   * });
+   * ```
    */
   async getImportAndAddLiquidityCalls(
-    params: ImportMemecoinParams &
-      GetAddLiquidityCallsParams & {
-        initialMarketCapUSD: number;
-      }
+    params: ImportAndAddLiquidityWithMarketCap
+  ): Promise<CallWithDescription[]>;
+
+  /**
+   * Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
+   * @param params - Parameters for importing and adding liquidity with price constraints
+   * @returns Array of calls with descriptions
+   *
+   * @example
+   * ```typescript
+   * const calls = await sdk.getImportAndAddLiquidityCalls({
+   *   coinAddress: "0x...",
+   *   verifier: Verifier.CLANKER,
+   *   creatorFeeAllocationPercent: 5,
+   *   liquidityMode: LiquidityMode.CONCENTRATED,
+   *   coinOrEthInputAmount: parseEther("1"),
+   *   inputToken: "eth",
+   *   minPriceUSD: "0.0001",
+   *   maxPriceUSD: "0.001",
+   *   initialPriceUSD: 0.0005
+   * });
+   * ```
+   */
+  async getImportAndAddLiquidityCalls(
+    params: ImportAndAddLiquidityWithPrice
+  ): Promise<CallWithDescription[]>;
+
+  /**
+   * Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
+   * @param params - Parameters for importing and adding liquidity with exact amounts
+   * @returns Array of calls with descriptions
+   *
+   * @example
+   * ```typescript
+   * const calls = await sdk.getImportAndAddLiquidityCalls({
+   *   coinAddress: "0x...",
+   *   verifier: Verifier.CLANKER,
+   *   creatorFeeAllocationPercent: 5,
+   *   coinAmount: parseEther("1000"),
+   *   flethAmount: parseEther("0.5"),
+   *   tickLower: -887220,
+   *   tickUpper: 887220,
+   *   currentTick: 0
+   * });
+   * ```
+   */
+  async getImportAndAddLiquidityCalls(
+    params: ImportAndAddLiquidityWithExactAmounts
+  ): Promise<CallWithDescription[]>;
+
+  // Implementation with union type for internal use
+  async getImportAndAddLiquidityCalls(
+    params: ImportAndAddLiquidityParams
   ): Promise<CallWithDescription[]> {
-    const importParams = await this.readWriteTokenImporter.getInitializeParams({
-      coinAddress: params.coinAddress,
-      creatorFeeAllocationPercent: params.creatorFeeAllocationPercent,
-      initialMarketCapUSD: params.initialMarketCapUSD,
-      verifier: params.verifier,
-    });
+    let importParams;
+    if ("initialMarketCapUSD" in params) {
+      const paramsWithMarketCap = params as ImportAndAddLiquidityParams & {
+        initialMarketCapUSD: number;
+      };
+      importParams = await this.readWriteTokenImporter.getInitializeParams({
+        coinAddress: paramsWithMarketCap.coinAddress,
+        creatorFeeAllocationPercent:
+          paramsWithMarketCap.creatorFeeAllocationPercent,
+        initialMarketCapUSD: paramsWithMarketCap.initialMarketCapUSD,
+        verifier: paramsWithMarketCap.verifier,
+      });
+    } else {
+      const paramsWithPrice = params as ImportAndAddLiquidityParams & {
+        initialPriceUSD: number;
+      };
+      importParams = await this.readWriteTokenImporter.getInitializeParams({
+        coinAddress: paramsWithPrice.coinAddress,
+        creatorFeeAllocationPercent:
+          paramsWithPrice.creatorFeeAllocationPercent,
+        initialPriceUSD: paramsWithPrice.initialPriceUSD,
+        verifier: paramsWithPrice.verifier,
+      });
+    }
 
     const addLiquidityCalls = await this.getAddLiquidityCalls({
       ...params,
@@ -3019,11 +3103,53 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     );
     const poolKey = this.createPoolKey(coinAddress, version);
 
-    // get the current tick from the pool
-    const poolState = await this.readStateView.poolSlot0({
-      poolId: getPoolId(poolKey),
-    });
-    const currentTick = poolState.tick;
+    let currentTick: number;
+
+    // if initial marketcap or price is provided, it means that the pool is not initialized yet
+    // so determining the currentTick
+    if (
+      ("initialMarketCapUSD" in params && params.initialMarketCapUSD) ||
+      ("initialPriceUSD" in params && params.initialPriceUSD)
+    ) {
+      const { decimals: coinDecimals, formattedTotalSupplyInDecimals } =
+        await this.getCoinInfo(coinAddress);
+
+      // Determine market cap based on provided parameter
+      let initialMarketCapUSD: number;
+      if ("initialMarketCapUSD" in params && params.initialMarketCapUSD) {
+        initialMarketCapUSD = params.initialMarketCapUSD;
+      } else if ("initialPriceUSD" in params && params.initialPriceUSD) {
+        initialMarketCapUSD =
+          params.initialPriceUSD * formattedTotalSupplyInDecimals;
+      } else {
+        throw new Error(
+          "Either initialMarketCapUSD or initialPriceUSD must be provided"
+        );
+      }
+
+      const marketContext = await this.getMarketContext(
+        coinAddress,
+        coinDecimals
+      );
+
+      const calculatedTick = this.calculateCurrentTickFromMarketCap(
+        initialMarketCapUSD.toString(),
+        formattedTotalSupplyInDecimals,
+        marketContext
+      );
+
+      if (calculatedTick === undefined) {
+        throw new Error("Failed to calculate current tick from market cap");
+      }
+
+      currentTick = calculatedTick;
+    } else {
+      // the pool is already initialized, get the current tick from the pool
+      const poolState = await this.readStateView.poolSlot0({
+        poolId: getPoolId(poolKey),
+      });
+      currentTick = poolState.tick;
+    }
 
     // We want to add liquidity from current price to infinity (as coin appreciates vs flETH)
     // This means providing single-sided coin liquidity that becomes active as coin price increases
@@ -3169,6 +3295,99 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
 
     return calls;
   }
+
+  /**
+   * Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
+   * @param params - Parameters for importing and adding liquidity with initial market cap
+   * @returns Array of calls with descriptions
+   *
+   * @example
+   * ```typescript
+   * const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
+   *   coinAddress: "0x...",
+   *   verifier: Verifier.CLANKER,
+   *   creatorFeeAllocationPercent: 5,
+   *   coinAmount: parseEther("1000"),
+   *   initialMarketCapUSD: 50000
+   * });
+   * ```
+   */
+  async getImportAndSingleSidedCoinAddLiquidityCalls(
+    params: ImportAndSingleSidedCoinAddLiquidityWithMarketCap
+  ): Promise<CallWithDescription[]>;
+
+  /**
+   * Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
+   * @param params - Parameters for importing and adding liquidity with initial price
+   * @returns Array of calls with descriptions
+   *
+   * @example
+   * ```typescript
+   * const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
+   *   coinAddress: "0x...",
+   *   verifier: Verifier.CLANKER,
+   *   creatorFeeAllocationPercent: 5,
+   *   coinAmount: parseEther("1000"),
+   *   initialPriceUSD: 0.001
+   * });
+   * ```
+   */
+  async getImportAndSingleSidedCoinAddLiquidityCalls(
+    params: ImportAndSingleSidedCoinAddLiquidityWithPrice
+  ): Promise<CallWithDescription[]>;
+
+  // Implementation with union type for internal use
+  async getImportAndSingleSidedCoinAddLiquidityCalls(
+    params: ImportAndSingleSidedCoinAddLiquidityParams
+  ): Promise<CallWithDescription[]> {
+    let importParams;
+    if ("initialMarketCapUSD" in params) {
+      const paramsWithMarketCap =
+        params as ImportAndSingleSidedCoinAddLiquidityParams & {
+          initialMarketCapUSD: number;
+        };
+      importParams = await this.readWriteTokenImporter.getInitializeParams({
+        coinAddress: paramsWithMarketCap.coinAddress,
+        creatorFeeAllocationPercent:
+          paramsWithMarketCap.creatorFeeAllocationPercent,
+        initialMarketCapUSD: paramsWithMarketCap.initialMarketCapUSD,
+        verifier: paramsWithMarketCap.verifier,
+      });
+    } else {
+      const paramsWithPrice =
+        params as ImportAndSingleSidedCoinAddLiquidityParams & {
+          initialPriceUSD: number;
+        };
+      importParams = await this.readWriteTokenImporter.getInitializeParams({
+        coinAddress: paramsWithPrice.coinAddress,
+        creatorFeeAllocationPercent:
+          paramsWithPrice.creatorFeeAllocationPercent,
+        initialPriceUSD: paramsWithPrice.initialPriceUSD,
+        verifier: paramsWithPrice.verifier,
+      });
+    }
+
+    const addLiquidityCalls = await this.getSingleSidedCoinAddLiquidityCalls({
+      ...params,
+      version: FlaunchVersion.ANY, // optimize to avoid fetching if not passed
+    });
+
+    return [
+      {
+        to: this.readWriteTokenImporter.contract.address,
+        data: this.readWriteTokenImporter.contract.encodeFunctionData(
+          "initialize",
+          importParams
+        ),
+        description: "Import Memecoin to Flaunch",
+      },
+      ...addLiquidityCalls,
+    ];
+  }
+
+  /**
+   * === Private helper functions ===
+   */
 
   /**
    * Calculates and constrains liquidity amounts for a position

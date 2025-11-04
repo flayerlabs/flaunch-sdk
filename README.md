@@ -37,6 +37,7 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
   - [Importing External Coins into Flaunch](#importing-external-coins-into-flaunch)
   - [Adding Liquidity to Imported (or flaunch) coins](#adding-liquidity-to-imported-or-flaunch-coins)
   - [Import AND Add Liquidity calls in a single batch](#import-and-add-liquidity-calls-in-a-single-batch)
+  - [Import AND Add Single-Sided Coin Liquidity calls in a single batch](#import-and-add-single-sided-coin-liquidity-calls-in-a-single-batch)
   - [`createFlaunchCalldata`: alternative to `createFlaunch`](#createflaunchcalldata-alternative-to-createflaunch-that-returns-the-tx-call-object-with-to-data-and-value-instead-of-directly-broadcasting-the-tx-from-walletclient)
   - [All SDK functions](#all-sdk-functions)
   - [React Hooks](#react-hooks)
@@ -900,6 +901,57 @@ const importAndAddLiqCalls = await flaunchWrite.getImportAndAddLiquidityCalls({
   minPriceUSD: "1",
   maxPriceUSD: "5",
 });
+```
+
+### Import AND Add Single-Sided Coin Liquidity calls in a single batch
+
+This allows importing an external coin and providing single-sided coin liquidity (from current price to infinity) in one transaction batch. This is perfect for coin creators who want their imported tokens to be instantly tradeable with single-sided liquidity that doesn't require ETH.
+
+💡 **Key Benefits:**
+
+- No ETH required for liquidity provision
+- Liquidity is provided from current price to infinity
+- As price increases, the position automatically sells coins and accumulates ETH
+- Instant tradeability after import
+
+  2.1. With Market Cap inputs
+
+```ts
+const importAndSingleSidedCalls =
+  await flaunchWrite.getImportAndSingleSidedCoinAddLiquidityCalls({
+    coinAddress: "0x...", // ERC20 token contract address
+    verifier: Verifier.CLANKER, // Optional verifier
+    creatorFeeAllocationPercent: 100, // Fee allocation to creator (0-100%)
+    coinAmount: parseEther("1000000"), // Amount of coins to provide as liquidity
+    initialMarketCapUSD: 10_000, // Starting market cap in USD
+  });
+// Returns: CallWithDescription[] - Array of transaction calls with descriptions
+
+// === send these calls to user's wallet as a batch ===
+import { useSendCalls } from "wagmi";
+
+const { sendCalls } = useSendCalls();
+
+const calls = importAndSingleSidedCalls.map((call) => ({
+  to: call.to as `0x${string}`,
+  value: call.value,
+  data: call.data as `0x${string}`,
+}));
+
+await sendCalls({ calls });
+```
+
+2.2. With Coin Price inputs
+
+```ts
+const importAndSingleSidedCalls =
+  await flaunchWrite.getImportAndSingleSidedCoinAddLiquidityCalls({
+    coinAddress: "0x...", // ERC20 token contract address
+    verifier: Verifier.CLANKER, // Optional verifier
+    creatorFeeAllocationPercent: 100, // Fee allocation to creator (0-100%)
+    coinAmount: parseEther("1000000"), // Amount of coins to provide as liquidity
+    initialPriceUSD: 0.001, // Starting price in USD
+  });
 ```
 
 ### `createFlaunchCalldata`: alternative to `createFlaunch` that returns the tx call object with to, data, and value instead of directly broadcasting the tx from walletClient

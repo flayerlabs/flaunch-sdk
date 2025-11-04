@@ -1,6 +1,11 @@
 import { Address, Call, Hex } from "viem";
 import { PinataConfig } from "helpers/ipfs";
 
+// Utility type to flatten complex intersections for better IntelliSense
+type Flatten<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
 export interface Addresses {
   [chainId: number]: Address;
 }
@@ -146,11 +151,19 @@ export type GetAddLiquidityCallsParams =
       version?: FlaunchVersion;
     };
 
-export type GetSingleSidedCoinAddLiquidityCallsParams = {
-  coinAddress: Address;
-  coinAmount: bigint;
-  version?: FlaunchVersion;
-};
+export type GetSingleSidedCoinAddLiquidityCallsParams =
+  | {
+      coinAddress: Address;
+      coinAmount: bigint;
+      initialMarketCapUSD?: number;
+      version?: FlaunchVersion;
+    }
+  | {
+      coinAddress: Address;
+      coinAmount: bigint;
+      initialPriceUSD?: number;
+      version?: FlaunchVersion;
+    };
 
 export type CheckSingleSidedAddLiquidityParams =
   | {
@@ -175,3 +188,74 @@ export interface SingleSidedLiquidityInfo {
   shouldHideCoinInput: boolean;
   shouldHideETHInput: boolean;
 }
+
+// Flattened parameter types for better SDK integrator experience
+export type ImportAndAddLiquidityWithMarketCap = Flatten<{
+  coinAddress: Address;
+  verifier?: Verifier;
+  creatorFeeAllocationPercent: number;
+  liquidityMode: LiquidityMode;
+  coinOrEthInputAmount: bigint;
+  inputToken: "coin" | "eth";
+  minMarketCap: string;
+  maxMarketCap: string;
+  initialMarketCapUSD: number;
+  version?: FlaunchVersion;
+}>;
+
+export type ImportAndAddLiquidityWithPrice = Flatten<{
+  coinAddress: Address;
+  verifier?: Verifier;
+  creatorFeeAllocationPercent: number;
+  liquidityMode: LiquidityMode;
+  coinOrEthInputAmount: bigint;
+  inputToken: "coin" | "eth";
+  minPriceUSD: string;
+  maxPriceUSD: string;
+  initialPriceUSD: number;
+  version?: FlaunchVersion;
+}>;
+
+export type ImportAndAddLiquidityWithExactAmounts = Flatten<{
+  coinAddress: Address;
+  verifier?: Verifier;
+  creatorFeeAllocationPercent: number;
+  coinAmount: bigint;
+  flethAmount: bigint;
+  tickLower: number;
+  tickUpper: number;
+  currentTick?: number;
+  version?: FlaunchVersion;
+}>;
+
+// Union type for backward compatibility (still used internally)
+export type ImportAndAddLiquidityParams =
+  | ImportAndAddLiquidityWithMarketCap
+  | ImportAndAddLiquidityWithPrice
+  | ImportAndAddLiquidityWithExactAmounts;
+
+// Union type for getImportAndSingleSidedCoinAddLiquidityCalls to ensure consistent price/market cap params
+
+// Resolved, flattened parameter types for better SDK integrator experience
+export type ImportAndSingleSidedCoinAddLiquidityWithMarketCap = Flatten<{
+  coinAddress: Address;
+  verifier?: Verifier;
+  creatorFeeAllocationPercent: number;
+  coinAmount: bigint;
+  initialMarketCapUSD: number;
+  version?: FlaunchVersion;
+}>;
+
+export type ImportAndSingleSidedCoinAddLiquidityWithPrice = Flatten<{
+  coinAddress: Address;
+  verifier?: Verifier;
+  creatorFeeAllocationPercent: number;
+  coinAmount: bigint;
+  initialPriceUSD: number;
+  version?: FlaunchVersion;
+}>;
+
+// Union type for backward compatibility (still used internally)
+export type ImportAndSingleSidedCoinAddLiquidityParams =
+  | ImportAndSingleSidedCoinAddLiquidityWithMarketCap
+  | ImportAndSingleSidedCoinAddLiquidityWithPrice;
