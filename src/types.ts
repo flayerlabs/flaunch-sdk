@@ -64,6 +64,7 @@ export enum Verifier {
   VIRTUALS = "virtuals",
   WHITELIST = "whitelist",
   ZORA = "zora",
+  SOLANA = "solana",
 }
 
 export enum LiquidityMode {

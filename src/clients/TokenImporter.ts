@@ -17,6 +17,7 @@ import {
   VirtualsVerifierAddress,
   WhitelistVerifierAddress,
   ZoraVerifierAddress,
+  SolanaVerifierAddress,
 } from "addresses";
 import { ReadMemecoin } from "./MemecoinClient";
 
@@ -74,6 +75,8 @@ export class ReadTokenImporter {
         return WhitelistVerifierAddress[this.chainId];
       case Verifier.ZORA:
         return ZoraVerifierAddress[this.chainId];
+      case Verifier.SOLANA:
+        return SolanaVerifierAddress[this.chainId];
       default:
         throw new Error(`Unknown verifier: ${verifier}`);
     }

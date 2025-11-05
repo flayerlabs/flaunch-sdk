@@ -127,6 +127,11 @@ export const ZoraVerifierAddress: Addresses = {
   [baseSepolia.id]: "0x05a5763e9199b88bb591c6b112d0424b2cd7a99e",
 };
 
+export const SolanaVerifierAddress: Addresses = {
+  [base.id]: "0x0000000000000000000000000000000000000000",
+  [baseSepolia.id]: "0x47226918E518f205584bd75Bf81E0b532B0B3Ea7",
+};
+
 /** ======== */
 
 /** Permissions */
