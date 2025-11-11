@@ -73,6 +73,7 @@ import {
   FlaunchWithSplitManagerIPFSParams,
   DeployRevenueManagerParams,
   DeployStakingManagerParams,
+  DeployBuyBackManagerParams,
 } from "../clients/FlaunchZapClient";
 import { ReadFlaunch } from "../clients/FlaunchClient";
 import { ReadMemecoin, ReadWriteMemecoin } from "../clients/MemecoinClient";
@@ -2219,6 +2220,31 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     params: DeployStakingManagerParams
   ): Promise<Address> {
     const hash = await this.readWriteFlaunchZap.deployStakingManager(params);
+
+    return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
+      hash
+    );
+  }
+
+  /**
+   * Deploys a new BuyBack manager
+   * @param params - Parameters for deploying the BuyBack manager
+   * @param params.managerOwner - The address of the manager owner
+   * @param params.creatorSharePercent - The % share that a creator will earn from their token (0-100)
+   * @param params.ownerSharePercent - The % share that the manager owner will earn from their token (0-100)
+   * @param params.buyBackPoolKey - The Uniswap V4 pool key configuration for the buyback pool
+   * @param params.buyBackPoolKey.currency0 - The lower currency of the pool (sorted numerically)
+   * @param params.buyBackPoolKey.currency1 - The higher currency of the pool (sorted numerically)
+   * @param params.buyBackPoolKey.fee - The pool LP fee, capped at 1_000_000
+   * @param params.buyBackPoolKey.tickSpacing - Tick spacing for the pool
+   * @param params.buyBackPoolKey.hooks - The hooks address of the pool
+   * @param params.permissions - The permissions for the BuyBack manager
+   * @returns Address of the deployed BuyBack manager
+   */
+  async deployBuyBackManager(
+    params: DeployBuyBackManagerParams
+  ): Promise<Address> {
+    const hash = await this.readWriteFlaunchZap.deployBuyBackManager(params);
 
     return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
       hash

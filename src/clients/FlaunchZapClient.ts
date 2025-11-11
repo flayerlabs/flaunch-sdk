@@ -14,7 +14,11 @@ import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
 import { getPermissionsAddress } from "../helpers/permissions";
 import { IPFSParams, Permissions } from "../types";
-import { RevenueManagerAddress, StakingManagerAddress } from "addresses";
+import {
+  BuyBackManagerAddress,
+  RevenueManagerAddress,
+  StakingManagerAddress,
+} from "addresses";
 import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
 import {
   AddressFeeSplitManagerAddress,
@@ -22,6 +26,7 @@ import {
 } from "addresses";
 import { getAmountWithSlippage } from "utils/universalRouter";
 import { ReadInitialPrice } from "./InitialPriceClient";
+import { orderPoolKey } from "utils";
 
 export type FlaunchZapABI = typeof FlaunchZapAbi;
 
@@ -104,6 +109,20 @@ export interface DeployStakingManagerParams {
   minStakeDuration: bigint;
   creatorSharePercent: number;
   ownerSharePercent: number;
+  permissions?: Permissions;
+}
+
+export interface DeployBuyBackManagerParams {
+  managerOwner: Address;
+  creatorSharePercent: number;
+  ownerSharePercent: number;
+  buyBackPoolKey: {
+    currency0: Address;
+    currency1: Address;
+    fee: number;
+    tickSpacing: number;
+    hooks: Address;
+  };
   permissions?: Permissions;
 }
 
@@ -599,6 +618,80 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
               (BigInt(params.creatorSharePercent) * VALID_SHARE_TOTAL) / 100n,
             ownerShare:
               (BigInt(params.ownerSharePercent) * VALID_SHARE_TOTAL) / 100n,
+          },
+        ]
+      ),
+      _permissions: permissionsAddress,
+    });
+  }
+
+  /**
+   * Deploys a new BuyBack manager
+   * @param params - Parameters for deploying the BuyBack manager
+   * @param params.managerOwner - The address of the manager owner
+   * @param params.creatorSharePercent - The % share that a creator will earn from their token (0-100)
+   * @param params.ownerSharePercent - The % share that the manager owner will earn from their token (0-100)
+   * @param params.buyBackPoolKey - The Uniswap V4 pool key configuration for the buyback pool
+   * @param params.buyBackPoolKey.currency0 - The lower currency of the pool (sorted numerically)
+   * @param params.buyBackPoolKey.currency1 - The higher currency of the pool (sorted numerically)
+   * @param params.buyBackPoolKey.fee - The pool LP fee, capped at 1_000_000
+   * @param params.buyBackPoolKey.tickSpacing - Tick spacing for the pool
+   * @param params.buyBackPoolKey.hooks - The hooks address of the pool
+   * @param params.permissions - The permissions for the BuyBack manager
+   * @returns Transaction response
+   */
+  deployBuyBackManager(params: DeployBuyBackManagerParams) {
+    const permissionsAddress = getPermissionsAddress(
+      params.permissions ?? Permissions.OPEN,
+      this.chainId
+    );
+
+    const VALID_SHARE_TOTAL = 100_00000n; // 5 decimals as BigInt
+
+    const buyBackManagerAddress = BuyBackManagerAddress[this.chainId];
+    if (buyBackManagerAddress === zeroAddress) {
+      throw new Error(
+        `BuyBackManager not deployed on chainId: ${this.chainId}`
+      );
+    }
+
+    return this.contract.write("deployAndInitializeManager", {
+      _managerImplementation: buyBackManagerAddress,
+      _owner: params.managerOwner,
+      _data: encodeAbiParameters(
+        [
+          {
+            type: "tuple",
+            components: [
+              { type: "uint256", name: "creatorShare" },
+              { type: "uint256", name: "ownerShare" },
+              {
+                type: "tuple",
+                name: "buyBackPoolKey",
+                components: [
+                  { type: "address", name: "currency0" },
+                  { type: "address", name: "currency1" },
+                  { type: "uint24", name: "fee" },
+                  { type: "int24", name: "tickSpacing" },
+                  { type: "address", name: "hooks" },
+                ],
+              },
+            ],
+          },
+        ],
+        [
+          {
+            creatorShare:
+              (BigInt(params.creatorSharePercent) * VALID_SHARE_TOTAL) / 100n,
+            ownerShare:
+              (BigInt(params.ownerSharePercent) * VALID_SHARE_TOTAL) / 100n,
+            buyBackPoolKey: orderPoolKey({
+              currency0: params.buyBackPoolKey.currency0,
+              currency1: params.buyBackPoolKey.currency1,
+              fee: params.buyBackPoolKey.fee,
+              tickSpacing: params.buyBackPoolKey.tickSpacing,
+              hooks: params.buyBackPoolKey.hooks,
+            }),
           },
         ]
       ),
