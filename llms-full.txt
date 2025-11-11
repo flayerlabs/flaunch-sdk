@@ -1039,7 +1039,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.7 / Exports / FlaunchBackend
+@flaunch/sdk - v0.9.8 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1138,7 +1138,7 @@ Returns
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.8 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -2698,7 +2698,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.8 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -2774,6 +2774,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - createPoolKey
 - creatorRevenue
 - currentTick
+- deployBuyBackManager
 - deployRevenueManager
 - deployStakingManager
 - determineCoinVersion
@@ -3651,6 +3652,26 @@ Promise<number> - The current tick of the pool
 Inherited from
 
 ReadFlaunchSDK.currentTick
+
+___
+
+### deployBuyBackManager
+
+▸ **deployBuyBackManager**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Deploys a new BuyBack manager
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `DeployBuyBackManagerParams` | Parameters for deploying the BuyBack manager |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Address of the deployed BuyBack manager
 
 ___
 
@@ -5546,7 +5567,7 @@ Transaction response
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.8 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -5589,7 +5610,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / LiquidityMode
+@flaunch/sdk - v0.9.8 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -5616,7 +5637,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / Permissions
+@flaunch/sdk - v0.9.8 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -5652,7 +5673,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / Verifier
+@flaunch/sdk - v0.9.8 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -5702,7 +5723,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / Addresses
+@flaunch/sdk - v0.9.8 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -5713,7 +5734,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / BuySwapData
+@flaunch/sdk - v0.9.8 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -5748,7 +5769,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / CallData
+@flaunch/sdk - v0.9.8 / Exports / CallData
 
 # Interface: CallData
 
@@ -5782,7 +5803,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.8 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -5851,7 +5872,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / IPFSParams
+@flaunch/sdk - v0.9.8 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -5889,7 +5910,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / PinataConfig
+@flaunch/sdk - v0.9.8 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -5909,7 +5930,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / PoolKey
+@flaunch/sdk - v0.9.8 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -5963,7 +5984,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / PoolWithHookData
+@flaunch/sdk - v0.9.8 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -6044,7 +6065,7 @@ PoolKey.tickSpacing
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / SellSwapData
+@flaunch/sdk - v0.9.8 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -6079,7 +6100,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.9.8 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -6113,7 +6134,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / SwapFees
+@flaunch/sdk - v0.9.8 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -6140,7 +6161,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.8 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -6237,9 +6258,9 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.7 / Exports
+@flaunch/sdk - v0.9.8 / Exports
 
-# @flaunch/sdk - v0.9.7
+# @flaunch/sdk - v0.9.8
 
 ## Table of contents
 
@@ -6307,6 +6328,7 @@ ___
 - AnyPositionManagerAddress
 - BidWallAddress
 - BidWallV1\_1Address
+- BuyBackManagerAddress
 - ClankerWorldVerifierAddress
 - ClosedPermissionsAddress
 - DopplerVerifierAddress
@@ -6624,6 +6646,12 @@ ___
 ### BidWallV1\_1Address
 
 • `Const` **BidWallV1\_1Address**: `Addresses`
+
+___
+
+### BuyBackManagerAddress
+
+• `Const` **BuyBackManagerAddress**: `Addresses`
 
 ___
 

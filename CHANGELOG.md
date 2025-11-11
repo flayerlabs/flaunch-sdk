@@ -2,6 +2,14 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.9] - 2025-11-11
+
+### Added
+
+- **BuyBack Manager System** for automated token buyback functionality
+  - New `deployBuyBackManager()` method for creating buyback manager instances
+  - New `BuyBackManagerAddress` contract address mappings for Base mainnet and Base Sepolia testnet
+
 ## [0.9.8] - 2025-11-05
 
 ### Added
