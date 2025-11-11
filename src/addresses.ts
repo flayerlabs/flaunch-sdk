@@ -96,6 +96,11 @@ export const StakingManagerAddress: Addresses = {
   [baseSepolia.id]: "0xB8f1cb6B4Ff8f07149276bbfA617aed7bd32d20D",
 };
 
+export const BuyBackManagerAddress: Addresses = {
+  [base.id]: "0x3AAF3b1D8cD5b61C77f99bA7cdf41E9eC0Ba8a3f",
+  [baseSepolia.id]: "0xc3947EC9d687053bBA72b36Fd6b2567e775E82C7",
+};
+
 /** Verifiers */
 export const TokenImporterAddress: Addresses = {
   [base.id]: "0xb47af90ae61bc916ea4b4bacffae4570e7435842",
