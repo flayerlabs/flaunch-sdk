@@ -161,6 +161,20 @@ const hash = await flaunchWrite.flaunchIPFS({
     telegramUrl: "https://t.me/example",
   },
 });
+
+// parse the logs from the tx hash to get memecoin address and Flaunch NFT tokenId
+
+import { PoolCreatedEventData } from "@flaunch/sdk";
+
+// Parse the flaunch transaction hash
+const poolCreatedData: PoolCreatedEventData | null =
+  await flaunchRead.getPoolCreatedFromTx(hash);
+
+if (poolCreatedData) {
+  console.log("Memecoin Address:", poolCreatedData.memecoin);
+  console.log("Token ID:", poolCreatedData.tokenId);
+  // ... other params
+}
 ```
 
 #### How to generate `base64Image` from User uploaded file

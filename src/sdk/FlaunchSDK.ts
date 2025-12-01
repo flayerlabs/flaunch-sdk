@@ -15,6 +15,7 @@ import {
   encodeFunctionData,
   erc721Abi,
   formatUnits,
+  decodeEventLog,
 } from "viem";
 import axios from "axios";
 import {
@@ -119,6 +120,7 @@ import {
   ReadWriteTreasuryManager,
 } from "clients/TreasuryManagerClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
+import { FlaunchPositionManagerV1_2Abi } from "abi/FlaunchPositionManagerV1_2";
 import {
   CallWithDescription,
   CoinMetadata,
@@ -139,6 +141,7 @@ import {
   ImportAndAddLiquidityWithMarketCap,
   ImportAndAddLiquidityWithPrice,
   ImportAndAddLiquidityWithExactAmounts,
+  PoolCreatedEventData,
 } from "types";
 import {
   getPoolId,
@@ -168,6 +171,9 @@ import { ReadMulticall } from "clients/MulticallClient";
 import { MemecoinAbi, Permit2Abi } from "abi";
 import { FLETHAbi } from "abi/FLETH";
 import { ReadTrustedSignerFeeCalculator } from "clients/TrustedSignerFeeCalculatorClient";
+
+// Re-export PoolCreatedEventData so it's available as part of FlaunchSDK module
+export type { PoolCreatedEventData } from "types";
 
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
@@ -698,6 +704,57 @@ export class ReadFlaunchSDK {
     }
 
     return poll();
+  }
+
+  /**
+   * Parses a transaction to extract PoolCreated event data
+   * @param txHash - The transaction hash to parse
+   * @returns PoolCreated event parameters or null if not found
+   */
+  async getPoolCreatedFromTx(
+    txHash: Hex
+  ): Promise<PoolCreatedEventData | null> {
+    if (!this.publicClient) {
+      throw new Error("Public client is required to fetch transaction data");
+    }
+
+    // Get transaction receipt
+    const receipt = await this.publicClient.getTransactionReceipt({
+      hash: txHash,
+    });
+
+    if (!receipt) {
+      throw new Error(`Transaction not found: ${txHash}`);
+    }
+
+    // Find PoolCreated event in logs by trying to decode each log
+    // Using V1_2 ABI which is compatible with all versions (V1_2 has extra fields that are optional)
+    for (const log of receipt.logs) {
+      try {
+        const decodedLog = decodeEventLog({
+          abi: FlaunchPositionManagerV1_2Abi,
+          data: log.data,
+          topics: log.topics,
+        });
+
+        if (decodedLog.eventName === "PoolCreated") {
+          return {
+            poolId: decodedLog.args._poolId as Hex,
+            memecoin: decodedLog.args._memecoin as Address,
+            memecoinTreasury: decodedLog.args._memecoinTreasury as Address,
+            tokenId: decodedLog.args._tokenId as bigint,
+            currencyFlipped: decodedLog.args._currencyFlipped as boolean,
+            flaunchFee: decodedLog.args._flaunchFee as bigint,
+            params: decodedLog.args._params as any,
+          };
+        }
+      } catch (error) {
+        // Not a PoolCreated event or decoding failed, continue to next log
+        continue;
+      }
+    }
+
+    return null;
   }
 
   /**

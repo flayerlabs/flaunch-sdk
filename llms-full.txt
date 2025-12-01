@@ -161,6 +161,20 @@ const hash = await flaunchWrite.flaunchIPFS({
     telegramUrl: "https://t.me/example",
   },
 });
+
+// parse the logs from the tx hash to get memecoin address and Flaunch NFT tokenId
+
+import { PoolCreatedEventData } from "@flaunch/sdk";
+
+// Parse the flaunch transaction hash
+const poolCreatedData: PoolCreatedEventData | null =
+  await flaunchRead.getPoolCreatedFromTx(hash);
+
+if (poolCreatedData) {
+  console.log("Memecoin Address:", poolCreatedData.memecoin);
+  console.log("Token ID:", poolCreatedData.tokenId);
+  // ... other params
+}
 ```
 
 #### How to generate `base64Image` from User uploaded file
@@ -1039,7 +1053,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.8 / Exports / FlaunchBackend
+@flaunch/sdk - v0.9.9 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1138,7 +1152,7 @@ Returns
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.9 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -1220,6 +1234,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getFlaunchAddress
 - getFlaunchingFee
 - getMarketContext
+- getPoolCreatedFromTx
 - getPositionManager
 - getPositionManagerAddress
 - getSellQuoteExactInput
@@ -2134,6 +2149,26 @@ Returns
 
 ___
 
+### getPoolCreatedFromTx
+
+▸ **getPoolCreatedFromTx**(`txHash`): `Promise`\<``null`` \| `PoolCreatedEventData`\>
+
+Parses a transaction to extract PoolCreated event data
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `txHash` | \`0x$\{string}\` | The transaction hash to parse |
+
+Returns
+
+`Promise`\<``null`` \| `PoolCreatedEventData`\>
+
+PoolCreated event parameters or null if not found
+
+___
+
 ### getPositionManager
 
 ▸ **getPositionManager**(`version`): `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
@@ -2698,7 +2733,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.9 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -2811,6 +2846,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getMarketContext
 - getPermit2AllowanceAndNonce
 - getPermit2TypedData
+- getPoolCreatedFromTx
 - getPositionManager
 - getPositionManagerAddress
 - getSellQuoteExactInput
@@ -4662,6 +4698,30 @@ The typed data object for signing
 
 ___
 
+### getPoolCreatedFromTx
+
+▸ **getPoolCreatedFromTx**(`txHash`): `Promise`\<``null`` \| `PoolCreatedEventData`\>
+
+Parses a transaction to extract PoolCreated event data
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `txHash` | \`0x$\{string}\` | The transaction hash to parse |
+
+Returns
+
+`Promise`\<``null`` \| `PoolCreatedEventData`\>
+
+PoolCreated event parameters or null if not found
+
+Inherited from
+
+ReadFlaunchSDK.getPoolCreatedFromTx
+
+___
+
 ### getPositionManager
 
 ▸ **getPositionManager**(`version`): `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
@@ -5567,7 +5627,7 @@ Transaction response
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.9 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -5610,7 +5670,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / LiquidityMode
+@flaunch/sdk - v0.9.9 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -5637,7 +5697,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / Permissions
+@flaunch/sdk - v0.9.9 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -5673,7 +5733,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / Verifier
+@flaunch/sdk - v0.9.9 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -5723,7 +5783,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / Addresses
+@flaunch/sdk - v0.9.9 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -5734,7 +5794,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / BuySwapData
+@flaunch/sdk - v0.9.9 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -5769,7 +5829,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / CallData
+@flaunch/sdk - v0.9.9 / Exports / CallData
 
 # Interface: CallData
 
@@ -5803,7 +5863,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.9 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -5872,7 +5932,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / IPFSParams
+@flaunch/sdk - v0.9.9 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -5910,7 +5970,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / PinataConfig
+@flaunch/sdk - v0.9.9 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -5930,7 +5990,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / PoolKey
+@flaunch/sdk - v0.9.9 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -5984,7 +6044,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / PoolWithHookData
+@flaunch/sdk - v0.9.9 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -6065,7 +6125,7 @@ PoolKey.tickSpacing
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / SellSwapData
+@flaunch/sdk - v0.9.9 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -6100,7 +6160,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.9.9 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -6134,7 +6194,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / SwapFees
+@flaunch/sdk - v0.9.9 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -6161,7 +6221,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.9 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -6258,9 +6318,9 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.8 / Exports
+@flaunch/sdk - v0.9.9 / Exports
 
-# @flaunch/sdk - v0.9.8
+# @flaunch/sdk - v0.9.9
 
 ## Table of contents
 
@@ -6316,6 +6376,7 @@ ___
 - ParsedSwapData
 - PermitDetails
 - PermitSingle
+- PoolCreatedEventData
 - PoolCreatedLogs
 - PoolSwapLog
 - SellSwapLog
@@ -6592,6 +6653,37 @@ Type declaration
 | `details` | `PermitDetails` |
 | `sigDeadline` | `bigint` |
 | `spender` | `Address` |
+
+___
+
+### PoolCreatedEventData
+
+Ƭ **PoolCreatedEventData**: `Object`
+
+Parsed data from a PoolCreated event
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `currencyFlipped` | `boolean` |
+| `flaunchFee` | `bigint` |
+| `memecoin` | `Address` |
+| `memecoinTreasury` | `Address` |
+| `params` | \{ `creator`: `Address` ; `creatorFeeAllocation`: `number` ; `fairLaunchDuration?`: `bigint` ; `feeCalculatorParams`: `Hex` ; `flaunchAt`: `bigint` ; `initialPriceParams`: `Hex` ; `initialTokenFairLaunch`: `bigint` ; `name`: `string` ; `premineAmount`: `bigint` ; `symbol`: `string` ; `tokenUri`: `string`  } |
+| `params.creator` | `Address` |
+| `params.creatorFeeAllocation` | `number` |
+| `params.fairLaunchDuration?` | `bigint` |
+| `params.feeCalculatorParams` | `Hex` |
+| `params.flaunchAt` | `bigint` |
+| `params.initialPriceParams` | `Hex` |
+| `params.initialTokenFairLaunch` | `bigint` |
+| `params.name` | `string` |
+| `params.premineAmount` | `bigint` |
+| `params.symbol` | `string` |
+| `params.tokenUri` | `string` |
+| `poolId` | `Hex` |
+| `tokenId` | `bigint` |
 
 ___
 

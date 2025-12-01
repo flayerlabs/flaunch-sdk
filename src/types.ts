@@ -259,3 +259,28 @@ export type ImportAndSingleSidedCoinAddLiquidityWithPrice = Flatten<{
 export type ImportAndSingleSidedCoinAddLiquidityParams =
   | ImportAndSingleSidedCoinAddLiquidityWithMarketCap
   | ImportAndSingleSidedCoinAddLiquidityWithPrice;
+
+/**
+ * Parsed data from a PoolCreated event
+ */
+export type PoolCreatedEventData = {
+  poolId: Hex;
+  memecoin: Address;
+  memecoinTreasury: Address;
+  tokenId: bigint;
+  currencyFlipped: boolean;
+  flaunchFee: bigint;
+  params: {
+    name: string;
+    symbol: string;
+    tokenUri: string;
+    initialTokenFairLaunch: bigint;
+    fairLaunchDuration?: bigint; // Optional as V1/V1_1 don't have this field
+    premineAmount: bigint;
+    creator: Address;
+    creatorFeeAllocation: number;
+    flaunchAt: bigint;
+    initialPriceParams: Hex;
+    feeCalculatorParams: Hex;
+  };
+};

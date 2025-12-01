@@ -2,6 +2,12 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.10] - 2025-12-01
+
+### Added
+
+- New `getPoolCreatedFromTx()` method for parsing PoolCreated event data from transaction hash, returns memecoin address, Flaunch NFT tokenId and other params.
+
 ## [0.9.9] - 2025-11-11
 
 ### Added
