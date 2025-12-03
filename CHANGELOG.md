@@ -2,6 +2,16 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.11] - 2025-12-03
+
+### Added
+
+- **Solana Verifier Support** for token import verification
+  - New `Verifier.SOLANA` enum value for Solana-based token verification
+  - New `SolanaVerifierAddress` contract address mappings for Base mainnet and Base Sepolia testnet
+  - Updated `ReadTokenImporter.verifierAddress()` method to support Solana verifier lookup
+  - Enables importing and verifying tokens from the Solana ecosystem into the Flaunch protocol
+
 ## [0.9.10] - 2025-12-01
 
 ### Added
