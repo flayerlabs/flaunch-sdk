@@ -61,6 +61,7 @@ export enum FlaunchVersion {
 export enum Verifier {
   CLANKER = "clanker",
   DOPPLER = "doppler",
+  SOLANA = "solana",
   VIRTUALS = "virtuals",
   WHITELIST = "whitelist",
   ZORA = "zora",

@@ -117,6 +117,11 @@ export const DopplerVerifierAddress: Addresses = {
   [baseSepolia.id]: "0x6428b5C4da36ecB070aBdcB5E1939244A3cC7fb5",
 };
 
+export const SolanaVerifierAddress: Addresses = {
+  [base.id]: "0xba28ac1540893a34476c24b2c4fa32e0506c9055",
+  [baseSepolia.id]: "0x47226918e518f205584bd75bf81e0b532b0b3ea7",
+};
+
 export const VirtualsVerifierAddress: Addresses = {
   [base.id]: "0x06a089fa231aca48d2aa77365123ad9aca43d3a4",
   [baseSepolia.id]: "0x6582d2bc6a7eba3b40bdf46b3868fc7ec2ff96ec",

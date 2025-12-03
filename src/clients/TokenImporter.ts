@@ -14,6 +14,7 @@ import { Verifier } from "../types";
 import {
   ClankerWorldVerifierAddress,
   DopplerVerifierAddress,
+  SolanaVerifierAddress,
   VirtualsVerifierAddress,
   WhitelistVerifierAddress,
   ZoraVerifierAddress,
@@ -68,6 +69,8 @@ export class ReadTokenImporter {
         return ClankerWorldVerifierAddress[this.chainId];
       case Verifier.DOPPLER:
         return DopplerVerifierAddress[this.chainId];
+      case Verifier.SOLANA:
+        return SolanaVerifierAddress[this.chainId];
       case Verifier.VIRTUALS:
         return VirtualsVerifierAddress[this.chainId];
       case Verifier.WHITELIST:
