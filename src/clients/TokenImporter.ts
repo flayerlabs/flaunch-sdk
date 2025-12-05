@@ -104,12 +104,14 @@ export class ReadWriteTokenImporter extends ReadTokenImporter {
           creatorFeeAllocationPercent: number;
           initialMarketCapUSD: number;
           verifier?: Verifier;
+          tokenSupply?: bigint;
         }
       | {
           coinAddress: Address;
           creatorFeeAllocationPercent: number;
           initialPriceUSD: number;
           verifier?: Verifier;
+          tokenSupply?: bigint;
         }
   ) {
     return this.contract.write(
@@ -125,12 +127,14 @@ export class ReadWriteTokenImporter extends ReadTokenImporter {
           creatorFeeAllocationPercent: number;
           initialMarketCapUSD: number;
           verifier?: Verifier;
+          tokenSupply?: bigint;
         }
       | {
           coinAddress: Address;
           creatorFeeAllocationPercent: number;
           initialPriceUSD: number;
           verifier?: Verifier;
+          tokenSupply?: bigint;
         }
   ) {
     let initialMarketCapUSD: number;
@@ -157,11 +161,21 @@ export class ReadWriteTokenImporter extends ReadTokenImporter {
           _memecoin: params.coinAddress,
         });
 
-    return {
+    const baseParams = {
       _memecoin: params.coinAddress,
       _creatorFeeAllocation: creatorFeeAllocationInBps,
       _initialMarketCap: initialMCapInUSDCWei,
       _verifier,
     };
+
+    // If tokenSupply is provided (even if 0n), include it to use the 5-parameter initialize overload
+    if (params.tokenSupply !== undefined) {
+      return {
+        ...baseParams,
+        _totalSupply: params.tokenSupply,
+      };
+    }
+
+    return baseParams;
   }
 }

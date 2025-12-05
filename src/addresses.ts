@@ -103,7 +103,7 @@ export const BuyBackManagerAddress: Addresses = {
 
 /** Verifiers */
 export const TokenImporterAddress: Addresses = {
-  [base.id]: "0xb47af90ae61bc916ea4b4bacffae4570e7435842",
+  [base.id]: "0x6fb66f4fc262dc86e12136c481ba7c411e668197",
   [baseSepolia.id]: "0x7981369D21975F39773f289F759F7d7CE1097139",
 };
 
