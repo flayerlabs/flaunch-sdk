@@ -2,6 +2,22 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.12] - 2025-12-05
+
+### Added
+
+- **Custom Token Supply Support for Single-Sided Coin Liquidity Import**
+  - New overloads for `getImportAndSingleSidedCoinAddLiquidityCalls()` accepting `tokenSupply` parameter
+  - Allows specifying custom total supply for tokens with non-standard decimals (e.g., 6 decimals)
+  - Supports both `initialMarketCapUSD` and `initialPriceUSD` pricing modes with custom supply
+  - New `_totalSupply` parameter in `getInitializeParams()` method for 5-parameter `initialize()` overload
+
+### Changed
+
+- **Updated Token Importer Contract**
+  - Updated `TokenImporterAddress` for Base mainnet to `0x6fb66f4fc262dc86e12136c481ba7c411e668197`
+  - Updated `TokenImporterAbi` with new contract interface
+
 ## [0.9.11] - 2025-12-03
 
 ### Added
