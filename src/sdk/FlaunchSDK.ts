@@ -3198,9 +3198,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     // If the current sqrtPriceX96 of the pool is zero, and the initial marketcap or price is provided,
     // we can use this to determine the current tick.
     if (
-      (
-        poolState.sqrtPriceX96 === 0n
-      ) && (
+      poolState.sqrtPriceX96 === 0n && (
         ("initialMarketCapUSD" in params && params.initialMarketCapUSD) ||
         ("initialPriceUSD" in params && params.initialPriceUSD)
       )
