@@ -158,12 +158,14 @@ export type GetSingleSidedCoinAddLiquidityCallsParams =
       coinAmount: bigint;
       initialMarketCapUSD?: number;
       version?: FlaunchVersion;
+      tokenSupply?: bigint;
     }
   | {
       coinAddress: Address;
       coinAmount: bigint;
       initialPriceUSD?: number;
       version?: FlaunchVersion;
+      tokenSupply?: bigint;
     };
 
 export type CheckSingleSidedAddLiquidityParams =

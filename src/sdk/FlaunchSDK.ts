@@ -3220,14 +3220,30 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
 
     let currentTick: number;
 
-    // if initial marketcap or price is provided, it means that the pool is not initialized yet
-    // so determining the currentTick
+    // First, check if the pool is initialized as we can then get the current tick directly from
+    // the state view.
+    const poolState = await this.readStateView.poolSlot0({
+      poolId: getPoolId(poolKey),
+    });
+    currentTick = poolState.tick;
+
+    // If the current sqrtPriceX96 of the pool is zero, and the initial marketcap or price is provided,
+    // we can use this to determine the current tick.
     if (
-      ("initialMarketCapUSD" in params && params.initialMarketCapUSD) ||
-      ("initialPriceUSD" in params && params.initialPriceUSD)
+      poolState.sqrtPriceX96 === 0n && (
+        ("initialMarketCapUSD" in params && params.initialMarketCapUSD) ||
+        ("initialPriceUSD" in params && params.initialPriceUSD)
+      )
     ) {
-      const { decimals: coinDecimals, formattedTotalSupplyInDecimals } =
+      let { decimals: coinDecimals, formattedTotalSupplyInDecimals } =
         await this.getCoinInfo(coinAddress);
+
+      // If we have a tokenSupply set, then overwrite the value
+      if ("tokenSupply" in params && params.tokenSupply !== undefined) {
+        formattedTotalSupplyInDecimals = parseFloat(
+          formatUnits(params.tokenSupply, coinDecimals)
+        );
+      }
 
       // Determine market cap based on provided parameter
       let initialMarketCapUSD: number;
@@ -3258,12 +3274,6 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       }
 
       currentTick = calculatedTick;
-    } else {
-      // the pool is already initialized, get the current tick from the pool
-      const poolState = await this.readStateView.poolSlot0({
-        poolId: getPoolId(poolKey),
-      });
-      currentTick = poolState.tick;
     }
 
     // We want to add liquidity from current price to infinity (as coin appreciates vs flETH)
@@ -3557,7 +3567,15 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     }
 
     const addLiquidityCalls = await this.getSingleSidedCoinAddLiquidityCalls({
+      // Add our liquidity parameters
       ...params,
+
+      // Add our optional tokenSupply if provided from our initialize params
+      ...("_totalSupply" in importParams && {
+        tokenSupply: importParams._totalSupply,
+      }),
+
+      // Set our FlaunchVersion
       version: FlaunchVersion.ANY, // optimize to avoid fetching if not passed
     });
 
