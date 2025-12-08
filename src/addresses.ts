@@ -33,7 +33,6 @@ export const FlaunchAddress: Addresses = {
   [baseSepolia.id]: "0x7D375C9133721083DF7b7e5Cb0Ed8Fc78862dfe3",
 };
 
-// also supports AnyPositionManager
 export const FlaunchV1_1Address: Addresses = {
   [base.id]: "0xb4512bf57d50fbcb64a3adf8b17a79b2a204c18c",
   [baseSepolia.id]: "0x96be8ff5e244294a34bfa507a39190dc7a839baa",

@@ -77,6 +77,7 @@ import {
   DeployBuyBackManagerParams,
 } from "../clients/FlaunchZapClient";
 import { ReadFlaunch } from "../clients/FlaunchClient";
+import { ReadAnyFlaunch } from "../clients/AnyFlaunchClient";
 import { ReadMemecoin, ReadWriteMemecoin } from "../clients/MemecoinClient";
 import { ReadQuoter } from "clients/QuoterClient";
 import { ReadPermit2, ReadWritePermit2 } from "clients/Permit2Client";
@@ -278,6 +279,7 @@ export class ReadFlaunchSDK {
   public readonly readBidWallV1_1: ReadBidWallV1_1;
   public readonly readFlaunch: ReadFlaunch;
   public readonly readFlaunchV1_1: ReadFlaunchV1_1;
+  public readonly readAnyFlaunch: ReadAnyFlaunch;
   public readonly readQuoter: ReadQuoter;
   public readonly readPermit2: ReadPermit2;
 
@@ -365,6 +367,10 @@ export class ReadFlaunchSDK {
     );
     this.readFlaunchV1_2 = new ReadFlaunchV1_2(
       FlaunchV1_2Address[this.chainId],
+      drift
+    );
+    this.readAnyFlaunch = new ReadAnyFlaunch(
+      AnyFlaunchAddress[this.chainId],
       drift
     );
     this.readQuoter = new ReadQuoter(
@@ -467,22 +473,30 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets the flaunch contract instance for a given version
+   * @param version - The version to get the flaunch contract instance for
+   */
+  getFlaunch(version: FlaunchVersion) {
+    switch (version) {
+      case FlaunchVersion.V1:
+        return this.readFlaunch;
+      case FlaunchVersion.V1_1:
+        return this.readFlaunchV1_1;
+      case FlaunchVersion.V1_2:
+        return this.readFlaunchV1_2;
+      case FlaunchVersion.ANY:
+        return this.readAnyFlaunch;
+      default:
+        return this.readFlaunchV1_2;
+    }
+  }
+
+  /**
    * Gets the flaunch contract address for a given version
    * @param version - The version to get the flaunch contract address for
    */
   getFlaunchAddress(version: FlaunchVersion) {
-    switch (version) {
-      case FlaunchVersion.V1:
-        return this.readFlaunch.contract.address;
-      case FlaunchVersion.V1_1:
-        return this.readFlaunchV1_1.contract.address;
-      case FlaunchVersion.V1_2:
-        return this.readFlaunchV1_2.contract.address;
-      case FlaunchVersion.ANY:
-        return this.readFlaunchV1_1.contract.address;
-      default:
-        return this.readFlaunchV1_1.contract.address;
-    }
+    return this.getFlaunch(version).contract.address;
   }
 
   getPositionManagerAddress(version: FlaunchVersion) {
@@ -495,6 +509,24 @@ export class ReadFlaunchSDK {
 
   getBidWallAddress(version: FlaunchVersion) {
     return this.getBidWall(version).contract.address;
+  }
+
+  /**
+   * Gets the flaunch contract address and token ID for a memecoin
+   * @param coinAddress - The address of the memecoin
+   * @returns Promise<{ flaunchAddress: Address; tokenId: bigint }> - The flaunch contract address and token ID
+   */
+  async getFlaunchTokenIdForMemecoin(
+    coinAddress: Address
+  ): Promise<{ flaunchAddress: Address; tokenId: bigint }> {
+    const version = await this.getCoinVersion(coinAddress);
+    const flaunch = this.getFlaunch(version);
+    const tokenId = await flaunch.tokenId(coinAddress);
+
+    return {
+      flaunchAddress: flaunch.contract.address,
+      tokenId,
+    };
   }
 
   /**
