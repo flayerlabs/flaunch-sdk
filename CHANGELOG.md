@@ -2,6 +2,23 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.13] - 2025-12-08
+
+### Added
+
+- **Flaunch Token ID Lookup** for memecoins
+
+  - New `getFlaunchTokenIdForMemecoin()` method in `ReadFlaunchSDK` class
+  - Returns both the flaunch contract address and token ID for a given memecoin address
+
+- **Optional Token Supply Parameter** for import and liquidity operations
+  - Optional `tokenSupply` parameter added to `getImportAndSingleSidedCoinAddLiquidityCalls()` method
+  - Optional `tokenSupply` parameter added to `GetSingleSidedCoinAddLiquidityCallsParams` type
+  - When provided, `tokenSupply` is passed to `getInitializeParams()` which returns `_totalSupply` in importParams
+  - The `_totalSupply` from importParams is automatically forwarded to liquidity calculation calls
+  - Enables accurate tick calculation for uninitialized pools when using custom token supply values
+  - Supports tokens with non-standard decimals or custom supply configurations
+
 ## [0.9.12] - 2025-12-05
 
 ### Added
