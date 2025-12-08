@@ -1,6 +1,6 @@
 {
   "name": "@flaunch/sdk",
-  "version": "0.9.12",
+  "version": "0.9.13",
   "description": "Flaunch SDK to easily interact with the Flaunch protocol",
   "license": "MIT",
   "author": "Apoorv Lathey <apoorv@flayer.io>",
