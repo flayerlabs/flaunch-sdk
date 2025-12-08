@@ -3193,7 +3193,6 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     const poolState = await this.readStateView.poolSlot0({
       poolId: getPoolId(poolKey),
     });
-    
     currentTick = poolState.tick;
 
     // If the current sqrtPriceX96 of the pool is zero, and the initial marketcap or price is provided,
