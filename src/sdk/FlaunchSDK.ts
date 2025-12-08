@@ -3414,6 +3414,29 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
 
   /**
    * Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
+   * @param params - Parameters for importing and adding liquidity with initial market cap
+   * @returns Array of calls with descriptions
+   *
+   * @example
+   * ```typescript
+   * const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
+   *   coinAddress: "0x...",
+   *   verifier: Verifier.CLANKER,
+   *   creatorFeeAllocationPercent: 5,
+   *   coinAmount: parseEther("1000"),
+   *   initialMarketCapUSD: 50000,
+   *   tokenSupply: 1000000e6 // 1 million tokens (6 decimals)
+   * });
+   * ```
+   */
+  async getImportAndSingleSidedCoinAddLiquidityCalls(
+    params: ImportAndSingleSidedCoinAddLiquidityWithMarketCap & {
+      tokenSupply: bigint;
+    }
+  ): Promise<CallWithDescription[]>;
+
+  /**
+   * Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
    * @param params - Parameters for importing and adding liquidity with initial price
    * @returns Array of calls with descriptions
    *
@@ -3432,6 +3455,29 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     params: ImportAndSingleSidedCoinAddLiquidityWithPrice
   ): Promise<CallWithDescription[]>;
 
+  /**
+   * Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
+   * @param params - Parameters for importing and adding liquidity with initial price
+   * @returns Array of calls with descriptions
+   *
+   * @example
+   * ```typescript
+   * const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
+   *   coinAddress: "0x...",
+   *   verifier: Verifier.CLANKER,
+   *   creatorFeeAllocationPercent: 5,
+   *   coinAmount: parseEther("1000"),
+   *   initialPriceUSD: 0.001,
+   *   tokenSupply: 1000000e6 // 1 million tokens (6 decimals)
+   * });
+   * ```
+   */
+  async getImportAndSingleSidedCoinAddLiquidityCalls(
+    params: ImportAndSingleSidedCoinAddLiquidityWithPrice & {
+      tokenSupply: bigint;
+    }
+  ): Promise<CallWithDescription[]>;
+
   // Implementation with union type for internal use
   async getImportAndSingleSidedCoinAddLiquidityCalls(
     params: ImportAndSingleSidedCoinAddLiquidityParams
@@ -3442,25 +3488,53 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         params as ImportAndSingleSidedCoinAddLiquidityParams & {
           initialMarketCapUSD: number;
         };
-      importParams = await this.readWriteTokenImporter.getInitializeParams({
-        coinAddress: paramsWithMarketCap.coinAddress,
-        creatorFeeAllocationPercent:
-          paramsWithMarketCap.creatorFeeAllocationPercent,
-        initialMarketCapUSD: paramsWithMarketCap.initialMarketCapUSD,
-        verifier: paramsWithMarketCap.verifier,
-      });
+      if (
+        "tokenSupply" in paramsWithMarketCap &&
+        paramsWithMarketCap.tokenSupply !== undefined
+      ) {
+        importParams = await this.readWriteTokenImporter.getInitializeParams({
+          coinAddress: paramsWithMarketCap.coinAddress,
+          creatorFeeAllocationPercent:
+            paramsWithMarketCap.creatorFeeAllocationPercent,
+          initialMarketCapUSD: paramsWithMarketCap.initialMarketCapUSD,
+          verifier: paramsWithMarketCap.verifier,
+          tokenSupply: paramsWithMarketCap.tokenSupply as bigint,
+        });
+      } else {
+        importParams = await this.readWriteTokenImporter.getInitializeParams({
+          coinAddress: paramsWithMarketCap.coinAddress,
+          creatorFeeAllocationPercent:
+            paramsWithMarketCap.creatorFeeAllocationPercent,
+          initialMarketCapUSD: paramsWithMarketCap.initialMarketCapUSD,
+          verifier: paramsWithMarketCap.verifier,
+        });
+      }
     } else {
       const paramsWithPrice =
         params as ImportAndSingleSidedCoinAddLiquidityParams & {
           initialPriceUSD: number;
         };
-      importParams = await this.readWriteTokenImporter.getInitializeParams({
-        coinAddress: paramsWithPrice.coinAddress,
-        creatorFeeAllocationPercent:
-          paramsWithPrice.creatorFeeAllocationPercent,
-        initialPriceUSD: paramsWithPrice.initialPriceUSD,
-        verifier: paramsWithPrice.verifier,
-      });
+      if (
+        "tokenSupply" in paramsWithPrice &&
+        paramsWithPrice.tokenSupply !== undefined
+      ) {
+        importParams = await this.readWriteTokenImporter.getInitializeParams({
+          coinAddress: paramsWithPrice.coinAddress,
+          creatorFeeAllocationPercent:
+            paramsWithPrice.creatorFeeAllocationPercent,
+          initialPriceUSD: paramsWithPrice.initialPriceUSD,
+          verifier: paramsWithPrice.verifier,
+          tokenSupply: paramsWithPrice.tokenSupply as bigint,
+        });
+      } else {
+        importParams = await this.readWriteTokenImporter.getInitializeParams({
+          coinAddress: paramsWithPrice.coinAddress,
+          creatorFeeAllocationPercent:
+            paramsWithPrice.creatorFeeAllocationPercent,
+          initialPriceUSD: paramsWithPrice.initialPriceUSD,
+          verifier: paramsWithPrice.verifier,
+        });
+      }
     }
 
     const addLiquidityCalls = await this.getSingleSidedCoinAddLiquidityCalls({
