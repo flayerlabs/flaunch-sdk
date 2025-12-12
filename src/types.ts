@@ -131,6 +131,7 @@ export type GetAddLiquidityCallsParams =
       maxMarketCap: string;
       initialMarketCapUSD?: number;
       version?: FlaunchVersion;
+      slippagePercent?: number;
     }
   | {
       coinAddress: Address;
@@ -141,6 +142,7 @@ export type GetAddLiquidityCallsParams =
       maxPriceUSD: string;
       initialPriceUSD?: number;
       version?: FlaunchVersion;
+      slippagePercent?: number;
     }
   | {
       coinAddress: Address;
@@ -150,6 +152,7 @@ export type GetAddLiquidityCallsParams =
       tickUpper: number;
       currentTick?: number;
       version?: FlaunchVersion;
+      slippagePercent?: number;
     };
 
 export type GetSingleSidedCoinAddLiquidityCallsParams =
@@ -159,6 +162,7 @@ export type GetSingleSidedCoinAddLiquidityCallsParams =
       initialMarketCapUSD?: number;
       version?: FlaunchVersion;
       tokenSupply?: bigint;
+      slippagePercent?: number;
     }
   | {
       coinAddress: Address;
@@ -166,6 +170,7 @@ export type GetSingleSidedCoinAddLiquidityCallsParams =
       initialPriceUSD?: number;
       version?: FlaunchVersion;
       tokenSupply?: bigint;
+      slippagePercent?: number;
     };
 
 export type CheckSingleSidedAddLiquidityParams =
@@ -204,6 +209,7 @@ export type ImportAndAddLiquidityWithMarketCap = Flatten<{
   maxMarketCap: string;
   initialMarketCapUSD: number;
   version?: FlaunchVersion;
+  slippagePercent?: number;
 }>;
 
 export type ImportAndAddLiquidityWithPrice = Flatten<{
@@ -217,6 +223,7 @@ export type ImportAndAddLiquidityWithPrice = Flatten<{
   maxPriceUSD: string;
   initialPriceUSD: number;
   version?: FlaunchVersion;
+  slippagePercent?: number;
 }>;
 
 export type ImportAndAddLiquidityWithExactAmounts = Flatten<{
@@ -229,6 +236,7 @@ export type ImportAndAddLiquidityWithExactAmounts = Flatten<{
   tickUpper: number;
   currentTick?: number;
   version?: FlaunchVersion;
+  slippagePercent?: number;
 }>;
 
 // Union type for backward compatibility (still used internally)
