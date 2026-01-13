@@ -238,6 +238,12 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
    * @returns Transaction response for the flaunch creation
    */
   async flaunch(params: FlaunchParams) {
+    if (params.fairLaunchPercent !== 0) {
+      throw new Error(
+        "FairLaunch has been deprecated. Please set fairLaunchPercent to 0."
+      );
+    }
+
     const initialMCapInUSDCWei = parseUnits(
       params.initialMarketCapUSD.toString(),
       6
