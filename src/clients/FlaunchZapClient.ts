@@ -34,6 +34,7 @@ export interface FlaunchParams {
   name: string;
   symbol: string;
   tokenUri: string;
+  /** @deprecated FairLaunch has been deprecated. Please set fairLaunchPercent to 0. */
   fairLaunchPercent: number;
   fairLaunchDuration: number;
   initialMarketCapUSD: number;
@@ -235,6 +236,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
   /**
    * Flaunches a new token, supports premine
    * @param params - Parameters for the flaunch
+   * @param params.fairLaunchPercent - @deprecated FairLaunch has been deprecated. Please set to 0.
    * @returns Transaction response for the flaunch creation
    */
   async flaunch(params: FlaunchParams) {
@@ -391,7 +393,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
    * @param params.name - The name of the token
    * @param params.symbol - The symbol of the token
    * @param params.tokenUri - The URI containing the token metadata
-   * @param params.fairLaunchPercent - Percentage of total supply to be used in fair launch (0-100)
+   * @param params.fairLaunchPercent - @deprecated FairLaunch has been deprecated. Please set to 0.
    * @param params.fairLaunchDuration - Duration of fair launch in seconds
    * @param params.initialMarketCapUSD - Initial market cap in USD
    * @param params.creator - Address of the token creator
@@ -440,7 +442,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
    * @param params.name - The name of the token
    * @param params.symbol - The symbol of the token
    * @param params.tokenUri - The URI containing the token metadata
-   * @param params.fairLaunchPercent - Percentage of total supply to be used in fair launch (0-100)
+   * @param params.fairLaunchPercent - @deprecated FairLaunch has been deprecated. Please set to 0.
    * @param params.fairLaunchDuration - Duration of fair launch in seconds
    * @param params.initialMarketCapUSD - Initial market cap in USD
    * @param params.creator - Address of the token creator

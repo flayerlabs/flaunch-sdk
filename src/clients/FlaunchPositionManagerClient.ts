@@ -88,6 +88,7 @@ export interface FlaunchParams {
   name: string;
   symbol: string;
   tokenUri: string;
+  /** @deprecated FairLaunch has been deprecated. Please set fairLaunchPercent to 0. */
   fairLaunchPercent: number;
   initialMarketCapUSD: number;
   creator: Address;
@@ -404,6 +405,11 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
     super(address, drift);
   }
 
+  /**
+   * Flaunches a new token
+   * @param params - Parameters for the flaunch
+   * @param params.fairLaunchPercent - @deprecated FairLaunch has been deprecated. Please set to 0.
+   */
   async flaunch({
     name,
     symbol,
@@ -472,6 +478,11 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
     );
   }
 
+  /**
+   * Flaunches a new token by uploading the token metadata to IPFS
+   * @param params - Parameters for the flaunch including IPFS metadata
+   * @param params.fairLaunchPercent - @deprecated FairLaunch has been deprecated. Please set to 0.
+   */
   async flaunchIPFS({
     name,
     symbol,
