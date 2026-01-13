@@ -414,6 +414,12 @@ export class ReadWriteFlaunchPositionManager extends ReadFlaunchPositionManager 
     creatorFeeAllocationPercent,
     flaunchAt,
   }: FlaunchParams) {
+    if (fairLaunchPercent !== 0) {
+      throw new Error(
+        "FairLaunch has been deprecated. Please set fairLaunchPercent to 0."
+      );
+    }
+
     const initialMCapInUSDCWei = parseUnits(initialMarketCapUSD.toString(), 6);
     const initialPriceParams = encodeAbiParameters(
       [
