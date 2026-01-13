@@ -1053,7 +1053,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.12 / Exports / FlaunchBackend
+@flaunch/sdk - v0.9.13 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1152,7 +1152,7 @@ Returns
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.13 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -2780,7 +2780,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.13 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -3425,19 +3425,20 @@ ___
 
 ### calculateConstrainedLiquidity
 
-▸ **calculateConstrainedLiquidity**(`currentTick`, `tickLower`, `tickUpper`, `amount0`, `amount1`): `Object`
+▸ **calculateConstrainedLiquidity**(`currentTick`, `tickLower`, `tickUpper`, `amount0`, `amount1`, `slippagePercent?`): `Object`
 
 Calculates and constrains liquidity amounts for a position
 
 Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `currentTick` | `number` | Current pool tick |
-| `tickLower` | `number` | Lower tick of the position |
-| `tickUpper` | `number` | Upper tick of the position |
-| `amount0` | `bigint` | Amount of currency0 |
-| `amount1` | `bigint` | Amount of currency1 |
+| Name | Type | Default value | Description |
+| :------ | :------ | :------ | :------ |
+| `currentTick` | `number` | `undefined` | Current pool tick |
+| `tickLower` | `number` | `undefined` | Lower tick of the position |
+| `tickUpper` | `number` | `undefined` | Upper tick of the position |
+| `amount0` | `bigint` | `undefined` | Amount of currency0 |
+| `amount1` | `bigint` | `undefined` | Amount of currency1 |
+| `slippagePercent` | `number` | `0.05` | - |
 
 Returns
 
@@ -4559,6 +4560,7 @@ Parameters
 | `params.liquidityMode` | `LiquidityMode` | - |
 | `params.maxMarketCap` | `string` | - |
 | `params.minMarketCap` | `string` | - |
+| `params.slippagePercent?` | `number` | - |
 | `params.verifier?` | `Verifier` | - |
 | `params.version?` | `FlaunchVersion` | - |
 
@@ -4601,6 +4603,7 @@ Parameters
 | `params.liquidityMode` | `LiquidityMode` | - |
 | `params.maxPriceUSD` | `string` | - |
 | `params.minPriceUSD` | `string` | - |
+| `params.slippagePercent?` | `number` | - |
 | `params.verifier?` | `Verifier` | - |
 | `params.version?` | `FlaunchVersion` | - |
 
@@ -4640,6 +4643,7 @@ Parameters
 | `params.creatorFeeAllocationPercent` | `number` | - |
 | `params.currentTick?` | `number` | - |
 | `params.flethAmount` | `bigint` | - |
+| `params.slippagePercent?` | `number` | - |
 | `params.tickLower` | `number` | - |
 | `params.tickUpper` | `number` | - |
 | `params.verifier?` | `Verifier` | - |
@@ -5791,7 +5795,7 @@ Transaction response
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.13 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -5834,7 +5838,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / LiquidityMode
+@flaunch/sdk - v0.9.13 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -5861,7 +5865,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / Permissions
+@flaunch/sdk - v0.9.13 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -5897,7 +5901,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / Verifier
+@flaunch/sdk - v0.9.13 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -5954,7 +5958,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / Addresses
+@flaunch/sdk - v0.9.13 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -5965,7 +5969,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / BuySwapData
+@flaunch/sdk - v0.9.13 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -6000,7 +6004,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / CallData
+@flaunch/sdk - v0.9.13 / Exports / CallData
 
 # Interface: CallData
 
@@ -6034,7 +6038,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.13 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -6103,7 +6107,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / IPFSParams
+@flaunch/sdk - v0.9.13 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -6141,7 +6145,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / PinataConfig
+@flaunch/sdk - v0.9.13 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -6161,7 +6165,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / PoolKey
+@flaunch/sdk - v0.9.13 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -6215,7 +6219,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / PoolWithHookData
+@flaunch/sdk - v0.9.13 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -6296,7 +6300,7 @@ PoolKey.tickSpacing
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / SellSwapData
+@flaunch/sdk - v0.9.13 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -6331,7 +6335,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.9.13 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -6365,7 +6369,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / SwapFees
+@flaunch/sdk - v0.9.13 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -6392,7 +6396,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.13 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -6489,9 +6493,9 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.12 / Exports
+@flaunch/sdk - v0.9.13 / Exports
 
-# @flaunch/sdk - v0.9.12
+# @flaunch/sdk - v0.9.13
 
 ## Table of contents
 
@@ -6735,13 +6739,13 @@ ___
 
 ### GetAddLiquidityCallsParams
 
-Ƭ **GetAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number` ; `version?`: `FlaunchVersion`  }
+Ƭ **GetAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `slippagePercent?`: `number` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `slippagePercent?`: `number` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `slippagePercent?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number` ; `version?`: `FlaunchVersion`  }
 
 ___
 
 ### GetSingleSidedCoinAddLiquidityCallsParams
 
-Ƭ **GetSingleSidedCoinAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `tokenSupply?`: `bigint` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `tokenSupply?`: `bigint` ; `version?`: `FlaunchVersion`  }
+Ƭ **GetSingleSidedCoinAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `slippagePercent?`: `number` ; `tokenSupply?`: `bigint` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `slippagePercent?`: `number` ; `tokenSupply?`: `bigint` ; `version?`: `FlaunchVersion`  }
 
 ___
 
@@ -6753,19 +6757,19 @@ ___
 
 ### ImportAndAddLiquidityWithExactAmounts
 
-Ƭ **ImportAndAddLiquidityWithExactAmounts**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
+Ƭ **ImportAndAddLiquidityWithExactAmounts**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `slippagePercent?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
 ___
 
 ### ImportAndAddLiquidityWithMarketCap
 
-Ƭ **ImportAndAddLiquidityWithMarketCap**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
+Ƭ **ImportAndAddLiquidityWithMarketCap**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `slippagePercent?`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
 ___
 
 ### ImportAndAddLiquidityWithPrice
 
-Ƭ **ImportAndAddLiquidityWithPrice**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
+Ƭ **ImportAndAddLiquidityWithPrice**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `slippagePercent?`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
 ___
 

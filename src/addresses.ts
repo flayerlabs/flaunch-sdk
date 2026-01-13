@@ -107,8 +107,8 @@ export const TokenImporterAddress: Addresses = {
 };
 
 export const ClankerWorldVerifierAddress: Addresses = {
-  [base.id]: "0xf6ddfcb093be0cd0c015590cb6c5127d9ff2a20b",
-  [baseSepolia.id]: "0x2874f9a30348acaaad55d74b0bec9c18f04b471a",
+  [base.id]: "0xFe55dFf581b665479ABe9Fc0A0578FB222cB4Dda",
+  [baseSepolia.id]: "0x2874F9A30348aCAaaD55D74B0BEc9C18f04b471a",
 };
 
 export const DopplerVerifierAddress: Addresses = {

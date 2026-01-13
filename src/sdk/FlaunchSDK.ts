@@ -3059,13 +3059,15 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       poolKey.currency0 === coinAddress ? flethAmount : coinAmount;
 
     // Calculate and constrain liquidity using shared method
+    const slippagePercent = params.slippagePercent;
     const { finalLiquidity, finalAmount0, finalAmount1 } =
       this.calculateConstrainedLiquidity(
         currentTick,
         tickLower,
         tickUpper,
         amount0,
-        amount1
+        amount1,
+        slippagePercent
       );
 
     // 6. Add liquidity
@@ -3230,10 +3232,9 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     // If the current sqrtPriceX96 of the pool is zero, and the initial marketcap or price is provided,
     // we can use this to determine the current tick.
     if (
-      poolState.sqrtPriceX96 === 0n && (
-        ("initialMarketCapUSD" in params && params.initialMarketCapUSD) ||
-        ("initialPriceUSD" in params && params.initialPriceUSD)
-      )
+      poolState.sqrtPriceX96 === 0n &&
+      (("initialMarketCapUSD" in params && params.initialMarketCapUSD) ||
+        ("initialPriceUSD" in params && params.initialPriceUSD))
     ) {
       let { decimals: coinDecimals, formattedTotalSupplyInDecimals } =
         await this.getCoinInfo(coinAddress);
@@ -3396,13 +3397,15 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       poolKey.currency0 === coinAddress ? flethAmount : coinAmount;
 
     // Calculate and constrain liquidity using shared method
+    const slippagePercent = params.slippagePercent;
     const { finalLiquidity, finalAmount0, finalAmount1 } =
       this.calculateConstrainedLiquidity(
         currentTick,
         tickLower,
         tickUpper,
         amount0,
-        amount1
+        amount1,
+        slippagePercent
       );
 
     // 3. Add liquidity
@@ -3610,7 +3613,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     tickLower: number,
     tickUpper: number,
     amount0: bigint,
-    amount1: bigint
+    amount1: bigint,
+    slippagePercent: number = 0.05 // Default to 0.05%
   ): {
     finalLiquidity: bigint;
     finalAmount0: bigint;
@@ -3678,8 +3682,11 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     }
 
     // IMPORTANT: Add conservative buffer to account for contract rounding differences
-    // Reduce liquidity by 0.05% to ensure contract calculations stay within user bounds
-    const liquidityBuffer = finalLiquidity / 2000n; // 0.05%
+    // Reduce liquidity by slippagePercent to ensure contract calculations stay within user bounds
+    // slippagePercent is passed as decimal percentage (e.g., 0.05 for 0.05%), convert to decimal
+    const slippageAsDecimal = slippagePercent / 100;
+    const slippageMultiplier = BigInt(Math.floor(1 / slippageAsDecimal));
+    const liquidityBuffer = finalLiquidity / slippageMultiplier;
     const conservativeLiquidity =
       finalLiquidity - (liquidityBuffer > 1n ? liquidityBuffer : 1n);
 

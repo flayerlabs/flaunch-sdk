@@ -2,6 +2,21 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.15] - 2025-12-12
+
+### Updated
+
+- `ClankerWorldVerifierAddress` so we can support multiple clanker token deployments
+
+## [0.9.14] - 2025-12-12
+
+### Added
+
+- Optional `slippagePercent` parameter for liquidity operations
+  - Added to `GetAddLiquidityCallsParams`, `GetSingleSidedCoinAddLiquidityCallsParams`, and import-related liquidity types
+  - Defaults to `0.05` (0.05%) for backward compatibility
+  - Allows customization of the slippage buffer applied to liquidity calculations
+
 ## [0.9.13] - 2025-12-08
 
 ### Added
