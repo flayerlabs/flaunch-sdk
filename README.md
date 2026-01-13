@@ -146,7 +146,7 @@ _**Flaunches below $10k market caps don't incur any protocol fees!**_
 const hash = await flaunchWrite.flaunchIPFS({
   name: "Test",
   symbol: "TEST",
-  fairLaunchPercent: 60, // 60%
+  fairLaunchPercent: 0, // 0%
   fairLaunchDuration: 30 * 60, // 30 mins
   initialMarketCapUSD: 10_000, // $10k
   creator: address,
@@ -224,7 +224,7 @@ await flaunchWrite.flaunchIPFSWithSplitManager({
   metadata: {
     base64Image: "...",
   },
-  fairLaunchPercent: 40,
+  fairLaunchPercent: 0,
   fairLaunchDuration: 30 * 60, // 30 mins
   initialMarketCapUSD: 1_000,
   creator: "0x...",
@@ -449,7 +449,7 @@ await flaunchWrite.flaunchIPFSWithRevenueManager({
   metadata: {
     base64Image: "...",
   },
-  fairLaunchPercent: 40,
+  fairLaunchPercent: 0,
   fairLaunchDuration: 30 * 60, // 30 mins
   initialMarketCapUSD: 1_000,
   creator: "0x...",

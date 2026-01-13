@@ -146,7 +146,7 @@ _**Flaunches below $10k market caps don't incur any protocol fees!**_
 const hash = await flaunchWrite.flaunchIPFS({
   name: "Test",
   symbol: "TEST",
-  fairLaunchPercent: 60, // 60%
+  fairLaunchPercent: 0, // 0%
   fairLaunchDuration: 30 * 60, // 30 mins
   initialMarketCapUSD: 10_000, // $10k
   creator: address,
@@ -224,7 +224,7 @@ await flaunchWrite.flaunchIPFSWithSplitManager({
   metadata: {
     base64Image: "...",
   },
-  fairLaunchPercent: 40,
+  fairLaunchPercent: 0,
   fairLaunchDuration: 30 * 60, // 30 mins
   initialMarketCapUSD: 1_000,
   creator: "0x...",
@@ -449,7 +449,7 @@ await flaunchWrite.flaunchIPFSWithRevenueManager({
   metadata: {
     base64Image: "...",
   },
-  fairLaunchPercent: 40,
+  fairLaunchPercent: 0,
   fairLaunchDuration: 30 * 60, // 30 mins
   initialMarketCapUSD: 1_000,
   creator: "0x...",
@@ -1053,7 +1053,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.13 / Exports / FlaunchBackend
+@flaunch/sdk - v0.9.15 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1152,7 +1152,7 @@ Returns
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.15 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -2780,7 +2780,7 @@ Subscription to pool swap events
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.15 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -5795,7 +5795,7 @@ Transaction response
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.15 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -5838,7 +5838,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / LiquidityMode
+@flaunch/sdk - v0.9.15 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -5865,7 +5865,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / Permissions
+@flaunch/sdk - v0.9.15 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -5901,7 +5901,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / Verifier
+@flaunch/sdk - v0.9.15 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -5958,7 +5958,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / Addresses
+@flaunch/sdk - v0.9.15 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -5969,7 +5969,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / BuySwapData
+@flaunch/sdk - v0.9.15 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -6004,7 +6004,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / CallData
+@flaunch/sdk - v0.9.15 / Exports / CallData
 
 # Interface: CallData
 
@@ -6038,7 +6038,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.15 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -6107,7 +6107,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / IPFSParams
+@flaunch/sdk - v0.9.15 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -6145,7 +6145,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / PinataConfig
+@flaunch/sdk - v0.9.15 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -6165,7 +6165,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / PoolKey
+@flaunch/sdk - v0.9.15 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -6219,7 +6219,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / PoolWithHookData
+@flaunch/sdk - v0.9.15 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -6300,7 +6300,7 @@ PoolKey.tickSpacing
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / SellSwapData
+@flaunch/sdk - v0.9.15 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -6335,7 +6335,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.9.15 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -6369,7 +6369,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / SwapFees
+@flaunch/sdk - v0.9.15 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -6396,7 +6396,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.15 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -6493,9 +6493,9 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.13 / Exports
+@flaunch/sdk - v0.9.15 / Exports
 
-# @flaunch/sdk - v0.9.13
+# @flaunch/sdk - v0.9.15
 
 ## Table of contents
 

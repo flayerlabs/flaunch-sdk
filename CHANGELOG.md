@@ -2,6 +2,12 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.16] - 2026-01-13
+
+### Deprecated
+
+- `fairLaunchPercent` param in flaunch calls, passing non-zero values will result in error.
+
 ## [0.9.15] - 2025-12-12
 
 ### Updated
