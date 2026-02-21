@@ -2,6 +2,23 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Updated SDK contract address mappings to match the latest deployment artifacts:
+  - `FlaunchZapAddress` (Base and Base Sepolia)
+  - `ReferralEscrowAddress` (Base)
+  - `FLETHHooksAddress` (Base Sepolia)
+
+### Added
+
+- **Buyback handler support**
+  - New doc `docs/BUYBACK_HANDLER_SUPPORT.md` answering common questions when `buybackAndBurn` reverts (prerequisites, how to check token/pool readiness, known causes).
+  - `ReadFlaunchSDK.getBuybackPoolKey(coinAddress, version?)` – returns the Flaunch pool key (token/FLETH) used for buyback; same key as `buyBackPoolKey` when deploying a BuyBack manager for that token.
+  - `ReadFlaunchSDK.getBuybackPoolReadiness(coinAddress, version?)` – returns `{ poolId, initialized, liquidity }` for the token’s Flaunch pool so integrators can check if the pool is ready before calling a buyback handler.
+  - `ReadStateView.poolLiquidity({ poolId })` – returns total liquidity in a pool (for use in buyback readiness checks).
+
 ## [0.9.16] - 2026-01-13
 
 ### Deprecated
