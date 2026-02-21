@@ -3,8 +3,8 @@ import { Addresses, PoolKey } from "./types";
 import { zeroAddress } from "viem";
 
 export const FlaunchZapAddress: Addresses = {
-  [base.id]: "0xe52dE1801C10cF709cc8e62d43D783AFe984b510",
-  [baseSepolia.id]: "0xf0Fd8Bb98c050607d999D6fFF9C617edD6673b75",
+  [base.id]: "0xa9bd947751c6a6d33ccd0ef4a03c48466f24c172",
+  [baseSepolia.id]: "0x25b747aeca2612b9804b5c3bb272a3daefdc6eaa",
 };
 
 // only old V1.0: doesn't use FeeEscrow
@@ -156,7 +156,7 @@ export const FeeEscrowAddress: Addresses = {
 };
 
 export const ReferralEscrowAddress: Addresses = {
-  [base.id]: "0xBD39c7Be6D98BD1a3e4Ad482baF99d738947fE55",
+  [base.id]: "0xd381f8ea57df43c57cfe6e5b19a0a4700396f28c",
   [baseSepolia.id]: "0xd3d9047CaBE3346C70b510435866565176e8CE12",
 };
 
@@ -167,7 +167,7 @@ export const FLETHAddress: Addresses = {
 
 export const FLETHHooksAddress: Addresses = {
   [base.id]: "0x9E433F32bb5481a9CA7DFF5b3af74A7ed041a888",
-  [baseSepolia.id]: "0x4bd2ca15286c96e4e731337de8b375da6841e888",
+  [baseSepolia.id]: "0x009941e51253244349c6034761382b01f06dBA99",
 };
 
 // @deprecated: FlaunchZap used instead
