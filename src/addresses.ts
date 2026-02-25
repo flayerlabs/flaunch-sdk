@@ -167,7 +167,7 @@ export const FLETHAddress: Addresses = {
 
 export const FLETHHooksAddress: Addresses = {
   [base.id]: "0x9E433F32bb5481a9CA7DFF5b3af74A7ed041a888",
-  [baseSepolia.id]: "0x009941e51253244349c6034761382b01f06dBA99",
+  [baseSepolia.id]: "0x4bd2ca15286c96e4e731337de8b375da6841e888",
 };
 
 // @deprecated: FlaunchZap used instead
