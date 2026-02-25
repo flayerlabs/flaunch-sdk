@@ -3,7 +3,7 @@ import { Addresses, PoolKey } from "./types";
 import { zeroAddress } from "viem";
 
 export const FlaunchZapAddress: Addresses = {
-  [base.id]: "0xa9bd947751c6a6d33ccd0ef4a03c48466f24c172",
+  [base.id]: "0x39112541720078c70164EA4Deb61F0A4811910F9",
   [baseSepolia.id]: "0x25b747aeca2612b9804b5c3bb272a3daefdc6eaa",
 };
 
