@@ -720,9 +720,10 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Polls for current pool creation events
+   * Triggers an immediate pool creation poll cycle for an active watcher
    * @param version - Version of Flaunch to use (defaults to V1_1)
-   * @returns Current pool creation events or undefined if polling is not available
+   * @returns Promise<void> from the active watcher poll function, or undefined if no watcher poll function is registered
+   * @dev Results are delivered through the callback passed to `watchPoolCreated`, not as a return value
    */
   pollPoolCreatedNow(version: FlaunchVersion = FlaunchVersion.V1_1) {
     const positionManager =
@@ -816,9 +817,10 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Polls for current pool swap events
+   * Triggers an immediate pool swap poll cycle for an active watcher
    * @param version - Version of Flaunch to use (defaults to V1_1)
-   * @returns Current pool swap events or undefined if polling is not available
+   * @returns Promise<void> from the active watcher poll function, or undefined if no watcher poll function is registered
+   * @dev Results are delivered through the callback passed to `watchPoolSwap`, not as a return value
    */
   pollPoolSwapNow(version: FlaunchVersion = FlaunchVersion.V1_1) {
     const positionManager =
