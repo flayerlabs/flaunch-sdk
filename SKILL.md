@@ -9,8 +9,8 @@ Use this skill when the user needs to build, debug, or review app code using `@f
 
 ## Staying Current
 
-- Treat [llms-full.txt](https://github.com/flayerlabs/flaunch-sdk/blob/master/llms-full.txt) as the canonical extended SDK reference when available.
-- Use the [README](https://github.com/flayerlabs/flaunch-sdk/blob/master/README.md) for integration examples and common recipes.
+- Treat [llms-full.txt](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/llms-full.txt) as the canonical extended SDK reference when available.
+- Use the [README](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/README.md) for integration examples and common recipes.
 - If method names or signatures are unclear, check [src](https://github.com/flayerlabs/flaunch-sdk/tree/master/src).
 
 ## Embedded SDK Essentials (Standalone Use)
@@ -31,8 +31,8 @@ This section captures the minimum `llms-full.txt` context needed for most builde
 
 ### Supported chains
 
-- Base Mainnet (`base`)
-- Base Sepolia (`baseSepolia`)
+- Base Mainnet (`base`) `8453`
+- Base Sepolia (`baseSepolia`) `84532`
 
 Always confirm chain before reads/writes. Many integration failures are chain mismatches.
 
@@ -98,6 +98,42 @@ This skill is for SDK integration work, not product-specific ops runbooks.
 - In scope: app integration patterns, SDK method selection, quote/tx/event flows, Permit2 and liquidity workflows.
 - Out of scope by default: org-specific API backends, Discord/Twitter automations, private infra, and hardcoded manager addresses unless user explicitly asks.
 
+## Task Router (Intent -> Workflow -> Inputs -> Methods)
+
+Use this before reading the full workflow sections.
+
+| User intent | Workflow | Minimum inputs | Primary methods |
+|---|---|---|---|
+| Read coin metadata / info | `setup-read` | `chain`, `publicClient`, `coinAddress` | `createFlaunch`, `getCoinMetadata`, `getCoinInfo` |
+| Launch a creator coin | `setup-write` + `launch` | `chain`, `publicClient`, `walletClient`, launch params, metadata | `flaunchIPFS`, `getPoolCreatedFromTx` |
+| Buy a coin | `setup-write` + `trade-buy-sell` | `chain`, clients, `coinAddress`, amount, slippage | `getBuyQuoteExactInput/Output`, `buyCoin`, `parseSwapTx` |
+| Sell a coin | `setup-write` + `trade-buy-sell` | `chain`, clients, `coinAddress`, `amountIn`, slippage | `getSellQuoteExactInput`, `sellCoin`, `parseSwapTx` |
+| Sell with Permit2 | `setup-write` + `permit2-sell` | above + permit signature data | `getPermit2TypedData`, `getPermit2AllowanceAndNonce`, `sellCoin` |
+| Add liquidity | `setup-write` + `liquidity` | `chain`, clients, `coinAddress`, liquidity params | `calculateAddLiquidity*`, `getAddLiquidityCalls` |
+| Import token to flaunch | `setup-write` + `import` | `chain`, clients, `coinAddress`, import params | `tokenImporterVerifyMemecoin`, `isMemecoinImported`, `importMemecoin` |
+| Import + add liquidity batch | `setup-write` + `import` + `liquidity` | above + liquidity params | `getImportAndAddLiquidityCalls` |
+| Watch launch/swap events | `events` | `chain`, active SDK instance, callback | `watchPoolCreated`, `watchPoolSwap`, `pollPool*Now` |
+| Build calldata only | `calldata-mode` | `chain`, call params | `createFlaunchCalldata`, call-build helpers |
+| Debug failing integration | `troubleshoot` | failing call, chain, params, tx hash if any | `isValidCoin`, `getCoinVersion`, parsing + quote helpers |
+
+## Do / Don't (LLM Safety)
+
+Do:
+
+- Use exact current field names from SDK types (`coinAddress`, `slippagePercent`, `swapType`)
+- Quote before write for trade/liquidity flows
+- Confirm chain and client setup before write examples
+- Return parsed outcomes (`memecoin`, `tokenId`, parsed swap logs) not just `txHash`
+- Mark assumptions when placeholders are used
+
+Don't:
+
+- Use shorthand placeholders that look like real params (`coin` instead of `coinAddress`)
+- Call `parseSwapTx(txHash)` directly (use object form)
+- Treat `pollPool*Now` as data-returning methods
+- Omit slippage/deadline/approval discussion in write flows
+- Assume Base when the user has not specified chain
+
 ## Workflow Selection
 
 Pick the smallest workflow that satisfies the user request:
@@ -123,6 +159,21 @@ Pick the smallest workflow that satisfies the user request:
 - Parse receipts/logs after writes to confirm outcomes; do not assume success from tx submission alone.
 - Prefer calldata-returning methods when users need transaction building without immediate broadcast.
 - When giving examples, prefer exact current SDK field names (for example `coinAddress`, `slippagePercent`, `swapType`) over shorthand placeholders.
+
+## Minimum Required Inputs Matrix
+
+| Workflow | `chain` | `publicClient` | `walletClient` | `coinAddress` | Slippage | Version | Approval / Permit |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `setup-read` | Yes | Yes | No | Optional | No | Optional | No |
+| `setup-write` | Yes | Yes | Yes | No | No | No | No |
+| `launch` | Yes | Yes | Yes | No | Optional | Optional | No |
+| `trade-buy-sell` (buy) | Yes | Yes | Yes | Yes | Yes | Optional | Sometimes |
+| `trade-buy-sell` (sell) | Yes | Yes | Yes | Yes | Yes | Optional | Yes (Permit2 path) |
+| `permit2-sell` | Yes | Yes | Yes | Yes | Yes | Optional | Yes |
+| `liquidity` | Yes | Yes | Yes | Yes | Recommended | Optional | Usually |
+| `import` | Yes | Yes | Yes | Yes | No | Optional | No |
+| `events` | Yes | Usually | No | Optional | No | Often | No |
+| `calldata-mode` | Yes | Optional | No | Depends | Depends | Optional | Depends |
 
 ## Quick Start Paths (Builder-Focused)
 
@@ -277,7 +328,33 @@ Use this as a fast routing table before searching docs.
 
 Use these when the user asks for a concrete starting point. These examples are aligned to current public method names/argument shapes in `src/sdk/FlaunchSDK.ts`.
 
+Confidence labels:
+
+- `Verified Recipe`: argument names and method shapes checked against current SDK source
+- `Outline`: flow is correct, but params may need adaptation to the user’s exact version/setup
+
+## Signature Index (Most Used)
+
+Use this compact index before diving into examples.
+
+- `buyCoin(params: BuyCoinParams, version?: FlaunchVersion)`
+- `sellCoin(params: SellCoinParams, version?: FlaunchVersion)`
+- `getBuyQuoteExactInput({ coinAddress, amountIn, version?, intermediatePoolKey?, hookData?, userWallet? })`
+- `getBuyQuoteExactOutput({ coinAddress, amountOut, version?, intermediatePoolKey?, hookData?, userWallet? })`
+- `getSellQuoteExactInput({ coinAddress, amountIn, version?, intermediatePoolKey? })`
+- `parseSwapTx({ txHash, version, flETHIsCurrencyZero? })`
+- `getPermit2TypedData(coinAddress, deadline?) -> { typedData, permitSingle }`
+- `getPermit2AllowanceAndNonce(coinAddress) -> { allowance, nonce }`
+- `setERC20AllowanceToPermit2(coinAddress, amount)`
+- `importMemecoin({ coinAddress, creatorFeeAllocationPercent, initialMarketCapUSD | initialPriceUSD, verifier? })`
+- `getAddLiquidityCalls(params: GetAddLiquidityCallsParams) -> CallWithDescription[]`
+- `getImportAndAddLiquidityCalls(params: ImportAndAddLiquidity*) -> CallWithDescription[]`
+- `watchPoolSwap(params, version?) -> { cleanup, pollPoolSwapNow }`
+- `pollPoolSwapNow(version?) -> Promise<void> | undefined` (triggers callbacks)
+
 ### 1) `buyCoin` (EXACT_IN) + quote + parse
+
+Label: `Verified Recipe`
 
 ```ts
 import { createFlaunch } from '@flaunch/sdk'
@@ -308,6 +385,8 @@ console.log({ quoteOut, txHash, parsed })
 ```
 
 ### 2) `sellCoin` with Permit2 (`getPermit2TypedData` + `permitSingle`)
+
+Label: `Verified Recipe`
 
 ```ts
 import { maxUint256 } from 'viem'
@@ -350,6 +429,8 @@ console.log({ quoteOut, txHash, parsed })
 
 ### 3) `getAddLiquidityCalls` (market cap constrained)
 
+Label: `Verified Recipe`
+
 ```ts
 import { LiquidityMode } from '@flaunch/sdk'
 import { parseEther } from 'viem'
@@ -372,6 +453,8 @@ console.log(calls) // array of { to, data, value?, description? }
 ```
 
 ### 4) `importMemecoin` (direct write)
+
+Label: `Verified Recipe`
 
 ```ts
 import { Verifier } from '@flaunch/sdk'
@@ -396,6 +479,8 @@ if (!isImported) {
 ```
 
 ### 5) `getImportAndAddLiquidityCalls` (batch call builder)
+
+Label: `Verified Recipe`
 
 ```ts
 import { LiquidityMode, Verifier } from '@flaunch/sdk'
@@ -897,6 +982,21 @@ When using this skill, prefer responses that include:
 3. One verification step (read or parsed receipt/event).
 4. One common failure mode and mitigation.
 
+## Return Values To Report (By Workflow)
+
+When returning results to builders, include these fields when available.
+
+- `setup-read`: `chain`, method called, returned shape/sample fields
+- `setup-write`: `chain`, signer address, confirmation that read-write SDK instance was created
+- `launch`: `txHash`, `memecoin`, `tokenId`, `poolId` (if parsed), `chain`
+- `trade-buy-sell`: `txHash`, quote result, parsed swap summary (`type`, amounts/fees), `chain`
+- `permit2-sell`: `allowance/nonce` check summary, permit generated (`yes/no`), `txHash`, parsed swap summary
+- `liquidity`: computed ticks/amounts summary, number of calls generated, any approvals required
+- `import`: import status (`already imported` vs `imported now`), `txHash` if write executed, batch call count if built
+- `events`: subscription status, callback shape, whether immediate poll trigger is available
+- `calldata-mode`: `to`, `data`, `value`, intended chain, expected executor/signer
+- `troubleshoot`: root cause hypothesis, failing precondition, minimal fix
+
 If the user is building from scratch, prefer this order:
 
 1. `setup-read`
@@ -914,13 +1014,39 @@ If the user is building from scratch, prefer this order:
 - Treating `llms-full.txt` as runtime logic instead of reference material.
 - Returning code without required inputs (chain, addresses, slippage, deadlines, approvals).
 
+## When To Ask The User (Instead Of Assuming)
+
+Ask before proceeding when any of these are missing or ambiguous in a write or money-sensitive flow:
+
+- Chain (`base` vs `baseSepolia`)
+- `coinAddress` or target token identity
+- Whether they want read-only code, write code, or calldata only
+- Trade side and amount semantics (exact input vs exact output)
+- Slippage tolerance (or permission to use a default)
+- Whether Permit2 should be used
+- Whether examples should target frontend (React/Wagmi) or backend scripts
+- Whether they want direct tx broadcast or batched call objects
+
+Reasonable defaults are acceptable for low-risk read examples, but state them explicitly.
+
+## Versioning Note
+
+This skill includes a mix of:
+
+- `Verified Recipe` sections checked against current SDK source on this branch
+- `Outline` sections that describe correct flow but may need parameter adaptation
+
+Revalidate against `src/sdk/FlaunchSDK.ts` and `src/types.ts` if the SDK version changes.
+
 ## Reference Map
 
 Use these files as needed; do not duplicate large sections into responses.
 
 - SDK repository: [flaunch-sdk](https://github.com/flayerlabs/flaunch-sdk)
-- Full SDK reference: [llms-full.txt](https://github.com/flayerlabs/flaunch-sdk/blob/master/llms-full.txt)
-- Integration guide: [README.md](https://github.com/flayerlabs/flaunch-sdk/blob/master/README.md)
-- Package metadata/scripts: [package.json](https://github.com/flayerlabs/flaunch-sdk/blob/master/package.json)
+- Full SDK reference: [llms-full.txt](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/llms-full.txt)
+- Integration guide: [README.md](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/README.md)
+- Package metadata/scripts: [package.json](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/package.json)
 - Source of truth for SDK method implementations: [src](https://github.com/flayerlabs/flaunch-sdk/tree/master/src)
+- Raw `FlaunchSDK.ts` (method signatures / docs): [src/sdk/FlaunchSDK.ts](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/src/sdk/FlaunchSDK.ts)
+- Raw `types.ts` (exported SDK types): [src/types.ts](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/src/types.ts)
 - Protocol contracts repository: [flaunchgg-contracts](https://github.com/flayerlabs/flaunchgg-contracts)
