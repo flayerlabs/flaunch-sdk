@@ -2,7 +2,7 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
-## [Unreleased]
+## [0.9.17] - 2026-03-13
 
 ### Added
 
