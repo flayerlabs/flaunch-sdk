@@ -16,9 +16,7 @@ All notable changes to the @flaunch/sdk package will be documented in this file.
 
 ### Changed
 
-- Updated SDK contract address mappings to match the latest deployment artifacts:
-  - `FlaunchZapAddress` (Base and Base Sepolia)
-  - `ReferralEscrowAddress` (Base)
+- Updated SDK contract address mapping to match the latest deployment artifacts:
   - `DynamicAddressFeeSplitManagerAddress` (Base mainnet)
 
 ## [0.9.16] - 2026-01-13
