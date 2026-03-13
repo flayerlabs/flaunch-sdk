@@ -9,7 +9,7 @@ import {
   createDrift,
 } from "@delvtech/drift";
 import { FlaunchZapAbi } from "../abi/FlaunchZap";
-import { parseUnits, zeroAddress, zeroHash } from "viem";
+import { parseUnits, zeroAddress, zeroHash, getAddress } from "viem";
 import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
 import { getPermissionsAddress } from "../helpers/permissions";
@@ -580,7 +580,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
       );
     }
 
-    const duplicateRecipients = new Set<Address>();
+    const duplicateRecipients = new Set<string>();
     const recipientShares = params.splitReceivers.map((receiver) => {
       if (receiver.address === zeroAddress) {
         throw new Error("Recipient address cannot be zero address");
@@ -590,13 +590,15 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
         throw new Error("Recipient share must be greater than zero");
       }
 
-      if (duplicateRecipients.has(receiver.address)) {
+      const normalizedAddress = getAddress(receiver.address);
+
+      if (duplicateRecipients.has(normalizedAddress)) {
         throw new Error("Duplicate recipient found in split receivers");
       }
 
-      duplicateRecipients.add(receiver.address);
+      duplicateRecipients.add(normalizedAddress);
       return {
-        recipient: receiver.address,
+        recipient: normalizedAddress,
         share: receiver.share,
       };
     });
