@@ -12,6 +12,7 @@ All notable changes to the @flaunch/sdk package will be documented in this file.
   - Added `ReadDynamicAddressFeeSplitManager` and `ReadWriteDynamicAddressFeeSplitManager` clients.
   - Added `flaunchWithDynamicSplitManager` and `flaunchIPFSWithDynamicSplitManager` flows.
   - Added dynamic split manager exports and usage docs.
+  - Added validation that `creatorShare + managerOwnerShare` must be less than or equal to `100_00000` (`VALID_SHARE_TOTAL`), while recipient shares remain dynamic.
 
 ### Changed
 

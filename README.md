@@ -248,6 +248,7 @@ await flaunchWrite.flaunchIPFSWithSplitManager({
 
 Use the dynamic split manager when recipient weights need to be updated after deployment.
 Unlike the static split manager, recipient shares are mutable and do not need to be modeled as a fixed 100% distribution in SDK inputs.
+`creatorShare + managerOwnerShare` must be less than or equal to `100_00000` (`VALID_SHARE_TOTAL`).
 
 ```ts
 await flaunchWrite.flaunchIPFSWithDynamicSplitManager({
@@ -262,8 +263,8 @@ await flaunchWrite.flaunchIPFSWithDynamicSplitManager({
   creator: "0x...",
   creatorFeeAllocationPercent: 100,
   // Dynamic split manager params (raw share weights)
-  creatorShare: 5_000_000n,
-  managerOwnerShare: 2_000_000n,
+  creatorShare: 10_00000n,  // 10%
+  managerOwnerShare: 20_00000n,  // 20%
   moderator: "0xmoderator...",
   splitReceivers: [
     { address: "0x123...", share: 2_000_000n },

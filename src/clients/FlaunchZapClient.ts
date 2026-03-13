@@ -564,8 +564,20 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
   async flaunchWithDynamicSplitManager(
     params: FlaunchWithDynamicSplitManagerParams
   ) {
+    const VALID_SHARE_TOTAL = 100_00000n;
+
     if (params.moderator === zeroAddress) {
       throw new Error("Dynamic split moderator cannot be zero address");
+    }
+
+    if (params.creatorShare < 0n || params.managerOwnerShare < 0n) {
+      throw new Error("Creator and manager owner shares cannot be negative");
+    }
+
+    if (params.creatorShare + params.managerOwnerShare > VALID_SHARE_TOTAL) {
+      throw new Error(
+        "Creator and manager owner shares must be less than or equal to 100_00000"
+      );
     }
 
     const duplicateRecipients = new Set<Address>();
