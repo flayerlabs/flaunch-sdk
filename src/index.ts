@@ -15,6 +15,18 @@ export type {
   PoolCreatedLogs,
   PoolSwapLog,
 } from "./clients/FlaunchPositionManagerClient";
+export {
+  ReadDynamicAddressFeeSplitManager,
+  ReadWriteDynamicAddressFeeSplitManager,
+} from "./clients/DynamicAddressFeeSplitManagerClient";
+export type {
+  DynamicRecipientInfo,
+  RecipientShare,
+} from "./clients/DynamicAddressFeeSplitManagerClient";
+export type {
+  FlaunchWithDynamicSplitManagerParams,
+  FlaunchWithDynamicSplitManagerIPFSParams,
+} from "./clients/FlaunchZapClient";
 
 export { ReadFlaunchSDK, ReadWriteFlaunchSDK };
 export { createFlaunch } from "./sdk/factory";

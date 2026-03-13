@@ -9,7 +9,7 @@ import {
   createDrift,
 } from "@delvtech/drift";
 import { FlaunchZapAbi } from "../abi/FlaunchZap";
-import { parseUnits, zeroAddress, zeroHash } from "viem";
+import { parseUnits, zeroAddress, zeroHash, getAddress } from "viem";
 import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
 import { getPermissionsAddress } from "../helpers/permissions";
@@ -18,12 +18,11 @@ import {
   BuyBackManagerAddress,
   RevenueManagerAddress,
   StakingManagerAddress,
-} from "addresses";
-import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
-import {
   AddressFeeSplitManagerAddress,
+  DynamicAddressFeeSplitManagerAddress,
   FlaunchPositionManagerV1_1Address,
 } from "addresses";
+import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
 import { getAmountWithSlippage } from "utils/universalRouter";
 import { ReadInitialPrice } from "./InitialPriceClient";
 import { orderPoolKey } from "utils";
@@ -95,6 +94,24 @@ export interface FlaunchWithSplitManagerParams
 
 export interface FlaunchWithSplitManagerIPFSParams
   extends Omit<FlaunchWithSplitManagerParams, "tokenUri">,
+    IPFSParams {}
+
+export interface FlaunchWithDynamicSplitManagerParams
+  extends Omit<FlaunchParams, "treasuryManagerParams"> {
+  creatorShare: bigint;
+  managerOwnerShare: bigint;
+  moderator: Address;
+  splitReceivers: {
+    address: Address;
+    share: bigint;
+  }[];
+  treasuryManagerParams?: {
+    permissions?: Permissions;
+  };
+}
+
+export interface FlaunchWithDynamicSplitManagerIPFSParams
+  extends Omit<FlaunchWithDynamicSplitManagerParams, "tokenUri">,
     IPFSParams {}
 
 export interface DeployRevenueManagerParams {
@@ -531,6 +548,115 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
     });
 
     return this.flaunchWithSplitManager({
+      ...params,
+      tokenUri,
+    });
+  }
+
+  /**
+   * Flaunches a new token with the Dynamic Address Fee Split manager.
+   * Unlike static splits, recipient shares are mutable post-deployment.
+   * @param params - Parameters for the flaunch with dynamic split manager
+   * @returns Transaction response for the flaunch creation
+   */
+  async flaunchWithDynamicSplitManager(
+    params: FlaunchWithDynamicSplitManagerParams
+  ) {
+    const VALID_SHARE_TOTAL = 100_00000n;
+
+    if (params.moderator === zeroAddress) {
+      throw new Error("Dynamic split moderator cannot be zero address");
+    }
+
+    if (params.creatorShare < 0n || params.managerOwnerShare < 0n) {
+      throw new Error("Creator and manager owner shares cannot be negative");
+    }
+
+    if (params.creatorShare + params.managerOwnerShare > VALID_SHARE_TOTAL) {
+      throw new Error(
+        "Creator and manager owner shares must be less than or equal to 100_00000"
+      );
+    }
+
+    const duplicateRecipients = new Set<string>();
+    const recipientShares = params.splitReceivers.map((receiver) => {
+      if (receiver.address === zeroAddress) {
+        throw new Error("Recipient address cannot be zero address");
+      }
+
+      if (receiver.share <= 0n) {
+        throw new Error("Recipient share must be greater than zero");
+      }
+
+      const normalizedAddress = getAddress(receiver.address);
+
+      if (duplicateRecipients.has(normalizedAddress)) {
+        throw new Error("Duplicate recipient found in split receivers");
+      }
+
+      duplicateRecipients.add(normalizedAddress);
+      return {
+        recipient: normalizedAddress,
+        share: receiver.share,
+      };
+    });
+
+    const initializeData = encodeAbiParameters(
+      [
+        {
+          type: "tuple",
+          name: "params",
+          components: [
+            { type: "uint256", name: "creatorShare" },
+            { type: "uint256", name: "ownerShare" },
+            { type: "address", name: "moderator" },
+            {
+              type: "tuple[]",
+              name: "recipientShares",
+              components: [
+                { type: "address", name: "recipient" },
+                { type: "uint256", name: "share" },
+              ],
+            },
+          ],
+        },
+      ],
+      [
+        {
+          creatorShare: params.creatorShare,
+          ownerShare: params.managerOwnerShare,
+          moderator: params.moderator,
+          recipientShares,
+        },
+      ]
+    );
+
+    return this.flaunch({
+      ...params,
+      treasuryManagerParams: {
+        manager: DynamicAddressFeeSplitManagerAddress[this.chainId],
+        permissions:
+          params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+        initializeData,
+        depositData: "0x",
+      },
+    });
+  }
+
+  /**
+   * Flaunches a new token with dynamic split manager and stores metadata on IPFS.
+   * @param params - Parameters for dynamic split manager flow including IPFS metadata
+   * @returns Transaction response for the flaunch creation
+   */
+  async flaunchIPFSWithDynamicSplitManager(
+    params: FlaunchWithDynamicSplitManagerIPFSParams
+  ) {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
+      metadata: params.metadata,
+      pinataConfig: params.pinataConfig,
+    });
+
+    return this.flaunchWithDynamicSplitManager({
       ...params,
       tokenUri,
     });

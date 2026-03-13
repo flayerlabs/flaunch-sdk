@@ -1,6 +1,7 @@
 export * from "./AnyPositionManager";
 export * from "./BidWall";
 export * from "./BidWallV1_1";
+export * from "./DynamicAddressFeeSplitManager";
 export * from "./FairLaunch";
 export * from "./FairLaunchV1_1";
 export * from "./FastFlaunchZap";

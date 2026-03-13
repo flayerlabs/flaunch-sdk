@@ -244,6 +244,52 @@ await flaunchWrite.flaunchIPFSWithSplitManager({
 });
 ```
 
+### Flaunch with Dynamic Address Fee Splits
+
+Use the dynamic split manager when recipient weights need to be updated after deployment.
+Unlike the static split manager, recipient shares are mutable and do not need to be modeled as a fixed 100% distribution in SDK inputs.
+
+```ts
+await flaunchWrite.flaunchIPFSWithDynamicSplitManager({
+  name: "...",
+  symbol: "...",
+  metadata: {
+    base64Image: "...",
+  },
+  fairLaunchPercent: 0,
+  fairLaunchDuration: 30 * 60, // 30 mins
+  initialMarketCapUSD: 1_000,
+  creator: "0x...",
+  creatorFeeAllocationPercent: 100,
+  // Dynamic split manager params (raw share weights)
+  creatorShare: 5_000_000n,
+  managerOwnerShare: 2_000_000n,
+  moderator: "0xmoderator...",
+  splitReceivers: [
+    { address: "0x123...", share: 2_000_000n },
+    { address: "0xabc...", share: 1_000_000n },
+  ],
+});
+```
+
+You can update recipient distribution after deployment:
+
+```ts
+import { ReadWriteDynamicAddressFeeSplitManager } from "@flaunch/sdk";
+
+const manager = new ReadWriteDynamicAddressFeeSplitManager(
+  "0xmanagerAddress...",
+  flaunchWrite.drift
+);
+
+// share = 0 removes recipient; non-zero adds/updates recipient share
+await manager.updateRecipients([
+  { recipient: "0x123...", share: 1_500_000n },
+  { recipient: "0xdef...", share: 500_000n },
+  { recipient: "0xabc...", share: 0n },
+]);
+```
+
 ### Buying a Flaunch coin
 
 ```ts
@@ -1053,7 +1099,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.15 / Exports / FlaunchBackend
+@flaunch/sdk - v0.9.16 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1093,17 +1139,23 @@ Returns
 
 `FlaunchBackend`
 
+src/sdk/FlaunchBackend.ts:27
+
 ## Properties
 
 ### chainId
 
 • `Readonly` **chainId**: `number`
 
+src/sdk/FlaunchBackend.ts:25
+
 ___
 
 ### signerPrivateKey
 
 • **signerPrivateKey**: \`0x$\{string}\`
+
+src/sdk/FlaunchBackend.ts:24
 
 ## Methods
 
@@ -1130,6 +1182,8 @@ Returns
 
 The hookData, deadline and signature
 
+src/sdk/FlaunchBackend.ts:42
+
 ___
 
 ### getPositionManagerAddress
@@ -1148,11 +1202,323 @@ Returns
 
 \`0x$\{string}\`
 
+src/sdk/FlaunchBackend.ts:118
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.16 / Exports / ReadDynamicAddressFeeSplitManager
+
+# Class: ReadDynamicAddressFeeSplitManager
+
+## Hierarchy
+
+- **`ReadDynamicAddressFeeSplitManager`**
+
+  ↳ `ReadWriteDynamicAddressFeeSplitManager`
+
+## Table of contents
+
+### Constructors
+
+- constructor
+
+### Properties
+
+- contract
+
+### Methods
+
+- accumulatorPerShare
+- allRecipients
+- balances
+- claimableOwnerFees
+- creatorShare
+- lastProcessedManagerFees
+- managerOwner
+- moderator
+- ownerShare
+- pendingCreatorFees
+- pendingOwnerFees
+- permissions
+- recipientAt
+- recipientCount
+- recipientShare
+- recipients
+- totalActiveShares
+
+## Constructors
+
+### constructor
+
+• **new ReadDynamicAddressFeeSplitManager**(`address`, `drift?`): `ReadDynamicAddressFeeSplitManager`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `address` | \`0x$\{string}\` |
+| `drift` | `Drift` |
+
+Returns
+
+`ReadDynamicAddressFeeSplitManager`
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:31
+
+## Properties
+
+### contract
+
+• `Readonly` **contract**: `ReadContract`\<readonly [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}], `ReadAdapter`, `Store`, `Client`\<`ReadAdapter`, `Store`, {}\>\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:29
+
+## Methods
+
+### accumulatorPerShare
+
+▸ **accumulatorPerShare**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:66
+
+___
+
+### allRecipients
+
+▸ **allRecipients**(`includeInactive?`): `Promise`\<\`0x$\{string}\`[]\>
+
+Parameters
+
+| Name | Type | Default value |
+| :------ | :------ | :------ |
+| `includeInactive` | `boolean` | `false` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`[]\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:117
+
+___
+
+### balances
+
+▸ **balances**(`recipient`): `Promise`\<`bigint`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `recipient` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:90
+
+___
+
+### claimableOwnerFees
+
+▸ **claimableOwnerFees**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:113
+
+___
+
+### creatorShare
+
+▸ **creatorShare**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:54
+
+___
+
+### lastProcessedManagerFees
+
+▸ **lastProcessedManagerFees**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:70
+
+___
+
+### managerOwner
+
+▸ **managerOwner**(): `Promise`\<\`0x$\{string}\`\>
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:46
+
+___
+
+### moderator
+
+▸ **moderator**(): `Promise`\<\`0x$\{string}\`\>
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:50
+
+___
+
+### ownerShare
+
+▸ **ownerShare**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:58
+
+___
+
+### pendingCreatorFees
+
+▸ **pendingCreatorFees**(`recipient`): `Promise`\<`bigint`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `recipient` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:103
+
+___
+
+### pendingOwnerFees
+
+▸ **pendingOwnerFees**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:109
+
+___
+
+### permissions
+
+▸ **permissions**(): `Promise`\<\`0x$\{string}\`\>
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:42
+
+___
+
+### recipientAt
+
+▸ **recipientAt**(`index`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `index` | `bigint` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:78
+
+___
+
+### recipientCount
+
+▸ **recipientCount**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:74
+
+___
+
+### recipientShare
+
+▸ **recipientShare**(`recipient`, `data?`): `Promise`\<`bigint`\>
+
+Parameters
+
+| Name | Type | Default value |
+| :------ | :------ | :------ |
+| `recipient` | \`0x$\{string}\` | `undefined` |
+| `data` | \`0x$\{string}\` | `"0x"` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:96
+
+___
+
+### recipients
+
+▸ **recipients**(`recipient`): `Promise`\<`DynamicRecipientInfo`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `recipient` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`DynamicRecipientInfo`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:84
+
+___
+
+### totalActiveShares
+
+▸ **totalActiveShares**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:62
+
+
+---
+
+@flaunch/sdk - v0.9.16 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -1284,11 +1650,15 @@ Returns
 
 `ReadFlaunchSDK`
 
+src/sdk/FlaunchSDK.ts:297
+
 ## Properties
 
 ### TICK\_SPACING
 
 • `Readonly` **TICK\_SPACING**: ``60``
+
+src/sdk/FlaunchSDK.ts:267
 
 ___
 
@@ -1296,11 +1666,15 @@ ___
 
 • `Readonly` **chainId**: `number`
 
+src/sdk/FlaunchSDK.ts:265
+
 ___
 
 ### drift
 
 • `Readonly` **drift**: `Drift`
+
+src/sdk/FlaunchSDK.ts:264
 
 ___
 
@@ -1308,11 +1682,15 @@ ___
 
 • `Readonly` **publicClient**: `undefined` \| {}
 
+src/sdk/FlaunchSDK.ts:266
+
 ___
 
 ### readAnyBidWall
 
 • `Readonly` **readAnyBidWall**: `AnyBidWall`
+
+src/sdk/FlaunchSDK.ts:280
 
 ___
 
@@ -1320,11 +1698,15 @@ ___
 
 • `Readonly` **readAnyFlaunch**: `ReadAnyFlaunch`
 
+src/sdk/FlaunchSDK.ts:284
+
 ___
 
 ### readAnyPositionManager
 
 • `Readonly` **readAnyPositionManager**: `ReadAnyPositionManager`
+
+src/sdk/FlaunchSDK.ts:270
 
 ___
 
@@ -1332,11 +1714,15 @@ ___
 
 • `Readonly` **readBidWall**: `ReadBidWall`
 
+src/sdk/FlaunchSDK.ts:279
+
 ___
 
 ### readBidWallV1\_1
 
 • `Readonly` **readBidWallV1\_1**: `ReadBidWallV1_1`
+
+src/sdk/FlaunchSDK.ts:281
 
 ___
 
@@ -1344,11 +1730,15 @@ ___
 
 • `Readonly` **readFairLaunch**: `ReadFairLaunch`
 
+src/sdk/FlaunchSDK.ts:277
+
 ___
 
 ### readFairLaunchV1\_1
 
 • `Readonly` **readFairLaunchV1\_1**: `ReadFairLaunchV1_1`
+
+src/sdk/FlaunchSDK.ts:278
 
 ___
 
@@ -1356,11 +1746,15 @@ ___
 
 • `Readonly` **readFeeEscrow**: `ReadFeeEscrow`
 
+src/sdk/FlaunchSDK.ts:272
+
 ___
 
 ### readFlaunch
 
 • `Readonly` **readFlaunch**: `ReadFlaunch`
+
+src/sdk/FlaunchSDK.ts:282
 
 ___
 
@@ -1368,11 +1762,15 @@ ___
 
 • `Readonly` **readFlaunchV1\_1**: `ReadFlaunchV1_1`
 
+src/sdk/FlaunchSDK.ts:283
+
 ___
 
 ### readFlaunchV1\_2
 
 • `Readonly` **readFlaunchV1\_2**: `ReadFlaunchV1_2`
+
+src/sdk/FlaunchSDK.ts:292
 
 ___
 
@@ -1380,11 +1778,15 @@ ___
 
 • `Readonly` **readFlaunchZap**: `ReadFlaunchZap`
 
+src/sdk/FlaunchSDK.ts:274
+
 ___
 
 ### readPermit2
 
 • `Readonly` **readPermit2**: `ReadPermit2`
+
+src/sdk/FlaunchSDK.ts:286
 
 ___
 
@@ -1392,11 +1794,15 @@ ___
 
 • `Readonly` **readPoolManager**: `ReadPoolManager`
 
+src/sdk/FlaunchSDK.ts:275
+
 ___
 
 ### readPositionManager
 
 • `Readonly` **readPositionManager**: `ReadFlaunchPositionManager`
+
+src/sdk/FlaunchSDK.ts:268
 
 ___
 
@@ -1404,11 +1810,15 @@ ___
 
 • `Readonly` **readPositionManagerV1\_1**: `ReadFlaunchPositionManagerV1_1`
 
+src/sdk/FlaunchSDK.ts:269
+
 ___
 
 ### readPositionManagerV1\_2
 
 • `Readonly` **readPositionManagerV1\_2**: `ReadFlaunchPositionManagerV1_2`
+
+src/sdk/FlaunchSDK.ts:289
 
 ___
 
@@ -1416,11 +1826,15 @@ ___
 
 • `Readonly` **readQuoter**: `ReadQuoter`
 
+src/sdk/FlaunchSDK.ts:285
+
 ___
 
 ### readReferralEscrow
 
 • `Readonly` **readReferralEscrow**: `ReadReferralEscrow`
+
+src/sdk/FlaunchSDK.ts:273
 
 ___
 
@@ -1428,11 +1842,15 @@ ___
 
 • `Readonly` **readStateView**: `ReadStateView`
 
+src/sdk/FlaunchSDK.ts:276
+
 ___
 
 ### readTokenImporter
 
 • `Readonly` **readTokenImporter**: `ReadTokenImporter`
+
+src/sdk/FlaunchSDK.ts:271
 
 ___
 
@@ -1453,6 +1871,8 @@ Type declaration
 #Returns
 
 `string`
+
+src/sdk/FlaunchSDK.ts:295
 
 ## Methods
 
@@ -1475,6 +1895,8 @@ Returns
 
 Promise<{flETHAmount: bigint, coinAmount: bigint, pendingEth: bigint, tickLower: number, tickUpper: number}> - Bid wall position details
 
+src/sdk/FlaunchSDK.ts:1225
+
 ___
 
 ### calculateAddLiquidityAmounts
@@ -1490,6 +1912,8 @@ Parameters
 Returns
 
 `Promise`\<\{ `coinAmount`: `bigint` ; `currentTick`: `number` ; `ethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+src/sdk/FlaunchSDK.ts:1954
 
 ___
 
@@ -1511,6 +1935,8 @@ Parameters
 Returns
 
 `Promise`\<\{ `coinDecimals`: `number` ; `coinTotalSupply`: `bigint` ; `currentTick?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
+
+src/sdk/FlaunchSDK.ts:1738
 
 ___
 
@@ -1536,6 +1962,8 @@ Returns
 
 `undefined` \| `number`
 
+src/sdk/FlaunchSDK.ts:1709
+
 ___
 
 ### checkSingleSidedAddLiquidity
@@ -1551,6 +1979,8 @@ Parameters
 Returns
 
 `Promise`\<`SingleSidedLiquidityInfo`\>
+
+src/sdk/FlaunchSDK.ts:1855
 
 ___
 
@@ -1570,6 +2000,8 @@ Parameters
 Returns
 
 `Promise`\<`string`\>
+
+src/sdk/FlaunchSDK.ts:909
 
 ___
 
@@ -1591,6 +2023,8 @@ Returns
 `Promise`\<`string`\>
 
 Promise<string> - The price of the coin in ETH with 18 decimals precision
+
+src/sdk/FlaunchSDK.ts:869
 
 ___
 
@@ -1615,6 +2049,8 @@ Returns
 
 Promise<string> - The price of the coin in USD with 18 decimal precision
 
+src/sdk/FlaunchSDK.ts:893
+
 ___
 
 ### convertPriceToTick
@@ -1635,6 +2071,8 @@ Parameters
 Returns
 
 `number`
+
+src/sdk/FlaunchSDK.ts:1691
 
 ___
 
@@ -1665,6 +2103,8 @@ The ordered pool key
 | `hooks` | \`0x$\{string}\` |
 | `tickSpacing` | `number` |
 
+src/sdk/FlaunchSDK.ts:2208
+
 ___
 
 ### creatorRevenue
@@ -1685,6 +2125,8 @@ Returns
 `Promise`\<`bigint`\>
 
 The balance of the creator
+
+src/sdk/FlaunchSDK.ts:1259
 
 ___
 
@@ -1707,6 +2149,8 @@ Returns
 
 Promise<number> - The current tick of the pool
 
+src/sdk/FlaunchSDK.ts:854
+
 ___
 
 ### determineCoinVersion
@@ -1727,6 +2171,8 @@ Returns
 `Promise`\<`FlaunchVersion`\>
 
 The determined version
+
+src/sdk/FlaunchSDK.ts:2188
 
 ___
 
@@ -1751,6 +2197,8 @@ Returns
 
 Promise<bigint> - The ETH required to flaunch
 
+src/sdk/FlaunchSDK.ts:1447
+
 ___
 
 ### fairLaunchCoinOnlyPosition
@@ -1771,6 +2219,8 @@ Returns
 `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
 Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
+
+src/sdk/FlaunchSDK.ts:1162
 
 ___
 
@@ -1793,6 +2243,8 @@ Returns
 
 Promise<number> - The duration in seconds (30 minutes for V1, variable for V1.1)
 
+src/sdk/FlaunchSDK.ts:1069
+
 ___
 
 ### fairLaunchETHOnlyPosition
@@ -1813,6 +2265,8 @@ Returns
 `Promise`\<\{ `coinAmount`: `bigint` ; `flETHAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
 Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
+
+src/sdk/FlaunchSDK.ts:1099
 
 ___
 
@@ -1835,6 +2289,8 @@ Returns
 
 Fair launch information from the appropriate contract version
 
+src/sdk/FlaunchSDK.ts:977
+
 ___
 
 ### flETHIsCurrencyZero
@@ -1855,6 +2311,8 @@ Returns
 
 boolean - True if flETH is currency0, false otherwise
 
+src/sdk/FlaunchSDK.ts:1580
+
 ___
 
 ### getBidWall
@@ -1873,6 +2331,8 @@ Returns
 
 `ReadBidWall` \| `AnyBidWall` \| `ReadBidWallV1_1`
 
+src/sdk/FlaunchSDK.ts:462
+
 ___
 
 ### getBidWallAddress
@@ -1888,6 +2348,8 @@ Parameters
 Returns
 
 \`0x$\{string}\`
+
+src/sdk/FlaunchSDK.ts:512
 
 ___
 
@@ -1915,6 +2377,8 @@ Returns
 
 Promise<bigint> - The expected amount of coins to receive
 
+src/sdk/FlaunchSDK.ts:1511
+
 ___
 
 ### getBuyQuoteExactOutput
@@ -1941,6 +2405,8 @@ Returns
 
 Promise<bigint> - The required amount of ETH or inputToken to spend
 
+src/sdk/FlaunchSDK.ts:1548
+
 ___
 
 ### getCoinInfo
@@ -1958,6 +2424,8 @@ Parameters
 Returns
 
 `Promise`\<\{ `decimals`: `number` ; `formattedTotalSupplyInDecimals`: `number` ; `totalSupply`: `bigint`  }\>
+
+src/sdk/FlaunchSDK.ts:1632
 
 ___
 
@@ -1979,6 +2447,8 @@ Returns
 
 Promise<CoinMetadata & { symbol: string }> - The coin's metadata including name, symbol, description, and social links
 
+src/sdk/FlaunchSDK.ts:539
+
 ___
 
 ### getCoinMetadataFromTokenId
@@ -1999,6 +2469,8 @@ Returns
 `Promise`\<`CoinMetadata` & \{ `symbol`: `string`  }\>
 
 The coin's metadata including name, symbol, description, and social links
+
+src/sdk/FlaunchSDK.ts:569
 
 ___
 
@@ -2022,6 +2494,8 @@ Returns
 
 An array of objects containing coin address, name, symbol, description, and social links
 
+src/sdk/FlaunchSDK.ts:585
+
 ___
 
 ### getCoinVersion
@@ -2041,6 +2515,8 @@ Returns
 `Promise`\<`FlaunchVersion`\>
 
 Promise<FlaunchVersion> - The version of the coin
+
+src/sdk/FlaunchSDK.ts:405
 
 ___
 
@@ -2062,6 +2538,8 @@ Returns
 
 Promise<number> - The current ETH/USDC price
 
+src/sdk/FlaunchSDK.ts:932
+
 ___
 
 ### getFairLaunch
@@ -2080,6 +2558,8 @@ Returns
 
 `ReadFairLaunch` \| `ReadFairLaunchV1_1`
 
+src/sdk/FlaunchSDK.ts:443
+
 ___
 
 ### getFairLaunchAddress
@@ -2095,6 +2575,8 @@ Parameters
 Returns
 
 \`0x$\{string}\`
+
+src/sdk/FlaunchSDK.ts:508
 
 ___
 
@@ -2114,6 +2596,8 @@ Returns
 
 `ReadFlaunch` \| `ReadAnyFlaunch` \| `ReadFlaunchV1_1` \| `ReadFlaunchV1_2`
 
+src/sdk/FlaunchSDK.ts:481
+
 ___
 
 ### getFlaunchAddress
@@ -2131,6 +2615,8 @@ Parameters
 Returns
 
 \`0x$\{string}\`
+
+src/sdk/FlaunchSDK.ts:500
 
 ___
 
@@ -2151,6 +2637,8 @@ Returns
 `Promise`\<\{ `flaunchAddress`: \`0x$\{string}\` ; `tokenId`: `bigint`  }\>
 
 Promise<{ flaunchAddress: Address; tokenId: bigint }> - The flaunch contract address and token ID
+
+src/sdk/FlaunchSDK.ts:521
 
 ___
 
@@ -2175,6 +2663,8 @@ Returns
 
 Promise<bigint> - The flaunching fee
 
+src/sdk/FlaunchSDK.ts:1415
+
 ___
 
 ### getMarketContext
@@ -2193,6 +2683,8 @@ Parameters
 Returns
 
 `Promise`\<\{ `decimals0`: `number` ; `decimals1`: `number` ; `ethUsdPrice`: `number` ; `isFlethZero`: `boolean`  }\>
+
+src/sdk/FlaunchSDK.ts:1651
 
 ___
 
@@ -2214,6 +2706,8 @@ Returns
 
 PoolCreated event parameters or null if not found
 
+src/sdk/FlaunchSDK.ts:748
+
 ___
 
 ### getPositionManager
@@ -2232,6 +2726,8 @@ Returns
 
 `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
+src/sdk/FlaunchSDK.ts:424
+
 ___
 
 ### getPositionManagerAddress
@@ -2247,6 +2743,8 @@ Parameters
 Returns
 
 \`0x$\{string}\`
+
+src/sdk/FlaunchSDK.ts:504
 
 ___
 
@@ -2272,6 +2770,8 @@ Returns
 
 Promise<bigint> - The expected amount of ETH to receive
 
+src/sdk/FlaunchSDK.ts:1480
+
 ___
 
 ### initialSqrtPriceX96
@@ -2289,6 +2789,8 @@ Parameters
 Returns
 
 `Promise`\<`bigint`\>
+
+src/sdk/FlaunchSDK.ts:942
 
 ___
 
@@ -2311,6 +2813,8 @@ Returns
 
 Promise<number> - The initial tick value
 
+src/sdk/FlaunchSDK.ts:1082
+
 ___
 
 ### isFairLaunchActive
@@ -2331,6 +2835,8 @@ Returns
 `Promise`\<`boolean`\>
 
 Promise<boolean> - True if fair launch is active, false otherwise
+
+src/sdk/FlaunchSDK.ts:990
 
 ___
 
@@ -2354,6 +2860,8 @@ Returns
 
 Promise<boolean> - True if operator is approved for all tokens
 
+src/sdk/FlaunchSDK.ts:2167
+
 ___
 
 ### isMemecoinImported
@@ -2373,6 +2881,8 @@ Returns
 `Promise`\<`boolean`\>
 
 Promise<boolean> - True if the memecoin has been imported
+
+src/sdk/FlaunchSDK.ts:2143
 
 ___
 
@@ -2394,6 +2904,8 @@ Returns
 
 Promise<boolean> - True if the coin is valid, false otherwise
 
+src/sdk/FlaunchSDK.ts:391
+
 ___
 
 ### marketCapToTokenPriceEth
@@ -2413,6 +2925,8 @@ Parameters
 Returns
 
 `number`
+
+src/sdk/FlaunchSDK.ts:1679
 
 ___
 
@@ -2445,6 +2959,8 @@ Parsed swap log or undefined if no PoolSwap event found.
          If flETHIsCurrencyZero is provided, returns typed swap data with BUY/SELL information.
          If flETHIsCurrencyZero is undefined, returns basic swap log without parsed delta.
 
+src/sdk/FlaunchSDK.ts:1604
+
 ___
 
 ### pollPoolCreatedNow
@@ -2465,6 +2981,8 @@ Returns
 
 Current pool creation events or undefined if polling is not available
 
+src/sdk/FlaunchSDK.ts:729
+
 ___
 
 ### pollPoolSwapNow
@@ -2484,6 +3002,8 @@ Returns
 `undefined` \| `Promise`\<`void`\>
 
 Current pool swap events or undefined if polling is not available
+
+src/sdk/FlaunchSDK.ts:825
 
 ___
 
@@ -2506,6 +3026,8 @@ Returns
 
 Promise<string> - The pool ID
 
+src/sdk/FlaunchSDK.ts:1391
+
 ___
 
 ### positionInfo
@@ -2525,6 +3047,8 @@ Returns
 `Promise`\<\{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  } \| \{ `feeGrowthInside0LastX128`: `bigint` ; `feeGrowthInside1LastX128`: `bigint` ; `liquidity`: `bigint`  }\>
 
 Position information from the state view contract
+
+src/sdk/FlaunchSDK.ts:844
 
 ___
 
@@ -2546,6 +3070,8 @@ Returns
 `Promise`\<`bigint`\>
 
 Promise<bigint> - The balance of the recipient
+
+src/sdk/FlaunchSDK.ts:1273
 
 ___
 
@@ -2570,6 +3096,8 @@ Returns
 
 Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
 
+src/sdk/FlaunchSDK.ts:1330
+
 ___
 
 ### revenueManagerAllTokensInManager
@@ -2591,6 +3119,8 @@ Returns
 `Promise`\<\{ `flaunch`: \`0x$\{string}\` ; `tokenId`: `bigint`  }[]\>
 
 Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
+
+src/sdk/FlaunchSDK.ts:1352
 
 ___
 
@@ -2614,6 +3144,8 @@ Returns
 
 Promise<bigint> - The claimable balance of ETH
 
+src/sdk/FlaunchSDK.ts:1284
+
 ___
 
 ### revenueManagerProtocolBalance
@@ -2634,6 +3166,8 @@ Returns
 
 Promise<bigint> - The claimable balance of ETH
 
+src/sdk/FlaunchSDK.ts:1300
+
 ___
 
 ### revenueManagerTokensCount
@@ -2653,6 +3187,8 @@ Returns
 `Promise`\<`bigint`\>
 
 Promise<bigint> - The total count of tokens
+
+src/sdk/FlaunchSDK.ts:1314
 
 ___
 
@@ -2677,6 +3213,8 @@ Returns
 this is used to resolve IPFS hash to a gateway URL
 eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
 
+src/sdk/FlaunchSDK.ts:1590
+
 ___
 
 ### tokenImporterVerifyMemecoin
@@ -2696,6 +3234,8 @@ Returns
 `Promise`\<\{ `isValid`: `boolean` ; `verifier`: \`0x$\{string}\`  }\>
 
 Promise<{ isValid: boolean; verifier: Address }> - The result of the verification
+
+src/sdk/FlaunchSDK.ts:1625
 
 ___
 
@@ -2717,6 +3257,8 @@ Returns
 
 Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
 
+src/sdk/FlaunchSDK.ts:1368
+
 ___
 
 ### trustedPoolKeySignerStatus
@@ -2733,6 +3275,8 @@ Parameters
 Returns
 
 `Promise`\<\{ `fairLaunchEndsAt`: `number` ; `fairLaunchStartsAt`: `number` ; `isCurrentlyEnabled`: `boolean` ; `isFairLaunchActive`: `boolean` ; `signer`: \`0x$\{string}\` ; `trustedSignerEnabled`: `boolean`  }\>
+
+src/sdk/FlaunchSDK.ts:997
 
 ___
 
@@ -2755,6 +3299,8 @@ Returns
 
 Subscription to pool creation events
 
+src/sdk/FlaunchSDK.ts:715
+
 ___
 
 ### watchPoolSwap
@@ -2776,11 +3322,587 @@ Returns
 
 Subscription to pool swap events
 
+src/sdk/FlaunchSDK.ts:800
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.16 / Exports / ReadWriteDynamicAddressFeeSplitManager
+
+# Class: ReadWriteDynamicAddressFeeSplitManager
+
+## Hierarchy
+
+- `ReadDynamicAddressFeeSplitManager`
+
+  ↳ **`ReadWriteDynamicAddressFeeSplitManager`**
+
+## Table of contents
+
+### Constructors
+
+- constructor
+
+### Properties
+
+- contract
+
+### Methods
+
+- accumulatorPerShare
+- allRecipients
+- balances
+- claim
+- claimForData
+- claimableOwnerFees
+- creatorShare
+- deposit
+- lastProcessedManagerFees
+- managerOwner
+- moderator
+- ownerShare
+- pendingCreatorFees
+- pendingOwnerFees
+- permissions
+- recipientAt
+- recipientCount
+- recipientShare
+- recipients
+- rescue
+- setCreator
+- setModerator
+- setPermissions
+- totalActiveShares
+- transferManagerOwnership
+- transferRecipientShare
+- updateRecipients
+
+## Constructors
+
+### constructor
+
+• **new ReadWriteDynamicAddressFeeSplitManager**(`address`, `drift?`): `ReadWriteDynamicAddressFeeSplitManager`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `address` | \`0x$\{string}\` |
+| `drift` | `Drift`\<`ReadWriteAdapter`\> |
+
+Returns
+
+`ReadWriteDynamicAddressFeeSplitManager`
+
+Overrides
+
+ReadDynamicAddressFeeSplitManager.constructor
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:143
+
+## Properties
+
+### contract
+
+• **contract**: `ReadWriteContract`\<readonly [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}], `ReadWriteAdapter`, `Store`, `Client`\<`ReadWriteAdapter`, `Store`, {}\>\>
+
+Overrides
+
+ReadDynamicAddressFeeSplitManager.contract
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:141
+
+## Methods
+
+### accumulatorPerShare
+
+▸ **accumulatorPerShare**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.accumulatorPerShare
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:66
+
+___
+
+### allRecipients
+
+▸ **allRecipients**(`includeInactive?`): `Promise`\<\`0x$\{string}\`[]\>
+
+Parameters
+
+| Name | Type | Default value |
+| :------ | :------ | :------ |
+| `includeInactive` | `boolean` | `false` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`[]\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.allRecipients
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:117
+
+___
+
+### balances
+
+▸ **balances**(`recipient`): `Promise`\<`bigint`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `recipient` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.balances
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:90
+
+___
+
+### claim
+
+▸ **claim**(): `Promise`\<\`0x$\{string}\`\>
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:180
+
+___
+
+### claimForData
+
+▸ **claimForData**(`data`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `data` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:184
+
+___
+
+### claimableOwnerFees
+
+▸ **claimableOwnerFees**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.claimableOwnerFees
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:113
+
+___
+
+### creatorShare
+
+▸ **creatorShare**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.creatorShare
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:54
+
+___
+
+### deposit
+
+▸ **deposit**(`flaunchToken`, `creator`, `data`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `flaunchToken` | `FlaunchToken` |
+| `creator` | \`0x$\{string}\` |
+| `data` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:190
+
+___
+
+### lastProcessedManagerFees
+
+▸ **lastProcessedManagerFees**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.lastProcessedManagerFees
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:70
+
+___
+
+### managerOwner
+
+▸ **managerOwner**(): `Promise`\<\`0x$\{string}\`\>
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.managerOwner
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:46
+
+___
+
+### moderator
+
+▸ **moderator**(): `Promise`\<\`0x$\{string}\`\>
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.moderator
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:50
+
+___
+
+### ownerShare
+
+▸ **ownerShare**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.ownerShare
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:58
+
+___
+
+### pendingCreatorFees
+
+▸ **pendingCreatorFees**(`recipient`): `Promise`\<`bigint`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `recipient` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.pendingCreatorFees
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:103
+
+___
+
+### pendingOwnerFees
+
+▸ **pendingOwnerFees**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.pendingOwnerFees
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:109
+
+___
+
+### permissions
+
+▸ **permissions**(): `Promise`\<\`0x$\{string}\`\>
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.permissions
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:42
+
+___
+
+### recipientAt
+
+▸ **recipientAt**(`index`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `index` | `bigint` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.recipientAt
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:78
+
+___
+
+### recipientCount
+
+▸ **recipientCount**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.recipientCount
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:74
+
+___
+
+### recipientShare
+
+▸ **recipientShare**(`recipient`, `data?`): `Promise`\<`bigint`\>
+
+Parameters
+
+| Name | Type | Default value |
+| :------ | :------ | :------ |
+| `recipient` | \`0x$\{string}\` | `undefined` |
+| `data` | \`0x$\{string}\` | `"0x"` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.recipientShare
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:96
+
+___
+
+### recipients
+
+▸ **recipients**(`recipient`): `Promise`\<`DynamicRecipientInfo`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `recipient` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`DynamicRecipientInfo`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.recipients
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:84
+
+___
+
+### rescue
+
+▸ **rescue**(`flaunchToken`, `recipient`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `flaunchToken` | `FlaunchToken` |
+| `recipient` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:205
+
+___
+
+### setCreator
+
+▸ **setCreator**(`flaunchToken`, `creator`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `flaunchToken` | `FlaunchToken` |
+| `creator` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:198
+
+___
+
+### setModerator
+
+▸ **setModerator**(`moderator`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `moderator` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:162
+
+___
+
+### setPermissions
+
+▸ **setPermissions**(`permissions`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `permissions` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:150
+
+___
+
+### totalActiveShares
+
+▸ **totalActiveShares**(): `Promise`\<`bigint`\>
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadDynamicAddressFeeSplitManager.totalActiveShares
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:62
+
+___
+
+### transferManagerOwnership
+
+▸ **transferManagerOwnership**(`newManagerOwner`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `newManagerOwner` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:156
+
+___
+
+### transferRecipientShare
+
+▸ **transferRecipientShare**(`newRecipient`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `newRecipient` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:174
+
+___
+
+### updateRecipients
+
+▸ **updateRecipients**(`recipients`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `recipients` | `RecipientShare`[] |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:168
+
+
+---
+
+@flaunch/sdk - v0.9.16 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -2869,8 +3991,10 @@ Base class for interacting with Flaunch protocol in read-only mode
 - flETHIsCurrencyZero
 - flaunch
 - flaunchIPFS
+- flaunchIPFSWithDynamicSplitManager
 - flaunchIPFSWithRevenueManager
 - flaunchIPFSWithSplitManager
+- flaunchWithDynamicSplitManager
 - flaunchWithRevenueManager
 - flaunchWithSplitManager
 - getAddLiquidityCalls
@@ -2958,6 +4082,8 @@ Overrides
 
 ReadFlaunchSDK.constructor
 
+src/sdk/FlaunchSDK.ts:2232
+
 ## Properties
 
 ### TICK\_SPACING
@@ -2967,6 +4093,8 @@ ReadFlaunchSDK.constructor
 Inherited from
 
 ReadFlaunchSDK.TICK_SPACING
+
+src/sdk/FlaunchSDK.ts:267
 
 ___
 
@@ -2978,6 +4106,8 @@ Inherited from
 
 ReadFlaunchSDK.chainId
 
+src/sdk/FlaunchSDK.ts:265
+
 ___
 
 ### drift
@@ -2987,6 +4117,8 @@ ___
 Overrides
 
 ReadFlaunchSDK.drift
+
+src/sdk/FlaunchSDK.ts:2221
 
 ___
 
@@ -2998,6 +4130,8 @@ Inherited from
 
 ReadFlaunchSDK.publicClient
 
+src/sdk/FlaunchSDK.ts:266
+
 ___
 
 ### readAnyBidWall
@@ -3007,6 +4141,8 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readAnyBidWall
+
+src/sdk/FlaunchSDK.ts:280
 
 ___
 
@@ -3018,6 +4154,8 @@ Inherited from
 
 ReadFlaunchSDK.readAnyFlaunch
 
+src/sdk/FlaunchSDK.ts:284
+
 ___
 
 ### readAnyPositionManager
@@ -3027,6 +4165,8 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readAnyPositionManager
+
+src/sdk/FlaunchSDK.ts:270
 
 ___
 
@@ -3038,6 +4178,8 @@ Inherited from
 
 ReadFlaunchSDK.readBidWall
 
+src/sdk/FlaunchSDK.ts:279
+
 ___
 
 ### readBidWallV1\_1
@@ -3047,6 +4189,8 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readBidWallV1_1
+
+src/sdk/FlaunchSDK.ts:281
 
 ___
 
@@ -3058,6 +4202,8 @@ Inherited from
 
 ReadFlaunchSDK.readFairLaunch
 
+src/sdk/FlaunchSDK.ts:277
+
 ___
 
 ### readFairLaunchV1\_1
@@ -3067,6 +4213,8 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readFairLaunchV1_1
+
+src/sdk/FlaunchSDK.ts:278
 
 ___
 
@@ -3078,6 +4226,8 @@ Inherited from
 
 ReadFlaunchSDK.readFeeEscrow
 
+src/sdk/FlaunchSDK.ts:272
+
 ___
 
 ### readFlaunch
@@ -3087,6 +4237,8 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readFlaunch
+
+src/sdk/FlaunchSDK.ts:282
 
 ___
 
@@ -3098,6 +4250,8 @@ Inherited from
 
 ReadFlaunchSDK.readFlaunchV1_1
 
+src/sdk/FlaunchSDK.ts:283
+
 ___
 
 ### readFlaunchV1\_2
@@ -3107,6 +4261,8 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readFlaunchV1_2
+
+src/sdk/FlaunchSDK.ts:292
 
 ___
 
@@ -3118,6 +4274,8 @@ Inherited from
 
 ReadFlaunchSDK.readFlaunchZap
 
+src/sdk/FlaunchSDK.ts:274
+
 ___
 
 ### readPermit2
@@ -3127,6 +4285,8 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readPermit2
+
+src/sdk/FlaunchSDK.ts:286
 
 ___
 
@@ -3138,6 +4298,8 @@ Inherited from
 
 ReadFlaunchSDK.readPoolManager
 
+src/sdk/FlaunchSDK.ts:275
+
 ___
 
 ### readPositionManager
@@ -3147,6 +4309,8 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readPositionManager
+
+src/sdk/FlaunchSDK.ts:268
 
 ___
 
@@ -3158,6 +4322,8 @@ Inherited from
 
 ReadFlaunchSDK.readPositionManagerV1_1
 
+src/sdk/FlaunchSDK.ts:269
+
 ___
 
 ### readPositionManagerV1\_2
@@ -3167,6 +4333,8 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readPositionManagerV1_2
+
+src/sdk/FlaunchSDK.ts:289
 
 ___
 
@@ -3178,6 +4346,8 @@ Inherited from
 
 ReadFlaunchSDK.readQuoter
 
+src/sdk/FlaunchSDK.ts:285
+
 ___
 
 ### readReferralEscrow
@@ -3187,6 +4357,8 @@ ___
 Inherited from
 
 ReadFlaunchSDK.readReferralEscrow
+
+src/sdk/FlaunchSDK.ts:273
 
 ___
 
@@ -3198,6 +4370,8 @@ Inherited from
 
 ReadFlaunchSDK.readStateView
 
+src/sdk/FlaunchSDK.ts:276
+
 ___
 
 ### readTokenImporter
@@ -3208,11 +4382,15 @@ Inherited from
 
 ReadFlaunchSDK.readTokenImporter
 
+src/sdk/FlaunchSDK.ts:271
+
 ___
 
 ### readWriteAnyPositionManager
 
 • `Readonly` **readWriteAnyPositionManager**: `ReadWriteAnyPositionManager`
+
+src/sdk/FlaunchSDK.ts:2224
 
 ___
 
@@ -3220,11 +4398,15 @@ ___
 
 • `Readonly` **readWriteFeeEscrow**: `ReadWriteFeeEscrow`
 
+src/sdk/FlaunchSDK.ts:2226
+
 ___
 
 ### readWriteFlaunchZap
 
 • `Readonly` **readWriteFlaunchZap**: `ReadWriteFlaunchZap`
+
+src/sdk/FlaunchSDK.ts:2228
 
 ___
 
@@ -3232,11 +4414,15 @@ ___
 
 • `Readonly` **readWritePermit2**: `ReadWritePermit2`
 
+src/sdk/FlaunchSDK.ts:2230
+
 ___
 
 ### readWritePositionManager
 
 • `Readonly` **readWritePositionManager**: `ReadWriteFlaunchPositionManager`
+
+src/sdk/FlaunchSDK.ts:2222
 
 ___
 
@@ -3244,11 +4430,15 @@ ___
 
 • `Readonly` **readWritePositionManagerV1\_1**: `ReadWriteFlaunchPositionManagerV1_1`
 
+src/sdk/FlaunchSDK.ts:2223
+
 ___
 
 ### readWriteReferralEscrow
 
 • `Readonly` **readWriteReferralEscrow**: `ReadWriteReferralEscrow`
+
+src/sdk/FlaunchSDK.ts:2227
 
 ___
 
@@ -3256,11 +4446,15 @@ ___
 
 • `Readonly` **readWriteTokenImporter**: `ReadWriteTokenImporter`
 
+src/sdk/FlaunchSDK.ts:2225
+
 ___
 
 ### readWriteTreasuryManagerFactory
 
 • `Readonly` **readWriteTreasuryManagerFactory**: `ReadWriteTreasuryManagerFactory`
+
+src/sdk/FlaunchSDK.ts:2229
 
 ___
 
@@ -3286,6 +4480,8 @@ Inherited from
 
 ReadFlaunchSDK.resolveIPFS
 
+src/sdk/FlaunchSDK.ts:295
+
 ## Methods
 
 ### addToTreasuryManager
@@ -3310,6 +4506,8 @@ Returns
 
 Transaction response
 
+src/sdk/FlaunchSDK.ts:2806
+
 ___
 
 ### anyFlaunch
@@ -3329,6 +4527,8 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response
+
+src/sdk/FlaunchSDK.ts:2438
 
 ___
 
@@ -3355,6 +4555,8 @@ Inherited from
 
 ReadFlaunchSDK.bidWallPosition
 
+src/sdk/FlaunchSDK.ts:1225
+
 ___
 
 ### buyCoin
@@ -3376,6 +4578,8 @@ Returns
 
 Transaction response for the buy operation
 
+src/sdk/FlaunchSDK.ts:2460
+
 ___
 
 ### calculateAddLiquidityAmounts
@@ -3395,6 +4599,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.calculateAddLiquidityAmounts
+
+src/sdk/FlaunchSDK.ts:1954
 
 ___
 
@@ -3420,6 +4626,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.calculateAddLiquidityTicks
+
+src/sdk/FlaunchSDK.ts:1738
 
 ___
 
@@ -3452,6 +4660,8 @@ Final liquidity and amounts
 | `finalAmount1` | `bigint` |
 | `finalLiquidity` | `bigint` |
 
+src/sdk/FlaunchSDK.ts:3635
+
 ___
 
 ### calculateCurrentTickFromMarketCap
@@ -3480,6 +4690,8 @@ Inherited from
 
 ReadFlaunchSDK.calculateCurrentTickFromMarketCap
 
+src/sdk/FlaunchSDK.ts:1709
+
 ___
 
 ### checkSingleSidedAddLiquidity
@@ -3499,6 +4711,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.checkSingleSidedAddLiquidity
+
+src/sdk/FlaunchSDK.ts:1855
 
 ___
 
@@ -3521,6 +4735,8 @@ Returns
 
 Transaction response
 
+src/sdk/FlaunchSDK.ts:2694
+
 ___
 
 ### coinBalance
@@ -3540,6 +4756,8 @@ Returns
 `Promise`\<`bigint`\>
 
 Promise<bigint> - The balance of the coin
+
+src/sdk/FlaunchSDK.ts:2447
 
 ___
 
@@ -3563,6 +4781,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.coinMarketCapInUSD
+
+src/sdk/FlaunchSDK.ts:909
 
 ___
 
@@ -3588,6 +4808,8 @@ Promise<string> - The price of the coin in ETH with 18 decimals precision
 Inherited from
 
 ReadFlaunchSDK.coinPriceInETH
+
+src/sdk/FlaunchSDK.ts:869
 
 ___
 
@@ -3616,6 +4838,8 @@ Inherited from
 
 ReadFlaunchSDK.coinPriceInUSD
 
+src/sdk/FlaunchSDK.ts:893
+
 ___
 
 ### convertPriceToTick
@@ -3640,6 +4864,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.convertPriceToTick
+
+src/sdk/FlaunchSDK.ts:1691
 
 ___
 
@@ -3666,6 +4892,8 @@ Returns
 `CallWithDescription`
 
 CallWithDescription for adding liquidity
+
+src/sdk/FlaunchSDK.ts:3745
 
 ___
 
@@ -3700,6 +4928,8 @@ Inherited from
 
 ReadFlaunchSDK.createPoolKey
 
+src/sdk/FlaunchSDK.ts:2208
+
 ___
 
 ### creatorRevenue
@@ -3724,6 +4954,8 @@ The balance of the creator
 Inherited from
 
 ReadFlaunchSDK.creatorRevenue
+
+src/sdk/FlaunchSDK.ts:1259
 
 ___
 
@@ -3750,6 +4982,8 @@ Inherited from
 
 ReadFlaunchSDK.currentTick
 
+src/sdk/FlaunchSDK.ts:854
+
 ___
 
 ### deployBuyBackManager
@@ -3769,6 +5003,8 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Address of the deployed BuyBack manager
+
+src/sdk/FlaunchSDK.ts:2335
 
 ___
 
@@ -3790,6 +5026,8 @@ Returns
 
 Address of the deployed revenue manager
 
+src/sdk/FlaunchSDK.ts:2288
+
 ___
 
 ### deployStakingManager
@@ -3809,6 +5047,8 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Address of the deployed staking manager
+
+src/sdk/FlaunchSDK.ts:2310
 
 ___
 
@@ -3834,6 +5074,8 @@ The determined version
 Inherited from
 
 ReadFlaunchSDK.determineCoinVersion
+
+src/sdk/FlaunchSDK.ts:2188
 
 ___
 
@@ -3862,6 +5104,8 @@ Inherited from
 
 ReadFlaunchSDK.ethRequiredToFlaunch
 
+src/sdk/FlaunchSDK.ts:1447
+
 ___
 
 ### fairLaunchCoinOnlyPosition
@@ -3886,6 +5130,8 @@ Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: 
 Inherited from
 
 ReadFlaunchSDK.fairLaunchCoinOnlyPosition
+
+src/sdk/FlaunchSDK.ts:1162
 
 ___
 
@@ -3912,6 +5158,8 @@ Inherited from
 
 ReadFlaunchSDK.fairLaunchDuration
 
+src/sdk/FlaunchSDK.ts:1069
+
 ___
 
 ### fairLaunchETHOnlyPosition
@@ -3936,6 +5184,8 @@ Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: 
 Inherited from
 
 ReadFlaunchSDK.fairLaunchETHOnlyPosition
+
+src/sdk/FlaunchSDK.ts:1099
 
 ___
 
@@ -3962,6 +5212,8 @@ Inherited from
 
 ReadFlaunchSDK.fairLaunchInfo
 
+src/sdk/FlaunchSDK.ts:977
+
 ___
 
 ### flETHIsCurrencyZero
@@ -3986,6 +5238,8 @@ Inherited from
 
 ReadFlaunchSDK.flETHIsCurrencyZero
 
+src/sdk/FlaunchSDK.ts:1580
+
 ___
 
 ### flaunch
@@ -4006,6 +5260,8 @@ Returns
 
 Transaction response
 
+src/sdk/FlaunchSDK.ts:2350
+
 ___
 
 ### flaunchIPFS
@@ -4025,6 +5281,30 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response
+
+src/sdk/FlaunchSDK.ts:2359
+
+___
+
+### flaunchIPFSWithDynamicSplitManager
+
+▸ **flaunchIPFSWithDynamicSplitManager**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Creates a new Flaunch with dynamic split manager configuration and IPFS metadata.
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `FlaunchWithDynamicSplitManagerIPFSParams` | Parameters for creating the Flaunch with dynamic split manager and IPFS data |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+src/sdk/FlaunchSDK.ts:2427
 
 ___
 
@@ -4050,6 +5330,8 @@ Transaction response
 
 Error if FlaunchZap is not deployed on the current chain
 
+src/sdk/FlaunchSDK.ts:2383
+
 ___
 
 ### flaunchIPFSWithSplitManager
@@ -4069,6 +5351,30 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response
+
+src/sdk/FlaunchSDK.ts:2407
+
+___
+
+### flaunchWithDynamicSplitManager
+
+▸ **flaunchWithDynamicSplitManager**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Creates a new Flaunch with dynamic split manager configuration.
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `FlaunchWithDynamicSplitManagerParams` | Parameters for creating the Flaunch with dynamic split manager |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Transaction response
+
+src/sdk/FlaunchSDK.ts:2416
 
 ___
 
@@ -4094,6 +5400,8 @@ Transaction response
 
 Error if FlaunchZap is not deployed on the current chain
 
+src/sdk/FlaunchSDK.ts:2369
+
 ___
 
 ### flaunchWithSplitManager
@@ -4114,6 +5422,8 @@ Returns
 
 Transaction response
 
+src/sdk/FlaunchSDK.ts:2398
+
 ___
 
 ### getAddLiquidityCalls
@@ -4133,6 +5443,8 @@ Returns
 `Promise`\<`CallWithDescription`[]\>
 
 Array of calls with descriptions
+
+src/sdk/FlaunchSDK.ts:2848
 
 ___
 
@@ -4156,6 +5468,8 @@ Inherited from
 
 ReadFlaunchSDK.getBidWall
 
+src/sdk/FlaunchSDK.ts:462
+
 ___
 
 ### getBidWallAddress
@@ -4175,6 +5489,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.getBidWallAddress
+
+src/sdk/FlaunchSDK.ts:512
 
 ___
 
@@ -4206,6 +5522,8 @@ Inherited from
 
 ReadFlaunchSDK.getBuyQuoteExactInput
 
+src/sdk/FlaunchSDK.ts:1511
+
 ___
 
 ### getBuyQuoteExactOutput
@@ -4236,6 +5554,8 @@ Inherited from
 
 ReadFlaunchSDK.getBuyQuoteExactOutput
 
+src/sdk/FlaunchSDK.ts:1548
+
 ___
 
 ### getCoinInfo
@@ -4257,6 +5577,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.getCoinInfo
+
+src/sdk/FlaunchSDK.ts:1632
 
 ___
 
@@ -4282,6 +5604,8 @@ Inherited from
 
 ReadFlaunchSDK.getCoinMetadata
 
+src/sdk/FlaunchSDK.ts:539
+
 ___
 
 ### getCoinMetadataFromTokenId
@@ -4306,6 +5630,8 @@ The coin's metadata including name, symbol, description, and social links
 Inherited from
 
 ReadFlaunchSDK.getCoinMetadataFromTokenId
+
+src/sdk/FlaunchSDK.ts:569
 
 ___
 
@@ -4333,6 +5659,8 @@ Inherited from
 
 ReadFlaunchSDK.getCoinMetadataFromTokenIds
 
+src/sdk/FlaunchSDK.ts:585
+
 ___
 
 ### getCoinVersion
@@ -4357,6 +5685,8 @@ Inherited from
 
 ReadFlaunchSDK.getCoinVersion
 
+src/sdk/FlaunchSDK.ts:405
+
 ___
 
 ### getERC20AllowanceToPermit2
@@ -4377,6 +5707,8 @@ Returns
 `Promise`\<`bigint`\>
 
 Promise<bigint> - The allowance of the coin to Permit2
+
+src/sdk/FlaunchSDK.ts:2648
 
 ___
 
@@ -4402,6 +5734,8 @@ Inherited from
 
 ReadFlaunchSDK.getETHUSDCPrice
 
+src/sdk/FlaunchSDK.ts:932
+
 ___
 
 ### getFairLaunch
@@ -4424,6 +5758,8 @@ Inherited from
 
 ReadFlaunchSDK.getFairLaunch
 
+src/sdk/FlaunchSDK.ts:443
+
 ___
 
 ### getFairLaunchAddress
@@ -4443,6 +5779,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.getFairLaunchAddress
+
+src/sdk/FlaunchSDK.ts:508
 
 ___
 
@@ -4466,6 +5804,8 @@ Inherited from
 
 ReadFlaunchSDK.getFlaunch
 
+src/sdk/FlaunchSDK.ts:481
+
 ___
 
 ### getFlaunchAddress
@@ -4487,6 +5827,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.getFlaunchAddress
+
+src/sdk/FlaunchSDK.ts:500
 
 ___
 
@@ -4511,6 +5853,8 @@ Promise<{ flaunchAddress: Address; tokenId: bigint }> - The flaunch contract add
 Inherited from
 
 ReadFlaunchSDK.getFlaunchTokenIdForMemecoin
+
+src/sdk/FlaunchSDK.ts:521
 
 ___
 
@@ -4538,6 +5882,8 @@ Promise<bigint> - The flaunching fee
 Inherited from
 
 ReadFlaunchSDK.getFlaunchingFee
+
+src/sdk/FlaunchSDK.ts:1415
 
 ___
 
@@ -4586,6 +5932,8 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
+src/sdk/FlaunchSDK.ts:3133
+
 ▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
 Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
@@ -4629,6 +5977,8 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
+src/sdk/FlaunchSDK.ts:3157
+
 ▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
 Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
@@ -4670,6 +6020,8 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
+src/sdk/FlaunchSDK.ts:3180
+
 ___
 
 ### getImportAndSingleSidedCoinAddLiquidityCalls
@@ -4708,6 +6060,8 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
+src/sdk/FlaunchSDK.ts:3467
+
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
 Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
@@ -4736,6 +6090,8 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
   tokenSupply: 1000000e6 // 1 million tokens (6 decimals)
 });
 ```
+
+src/sdk/FlaunchSDK.ts:3488
 
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -4771,6 +6127,8 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
+src/sdk/FlaunchSDK.ts:3510
+
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
 Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
@@ -4800,6 +6158,8 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
+src/sdk/FlaunchSDK.ts:3531
+
 ___
 
 ### getMarketContext
@@ -4823,6 +6183,8 @@ Inherited from
 
 ReadFlaunchSDK.getMarketContext
 
+src/sdk/FlaunchSDK.ts:1651
+
 ___
 
 ### getPermit2AllowanceAndNonce
@@ -4842,6 +6204,8 @@ Returns
 `Promise`\<\{ `allowance`: `bigint` = amount; `nonce`: `number`  }\>
 
 Promise<{allowance: bigint, nonce: bigint}> - Current allowance and nonce
+
+src/sdk/FlaunchSDK.ts:2629
 
 ___
 
@@ -4863,6 +6227,8 @@ Returns
 `Promise`\<\{ `permitSingle`: `PermitSingle` ; `typedData`: \{ `domain`: \{ `chainId`: `number` ; `name`: `string` ; `verifyingContract`: \`0x$\{string}\`  } ; `message`: `PermitSingle` ; `primaryType`: `string` ; `types`: \{ `PermitDetails`: \{ `name`: `string` = "token"; `type`: `string` = "address" }[] = PERMIT\_DETAILS; `PermitSingle`: \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[]  }  }  }\>
 
 The typed data object for signing
+
+src/sdk/FlaunchSDK.ts:2608
 
 ___
 
@@ -4888,6 +6254,8 @@ Inherited from
 
 ReadFlaunchSDK.getPoolCreatedFromTx
 
+src/sdk/FlaunchSDK.ts:748
+
 ___
 
 ### getPositionManager
@@ -4910,6 +6278,8 @@ Inherited from
 
 ReadFlaunchSDK.getPositionManager
 
+src/sdk/FlaunchSDK.ts:424
+
 ___
 
 ### getPositionManagerAddress
@@ -4929,6 +6299,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.getPositionManagerAddress
+
+src/sdk/FlaunchSDK.ts:504
 
 ___
 
@@ -4958,6 +6330,8 @@ Inherited from
 
 ReadFlaunchSDK.getSellQuoteExactInput
 
+src/sdk/FlaunchSDK.ts:1480
+
 ___
 
 ### getSingleSidedCoinAddLiquidityCalls
@@ -4978,6 +6352,8 @@ Returns
 
 Array of calls with descriptions
 
+src/sdk/FlaunchSDK.ts:3236
+
 ___
 
 ### importMemecoin
@@ -4997,6 +6373,8 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response
+
+src/sdk/FlaunchSDK.ts:2839
 
 ___
 
@@ -5019,6 +6397,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.initialSqrtPriceX96
+
+src/sdk/FlaunchSDK.ts:942
 
 ___
 
@@ -5045,6 +6425,8 @@ Inherited from
 
 ReadFlaunchSDK.initialTick
 
+src/sdk/FlaunchSDK.ts:1082
+
 ___
 
 ### isFairLaunchActive
@@ -5069,6 +6451,8 @@ Promise<boolean> - True if fair launch is active, false otherwise
 Inherited from
 
 ReadFlaunchSDK.isFairLaunchActive
+
+src/sdk/FlaunchSDK.ts:990
 
 ___
 
@@ -5096,6 +6480,8 @@ Inherited from
 
 ReadFlaunchSDK.isFlaunchTokenApprovedForAll
 
+src/sdk/FlaunchSDK.ts:2167
+
 ___
 
 ### isMemecoinImported
@@ -5119,6 +6505,8 @@ Promise<boolean> - True if the memecoin has been imported
 Inherited from
 
 ReadFlaunchSDK.isMemecoinImported
+
+src/sdk/FlaunchSDK.ts:2143
 
 ___
 
@@ -5144,6 +6532,8 @@ Inherited from
 
 ReadFlaunchSDK.isValidCoin
 
+src/sdk/FlaunchSDK.ts:391
+
 ___
 
 ### marketCapToTokenPriceEth
@@ -5167,6 +6557,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.marketCapToTokenPriceEth
+
+src/sdk/FlaunchSDK.ts:1679
 
 ___
 
@@ -5203,6 +6595,8 @@ Inherited from
 
 ReadFlaunchSDK.parseSwapTx
 
+src/sdk/FlaunchSDK.ts:1604
+
 ___
 
 ### pollPoolCreatedNow
@@ -5227,6 +6621,8 @@ Inherited from
 
 ReadFlaunchSDK.pollPoolCreatedNow
 
+src/sdk/FlaunchSDK.ts:729
+
 ___
 
 ### pollPoolSwapNow
@@ -5250,6 +6646,8 @@ Current pool swap events or undefined if polling is not available
 Inherited from
 
 ReadFlaunchSDK.pollPoolSwapNow
+
+src/sdk/FlaunchSDK.ts:825
 
 ___
 
@@ -5276,6 +6674,8 @@ Inherited from
 
 ReadFlaunchSDK.poolId
 
+src/sdk/FlaunchSDK.ts:1391
+
 ___
 
 ### positionInfo
@@ -5299,6 +6699,8 @@ Position information from the state view contract
 Inherited from
 
 ReadFlaunchSDK.positionInfo
+
+src/sdk/FlaunchSDK.ts:844
 
 ___
 
@@ -5324,6 +6726,8 @@ Promise<bigint> - The balance of the recipient
 Inherited from
 
 ReadFlaunchSDK.referralBalance
+
+src/sdk/FlaunchSDK.ts:1273
 
 ___
 
@@ -5352,6 +6756,8 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerAllTokensByCreator
 
+src/sdk/FlaunchSDK.ts:1330
+
 ___
 
 ### revenueManagerAllTokensInManager
@@ -5377,6 +6783,8 @@ Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects con
 Inherited from
 
 ReadFlaunchSDK.revenueManagerAllTokensInManager
+
+src/sdk/FlaunchSDK.ts:1352
 
 ___
 
@@ -5404,6 +6812,8 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerBalance
 
+src/sdk/FlaunchSDK.ts:1284
+
 ___
 
 ### revenueManagerCreatorClaim
@@ -5424,6 +6834,8 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response
+
+src/sdk/FlaunchSDK.ts:2716
 
 ___
 
@@ -5446,6 +6858,8 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response
+
+src/sdk/FlaunchSDK.ts:2729
 
 ___
 
@@ -5471,6 +6885,8 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerProtocolBalance
 
+src/sdk/FlaunchSDK.ts:1300
+
 ___
 
 ### revenueManagerProtocolClaim
@@ -5491,6 +6907,8 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response
+
+src/sdk/FlaunchSDK.ts:2703
 
 ___
 
@@ -5516,6 +6934,8 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerTokensCount
 
+src/sdk/FlaunchSDK.ts:1314
+
 ___
 
 ### sellCoin
@@ -5536,6 +6956,8 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response for the sell operation
+
+src/sdk/FlaunchSDK.ts:2552
 
 ___
 
@@ -5559,6 +6981,8 @@ Returns
 
 Promise<Hex> - The transaction hash
 
+src/sdk/FlaunchSDK.ts:2663
+
 ___
 
 ### setFlaunchTokenApprovalForAll
@@ -5580,6 +7004,8 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response
+
+src/sdk/FlaunchSDK.ts:2782
 
 ___
 
@@ -5608,6 +7034,8 @@ Inherited from
 
 ReadFlaunchSDK.setIPFSResolver
 
+src/sdk/FlaunchSDK.ts:1590
+
 ___
 
 ### tokenImporterVerifyMemecoin
@@ -5631,6 +7059,8 @@ Promise<{ isValid: boolean; verifier: Address }> - The result of the verificatio
 Inherited from
 
 ReadFlaunchSDK.tokenImporterVerifyMemecoin
+
+src/sdk/FlaunchSDK.ts:1625
 
 ___
 
@@ -5656,6 +7086,8 @@ Inherited from
 
 ReadFlaunchSDK.treasuryManagerInfo
 
+src/sdk/FlaunchSDK.ts:1368
+
 ___
 
 ### treasuryManagerSetPermissions
@@ -5676,6 +7108,8 @@ Returns
 `Promise`\<\`0x$\{string}\`\>
 
 Transaction response
+
+src/sdk/FlaunchSDK.ts:2746
 
 ___
 
@@ -5698,6 +7132,8 @@ Returns
 
 Transaction response
 
+src/sdk/FlaunchSDK.ts:2764
+
 ___
 
 ### trustedPoolKeySignerStatus
@@ -5718,6 +7154,8 @@ Returns
 Inherited from
 
 ReadFlaunchSDK.trustedPoolKeySignerStatus
+
+src/sdk/FlaunchSDK.ts:997
 
 ___
 
@@ -5744,6 +7182,8 @@ Inherited from
 
 ReadFlaunchSDK.watchPoolCreated
 
+src/sdk/FlaunchSDK.ts:715
+
 ___
 
 ### watchPoolSwap
@@ -5769,6 +7209,8 @@ Inherited from
 
 ReadFlaunchSDK.watchPoolSwap
 
+src/sdk/FlaunchSDK.ts:800
+
 ___
 
 ### withdrawCreatorRevenue
@@ -5791,11 +7233,12 @@ Returns
 
 Transaction response
 
+src/sdk/FlaunchSDK.ts:2675
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.16 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -5816,11 +7259,15 @@ Enumeration of Flaunch contract versions
 
 • **ANY** = ``"ANY"``
 
+src/types.ts:55
+
 ___
 
 ### V1
 
 • **V1** = ``"V1"``
+
+src/types.ts:52
 
 ___
 
@@ -5828,17 +7275,20 @@ ___
 
 • **V1\_1** = ``"V1_1"``
 
+src/types.ts:53
+
 ___
 
 ### V1\_2
 
 • **V1\_2** = ``"V1_2"``
 
+src/types.ts:54
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / LiquidityMode
+@flaunch/sdk - v0.9.16 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -5855,17 +7305,20 @@ ___
 
 • **CONCENTRATED** = ``"concentrated"``
 
+src/types.ts:72
+
 ___
 
 ### FULL\_RANGE
 
 • **FULL\_RANGE** = ``"full-range"``
 
+src/types.ts:71
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / Permissions
+@flaunch/sdk - v0.9.16 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -5885,11 +7338,15 @@ Enumeration of Permissions for TreasuryManagers. Defaults to OPEN.
 
 • **CLOSED** = ``"closed"``
 
+src/types.ts:83
+
 ___
 
 ### OPEN
 
 • **OPEN** = ``"open"``
+
+src/types.ts:82
 
 ___
 
@@ -5897,11 +7354,12 @@ ___
 
 • **WHITELISTED** = ``"whitelisted"``
 
+src/types.ts:84
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / Verifier
+@flaunch/sdk - v0.9.16 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -5924,11 +7382,15 @@ Enumeration of Verifiers for TokenImporter
 
 • **CLANKER** = ``"clanker"``
 
+src/types.ts:62
+
 ___
 
 ### DOPPLER
 
 • **DOPPLER** = ``"doppler"``
+
+src/types.ts:63
 
 ___
 
@@ -5936,11 +7398,15 @@ ___
 
 • **SOLANA** = ``"solana"``
 
+src/types.ts:64
+
 ___
 
 ### VIRTUALS
 
 • **VIRTUALS** = ``"virtuals"``
+
+src/types.ts:65
 
 ___
 
@@ -5948,17 +7414,20 @@ ___
 
 • **WHITELIST** = ``"whitelist"``
 
+src/types.ts:66
+
 ___
 
 ### ZORA
 
 • **ZORA** = ``"zora"``
 
+src/types.ts:67
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / Addresses
+@flaunch/sdk - v0.9.16 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -5969,7 +7438,7 @@ ___
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / BuySwapData
+@flaunch/sdk - v0.9.16 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -5994,17 +7463,20 @@ Type declaration
 | `fees` | `SwapFees` |
 | `flETHSold` | `bigint` |
 
+src/utils/parseSwap.ts:23
+
 ___
 
 ### type
 
 • **type**: ``"BUY"``
 
+src/utils/parseSwap.ts:22
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / CallData
+@flaunch/sdk - v0.9.16 / Exports / CallData
 
 # Interface: CallData
 
@@ -6022,11 +7494,15 @@ ___
 
 • **data**: \`0x$\{string}\`
 
+src/sdk/calldata.ts:23
+
 ___
 
 ### to
 
 • **to**: \`0x$\{string}\`
+
+src/sdk/calldata.ts:21
 
 ___
 
@@ -6034,11 +7510,12 @@ ___
 
 • **value**: `bigint`
 
+src/sdk/calldata.ts:22
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.16 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -6061,11 +7538,15 @@ ___
 
 • **collaborators**: `string`[]
 
+src/types.ts:30
+
 ___
 
 ### description
 
 • **description**: `string`
+
+src/types.ts:27
 
 ___
 
@@ -6073,11 +7554,15 @@ ___
 
 • **discordUrl**: `string`
 
+src/types.ts:31
+
 ___
 
 ### external\_link
 
 • **external\_link**: `string`
+
+src/types.ts:29
 
 ___
 
@@ -6085,11 +7570,15 @@ ___
 
 • **image**: `string`
 
+src/types.ts:28
+
 ___
 
 ### name
 
 • **name**: `string`
+
+src/types.ts:26
 
 ___
 
@@ -6097,19 +7586,530 @@ ___
 
 • **telegramUrl**: `string`
 
+src/types.ts:33
+
 ___
 
 ### twitterUrl
 
 • **twitterUrl**: `string`
 
+src/types.ts:32
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / IPFSParams
+@flaunch/sdk - v0.9.16 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
+
+# Interface: FlaunchWithDynamicSplitManagerIPFSParams
+
+## Hierarchy
+
+- `Omit`\<`FlaunchWithDynamicSplitManagerParams`, ``"tokenUri"``\>
+
+- `IPFSParams`
+
+  ↳ **`FlaunchWithDynamicSplitManagerIPFSParams`**
+
+## Table of contents
+
+### Properties
+
+- creator
+- creatorFeeAllocationPercent
+- creatorShare
+- fairLaunchDuration
+- fairLaunchPercent
+- flaunchAt
+- initialMarketCapUSD
+- managerOwnerShare
+- metadata
+- moderator
+- name
+- pinataConfig
+- premineAmount
+- splitReceivers
+- symbol
+- treasuryManagerParams
+- trustedSignerSettings
+
+## Properties
+
+### creator
+
+• **creator**: \`0x$\{string}\`
+
+Inherited from
+
+Omit.creator
+
+src/clients/FlaunchZapClient.ts:42
+
+___
+
+### creatorFeeAllocationPercent
+
+• **creatorFeeAllocationPercent**: `number`
+
+Inherited from
+
+Omit.creatorFeeAllocationPercent
+
+src/clients/FlaunchZapClient.ts:43
+
+___
+
+### creatorShare
+
+• **creatorShare**: `bigint`
+
+Inherited from
+
+Omit.creatorShare
+
+src/clients/FlaunchZapClient.ts:103
+
+___
+
+### fairLaunchDuration
+
+• **fairLaunchDuration**: `number`
+
+Inherited from
+
+Omit.fairLaunchDuration
+
+src/clients/FlaunchZapClient.ts:40
+
+___
+
+### fairLaunchPercent
+
+• **fairLaunchPercent**: `number`
+
+**`Deprecated`**
+
+FairLaunch has been deprecated. Please set fairLaunchPercent to 0.
+
+Inherited from
+
+Omit.fairLaunchPercent
+
+src/clients/FlaunchZapClient.ts:39
+
+___
+
+### flaunchAt
+
+• `Optional` **flaunchAt**: `bigint`
+
+Inherited from
+
+Omit.flaunchAt
+
+src/clients/FlaunchZapClient.ts:44
+
+___
+
+### initialMarketCapUSD
+
+• **initialMarketCapUSD**: `number`
+
+Inherited from
+
+Omit.initialMarketCapUSD
+
+src/clients/FlaunchZapClient.ts:41
+
+___
+
+### managerOwnerShare
+
+• **managerOwnerShare**: `bigint`
+
+Inherited from
+
+Omit.managerOwnerShare
+
+src/clients/FlaunchZapClient.ts:104
+
+___
+
+### metadata
+
+• **metadata**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `base64Image` | `string` |
+| `description` | `string` |
+| `discordUrl?` | `string` |
+| `telegramUrl?` | `string` |
+| `twitterUrl?` | `string` |
+| `websiteUrl?` | `string` |
+
+Inherited from
+
+IPFSParams.metadata
+
+src/types.ts:37
+
+___
+
+### moderator
+
+• **moderator**: \`0x$\{string}\`
+
+Inherited from
+
+Omit.moderator
+
+src/clients/FlaunchZapClient.ts:105
+
+___
+
+### name
+
+• **name**: `string`
+
+Inherited from
+
+Omit.name
+
+src/clients/FlaunchZapClient.ts:35
+
+___
+
+### pinataConfig
+
+• `Optional` **pinataConfig**: `PinataConfig`
+
+Inherited from
+
+IPFSParams.pinataConfig
+
+src/types.ts:45
+
+___
+
+### premineAmount
+
+• `Optional` **premineAmount**: `bigint`
+
+Inherited from
+
+Omit.premineAmount
+
+src/clients/FlaunchZapClient.ts:45
+
+___
+
+### splitReceivers
+
+• **splitReceivers**: \{ `address`: \`0x$\{string}\` ; `share`: `bigint`  }[]
+
+Inherited from
+
+Omit.splitReceivers
+
+src/clients/FlaunchZapClient.ts:106
+
+___
+
+### symbol
+
+• **symbol**: `string`
+
+Inherited from
+
+Omit.symbol
+
+src/clients/FlaunchZapClient.ts:36
+
+___
+
+### treasuryManagerParams
+
+• `Optional` **treasuryManagerParams**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `permissions?` | `Permissions` |
+
+Inherited from
+
+Omit.treasuryManagerParams
+
+src/clients/FlaunchZapClient.ts:110
+
+___
+
+### trustedSignerSettings
+
+• `Optional` **trustedSignerSettings**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `enabled` | `boolean` |
+| `premineSignedMessage?` | \{ `deadline`: `number` ; `signature`: \`0x$\{string}\`  } |
+| `premineSignedMessage.deadline` | `number` |
+| `premineSignedMessage.signature` | \`0x$\{string}\` |
+| `trustedFeeSigner?` | \`0x$\{string}\` |
+| `txCap?` | `bigint` |
+| `walletCap?` | `bigint` |
+
+Inherited from
+
+Omit.trustedSignerSettings
+
+src/clients/FlaunchZapClient.ts:54
+
+
+---
+
+@flaunch/sdk - v0.9.16 / Exports / FlaunchWithDynamicSplitManagerParams
+
+# Interface: FlaunchWithDynamicSplitManagerParams
+
+## Hierarchy
+
+- `Omit`\<`FlaunchParams`, ``"treasuryManagerParams"``\>
+
+  ↳ **`FlaunchWithDynamicSplitManagerParams`**
+
+## Table of contents
+
+### Properties
+
+- creator
+- creatorFeeAllocationPercent
+- creatorShare
+- fairLaunchDuration
+- fairLaunchPercent
+- flaunchAt
+- initialMarketCapUSD
+- managerOwnerShare
+- moderator
+- name
+- premineAmount
+- splitReceivers
+- symbol
+- tokenUri
+- treasuryManagerParams
+- trustedSignerSettings
+
+## Properties
+
+### creator
+
+• **creator**: \`0x$\{string}\`
+
+Inherited from
+
+Omit.creator
+
+src/clients/FlaunchZapClient.ts:42
+
+___
+
+### creatorFeeAllocationPercent
+
+• **creatorFeeAllocationPercent**: `number`
+
+Inherited from
+
+Omit.creatorFeeAllocationPercent
+
+src/clients/FlaunchZapClient.ts:43
+
+___
+
+### creatorShare
+
+• **creatorShare**: `bigint`
+
+src/clients/FlaunchZapClient.ts:103
+
+___
+
+### fairLaunchDuration
+
+• **fairLaunchDuration**: `number`
+
+Inherited from
+
+Omit.fairLaunchDuration
+
+src/clients/FlaunchZapClient.ts:40
+
+___
+
+### fairLaunchPercent
+
+• **fairLaunchPercent**: `number`
+
+**`Deprecated`**
+
+FairLaunch has been deprecated. Please set fairLaunchPercent to 0.
+
+Inherited from
+
+Omit.fairLaunchPercent
+
+src/clients/FlaunchZapClient.ts:39
+
+___
+
+### flaunchAt
+
+• `Optional` **flaunchAt**: `bigint`
+
+Inherited from
+
+Omit.flaunchAt
+
+src/clients/FlaunchZapClient.ts:44
+
+___
+
+### initialMarketCapUSD
+
+• **initialMarketCapUSD**: `number`
+
+Inherited from
+
+Omit.initialMarketCapUSD
+
+src/clients/FlaunchZapClient.ts:41
+
+___
+
+### managerOwnerShare
+
+• **managerOwnerShare**: `bigint`
+
+src/clients/FlaunchZapClient.ts:104
+
+___
+
+### moderator
+
+• **moderator**: \`0x$\{string}\`
+
+src/clients/FlaunchZapClient.ts:105
+
+___
+
+### name
+
+• **name**: `string`
+
+Inherited from
+
+Omit.name
+
+src/clients/FlaunchZapClient.ts:35
+
+___
+
+### premineAmount
+
+• `Optional` **premineAmount**: `bigint`
+
+Inherited from
+
+Omit.premineAmount
+
+src/clients/FlaunchZapClient.ts:45
+
+___
+
+### splitReceivers
+
+• **splitReceivers**: \{ `address`: \`0x$\{string}\` ; `share`: `bigint`  }[]
+
+src/clients/FlaunchZapClient.ts:106
+
+___
+
+### symbol
+
+• **symbol**: `string`
+
+Inherited from
+
+Omit.symbol
+
+src/clients/FlaunchZapClient.ts:36
+
+___
+
+### tokenUri
+
+• **tokenUri**: `string`
+
+Inherited from
+
+Omit.tokenUri
+
+src/clients/FlaunchZapClient.ts:37
+
+___
+
+### treasuryManagerParams
+
+• `Optional` **treasuryManagerParams**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `permissions?` | `Permissions` |
+
+src/clients/FlaunchZapClient.ts:110
+
+___
+
+### trustedSignerSettings
+
+• `Optional` **trustedSignerSettings**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `enabled` | `boolean` |
+| `premineSignedMessage?` | \{ `deadline`: `number` ; `signature`: \`0x$\{string}\`  } |
+| `premineSignedMessage.deadline` | `number` |
+| `premineSignedMessage.signature` | \`0x$\{string}\` |
+| `trustedFeeSigner?` | \`0x$\{string}\` |
+| `txCap?` | `bigint` |
+| `walletCap?` | `bigint` |
+
+Inherited from
+
+Omit.trustedSignerSettings
+
+src/clients/FlaunchZapClient.ts:54
+
+
+---
+
+@flaunch/sdk - v0.9.16 / Exports / IPFSParams
 
 # Interface: IPFSParams
+
+## Hierarchy
+
+- **`IPFSParams`**
+
+  ↳ `FlaunchWithDynamicSplitManagerIPFSParams`
 
 ## Table of contents
 
@@ -6135,17 +8135,20 @@ Type declaration
 | `twitterUrl?` | `string` |
 | `websiteUrl?` | `string` |
 
+src/types.ts:37
+
 ___
 
 ### pinataConfig
 
 • `Optional` **pinataConfig**: `PinataConfig`
 
+src/types.ts:45
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / PinataConfig
+@flaunch/sdk - v0.9.16 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -6161,11 +8164,12 @@ ___
 
 • **jwt**: `string`
 
+src/helpers/ipfs.ts:27
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / PoolKey
+@flaunch/sdk - v0.9.16 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -6191,11 +8195,15 @@ ___
 
 • **currency0**: \`0x$\{string}\`
 
+src/types.ts:14
+
 ___
 
 ### currency1
 
 • **currency1**: \`0x$\{string}\`
+
+src/types.ts:15
 
 ___
 
@@ -6203,11 +8211,15 @@ ___
 
 • **fee**: `number`
 
+src/types.ts:16
+
 ___
 
 ### hooks
 
 • **hooks**: \`0x$\{string}\`
+
+src/types.ts:18
 
 ___
 
@@ -6215,11 +8227,12 @@ ___
 
 • **tickSpacing**: `number`
 
+src/types.ts:17
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / PoolWithHookData
+@flaunch/sdk - v0.9.16 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -6250,6 +8263,8 @@ Inherited from
 
 PoolKey.currency0
 
+src/types.ts:14
+
 ___
 
 ### currency1
@@ -6259,6 +8274,8 @@ ___
 Inherited from
 
 PoolKey.currency1
+
+src/types.ts:15
 
 ___
 
@@ -6270,11 +8287,15 @@ Inherited from
 
 PoolKey.fee
 
+src/types.ts:16
+
 ___
 
 ### hookData
 
 • **hookData**: \`0x$\{string}\`
+
+src/types.ts:22
 
 ___
 
@@ -6286,6 +8307,8 @@ Inherited from
 
 PoolKey.hooks
 
+src/types.ts:18
+
 ___
 
 ### tickSpacing
@@ -6296,11 +8319,12 @@ Inherited from
 
 PoolKey.tickSpacing
 
+src/types.ts:17
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / SellSwapData
+@flaunch/sdk - v0.9.16 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -6325,17 +8349,20 @@ Type declaration
 | `fees` | `SwapFees` |
 | `flETHBought` | `bigint` |
 
+src/utils/parseSwap.ts:32
+
 ___
 
 ### type
 
 • **type**: ``"SELL"``
 
+src/utils/parseSwap.ts:31
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.9.16 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -6353,11 +8380,15 @@ ___
 
 • **isSingleSided**: `boolean`
 
+src/types.ts:195
+
 ___
 
 ### shouldHideCoinInput
 
 • **shouldHideCoinInput**: `boolean`
+
+src/types.ts:196
 
 ___
 
@@ -6365,11 +8396,12 @@ ___
 
 • **shouldHideETHInput**: `boolean`
 
+src/types.ts:197
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / SwapFees
+@flaunch/sdk - v0.9.16 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -6386,17 +8418,20 @@ ___
 
 • **amount**: `bigint`
 
+src/utils/parseSwap.ts:18
+
 ___
 
 ### isInFLETH
 
 • **isInFLETH**: `boolean`
 
+src/utils/parseSwap.ts:17
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.16 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -6423,11 +8458,15 @@ ___
 
 • **flAmount0**: `bigint`
 
+src/utils/parseSwap.ts:2
+
 ___
 
 ### flAmount1
 
 • **flAmount1**: `bigint`
+
+src/utils/parseSwap.ts:3
 
 ___
 
@@ -6435,11 +8474,15 @@ ___
 
 • **flFee0**: `bigint`
 
+src/utils/parseSwap.ts:4
+
 ___
 
 ### flFee1
 
 • **flFee1**: `bigint`
+
+src/utils/parseSwap.ts:5
 
 ___
 
@@ -6447,11 +8490,15 @@ ___
 
 • **ispAmount0**: `bigint`
 
+src/utils/parseSwap.ts:6
+
 ___
 
 ### ispAmount1
 
 • **ispAmount1**: `bigint`
+
+src/utils/parseSwap.ts:7
 
 ___
 
@@ -6459,11 +8506,15 @@ ___
 
 • **ispFee0**: `bigint`
 
+src/utils/parseSwap.ts:8
+
 ___
 
 ### ispFee1
 
 • **ispFee1**: `bigint`
+
+src/utils/parseSwap.ts:9
 
 ___
 
@@ -6471,11 +8522,15 @@ ___
 
 • **uniAmount0**: `bigint`
 
+src/utils/parseSwap.ts:10
+
 ___
 
 ### uniAmount1
 
 • **uniAmount1**: `bigint`
+
+src/utils/parseSwap.ts:11
 
 ___
 
@@ -6483,19 +8538,22 @@ ___
 
 • **uniFee0**: `bigint`
 
+src/utils/parseSwap.ts:12
+
 ___
 
 ### uniFee1
 
 • **uniFee1**: `bigint`
 
+src/utils/parseSwap.ts:13
 
 
 ---
 
-@flaunch/sdk - v0.9.15 / Exports
+@flaunch/sdk - v0.9.16 / Exports
 
-# @flaunch/sdk - v0.9.15
+# @flaunch/sdk - v0.9.16
 
 ## Table of contents
 
@@ -6509,7 +8567,9 @@ ___
 ### Classes
 
 - FlaunchBackend
+- ReadDynamicAddressFeeSplitManager
 - ReadFlaunchSDK
+- ReadWriteDynamicAddressFeeSplitManager
 - ReadWriteFlaunchSDK
 
 ### Interfaces
@@ -6518,6 +8578,8 @@ ___
 - BuySwapData
 - CallData
 - CoinMetadata
+- FlaunchWithDynamicSplitManagerIPFSParams
+- FlaunchWithDynamicSplitManagerParams
 - IPFSParams
 - PinataConfig
 - PoolKey
@@ -6538,6 +8600,7 @@ ___
 - CheckSingleSidedAddLiquidityParams
 - CreateFlaunchCalldataParams
 - CreateFlaunchParams
+- DynamicRecipientInfo
 - GetAddLiquidityCallsParams
 - GetSingleSidedCoinAddLiquidityCallsParams
 - ImportAndAddLiquidityParams
@@ -6554,6 +8617,7 @@ ___
 - PoolCreatedEventData
 - PoolCreatedLogs
 - PoolSwapLog
+- RecipientShare
 - SellSwapLog
 
 ### Variables
@@ -6568,6 +8632,7 @@ ___
 - ClankerWorldVerifierAddress
 - ClosedPermissionsAddress
 - DopplerVerifierAddress
+- DynamicAddressFeeSplitManagerAddress
 - FLETHAddress
 - FLETHHooksAddress
 - FairLaunchAddress
@@ -6649,17 +8714,23 @@ ___
 
 Ƭ **BaseSwapLog**: `EventLog`\<`FlaunchPositionManagerABI`, ``"PoolSwap"``\> & \{ `timestamp`: `number`  }
 
+src/clients/FlaunchPositionManagerClient.ts:39
+
 ___
 
 ### BuySwapLog
 
 Ƭ **BuySwapLog**: `BaseSwapLog` & \{ `delta`: \{ `coinsBought`: `bigint` ; `fees`: \{ `amount`: `bigint` ; `isInFLETH`: `boolean`  } ; `flETHSold`: `bigint`  } ; `type`: ``"BUY"``  }
 
+src/clients/FlaunchPositionManagerClient.ts:43
+
 ___
 
 ### CalculateAddLiquidityAmountsParams
 
 Ƭ **CalculateAddLiquidityAmountsParams**: \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `currentMarketCap?`: `string` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `currentPriceUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `version?`: `FlaunchVersion`  }
+
+src/types.ts:102
 
 ___
 
@@ -6689,6 +8760,8 @@ Type declaration
 
 `Promise`\<`Hex`\>
 
+src/sdk/calldata.ts:212
+
 ___
 
 ### CallDataResult
@@ -6697,17 +8770,23 @@ ___
 
 Type helper for the result of a calldata operation
 
+src/sdk/calldata.ts:219
+
 ___
 
 ### CallWithDescription
 
 Ƭ **CallWithDescription**: `Call` & \{ `description?`: `string`  }
 
+src/types.ts:75
+
 ___
 
 ### CheckSingleSidedAddLiquidityParams
 
 Ƭ **CheckSingleSidedAddLiquidityParams**: \{ `coinAddress`: `Address` ; `currentMarketCap?`: `string` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `currentPriceUSD?`: `number` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `version?`: `FlaunchVersion`  }
+
+src/types.ts:176
 
 ___
 
@@ -6722,6 +8801,8 @@ Type declaration
 | `publicClient` | `PublicClient` |
 | `walletAddress?` | `Address` |
 
+src/sdk/calldata.ts:26
+
 ___
 
 ### CreateFlaunchParams
@@ -6735,11 +8816,32 @@ Type declaration
 | `publicClient` | `PublicClient` |
 | `walletClient?` | `WalletClient` |
 
+src/sdk/factory.ts:6
+
+___
+
+### DynamicRecipientInfo
+
+Ƭ **DynamicRecipientInfo**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `claimed` | `bigint` |
+| `debtPerShare` | `bigint` |
+| `share` | `bigint` |
+| `snapshotBalance` | `bigint` |
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:21
+
 ___
 
 ### GetAddLiquidityCallsParams
 
 Ƭ **GetAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `slippagePercent?`: `number` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `slippagePercent?`: `number` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `slippagePercent?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number` ; `version?`: `FlaunchVersion`  }
+
+src/types.ts:124
 
 ___
 
@@ -6747,11 +8849,15 @@ ___
 
 Ƭ **GetSingleSidedCoinAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `slippagePercent?`: `number` ; `tokenSupply?`: `bigint` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `slippagePercent?`: `number` ; `tokenSupply?`: `bigint` ; `version?`: `FlaunchVersion`  }
 
+src/types.ts:158
+
 ___
 
 ### ImportAndAddLiquidityParams
 
 Ƭ **ImportAndAddLiquidityParams**: `ImportAndAddLiquidityWithMarketCap` \| `ImportAndAddLiquidityWithPrice` \| `ImportAndAddLiquidityWithExactAmounts`
+
+src/types.ts:243
 
 ___
 
@@ -6759,11 +8865,15 @@ ___
 
 Ƭ **ImportAndAddLiquidityWithExactAmounts**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `slippagePercent?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
+src/types.ts:229
+
 ___
 
 ### ImportAndAddLiquidityWithMarketCap
 
 Ƭ **ImportAndAddLiquidityWithMarketCap**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `slippagePercent?`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
+
+src/types.ts:201
 
 ___
 
@@ -6771,11 +8881,15 @@ ___
 
 Ƭ **ImportAndAddLiquidityWithPrice**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `slippagePercent?`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
+src/types.ts:215
+
 ___
 
 ### ImportAndSingleSidedCoinAddLiquidityParams
 
 Ƭ **ImportAndSingleSidedCoinAddLiquidityParams**: `ImportAndSingleSidedCoinAddLiquidityWithMarketCap` \| `ImportAndSingleSidedCoinAddLiquidityWithPrice`
+
+src/types.ts:270
 
 ___
 
@@ -6783,11 +8897,15 @@ ___
 
 Ƭ **ImportAndSingleSidedCoinAddLiquidityWithMarketCap**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
+src/types.ts:251
+
 ___
 
 ### ImportAndSingleSidedCoinAddLiquidityWithPrice
 
 Ƭ **ImportAndSingleSidedCoinAddLiquidityWithPrice**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
+
+src/types.ts:260
 
 ___
 
@@ -6795,11 +8913,15 @@ ___
 
 Ƭ **ImportMemecoinParams**: \{ `coinAddress`: `Address` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `verifier?`: `Verifier`  } \| \{ `coinAddress`: `Address` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `verifier?`: `Verifier`  }
 
+src/types.ts:88
+
 ___
 
 ### ParsedSwapData
 
 Ƭ **ParsedSwapData**: `BuySwapData` \| `SellSwapData`
+
+src/utils/parseSwap.ts:39
 
 ___
 
@@ -6816,6 +8938,8 @@ Type declaration
 | `nonce` | `number` |
 | `token` | `Address` |
 
+src/utils/universalRouter.ts:21
+
 ___
 
 ### PermitSingle
@@ -6829,6 +8953,8 @@ Type declaration
 | `details` | `PermitDetails` |
 | `sigDeadline` | `bigint` |
 | `spender` | `Address` |
+
+src/utils/universalRouter.ts:28
 
 ___
 
@@ -6861,11 +8987,15 @@ Type declaration
 | `poolId` | `Hex` |
 | `tokenId` | `bigint` |
 
+src/types.ts:277
+
 ___
 
 ### PoolCreatedLogs
 
 Ƭ **PoolCreatedLogs**: `PoolCreatedLog`[]
+
+src/clients/FlaunchPositionManagerClient.ts:26
 
 ___
 
@@ -6873,11 +9003,30 @@ ___
 
 Ƭ **PoolSwapLog**: `BuySwapLog` \| `SellSwapLog` \| `BaseSwapLog`
 
+src/clients/FlaunchPositionManagerClient.ts:67
+
+___
+
+### RecipientShare
+
+Ƭ **RecipientShare**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `recipient` | `Address` |
+| `share` | `bigint` |
+
+src/clients/DynamicAddressFeeSplitManagerClient.ts:16
+
 ___
 
 ### SellSwapLog
 
 Ƭ **SellSwapLog**: `BaseSwapLog` & \{ `delta`: \{ `coinsSold`: `bigint` ; `fees`: \{ `amount`: `bigint` ; `isInFLETH`: `boolean`  } ; `flETHBought`: `bigint`  } ; `type`: ``"SELL"``  }
+
+src/clients/FlaunchPositionManagerClient.ts:55
 
 ## Variables
 
@@ -6885,11 +9034,15 @@ ___
 
 • `Const` **AddressFeeSplitManagerAddress**: `Addresses`
 
+src/addresses.ts:88
+
 ___
 
 ### AnyBidWallAddress
 
 • `Const` **AnyBidWallAddress**: `Addresses`
+
+src/addresses.ts:73
 
 ___
 
@@ -6897,11 +9050,15 @@ ___
 
 • `Const` **AnyFlaunchAddress**: `Addresses`
 
+src/addresses.ts:46
+
 ___
 
 ### AnyPositionManagerAddress
 
 • `Const` **AnyPositionManagerAddress**: `Addresses`
+
+src/addresses.ts:26
 
 ___
 
@@ -6909,11 +9066,15 @@ ___
 
 • `Const` **BidWallAddress**: `Addresses`
 
+src/addresses.ts:62
+
 ___
 
 ### BidWallV1\_1Address
 
 • `Const` **BidWallV1\_1Address**: `Addresses`
+
+src/addresses.ts:68
 
 ___
 
@@ -6921,11 +9082,15 @@ ___
 
 • `Const` **BuyBackManagerAddress**: `Addresses`
 
+src/addresses.ts:103
+
 ___
 
 ### ClankerWorldVerifierAddress
 
 • `Const` **ClankerWorldVerifierAddress**: `Addresses`
+
+src/addresses.ts:114
 
 ___
 
@@ -6935,11 +9100,23 @@ ___
 
 Permissions
 
+src/addresses.ts:147
+
 ___
 
 ### DopplerVerifierAddress
 
 • `Const` **DopplerVerifierAddress**: `Addresses`
+
+src/addresses.ts:119
+
+___
+
+### DynamicAddressFeeSplitManagerAddress
+
+• `Const` **DynamicAddressFeeSplitManagerAddress**: `Addresses`
+
+src/addresses.ts:93
 
 ___
 
@@ -6947,11 +9124,15 @@ ___
 
 • `Const` **FLETHAddress**: `Addresses`
 
+src/addresses.ts:168
+
 ___
 
 ### FLETHHooksAddress
 
 • `Const` **FLETHHooksAddress**: `Addresses`
+
+src/addresses.ts:173
 
 ___
 
@@ -6959,17 +9140,23 @@ ___
 
 • `Const` **FairLaunchAddress**: `Addresses`
 
+src/addresses.ts:51
+
 ___
 
 ### FairLaunchV1\_1Address
 
 • `Const` **FairLaunchV1\_1Address**: `Addresses`
 
+src/addresses.ts:57
+
 ___
 
 ### FastFlaunchZapAddress
 
 • `Const` **FastFlaunchZapAddress**: `Addresses`
+
+src/addresses.ts:179
 
 ___
 
@@ -6979,11 +9166,15 @@ ___
 
 ===========
 
+src/addresses.ts:158
+
 ___
 
 ### FlaunchAddress
 
 • `Const` **FlaunchAddress**: `Addresses`
+
+src/addresses.ts:31
 
 ___
 
@@ -6991,17 +9182,23 @@ ___
 
 • `Const` **FlaunchPositionManagerAddress**: `Addresses`
 
+src/addresses.ts:11
+
 ___
 
 ### FlaunchPositionManagerV1\_1Address
 
 • `Const` **FlaunchPositionManagerV1\_1Address**: `Addresses`
 
+src/addresses.ts:16
+
 ___
 
 ### FlaunchPositionManagerV1\_2Address
 
 • `Const` **FlaunchPositionManagerV1\_2Address**: `Addresses`
+
+src/addresses.ts:21
 
 ___
 
@@ -7016,11 +9213,15 @@ Type declaration
 | `ReadFlaunchSDK` | typeof `ReadFlaunchSDK` |
 | `ReadWriteFlaunchSDK` | typeof `ReadWriteFlaunchSDK` |
 
+src/index.ts:53
+
 ___
 
 ### FlaunchV1\_1Address
 
 • `Const` **FlaunchV1\_1Address**: `Addresses`
+
+src/addresses.ts:36
 
 ___
 
@@ -7028,17 +9229,23 @@ ___
 
 • `Const` **FlaunchV1\_2Address**: `Addresses`
 
+src/addresses.ts:41
+
 ___
 
 ### FlaunchZapAddress
 
 • `Const` **FlaunchZapAddress**: `Addresses`
 
+src/addresses.ts:5
+
 ___
 
 ### PERMIT\_DETAILS
 
 • `Const` **PERMIT\_DETAILS**: \{ `name`: `string` = "token"; `type`: `string` = "address" }[]
+
+src/utils/universalRouter.ts:571
 
 ___
 
@@ -7053,11 +9260,15 @@ Type declaration
 | `PermitDetails` | \{ `name`: `string` = "token"; `type`: `string` = "address" }[] |
 | `PermitSingle` | \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[] |
 
+src/utils/universalRouter.ts:578
+
 ___
 
 ### Permit2Address
 
 • `Const` **Permit2Address**: `Addresses`
+
+src/addresses.ts:204
 
 ___
 
@@ -7065,11 +9276,15 @@ ___
 
 • `Const` **PoolManagerAddress**: `Addresses`
 
+src/addresses.ts:184
+
 ___
 
 ### Q192
 
 • `Const` **Q192**: `bigint`
+
+src/utils/univ4.ts:12
 
 ___
 
@@ -7077,11 +9292,15 @@ ___
 
 • `Const` **Q96**: `bigint`
 
+src/utils/univ4.ts:11
+
 ___
 
 ### QuoterAddress
 
 • `Const` **QuoterAddress**: `Addresses`
+
+src/addresses.ts:194
 
 ___
 
@@ -7089,11 +9308,15 @@ ___
 
 • `Const` **ReferralEscrowAddress**: `Addresses`
 
+src/addresses.ts:163
+
 ___
 
 ### RevenueManagerAddress
 
 • `Const` **RevenueManagerAddress**: `Addresses`
+
+src/addresses.ts:83
 
 ___
 
@@ -7101,11 +9324,15 @@ ___
 
 • `Const` **SolanaVerifierAddress**: `Addresses`
 
+src/addresses.ts:124
+
 ___
 
 ### StakingManagerAddress
 
 • `Const` **StakingManagerAddress**: `Addresses`
+
+src/addresses.ts:98
 
 ___
 
@@ -7113,11 +9340,15 @@ ___
 
 • `Const` **StateViewAddress**: `Addresses`
 
+src/addresses.ts:199
+
 ___
 
 ### TICK\_SPACING
 
 • `Const` **TICK\_SPACING**: ``60``
+
+src/utils/univ4.ts:14
 
 ___
 
@@ -7132,6 +9363,8 @@ Type declaration
 | `MAX_TICK` | `number` |
 | `MIN_TICK` | `number` |
 
+src/utils/univ4.ts:6
+
 ___
 
 ### TokenImporterAddress
@@ -7140,11 +9373,15 @@ ___
 
 Verifiers
 
+src/addresses.ts:109
+
 ___
 
 ### TreasuryManagerFactoryAddress
 
 • `Const` **TreasuryManagerFactoryAddress**: `Addresses`
+
+src/addresses.ts:78
 
 ___
 
@@ -7156,11 +9393,15 @@ Index signature
 
 ▪ [chainId: `number`]: `PoolKey`
 
+src/addresses.ts:214
+
 ___
 
 ### UniV4PositionManagerAddress
 
 • `Const` **UniV4PositionManagerAddress**: `Addresses`
+
+src/addresses.ts:209
 
 ___
 
@@ -7168,11 +9409,15 @@ ___
 
 • `Const` **UniversalRouterAddress**: `Addresses`
 
+src/addresses.ts:189
+
 ___
 
 ### VirtualsVerifierAddress
 
 • `Const` **VirtualsVerifierAddress**: `Addresses`
+
+src/addresses.ts:129
 
 ___
 
@@ -7180,17 +9425,23 @@ ___
 
 • `Const` **WhitelistVerifierAddress**: `Addresses`
 
+src/addresses.ts:134
+
 ___
 
 ### WhitelistedPermissionsAddress
 
 • `Const` **WhitelistedPermissionsAddress**: `Addresses`
 
+src/addresses.ts:152
+
 ___
 
 ### ZoraVerifierAddress
 
 • `Const` **ZoraVerifierAddress**: `Addresses`
+
+src/addresses.ts:139
 
 ___
 
@@ -7202,11 +9453,15 @@ Index signature
 
 ▪ [key: `number`]: `Chain`
 
+src/helpers/chainIdToChain.ts:4
+
 ___
 
 ### encodedCallAbi
 
 • `Const` **encodedCallAbi**: readonly [{}]
+
+src/sdk/calldata.ts:16
 
 ## Functions
 
@@ -7244,6 +9499,8 @@ Returns
 | `commands` | \`0x$\{string}\` |
 | `inputs` | \`0x$\{string}\`[] |
 
+src/utils/universalRouter.ts:118
+
 ___
 
 ### bytes32ToUint256
@@ -7259,6 +9516,8 @@ Parameters
 Returns
 
 `bigint`
+
+src/helpers/hex.ts:3
 
 ___
 
@@ -7284,6 +9543,8 @@ Returns
 | `amount0` | `bigint` |
 | `amount1` | `bigint` |
 
+src/utils/univ4.ts:185
+
 ___
 
 ### createCallDataWalletClient
@@ -7302,6 +9563,8 @@ Parameters
 Returns
 
 `WalletClient`
+
+src/sdk/calldata.ts:34
 
 ___
 
@@ -7327,6 +9590,8 @@ Drift instance for read-only operations
 
 Error if publicClient.chain is not configured
 
+src/sdk/drift.ts:20
+
 ▸ **createDrift**(`params`): `Drift`\<`ReadWriteAdapter`\>
 
 Creates a read-write Drift instance with both public and wallet clients
@@ -7346,6 +9611,8 @@ Drift instance for read and write operations
 **`Throws`**
 
 Error if publicClient.chain is not configured
+
+src/sdk/drift.ts:29
 
 ___
 
@@ -7371,6 +9638,8 @@ ReadFlaunchSDK for read-only operations
 
 Error if publicClient.chain is not configured
 
+src/sdk/factory.ts:17
+
 ▸ **createFlaunch**(`params`): `ReadWriteFlaunchSDK`
 
 Creates a read-write Flaunch SDK instance with both public and wallet clients
@@ -7390,6 +9659,8 @@ ReadWriteFlaunchSDK for read and write operations
 **`Throws`**
 
 Error if publicClient.chain is not configured
+
+src/sdk/factory.ts:26
 
 ___
 
@@ -7415,6 +9686,8 @@ ReadFlaunchSDK for read-only operations
 
 Error if publicClient.chain is not configured
 
+src/sdk/calldata.ts:129
+
 ▸ **createFlaunchCalldata**(`params`): `ReadWriteFlaunchSDK`
 
 Creates a read-write Flaunch SDK instance that returns encoded calldata instead of broadcasting transactions
@@ -7434,6 +9707,8 @@ ReadWriteFlaunchSDK instance configured for calldata generation
 **`Throws`**
 
 Error if publicClient.chain is not configured
+
+src/sdk/calldata.ts:138
 
 ___
 
@@ -7455,6 +9730,8 @@ Returns
 
 Call data containing to, value, and data
 
+src/sdk/calldata.ts:184
+
 ___
 
 ### generateTokenUri
@@ -7472,6 +9749,8 @@ Parameters
 Returns
 
 `Promise`\<`string`\>
+
+src/helpers/ipfs.ts:318
 
 ___
 
@@ -7495,6 +9774,8 @@ Returns
 **`Dev`**
 
 EXACT_OUT adds the slippage, EXACT_IN removes it
+
+src/utils/universalRouter.ts:94
 
 ___
 
@@ -7524,6 +9805,8 @@ Returns
 | `amount0` | `bigint` |
 | `amount1` | `bigint` |
 
+src/utils/univ4.ts:390
+
 ___
 
 ### getLiquidityFromAmounts
@@ -7547,6 +9830,8 @@ Returns
 
 `bigint`
 
+src/utils/univ4.ts:294
+
 ___
 
 ### getNearestUsableTick
@@ -7564,6 +9849,8 @@ Parameters
 Returns
 
 `number`
+
+src/utils/univ4.ts:73
 
 ___
 
@@ -7585,6 +9872,8 @@ Returns
 `Address`
 
 The corresponding permissions contract address
+
+src/helpers/permissions.ts:14
 
 ___
 
@@ -7620,6 +9909,8 @@ Returns
 | `typedData.types.PermitDetails` | \{ `name`: `string` = "token"; `type`: `string` = "address" }[] |
 | `typedData.types.PermitSingle` | \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[] |
 
+src/utils/universalRouter.ts:587
+
 ___
 
 ### getPoolId
@@ -7636,6 +9927,8 @@ Returns
 
 \`0x$\{string}\`
 
+src/utils/univ4.ts:16
+
 ___
 
 ### getSqrtPriceX96FromTick
@@ -7651,6 +9944,8 @@ Parameters
 Returns
 
 `bigint`
+
+src/utils/univ4.ts:123
 
 ___
 
@@ -7670,6 +9965,8 @@ Parameters
 Returns
 
 `number`
+
+src/utils/univ4.ts:42
 
 ___
 
@@ -7694,6 +9991,8 @@ Returns
 
 liquidity for amount0, precise
 
+src/utils/univ4.ts:340
+
 ___
 
 ### maxLiquidityForAmount1
@@ -7715,6 +10014,8 @@ Returns
 `bigint`
 
 liquidity for amount1
+
+src/utils/univ4.ts:368
 
 ___
 
@@ -7739,6 +10040,8 @@ Returns
 | `fee` | `number` |
 | `hooks` | \`0x$\{string}\` |
 | `tickSpacing` | `number` |
+
+src/utils/univ4.ts:29
 
 ___
 
@@ -7766,6 +10069,8 @@ Returns
 
 Promise<CallData> with decoded transaction parameters
 
+src/sdk/calldata.ts:202
+
 ___
 
 ### parseSwapData
@@ -7786,6 +10091,8 @@ Returns
 `ParsedSwapData`
 
 Parsed swap data with type and delta information
+
+src/utils/parseSwap.ts:47
 
 ___
 
@@ -7809,6 +10116,8 @@ Returns
 
 `number`
 
+src/utils/univ4.ts:230
+
 ___
 
 ### resolveIPFS
@@ -7824,6 +10133,8 @@ Parameters
 Returns
 
 `string`
+
+src/helpers/ipfs.ts:14
 
 ___
 
@@ -7856,6 +10167,8 @@ Returns
 | `commands` | \`0x$\{string}\` |
 | `inputs` | \`0x$\{string}\`[] |
 
+src/utils/universalRouter.ts:392
+
 ___
 
 ### uint256ToBytes32
@@ -7871,6 +10184,8 @@ Parameters
 Returns
 
 \`0x$\{string}\`
+
+src/helpers/hex.ts:7
 
 ___
 
@@ -7896,6 +10211,8 @@ Returns
 
 Upload response with CID and other details
 
+src/helpers/ipfs.ts:42
+
 ___
 
 ### uploadImageToFlaunchAPI
@@ -7915,6 +10232,8 @@ Returns
 `Promise`\<`FlaunchUploadResponse`\>
 
 Upload response with IPFS hash
+
+src/helpers/ipfs.ts:253
 
 ___
 
@@ -7940,6 +10259,8 @@ Returns
 
 Upload response with CID and other details
 
+src/helpers/ipfs.ts:149
+
 ___
 
 ### uploadJsonToIPFS
@@ -7964,6 +10285,8 @@ Returns
 
 Upload response with CID and other details
 
+src/helpers/ipfs.ts:97
+
 ___
 
 ### uploadMetadataToFlaunchAPI
@@ -7984,6 +10307,7 @@ Returns
 
 Upload response with IPFS hash
 
+src/helpers/ipfs.ts:288
 
 
 ---
