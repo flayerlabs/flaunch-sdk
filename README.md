@@ -244,6 +244,52 @@ await flaunchWrite.flaunchIPFSWithSplitManager({
 });
 ```
 
+### Flaunch with Dynamic Address Fee Splits
+
+Use the dynamic split manager when recipient weights need to be updated after deployment.
+Unlike the static split manager, recipient shares are mutable and do not need to be modeled as a fixed 100% distribution in SDK inputs.
+
+```ts
+await flaunchWrite.flaunchIPFSWithDynamicSplitManager({
+  name: "...",
+  symbol: "...",
+  metadata: {
+    base64Image: "...",
+  },
+  fairLaunchPercent: 0,
+  fairLaunchDuration: 30 * 60, // 30 mins
+  initialMarketCapUSD: 1_000,
+  creator: "0x...",
+  creatorFeeAllocationPercent: 100,
+  // Dynamic split manager params (raw share weights)
+  creatorShare: 5_000_000n,
+  managerOwnerShare: 2_000_000n,
+  moderator: "0xmoderator...",
+  splitReceivers: [
+    { address: "0x123...", share: 2_000_000n },
+    { address: "0xabc...", share: 1_000_000n },
+  ],
+});
+```
+
+You can update recipient distribution after deployment:
+
+```ts
+import { ReadWriteDynamicAddressFeeSplitManager } from "@flaunch/sdk";
+
+const manager = new ReadWriteDynamicAddressFeeSplitManager(
+  "0xmanagerAddress...",
+  flaunchWrite.drift
+);
+
+// share = 0 removes recipient; non-zero adds/updates recipient share
+await manager.updateRecipients([
+  { recipient: "0x123...", share: 1_500_000n },
+  { recipient: "0xdef...", share: 500_000n },
+  { recipient: "0xabc...", share: 0n },
+]);
+```
+
 ### Buying a Flaunch coin
 
 ```ts

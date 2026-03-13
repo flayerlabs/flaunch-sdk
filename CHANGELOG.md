@@ -4,6 +4,15 @@ All notable changes to the @flaunch/sdk package will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Dynamic Address Fee Split Manager SDK support:
+  - Added `DynamicAddressFeeSplitManagerAddress` mapping (Base Sepolia deployed address, Base placeholder).
+  - Added `DynamicAddressFeeSplitManagerAbi` export.
+  - Added `ReadDynamicAddressFeeSplitManager` and `ReadWriteDynamicAddressFeeSplitManager` clients.
+  - Added `flaunchWithDynamicSplitManager` and `flaunchIPFSWithDynamicSplitManager` flows.
+  - Added dynamic split manager exports and usage docs.
+
 ### Changed
 
 - Updated SDK contract address mappings to match the latest deployment artifacts:

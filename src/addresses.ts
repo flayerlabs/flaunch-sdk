@@ -90,6 +90,11 @@ export const AddressFeeSplitManagerAddress: Addresses = {
   [baseSepolia.id]: "0x0A3AF63cd86E68a852A1D4923FEfC4e855D8499d",
 };
 
+export const DynamicAddressFeeSplitManagerAddress: Addresses = {
+  [base.id]: zeroAddress,
+  [baseSepolia.id]: "0x4882075542626721C8743D80DC9528e2f54d8A46",
+};
+
 export const StakingManagerAddress: Addresses = {
   [base.id]: "0xec0069F8DBbbC94058dc895000dd38ef40b3125d",
   [baseSepolia.id]: "0xB8f1cb6B4Ff8f07149276bbfA617aed7bd32d20D",

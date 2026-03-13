@@ -22,6 +22,7 @@ import {
 import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
 import {
   AddressFeeSplitManagerAddress,
+  DynamicAddressFeeSplitManagerAddress,
   FlaunchPositionManagerV1_1Address,
 } from "addresses";
 import { getAmountWithSlippage } from "utils/universalRouter";
@@ -95,6 +96,24 @@ export interface FlaunchWithSplitManagerParams
 
 export interface FlaunchWithSplitManagerIPFSParams
   extends Omit<FlaunchWithSplitManagerParams, "tokenUri">,
+    IPFSParams {}
+
+export interface FlaunchWithDynamicSplitManagerParams
+  extends Omit<FlaunchParams, "treasuryManagerParams"> {
+  creatorShare: bigint;
+  managerOwnerShare: bigint;
+  moderator: Address;
+  splitReceivers: {
+    address: Address;
+    share: bigint;
+  }[];
+  treasuryManagerParams?: {
+    permissions?: Permissions;
+  };
+}
+
+export interface FlaunchWithDynamicSplitManagerIPFSParams
+  extends Omit<FlaunchWithDynamicSplitManagerParams, "tokenUri">,
     IPFSParams {}
 
 export interface DeployRevenueManagerParams {
@@ -531,6 +550,101 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
     });
 
     return this.flaunchWithSplitManager({
+      ...params,
+      tokenUri,
+    });
+  }
+
+  /**
+   * Flaunches a new token with the Dynamic Address Fee Split manager.
+   * Unlike static splits, recipient shares are mutable post-deployment.
+   * @param params - Parameters for the flaunch with dynamic split manager
+   * @returns Transaction response for the flaunch creation
+   */
+  async flaunchWithDynamicSplitManager(
+    params: FlaunchWithDynamicSplitManagerParams
+  ) {
+    if (params.moderator === zeroAddress) {
+      throw new Error("Dynamic split moderator cannot be zero address");
+    }
+
+    const duplicateRecipients = new Set<Address>();
+    const recipientShares = params.splitReceivers.map((receiver) => {
+      if (receiver.address === zeroAddress) {
+        throw new Error("Recipient address cannot be zero address");
+      }
+
+      if (receiver.share <= 0n) {
+        throw new Error("Recipient share must be greater than zero");
+      }
+
+      if (duplicateRecipients.has(receiver.address)) {
+        throw new Error("Duplicate recipient found in split receivers");
+      }
+
+      duplicateRecipients.add(receiver.address);
+      return {
+        recipient: receiver.address,
+        share: receiver.share,
+      };
+    });
+
+    const initializeData = encodeAbiParameters(
+      [
+        {
+          type: "tuple",
+          name: "params",
+          components: [
+            { type: "uint256", name: "creatorShare" },
+            { type: "uint256", name: "ownerShare" },
+            { type: "address", name: "moderator" },
+            {
+              type: "tuple[]",
+              name: "recipientShares",
+              components: [
+                { type: "address", name: "recipient" },
+                { type: "uint256", name: "share" },
+              ],
+            },
+          ],
+        },
+      ],
+      [
+        {
+          creatorShare: params.creatorShare,
+          ownerShare: params.managerOwnerShare,
+          moderator: params.moderator,
+          recipientShares,
+        },
+      ]
+    );
+
+    return this.flaunch({
+      ...params,
+      treasuryManagerParams: {
+        manager: DynamicAddressFeeSplitManagerAddress[this.chainId],
+        permissions:
+          params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+        initializeData,
+        depositData: "0x",
+      },
+    });
+  }
+
+  /**
+   * Flaunches a new token with dynamic split manager and stores metadata on IPFS.
+   * @param params - Parameters for dynamic split manager flow including IPFS metadata
+   * @returns Transaction response for the flaunch creation
+   */
+  async flaunchIPFSWithDynamicSplitManager(
+    params: FlaunchWithDynamicSplitManagerIPFSParams
+  ) {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
+      metadata: params.metadata,
+      pinataConfig: params.pinataConfig,
+    });
+
+    return this.flaunchWithDynamicSplitManager({
       ...params,
       tokenUri,
     });

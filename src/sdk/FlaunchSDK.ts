@@ -72,6 +72,8 @@ import {
   FlaunchWithRevenueManagerIPFSParams,
   FlaunchWithSplitManagerParams,
   FlaunchWithSplitManagerIPFSParams,
+  FlaunchWithDynamicSplitManagerParams,
+  FlaunchWithDynamicSplitManagerIPFSParams,
   DeployRevenueManagerParams,
   DeployStakingManagerParams,
   DeployBuyBackManagerParams,
@@ -2404,6 +2406,28 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    */
   flaunchIPFSWithSplitManager(params: FlaunchWithSplitManagerIPFSParams) {
     return this.readWriteFlaunchZap.flaunchIPFSWithSplitManager(params);
+  }
+
+  /**
+   * Creates a new Flaunch with dynamic split manager configuration.
+   * @param params - Parameters for creating the Flaunch with dynamic split manager
+   * @returns Transaction response
+   */
+  flaunchWithDynamicSplitManager(
+    params: FlaunchWithDynamicSplitManagerParams
+  ) {
+    return this.readWriteFlaunchZap.flaunchWithDynamicSplitManager(params);
+  }
+
+  /**
+   * Creates a new Flaunch with dynamic split manager configuration and IPFS metadata.
+   * @param params - Parameters for creating the Flaunch with dynamic split manager and IPFS data
+   * @returns Transaction response
+   */
+  flaunchIPFSWithDynamicSplitManager(
+    params: FlaunchWithDynamicSplitManagerIPFSParams
+  ) {
+    return this.readWriteFlaunchZap.flaunchIPFSWithDynamicSplitManager(params);
   }
 
   /**
