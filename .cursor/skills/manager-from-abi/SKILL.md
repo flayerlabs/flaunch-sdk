@@ -61,7 +61,7 @@ Collect these first:
   - New manager usage example
   - Differences from existing managers
   - Post-deploy management example (if applicable)
-- Update `CHANGELOG.md` under `[Unreleased]` using the changelog protocol below.
+- Update `CHANGELOG.md` using the changelog protocol below.
 
 ## Changelog Protocol (Required)
 
