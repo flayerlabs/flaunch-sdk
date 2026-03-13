@@ -18,13 +18,11 @@ import {
   BuyBackManagerAddress,
   RevenueManagerAddress,
   StakingManagerAddress,
-} from "addresses";
-import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
-import {
   AddressFeeSplitManagerAddress,
   DynamicAddressFeeSplitManagerAddress,
   FlaunchPositionManagerV1_1Address,
 } from "addresses";
+import { ReadFlaunchPositionManagerV1_1 } from "./FlaunchPositionManagerV1_1Client";
 import { getAmountWithSlippage } from "utils/universalRouter";
 import { ReadInitialPrice } from "./InitialPriceClient";
 import { orderPoolKey } from "utils";
