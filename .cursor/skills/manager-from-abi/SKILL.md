@@ -66,6 +66,7 @@ Collect these first:
 ## Changelog Protocol (Required)
 
 When writing changelog entries for manager integrations, follow this process:
+Every code change in scope must be reflected in `CHANGELOG.md` (no omissions).
 
 ### Step 1: Gather Git Information
 
@@ -105,6 +106,7 @@ Use the standard sections:
 
 Before finalizing:
 - Ensure all significant diff changes are represented
+- Ensure every code change made in this task is covered in `CHANGELOG.md`
 - Verify names and technical terms are accurate
 - Confirm impact/benefit is clear for SDK users
 - Confirm entry reflects code changes, not only commit summaries
@@ -125,6 +127,7 @@ Before finalizing:
 - Root exports include the new public surface.
 - README + changelog updated.
 - Changelog entry follows the required protocol in this skill.
+- Every code change is reflected in changelog entries.
 - Run:
   - `pnpm typecheck`
   - lint diagnostics for changed files

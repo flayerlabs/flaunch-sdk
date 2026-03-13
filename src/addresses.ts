@@ -90,9 +90,8 @@ export const AddressFeeSplitManagerAddress: Addresses = {
   [baseSepolia.id]: "0x0A3AF63cd86E68a852A1D4923FEfC4e855D8499d",
 };
 
-// Dynamic fee split manager is not deployed on Base mainnet; intentionally omit [base.id]
-// so callers can detect unsupported chains via an undefined lookup.
 export const DynamicAddressFeeSplitManagerAddress: Addresses = {
+  [base.id]: "0x9b332EA14a99B74cAB03A3D3178964eD9CE35fc8",
   [baseSepolia.id]: "0x4882075542626721C8743D80DC9528e2f54d8A46",
 };
 
