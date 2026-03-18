@@ -2,7 +2,13 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
-## [0.9.18] - 2026-03-13
+## [0.9.20] - 2026-03-18
+
+### Changed
+
+- Fix address typo affecting `BuyBackManager`
+
+## [0.9.19] - 2026-03-18
 
 ### Changed
 

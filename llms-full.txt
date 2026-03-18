@@ -1100,7 +1100,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.18 / Exports / FlaunchBackend
+@flaunch/sdk - v0.9.19 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1208,7 +1208,7 @@ src/sdk/FlaunchBackend.ts:118
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / ReadDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.9.19 / Exports / ReadDynamicAddressFeeSplitManager
 
 # Class: ReadDynamicAddressFeeSplitManager
 
@@ -1519,7 +1519,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:62
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.19 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -3328,7 +3328,7 @@ src/sdk/FlaunchSDK.ts:800
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / ReadWriteDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.9.19 / Exports / ReadWriteDynamicAddressFeeSplitManager
 
 # Class: ReadWriteDynamicAddressFeeSplitManager
 
@@ -3903,7 +3903,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:168
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.19 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -7239,7 +7239,7 @@ src/sdk/FlaunchSDK.ts:2675
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.19 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -7289,7 +7289,7 @@ src/types.ts:54
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / LiquidityMode
+@flaunch/sdk - v0.9.19 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -7319,7 +7319,7 @@ src/types.ts:71
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / Permissions
+@flaunch/sdk - v0.9.19 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -7360,7 +7360,7 @@ src/types.ts:84
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / Verifier
+@flaunch/sdk - v0.9.19 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -7428,7 +7428,7 @@ src/types.ts:67
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / Addresses
+@flaunch/sdk - v0.9.19 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -7439,7 +7439,7 @@ src/types.ts:67
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / BuySwapData
+@flaunch/sdk - v0.9.19 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -7477,7 +7477,7 @@ src/utils/parseSwap.ts:22
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / CallData
+@flaunch/sdk - v0.9.19 / Exports / CallData
 
 # Interface: CallData
 
@@ -7516,7 +7516,7 @@ src/sdk/calldata.ts:22
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.19 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -7600,7 +7600,7 @@ src/types.ts:32
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
+@flaunch/sdk - v0.9.19 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
 
 # Interface: FlaunchWithDynamicSplitManagerIPFSParams
 
@@ -7874,7 +7874,7 @@ src/clients/FlaunchZapClient.ts:52
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / FlaunchWithDynamicSplitManagerParams
+@flaunch/sdk - v0.9.19 / Exports / FlaunchWithDynamicSplitManagerParams
 
 # Interface: FlaunchWithDynamicSplitManagerParams
 
@@ -8102,7 +8102,7 @@ src/clients/FlaunchZapClient.ts:52
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / IPFSParams
+@flaunch/sdk - v0.9.19 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -8149,7 +8149,7 @@ src/types.ts:45
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / PinataConfig
+@flaunch/sdk - v0.9.19 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -8170,7 +8170,7 @@ src/helpers/ipfs.ts:27
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / PoolKey
+@flaunch/sdk - v0.9.19 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -8233,7 +8233,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / PoolWithHookData
+@flaunch/sdk - v0.9.19 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -8325,7 +8325,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / SellSwapData
+@flaunch/sdk - v0.9.19 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -8363,7 +8363,7 @@ src/utils/parseSwap.ts:31
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.9.19 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -8402,7 +8402,7 @@ src/types.ts:197
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / SwapFees
+@flaunch/sdk - v0.9.19 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -8432,7 +8432,7 @@ src/utils/parseSwap.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.19 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -8552,9 +8552,9 @@ src/utils/parseSwap.ts:13
 
 ---
 
-@flaunch/sdk - v0.9.18 / Exports
+@flaunch/sdk - v0.9.19 / Exports
 
-# @flaunch/sdk - v0.9.18
+# @flaunch/sdk - v0.9.19
 
 ## Table of contents
 
