@@ -248,6 +248,7 @@ await flaunchWrite.flaunchIPFSWithSplitManager({
 
 Use the dynamic split manager when recipient weights need to be updated after deployment.
 Unlike the static split manager, recipient shares are mutable and do not need to be modeled as a fixed 100% distribution in SDK inputs.
+`creatorShare + managerOwnerShare` must be less than or equal to `100_00000` (`VALID_SHARE_TOTAL`).
 
 ```ts
 await flaunchWrite.flaunchIPFSWithDynamicSplitManager({
@@ -262,8 +263,8 @@ await flaunchWrite.flaunchIPFSWithDynamicSplitManager({
   creator: "0x...",
   creatorFeeAllocationPercent: 100,
   // Dynamic split manager params (raw share weights)
-  creatorShare: 5_000_000n,
-  managerOwnerShare: 2_000_000n,
+  creatorShare: 10_00000n,  // 10%
+  managerOwnerShare: 20_00000n,  // 20%
   moderator: "0xmoderator...",
   splitReceivers: [
     { address: "0x123...", share: 2_000_000n },
@@ -1099,7 +1100,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.16 / Exports / FlaunchBackend
+@flaunch/sdk - v0.9.18 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1207,7 +1208,7 @@ src/sdk/FlaunchBackend.ts:118
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / ReadDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.9.18 / Exports / ReadDynamicAddressFeeSplitManager
 
 # Class: ReadDynamicAddressFeeSplitManager
 
@@ -1518,7 +1519,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:62
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.18 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -3327,7 +3328,7 @@ src/sdk/FlaunchSDK.ts:800
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / ReadWriteDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.9.18 / Exports / ReadWriteDynamicAddressFeeSplitManager
 
 # Class: ReadWriteDynamicAddressFeeSplitManager
 
@@ -3902,7 +3903,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:168
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.18 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -7238,7 +7239,7 @@ src/sdk/FlaunchSDK.ts:2675
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.18 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -7288,7 +7289,7 @@ src/types.ts:54
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / LiquidityMode
+@flaunch/sdk - v0.9.18 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -7318,7 +7319,7 @@ src/types.ts:71
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / Permissions
+@flaunch/sdk - v0.9.18 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -7359,7 +7360,7 @@ src/types.ts:84
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / Verifier
+@flaunch/sdk - v0.9.18 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -7427,7 +7428,7 @@ src/types.ts:67
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / Addresses
+@flaunch/sdk - v0.9.18 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -7438,7 +7439,7 @@ src/types.ts:67
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / BuySwapData
+@flaunch/sdk - v0.9.18 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -7476,7 +7477,7 @@ src/utils/parseSwap.ts:22
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / CallData
+@flaunch/sdk - v0.9.18 / Exports / CallData
 
 # Interface: CallData
 
@@ -7515,7 +7516,7 @@ src/sdk/calldata.ts:22
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.18 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -7599,7 +7600,7 @@ src/types.ts:32
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
+@flaunch/sdk - v0.9.18 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
 
 # Interface: FlaunchWithDynamicSplitManagerIPFSParams
 
@@ -7643,7 +7644,7 @@ Inherited from
 
 Omit.creator
 
-src/clients/FlaunchZapClient.ts:42
+src/clients/FlaunchZapClient.ts:40
 
 ___
 
@@ -7655,7 +7656,7 @@ Inherited from
 
 Omit.creatorFeeAllocationPercent
 
-src/clients/FlaunchZapClient.ts:43
+src/clients/FlaunchZapClient.ts:41
 
 ___
 
@@ -7667,7 +7668,7 @@ Inherited from
 
 Omit.creatorShare
 
-src/clients/FlaunchZapClient.ts:103
+src/clients/FlaunchZapClient.ts:101
 
 ___
 
@@ -7679,7 +7680,7 @@ Inherited from
 
 Omit.fairLaunchDuration
 
-src/clients/FlaunchZapClient.ts:40
+src/clients/FlaunchZapClient.ts:38
 
 ___
 
@@ -7695,7 +7696,7 @@ Inherited from
 
 Omit.fairLaunchPercent
 
-src/clients/FlaunchZapClient.ts:39
+src/clients/FlaunchZapClient.ts:37
 
 ___
 
@@ -7707,7 +7708,7 @@ Inherited from
 
 Omit.flaunchAt
 
-src/clients/FlaunchZapClient.ts:44
+src/clients/FlaunchZapClient.ts:42
 
 ___
 
@@ -7719,7 +7720,7 @@ Inherited from
 
 Omit.initialMarketCapUSD
 
-src/clients/FlaunchZapClient.ts:41
+src/clients/FlaunchZapClient.ts:39
 
 ___
 
@@ -7731,7 +7732,7 @@ Inherited from
 
 Omit.managerOwnerShare
 
-src/clients/FlaunchZapClient.ts:104
+src/clients/FlaunchZapClient.ts:102
 
 ___
 
@@ -7766,7 +7767,7 @@ Inherited from
 
 Omit.moderator
 
-src/clients/FlaunchZapClient.ts:105
+src/clients/FlaunchZapClient.ts:103
 
 ___
 
@@ -7778,7 +7779,7 @@ Inherited from
 
 Omit.name
 
-src/clients/FlaunchZapClient.ts:35
+src/clients/FlaunchZapClient.ts:33
 
 ___
 
@@ -7802,7 +7803,7 @@ Inherited from
 
 Omit.premineAmount
 
-src/clients/FlaunchZapClient.ts:45
+src/clients/FlaunchZapClient.ts:43
 
 ___
 
@@ -7814,7 +7815,7 @@ Inherited from
 
 Omit.splitReceivers
 
-src/clients/FlaunchZapClient.ts:106
+src/clients/FlaunchZapClient.ts:104
 
 ___
 
@@ -7826,7 +7827,7 @@ Inherited from
 
 Omit.symbol
 
-src/clients/FlaunchZapClient.ts:36
+src/clients/FlaunchZapClient.ts:34
 
 ___
 
@@ -7844,7 +7845,7 @@ Inherited from
 
 Omit.treasuryManagerParams
 
-src/clients/FlaunchZapClient.ts:110
+src/clients/FlaunchZapClient.ts:108
 
 ___
 
@@ -7868,12 +7869,12 @@ Inherited from
 
 Omit.trustedSignerSettings
 
-src/clients/FlaunchZapClient.ts:54
+src/clients/FlaunchZapClient.ts:52
 
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / FlaunchWithDynamicSplitManagerParams
+@flaunch/sdk - v0.9.18 / Exports / FlaunchWithDynamicSplitManagerParams
 
 # Interface: FlaunchWithDynamicSplitManagerParams
 
@@ -7914,7 +7915,7 @@ Inherited from
 
 Omit.creator
 
-src/clients/FlaunchZapClient.ts:42
+src/clients/FlaunchZapClient.ts:40
 
 ___
 
@@ -7926,7 +7927,7 @@ Inherited from
 
 Omit.creatorFeeAllocationPercent
 
-src/clients/FlaunchZapClient.ts:43
+src/clients/FlaunchZapClient.ts:41
 
 ___
 
@@ -7934,7 +7935,7 @@ ___
 
 • **creatorShare**: `bigint`
 
-src/clients/FlaunchZapClient.ts:103
+src/clients/FlaunchZapClient.ts:101
 
 ___
 
@@ -7946,7 +7947,7 @@ Inherited from
 
 Omit.fairLaunchDuration
 
-src/clients/FlaunchZapClient.ts:40
+src/clients/FlaunchZapClient.ts:38
 
 ___
 
@@ -7962,7 +7963,7 @@ Inherited from
 
 Omit.fairLaunchPercent
 
-src/clients/FlaunchZapClient.ts:39
+src/clients/FlaunchZapClient.ts:37
 
 ___
 
@@ -7974,7 +7975,7 @@ Inherited from
 
 Omit.flaunchAt
 
-src/clients/FlaunchZapClient.ts:44
+src/clients/FlaunchZapClient.ts:42
 
 ___
 
@@ -7986,7 +7987,7 @@ Inherited from
 
 Omit.initialMarketCapUSD
 
-src/clients/FlaunchZapClient.ts:41
+src/clients/FlaunchZapClient.ts:39
 
 ___
 
@@ -7994,7 +7995,7 @@ ___
 
 • **managerOwnerShare**: `bigint`
 
-src/clients/FlaunchZapClient.ts:104
+src/clients/FlaunchZapClient.ts:102
 
 ___
 
@@ -8002,7 +8003,7 @@ ___
 
 • **moderator**: \`0x$\{string}\`
 
-src/clients/FlaunchZapClient.ts:105
+src/clients/FlaunchZapClient.ts:103
 
 ___
 
@@ -8014,7 +8015,7 @@ Inherited from
 
 Omit.name
 
-src/clients/FlaunchZapClient.ts:35
+src/clients/FlaunchZapClient.ts:33
 
 ___
 
@@ -8026,7 +8027,7 @@ Inherited from
 
 Omit.premineAmount
 
-src/clients/FlaunchZapClient.ts:45
+src/clients/FlaunchZapClient.ts:43
 
 ___
 
@@ -8034,7 +8035,7 @@ ___
 
 • **splitReceivers**: \{ `address`: \`0x$\{string}\` ; `share`: `bigint`  }[]
 
-src/clients/FlaunchZapClient.ts:106
+src/clients/FlaunchZapClient.ts:104
 
 ___
 
@@ -8046,7 +8047,7 @@ Inherited from
 
 Omit.symbol
 
-src/clients/FlaunchZapClient.ts:36
+src/clients/FlaunchZapClient.ts:34
 
 ___
 
@@ -8058,7 +8059,7 @@ Inherited from
 
 Omit.tokenUri
 
-src/clients/FlaunchZapClient.ts:37
+src/clients/FlaunchZapClient.ts:35
 
 ___
 
@@ -8072,7 +8073,7 @@ Type declaration
 | :------ | :------ |
 | `permissions?` | `Permissions` |
 
-src/clients/FlaunchZapClient.ts:110
+src/clients/FlaunchZapClient.ts:108
 
 ___
 
@@ -8096,12 +8097,12 @@ Inherited from
 
 Omit.trustedSignerSettings
 
-src/clients/FlaunchZapClient.ts:54
+src/clients/FlaunchZapClient.ts:52
 
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / IPFSParams
+@flaunch/sdk - v0.9.18 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -8148,7 +8149,7 @@ src/types.ts:45
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / PinataConfig
+@flaunch/sdk - v0.9.18 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -8169,7 +8170,7 @@ src/helpers/ipfs.ts:27
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / PoolKey
+@flaunch/sdk - v0.9.18 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -8232,7 +8233,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / PoolWithHookData
+@flaunch/sdk - v0.9.18 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -8324,7 +8325,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / SellSwapData
+@flaunch/sdk - v0.9.18 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -8362,7 +8363,7 @@ src/utils/parseSwap.ts:31
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.9.18 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -8401,7 +8402,7 @@ src/types.ts:197
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / SwapFees
+@flaunch/sdk - v0.9.18 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -8431,7 +8432,7 @@ src/utils/parseSwap.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.18 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -8551,9 +8552,9 @@ src/utils/parseSwap.ts:13
 
 ---
 
-@flaunch/sdk - v0.9.16 / Exports
+@flaunch/sdk - v0.9.18 / Exports
 
-# @flaunch/sdk - v0.9.16
+# @flaunch/sdk - v0.9.18
 
 ## Table of contents
 

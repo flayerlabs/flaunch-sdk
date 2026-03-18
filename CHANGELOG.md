@@ -2,6 +2,12 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.9.18] - 2026-03-13
+
+### Changed
+
+- Updated Base Mainnet and Base Sepolia addresses for `DynamicAddressFeeSplitManagerAddress`
+
 ## [0.9.17] - 2026-03-13
 
 ### Added

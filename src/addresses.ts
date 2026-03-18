@@ -101,8 +101,8 @@ export const StakingManagerAddress: Addresses = {
 };
 
 export const BuyBackManagerAddress: Addresses = {
-  [base.id]: "0x3AAF3b1D8cD5b61C77f99bA7cdf41E9eC0Ba8a3f",
-  [baseSepolia.id]: "0xc3947EC9d687053bBA72b36Fd6b2567e775E82C7",
+  [base.id]: "0x18713855492A778363e23e2CdE325344b8fd6F8d",
+  [baseSepolia.id]: "0xA4A1a2Ca68151565d5200243a52EEBbCb2C878E0",
 };
 
 /** Verifiers */
