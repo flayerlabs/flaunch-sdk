@@ -68,9 +68,11 @@
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
     "prepublishOnly": "npm run build",
+    "test": "pnpm build && node --test test/*.test.cjs",
     "typecheck": "tsc --noEmit",
     "docs:generate": "typedoc --plugin typedoc-plugin-markdown --out docs src/index.ts --excludeExternals --exclude '**/abi/**' --includeVersion",
-    "docs:llms": "node scripts/generate-llms-doc.js"
+    "docs:llms": "node scripts/generate-llms-doc.js",
+    "validate:multichain": "pnpm build && node scripts/validate-multichain-deployments.mjs"
   },
   "packageManager": "pnpm@8.15.4",
   "devDependencies": {
@@ -93,6 +95,6 @@
     "@uniswap/v3-sdk": "^3.24.1",
     "axios": "^1.8.1",
     "react": "^19.0.0",
-    "viem": "^2.29.2"
+    "viem": "^2.55.2"
   }
 }

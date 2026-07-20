@@ -2,6 +2,7 @@ import { createDrift } from "./drift";
 import { viemAdapter } from "@delvtech/drift-viem";
 import type { PublicClient, WalletClient } from "viem";
 import { ReadFlaunchSDK, ReadWriteFlaunchSDK } from "./FlaunchSDK";
+import { isMultichainDeployment } from "../helpers/supportedChains";
 
 export type CreateFlaunchParams = {
   publicClient: PublicClient;
@@ -41,6 +42,16 @@ export function createFlaunch(params: CreateFlaunchParams) {
   }
 
   const chainId = publicClient.chain.id;
+
+  if (
+    walletClient &&
+    isMultichainDeployment(chainId) &&
+    walletClient.chain?.id !== chainId
+  ) {
+    throw new Error(
+      `walletClient chain ${walletClient.chain?.id ?? "unknown"} does not match publicClient chain ${chainId}`
+    );
+  }
 
   // Return appropriate SDK type based on whether walletClient is provided
   return walletClient

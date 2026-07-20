@@ -8,7 +8,7 @@ import {
   type HexString,
   createDrift,
 } from "@delvtech/drift";
-import { FlaunchZapAbi } from "../abi/FlaunchZap";
+import { FlaunchZapV1_1_6Abi } from "../abi/FlaunchZapV1_1_6";
 import { parseUnits, zeroAddress, zeroHash, getAddress } from "viem";
 import { encodeAbiParameters } from "viem";
 import { generateTokenUri } from "../helpers/ipfs";
@@ -27,7 +27,7 @@ import { getAmountWithSlippage } from "utils/universalRouter";
 import { ReadInitialPrice } from "./InitialPriceClient";
 import { orderPoolKey } from "utils";
 
-export type FlaunchZapABI = typeof FlaunchZapAbi;
+export type FlaunchZapABI = typeof FlaunchZapV1_1_6Abi;
 
 export interface FlaunchParams {
   name: string;
@@ -169,7 +169,7 @@ export class ReadFlaunchZap {
       throw new Error("Address is required");
     }
     this.contract = drift.contract({
-      abi: FlaunchZapAbi,
+      abi: FlaunchZapV1_1_6Abi,
       address,
     });
     this.readPositionManagerV1_1 = new ReadFlaunchPositionManagerV1_1(

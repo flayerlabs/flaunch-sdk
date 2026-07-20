@@ -27,6 +27,7 @@ const createConfig = (input, output, format, plugins = []) => ({
   input,
   output: {
     ...output,
+    ...(output.file ? { inlineDynamicImports: true } : {}),
     sourcemap: true,
     exports: "named",
   },

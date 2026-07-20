@@ -16,7 +16,13 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 - 🏗️ Build your own token launchpads on top of the flaunch protocol
 - 📊 Read functions for token and pool data
 - 🔒 Built-in Permit2 support for gasless approvals
-- 🔵 Works on Base and Base Sepolia networks
+- 🌐 Works on Base, Base Sepolia, Ethereum, Unichain, and Robinhood
+
+## Network support
+
+Base and Base Sepolia remain fully supported and backward compatible. Ethereum, Unichain, and Robinhood support standard direct launches, `PoolCreated` receipt decoding, and creator fee claims only. Swaps, manager and importer flows, watchers, the IPFS launch helper, and dynamic split launches are not supported on these newer deployments.
+
+The planned Robinhood UI will route swaps through 0x only; the SDK does not provide a Robinhood swap fallback.
 
 ## Table of Contents
 
@@ -1100,7 +1106,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.19 / Exports / FlaunchBackend
+@flaunch/sdk - v0.9.20 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1208,7 +1214,7 @@ src/sdk/FlaunchBackend.ts:118
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / ReadDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.9.20 / Exports / ReadDynamicAddressFeeSplitManager
 
 # Class: ReadDynamicAddressFeeSplitManager
 
@@ -1519,7 +1525,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:62
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.9.20 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -1540,9 +1546,15 @@ Base class for interacting with Flaunch protocol in read-only mode
 ### Properties
 
 - TICK\_SPACING
+- baseClients
 - chainId
 - drift
 - publicClient
+- readFeeEscrow
+- resolveIPFS
+
+### Accessors
+
 - readAnyBidWall
 - readAnyFlaunch
 - readAnyPositionManager
@@ -1550,7 +1562,6 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readBidWallV1\_1
 - readFairLaunch
 - readFairLaunchV1\_1
-- readFeeEscrow
 - readFlaunch
 - readFlaunchV1\_1
 - readFlaunchV1\_2
@@ -1564,10 +1575,10 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readReferralEscrow
 - readStateView
 - readTokenImporter
-- resolveIPFS
 
 ### Methods
 
+- assertBaseOnlyOperation
 - bidWallPosition
 - calculateAddLiquidityAmounts
 - calculateAddLiquidityTicks
@@ -1587,6 +1598,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - fairLaunchETHOnlyPosition
 - fairLaunchInfo
 - flETHIsCurrencyZero
+- getBaseClient
 - getBidWall
 - getBidWallAddress
 - getBuyQuoteExactInput
@@ -1651,7 +1663,7 @@ Returns
 
 `ReadFlaunchSDK`
 
-src/sdk/FlaunchSDK.ts:297
+src/sdk/FlaunchSDK.ts:393
 
 ## Properties
 
@@ -1659,7 +1671,15 @@ src/sdk/FlaunchSDK.ts:297
 
 • `Readonly` **TICK\_SPACING**: ``60``
 
-src/sdk/FlaunchSDK.ts:267
+src/sdk/FlaunchSDK.ts:310
+
+___
+
+### baseClients
+
+• `Private` `Optional` `Readonly` **baseClients**: `BaseReadClients`
+
+src/sdk/FlaunchSDK.ts:311
 
 ___
 
@@ -1667,7 +1687,7 @@ ___
 
 • `Readonly` **chainId**: `number`
 
-src/sdk/FlaunchSDK.ts:265
+src/sdk/FlaunchSDK.ts:308
 
 ___
 
@@ -1675,7 +1695,7 @@ ___
 
 • `Readonly` **drift**: `Drift`
 
-src/sdk/FlaunchSDK.ts:264
+src/sdk/FlaunchSDK.ts:307
 
 ___
 
@@ -1683,63 +1703,7 @@ ___
 
 • `Readonly` **publicClient**: `undefined` \| {}
 
-src/sdk/FlaunchSDK.ts:266
-
-___
-
-### readAnyBidWall
-
-• `Readonly` **readAnyBidWall**: `AnyBidWall`
-
-src/sdk/FlaunchSDK.ts:280
-
-___
-
-### readAnyFlaunch
-
-• `Readonly` **readAnyFlaunch**: `ReadAnyFlaunch`
-
-src/sdk/FlaunchSDK.ts:284
-
-___
-
-### readAnyPositionManager
-
-• `Readonly` **readAnyPositionManager**: `ReadAnyPositionManager`
-
-src/sdk/FlaunchSDK.ts:270
-
-___
-
-### readBidWall
-
-• `Readonly` **readBidWall**: `ReadBidWall`
-
-src/sdk/FlaunchSDK.ts:279
-
-___
-
-### readBidWallV1\_1
-
-• `Readonly` **readBidWallV1\_1**: `ReadBidWallV1_1`
-
-src/sdk/FlaunchSDK.ts:281
-
-___
-
-### readFairLaunch
-
-• `Readonly` **readFairLaunch**: `ReadFairLaunch`
-
-src/sdk/FlaunchSDK.ts:277
-
-___
-
-### readFairLaunchV1\_1
-
-• `Readonly` **readFairLaunchV1\_1**: `ReadFairLaunchV1_1`
-
-src/sdk/FlaunchSDK.ts:278
+src/sdk/FlaunchSDK.ts:309
 
 ___
 
@@ -1747,111 +1711,7 @@ ___
 
 • `Readonly` **readFeeEscrow**: `ReadFeeEscrow`
 
-src/sdk/FlaunchSDK.ts:272
-
-___
-
-### readFlaunch
-
-• `Readonly` **readFlaunch**: `ReadFlaunch`
-
-src/sdk/FlaunchSDK.ts:282
-
-___
-
-### readFlaunchV1\_1
-
-• `Readonly` **readFlaunchV1\_1**: `ReadFlaunchV1_1`
-
-src/sdk/FlaunchSDK.ts:283
-
-___
-
-### readFlaunchV1\_2
-
-• `Readonly` **readFlaunchV1\_2**: `ReadFlaunchV1_2`
-
-src/sdk/FlaunchSDK.ts:292
-
-___
-
-### readFlaunchZap
-
-• `Readonly` **readFlaunchZap**: `ReadFlaunchZap`
-
-src/sdk/FlaunchSDK.ts:274
-
-___
-
-### readPermit2
-
-• `Readonly` **readPermit2**: `ReadPermit2`
-
-src/sdk/FlaunchSDK.ts:286
-
-___
-
-### readPoolManager
-
-• `Readonly` **readPoolManager**: `ReadPoolManager`
-
-src/sdk/FlaunchSDK.ts:275
-
-___
-
-### readPositionManager
-
-• `Readonly` **readPositionManager**: `ReadFlaunchPositionManager`
-
-src/sdk/FlaunchSDK.ts:268
-
-___
-
-### readPositionManagerV1\_1
-
-• `Readonly` **readPositionManagerV1\_1**: `ReadFlaunchPositionManagerV1_1`
-
-src/sdk/FlaunchSDK.ts:269
-
-___
-
-### readPositionManagerV1\_2
-
-• `Readonly` **readPositionManagerV1\_2**: `ReadFlaunchPositionManagerV1_2`
-
-src/sdk/FlaunchSDK.ts:289
-
-___
-
-### readQuoter
-
-• `Readonly` **readQuoter**: `ReadQuoter`
-
-src/sdk/FlaunchSDK.ts:285
-
-___
-
-### readReferralEscrow
-
-• `Readonly` **readReferralEscrow**: `ReadReferralEscrow`
-
-src/sdk/FlaunchSDK.ts:273
-
-___
-
-### readStateView
-
-• `Readonly` **readStateView**: `ReadStateView`
-
-src/sdk/FlaunchSDK.ts:276
-
-___
-
-### readTokenImporter
-
-• `Readonly` **readTokenImporter**: `ReadTokenImporter`
-
-src/sdk/FlaunchSDK.ts:271
+src/sdk/FlaunchSDK.ts:312
 
 ___
 
@@ -1873,9 +1733,267 @@ Type declaration
 
 `string`
 
-src/sdk/FlaunchSDK.ts:295
+src/sdk/FlaunchSDK.ts:314
+
+## Accessors
+
+### readAnyBidWall
+
+• `get` **readAnyBidWall**(): `AnyBidWall`
+
+Returns
+
+`AnyBidWall`
+
+src/sdk/FlaunchSDK.ts:371
+
+___
+
+### readAnyFlaunch
+
+• `get` **readAnyFlaunch**(): `ReadAnyFlaunch`
+
+Returns
+
+`ReadAnyFlaunch`
+
+src/sdk/FlaunchSDK.ts:383
+
+___
+
+### readAnyPositionManager
+
+• `get` **readAnyPositionManager**(): `ReadAnyPositionManager`
+
+Returns
+
+`ReadAnyPositionManager`
+
+src/sdk/FlaunchSDK.ts:341
+
+___
+
+### readBidWall
+
+• `get` **readBidWall**(): `ReadBidWall`
+
+Returns
+
+`ReadBidWall`
+
+src/sdk/FlaunchSDK.ts:365
+
+___
+
+### readBidWallV1\_1
+
+• `get` **readBidWallV1_1**(): `ReadBidWallV1_1`
+
+Returns
+
+`ReadBidWallV1_1`
+
+src/sdk/FlaunchSDK.ts:368
+
+___
+
+### readFairLaunch
+
+• `get` **readFairLaunch**(): `ReadFairLaunch`
+
+Returns
+
+`ReadFairLaunch`
+
+src/sdk/FlaunchSDK.ts:359
+
+___
+
+### readFairLaunchV1\_1
+
+• `get` **readFairLaunchV1_1**(): `ReadFairLaunchV1_1`
+
+Returns
+
+`ReadFairLaunchV1_1`
+
+src/sdk/FlaunchSDK.ts:362
+
+___
+
+### readFlaunch
+
+• `get` **readFlaunch**(): `ReadFlaunch`
+
+Returns
+
+`ReadFlaunch`
+
+src/sdk/FlaunchSDK.ts:374
+
+___
+
+### readFlaunchV1\_1
+
+• `get` **readFlaunchV1_1**(): `ReadFlaunchV1_1`
+
+Returns
+
+`ReadFlaunchV1_1`
+
+src/sdk/FlaunchSDK.ts:377
+
+___
+
+### readFlaunchV1\_2
+
+• `get` **readFlaunchV1_2**(): `ReadFlaunchV1_2`
+
+Returns
+
+`ReadFlaunchV1_2`
+
+src/sdk/FlaunchSDK.ts:380
+
+___
+
+### readFlaunchZap
+
+• `get` **readFlaunchZap**(): `ReadFlaunchZap`
+
+Returns
+
+`ReadFlaunchZap`
+
+src/sdk/FlaunchSDK.ts:350
+
+___
+
+### readPermit2
+
+• `get` **readPermit2**(): `ReadPermit2`
+
+Returns
+
+`ReadPermit2`
+
+src/sdk/FlaunchSDK.ts:389
+
+___
+
+### readPoolManager
+
+• `get` **readPoolManager**(): `ReadPoolManager`
+
+Returns
+
+`ReadPoolManager`
+
+src/sdk/FlaunchSDK.ts:353
+
+___
+
+### readPositionManager
+
+• `get` **readPositionManager**(): `ReadFlaunchPositionManager`
+
+Returns
+
+`ReadFlaunchPositionManager`
+
+src/sdk/FlaunchSDK.ts:332
+
+___
+
+### readPositionManagerV1\_1
+
+• `get` **readPositionManagerV1_1**(): `ReadFlaunchPositionManagerV1_1`
+
+Returns
+
+`ReadFlaunchPositionManagerV1_1`
+
+src/sdk/FlaunchSDK.ts:335
+
+___
+
+### readPositionManagerV1\_2
+
+• `get` **readPositionManagerV1_2**(): `ReadFlaunchPositionManagerV1_2`
+
+Returns
+
+`ReadFlaunchPositionManagerV1_2`
+
+src/sdk/FlaunchSDK.ts:338
+
+___
+
+### readQuoter
+
+• `get` **readQuoter**(): `ReadQuoter`
+
+Returns
+
+`ReadQuoter`
+
+src/sdk/FlaunchSDK.ts:386
+
+___
+
+### readReferralEscrow
+
+• `get` **readReferralEscrow**(): `ReadReferralEscrow`
+
+Returns
+
+`ReadReferralEscrow`
+
+src/sdk/FlaunchSDK.ts:347
+
+___
+
+### readStateView
+
+• `get` **readStateView**(): `ReadStateView`
+
+Returns
+
+`ReadStateView`
+
+src/sdk/FlaunchSDK.ts:356
+
+___
+
+### readTokenImporter
+
+• `get` **readTokenImporter**(): `ReadTokenImporter`
+
+Returns
+
+`ReadTokenImporter`
+
+src/sdk/FlaunchSDK.ts:344
 
 ## Methods
+
+### assertBaseOnlyOperation
+
+▸ **assertBaseOnlyOperation**(`operation`): `void`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `operation` | `string` |
+
+Returns
+
+`void`
+
+src/sdk/FlaunchSDK.ts:326
+
+___
 
 ### bidWallPosition
 
@@ -1896,7 +2014,7 @@ Returns
 
 Promise<{flETHAmount: bigint, coinAmount: bigint, pendingEth: bigint, tickLower: number, tickUpper: number}> - Bid wall position details
 
-src/sdk/FlaunchSDK.ts:1225
+src/sdk/FlaunchSDK.ts:1382
 
 ___
 
@@ -1914,7 +2032,7 @@ Returns
 
 `Promise`\<\{ `coinAmount`: `bigint` ; `currentTick`: `number` ; `ethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
-src/sdk/FlaunchSDK.ts:1954
+src/sdk/FlaunchSDK.ts:2117
 
 ___
 
@@ -1937,7 +2055,7 @@ Returns
 
 `Promise`\<\{ `coinDecimals`: `number` ; `coinTotalSupply`: `bigint` ; `currentTick?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
-src/sdk/FlaunchSDK.ts:1738
+src/sdk/FlaunchSDK.ts:1901
 
 ___
 
@@ -1963,7 +2081,7 @@ Returns
 
 `undefined` \| `number`
 
-src/sdk/FlaunchSDK.ts:1709
+src/sdk/FlaunchSDK.ts:1872
 
 ___
 
@@ -1981,7 +2099,7 @@ Returns
 
 `Promise`\<`SingleSidedLiquidityInfo`\>
 
-src/sdk/FlaunchSDK.ts:1855
+src/sdk/FlaunchSDK.ts:2018
 
 ___
 
@@ -2002,7 +2120,7 @@ Returns
 
 `Promise`\<`string`\>
 
-src/sdk/FlaunchSDK.ts:909
+src/sdk/FlaunchSDK.ts:1066
 
 ___
 
@@ -2025,7 +2143,7 @@ Returns
 
 Promise<string> - The price of the coin in ETH with 18 decimals precision
 
-src/sdk/FlaunchSDK.ts:869
+src/sdk/FlaunchSDK.ts:1026
 
 ___
 
@@ -2050,7 +2168,7 @@ Returns
 
 Promise<string> - The price of the coin in USD with 18 decimal precision
 
-src/sdk/FlaunchSDK.ts:893
+src/sdk/FlaunchSDK.ts:1050
 
 ___
 
@@ -2073,7 +2191,7 @@ Returns
 
 `number`
 
-src/sdk/FlaunchSDK.ts:1691
+src/sdk/FlaunchSDK.ts:1854
 
 ___
 
@@ -2104,7 +2222,7 @@ The ordered pool key
 | `hooks` | \`0x$\{string}\` |
 | `tickSpacing` | `number` |
 
-src/sdk/FlaunchSDK.ts:2208
+src/sdk/FlaunchSDK.ts:2371
 
 ___
 
@@ -2127,7 +2245,7 @@ Returns
 
 The balance of the creator
 
-src/sdk/FlaunchSDK.ts:1259
+src/sdk/FlaunchSDK.ts:1416
 
 ___
 
@@ -2150,7 +2268,7 @@ Returns
 
 Promise<number> - The current tick of the pool
 
-src/sdk/FlaunchSDK.ts:854
+src/sdk/FlaunchSDK.ts:1011
 
 ___
 
@@ -2173,7 +2291,7 @@ Returns
 
 The determined version
 
-src/sdk/FlaunchSDK.ts:2188
+src/sdk/FlaunchSDK.ts:2351
 
 ___
 
@@ -2198,7 +2316,7 @@ Returns
 
 Promise<bigint> - The ETH required to flaunch
 
-src/sdk/FlaunchSDK.ts:1447
+src/sdk/FlaunchSDK.ts:1610
 
 ___
 
@@ -2221,7 +2339,7 @@ Returns
 
 Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
 
-src/sdk/FlaunchSDK.ts:1162
+src/sdk/FlaunchSDK.ts:1319
 
 ___
 
@@ -2244,7 +2362,7 @@ Returns
 
 Promise<number> - The duration in seconds (30 minutes for V1, variable for V1.1)
 
-src/sdk/FlaunchSDK.ts:1069
+src/sdk/FlaunchSDK.ts:1226
 
 ___
 
@@ -2267,7 +2385,7 @@ Returns
 
 Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
 
-src/sdk/FlaunchSDK.ts:1099
+src/sdk/FlaunchSDK.ts:1256
 
 ___
 
@@ -2290,7 +2408,7 @@ Returns
 
 Fair launch information from the appropriate contract version
 
-src/sdk/FlaunchSDK.ts:977
+src/sdk/FlaunchSDK.ts:1134
 
 ___
 
@@ -2312,7 +2430,31 @@ Returns
 
 boolean - True if flETH is currency0, false otherwise
 
-src/sdk/FlaunchSDK.ts:1580
+src/sdk/FlaunchSDK.ts:1743
+
+___
+
+### getBaseClient
+
+▸ **getBaseClient**\<`K`\>(`name`): `BaseReadClients`[`K`]
+
+Type parameters
+
+| Name | Type |
+| :------ | :------ |
+| `K` | extends keyof `BaseReadClients` |
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `name` | `K` |
+
+Returns
+
+`BaseReadClients`[`K`]
+
+src/sdk/FlaunchSDK.ts:316
 
 ___
 
@@ -2332,7 +2474,7 @@ Returns
 
 `ReadBidWall` \| `AnyBidWall` \| `ReadBidWallV1_1`
 
-src/sdk/FlaunchSDK.ts:462
+src/sdk/FlaunchSDK.ts:569
 
 ___
 
@@ -2350,7 +2492,7 @@ Returns
 
 \`0x$\{string}\`
 
-src/sdk/FlaunchSDK.ts:512
+src/sdk/FlaunchSDK.ts:619
 
 ___
 
@@ -2378,7 +2520,7 @@ Returns
 
 Promise<bigint> - The expected amount of coins to receive
 
-src/sdk/FlaunchSDK.ts:1511
+src/sdk/FlaunchSDK.ts:1674
 
 ___
 
@@ -2406,7 +2548,7 @@ Returns
 
 Promise<bigint> - The required amount of ETH or inputToken to spend
 
-src/sdk/FlaunchSDK.ts:1548
+src/sdk/FlaunchSDK.ts:1711
 
 ___
 
@@ -2426,7 +2568,7 @@ Returns
 
 `Promise`\<\{ `decimals`: `number` ; `formattedTotalSupplyInDecimals`: `number` ; `totalSupply`: `bigint`  }\>
 
-src/sdk/FlaunchSDK.ts:1632
+src/sdk/FlaunchSDK.ts:1795
 
 ___
 
@@ -2448,7 +2590,7 @@ Returns
 
 Promise<CoinMetadata & { symbol: string }> - The coin's metadata including name, symbol, description, and social links
 
-src/sdk/FlaunchSDK.ts:539
+src/sdk/FlaunchSDK.ts:646
 
 ___
 
@@ -2471,7 +2613,7 @@ Returns
 
 The coin's metadata including name, symbol, description, and social links
 
-src/sdk/FlaunchSDK.ts:569
+src/sdk/FlaunchSDK.ts:676
 
 ___
 
@@ -2495,7 +2637,7 @@ Returns
 
 An array of objects containing coin address, name, symbol, description, and social links
 
-src/sdk/FlaunchSDK.ts:585
+src/sdk/FlaunchSDK.ts:692
 
 ___
 
@@ -2517,7 +2659,7 @@ Returns
 
 Promise<FlaunchVersion> - The version of the coin
 
-src/sdk/FlaunchSDK.ts:405
+src/sdk/FlaunchSDK.ts:512
 
 ___
 
@@ -2539,7 +2681,7 @@ Returns
 
 Promise<number> - The current ETH/USDC price
 
-src/sdk/FlaunchSDK.ts:932
+src/sdk/FlaunchSDK.ts:1089
 
 ___
 
@@ -2559,7 +2701,7 @@ Returns
 
 `ReadFairLaunch` \| `ReadFairLaunchV1_1`
 
-src/sdk/FlaunchSDK.ts:443
+src/sdk/FlaunchSDK.ts:550
 
 ___
 
@@ -2577,7 +2719,7 @@ Returns
 
 \`0x$\{string}\`
 
-src/sdk/FlaunchSDK.ts:508
+src/sdk/FlaunchSDK.ts:615
 
 ___
 
@@ -2597,7 +2739,7 @@ Returns
 
 `ReadFlaunch` \| `ReadAnyFlaunch` \| `ReadFlaunchV1_1` \| `ReadFlaunchV1_2`
 
-src/sdk/FlaunchSDK.ts:481
+src/sdk/FlaunchSDK.ts:588
 
 ___
 
@@ -2617,7 +2759,7 @@ Returns
 
 \`0x$\{string}\`
 
-src/sdk/FlaunchSDK.ts:500
+src/sdk/FlaunchSDK.ts:607
 
 ___
 
@@ -2639,7 +2781,7 @@ Returns
 
 Promise<{ flaunchAddress: Address; tokenId: bigint }> - The flaunch contract address and token ID
 
-src/sdk/FlaunchSDK.ts:521
+src/sdk/FlaunchSDK.ts:628
 
 ___
 
@@ -2664,7 +2806,7 @@ Returns
 
 Promise<bigint> - The flaunching fee
 
-src/sdk/FlaunchSDK.ts:1415
+src/sdk/FlaunchSDK.ts:1578
 
 ___
 
@@ -2685,7 +2827,7 @@ Returns
 
 `Promise`\<\{ `decimals0`: `number` ; `decimals1`: `number` ; `ethUsdPrice`: `number` ; `isFlethZero`: `boolean`  }\>
 
-src/sdk/FlaunchSDK.ts:1651
+src/sdk/FlaunchSDK.ts:1814
 
 ___
 
@@ -2707,7 +2849,7 @@ Returns
 
 PoolCreated event parameters or null if not found
 
-src/sdk/FlaunchSDK.ts:748
+src/sdk/FlaunchSDK.ts:855
 
 ___
 
@@ -2727,7 +2869,7 @@ Returns
 
 `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
-src/sdk/FlaunchSDK.ts:424
+src/sdk/FlaunchSDK.ts:531
 
 ___
 
@@ -2745,7 +2887,7 @@ Returns
 
 \`0x$\{string}\`
 
-src/sdk/FlaunchSDK.ts:504
+src/sdk/FlaunchSDK.ts:611
 
 ___
 
@@ -2771,7 +2913,7 @@ Returns
 
 Promise<bigint> - The expected amount of ETH to receive
 
-src/sdk/FlaunchSDK.ts:1480
+src/sdk/FlaunchSDK.ts:1643
 
 ___
 
@@ -2791,7 +2933,7 @@ Returns
 
 `Promise`\<`bigint`\>
 
-src/sdk/FlaunchSDK.ts:942
+src/sdk/FlaunchSDK.ts:1099
 
 ___
 
@@ -2814,7 +2956,7 @@ Returns
 
 Promise<number> - The initial tick value
 
-src/sdk/FlaunchSDK.ts:1082
+src/sdk/FlaunchSDK.ts:1239
 
 ___
 
@@ -2837,7 +2979,7 @@ Returns
 
 Promise<boolean> - True if fair launch is active, false otherwise
 
-src/sdk/FlaunchSDK.ts:990
+src/sdk/FlaunchSDK.ts:1147
 
 ___
 
@@ -2861,7 +3003,7 @@ Returns
 
 Promise<boolean> - True if operator is approved for all tokens
 
-src/sdk/FlaunchSDK.ts:2167
+src/sdk/FlaunchSDK.ts:2330
 
 ___
 
@@ -2883,7 +3025,7 @@ Returns
 
 Promise<boolean> - True if the memecoin has been imported
 
-src/sdk/FlaunchSDK.ts:2143
+src/sdk/FlaunchSDK.ts:2306
 
 ___
 
@@ -2905,7 +3047,7 @@ Returns
 
 Promise<boolean> - True if the coin is valid, false otherwise
 
-src/sdk/FlaunchSDK.ts:391
+src/sdk/FlaunchSDK.ts:498
 
 ___
 
@@ -2927,7 +3069,7 @@ Returns
 
 `number`
 
-src/sdk/FlaunchSDK.ts:1679
+src/sdk/FlaunchSDK.ts:1842
 
 ___
 
@@ -2960,7 +3102,7 @@ Parsed swap log or undefined if no PoolSwap event found.
          If flETHIsCurrencyZero is provided, returns typed swap data with BUY/SELL information.
          If flETHIsCurrencyZero is undefined, returns basic swap log without parsed delta.
 
-src/sdk/FlaunchSDK.ts:1604
+src/sdk/FlaunchSDK.ts:1767
 
 ___
 
@@ -2982,7 +3124,7 @@ Returns
 
 Current pool creation events or undefined if polling is not available
 
-src/sdk/FlaunchSDK.ts:729
+src/sdk/FlaunchSDK.ts:836
 
 ___
 
@@ -3004,7 +3146,7 @@ Returns
 
 Current pool swap events or undefined if polling is not available
 
-src/sdk/FlaunchSDK.ts:825
+src/sdk/FlaunchSDK.ts:982
 
 ___
 
@@ -3027,7 +3169,7 @@ Returns
 
 Promise<string> - The pool ID
 
-src/sdk/FlaunchSDK.ts:1391
+src/sdk/FlaunchSDK.ts:1554
 
 ___
 
@@ -3049,7 +3191,7 @@ Returns
 
 Position information from the state view contract
 
-src/sdk/FlaunchSDK.ts:844
+src/sdk/FlaunchSDK.ts:1001
 
 ___
 
@@ -3072,7 +3214,7 @@ Returns
 
 Promise<bigint> - The balance of the recipient
 
-src/sdk/FlaunchSDK.ts:1273
+src/sdk/FlaunchSDK.ts:1430
 
 ___
 
@@ -3097,7 +3239,7 @@ Returns
 
 Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
 
-src/sdk/FlaunchSDK.ts:1330
+src/sdk/FlaunchSDK.ts:1490
 
 ___
 
@@ -3121,7 +3263,7 @@ Returns
 
 Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
 
-src/sdk/FlaunchSDK.ts:1352
+src/sdk/FlaunchSDK.ts:1513
 
 ___
 
@@ -3145,7 +3287,7 @@ Returns
 
 Promise<bigint> - The claimable balance of ETH
 
-src/sdk/FlaunchSDK.ts:1284
+src/sdk/FlaunchSDK.ts:1441
 
 ___
 
@@ -3167,7 +3309,7 @@ Returns
 
 Promise<bigint> - The claimable balance of ETH
 
-src/sdk/FlaunchSDK.ts:1300
+src/sdk/FlaunchSDK.ts:1458
 
 ___
 
@@ -3189,7 +3331,7 @@ Returns
 
 Promise<bigint> - The total count of tokens
 
-src/sdk/FlaunchSDK.ts:1314
+src/sdk/FlaunchSDK.ts:1473
 
 ___
 
@@ -3214,7 +3356,7 @@ Returns
 this is used to resolve IPFS hash to a gateway URL
 eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
 
-src/sdk/FlaunchSDK.ts:1590
+src/sdk/FlaunchSDK.ts:1753
 
 ___
 
@@ -3236,7 +3378,7 @@ Returns
 
 Promise<{ isValid: boolean; verifier: Address }> - The result of the verification
 
-src/sdk/FlaunchSDK.ts:1625
+src/sdk/FlaunchSDK.ts:1788
 
 ___
 
@@ -3258,7 +3400,7 @@ Returns
 
 Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
 
-src/sdk/FlaunchSDK.ts:1368
+src/sdk/FlaunchSDK.ts:1530
 
 ___
 
@@ -3277,7 +3419,7 @@ Returns
 
 `Promise`\<\{ `fairLaunchEndsAt`: `number` ; `fairLaunchStartsAt`: `number` ; `isCurrentlyEnabled`: `boolean` ; `isFairLaunchActive`: `boolean` ; `signer`: \`0x$\{string}\` ; `trustedSignerEnabled`: `boolean`  }\>
 
-src/sdk/FlaunchSDK.ts:997
+src/sdk/FlaunchSDK.ts:1154
 
 ___
 
@@ -3300,7 +3442,7 @@ Returns
 
 Subscription to pool creation events
 
-src/sdk/FlaunchSDK.ts:715
+src/sdk/FlaunchSDK.ts:822
 
 ___
 
@@ -3323,12 +3465,12 @@ Returns
 
 Subscription to pool swap events
 
-src/sdk/FlaunchSDK.ts:800
+src/sdk/FlaunchSDK.ts:957
 
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / ReadWriteDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.9.20 / Exports / ReadWriteDynamicAddressFeeSplitManager
 
 # Class: ReadWriteDynamicAddressFeeSplitManager
 
@@ -3903,7 +4045,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:168
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.9.20 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -3924,9 +4066,17 @@ Base class for interacting with Flaunch protocol in read-only mode
 ### Properties
 
 - TICK\_SPACING
+- baseReadWriteClients
 - chainId
 - drift
 - publicClient
+- readFeeEscrow
+- readWriteFeeEscrow
+- readWriteFlaunchZapMultichain
+- resolveIPFS
+
+### Accessors
+
 - readAnyBidWall
 - readAnyFlaunch
 - readAnyPositionManager
@@ -3934,7 +4084,6 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readBidWallV1\_1
 - readFairLaunch
 - readFairLaunchV1\_1
-- readFeeEscrow
 - readFlaunch
 - readFlaunchV1\_1
 - readFlaunchV1\_2
@@ -3949,7 +4098,6 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readStateView
 - readTokenImporter
 - readWriteAnyPositionManager
-- readWriteFeeEscrow
 - readWriteFlaunchZap
 - readWritePermit2
 - readWritePositionManager
@@ -3957,12 +4105,12 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readWriteReferralEscrow
 - readWriteTokenImporter
 - readWriteTreasuryManagerFactory
-- resolveIPFS
 
 ### Methods
 
 - addToTreasuryManager
 - anyFlaunch
+- assertBaseOnlyOperation
 - bidWallPosition
 - buyCoin
 - calculateAddLiquidityAmounts
@@ -3999,6 +4147,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - flaunchWithRevenueManager
 - flaunchWithSplitManager
 - getAddLiquidityCalls
+- getBaseReadWriteClient
 - getBidWall
 - getBidWallAddress
 - getBuyQuoteExactInput
@@ -4083,7 +4232,7 @@ Overrides
 
 ReadFlaunchSDK.constructor
 
-src/sdk/FlaunchSDK.ts:2232
+src/sdk/FlaunchSDK.ts:2426
 
 ## Properties
 
@@ -4095,7 +4244,15 @@ Inherited from
 
 ReadFlaunchSDK.TICK_SPACING
 
-src/sdk/FlaunchSDK.ts:267
+src/sdk/FlaunchSDK.ts:310
+
+___
+
+### baseReadWriteClients
+
+• `Private` `Optional` `Readonly` **baseReadWriteClients**: `BaseReadWriteClients`
+
+src/sdk/FlaunchSDK.ts:2385
 
 ___
 
@@ -4107,7 +4264,7 @@ Inherited from
 
 ReadFlaunchSDK.chainId
 
-src/sdk/FlaunchSDK.ts:265
+src/sdk/FlaunchSDK.ts:308
 
 ___
 
@@ -4119,7 +4276,7 @@ Overrides
 
 ReadFlaunchSDK.drift
 
-src/sdk/FlaunchSDK.ts:2221
+src/sdk/FlaunchSDK.ts:2384
 
 ___
 
@@ -4131,91 +4288,7 @@ Inherited from
 
 ReadFlaunchSDK.publicClient
 
-src/sdk/FlaunchSDK.ts:266
-
-___
-
-### readAnyBidWall
-
-• `Readonly` **readAnyBidWall**: `AnyBidWall`
-
-Inherited from
-
-ReadFlaunchSDK.readAnyBidWall
-
-src/sdk/FlaunchSDK.ts:280
-
-___
-
-### readAnyFlaunch
-
-• `Readonly` **readAnyFlaunch**: `ReadAnyFlaunch`
-
-Inherited from
-
-ReadFlaunchSDK.readAnyFlaunch
-
-src/sdk/FlaunchSDK.ts:284
-
-___
-
-### readAnyPositionManager
-
-• `Readonly` **readAnyPositionManager**: `ReadAnyPositionManager`
-
-Inherited from
-
-ReadFlaunchSDK.readAnyPositionManager
-
-src/sdk/FlaunchSDK.ts:270
-
-___
-
-### readBidWall
-
-• `Readonly` **readBidWall**: `ReadBidWall`
-
-Inherited from
-
-ReadFlaunchSDK.readBidWall
-
-src/sdk/FlaunchSDK.ts:279
-
-___
-
-### readBidWallV1\_1
-
-• `Readonly` **readBidWallV1\_1**: `ReadBidWallV1_1`
-
-Inherited from
-
-ReadFlaunchSDK.readBidWallV1_1
-
-src/sdk/FlaunchSDK.ts:281
-
-___
-
-### readFairLaunch
-
-• `Readonly` **readFairLaunch**: `ReadFairLaunch`
-
-Inherited from
-
-ReadFlaunchSDK.readFairLaunch
-
-src/sdk/FlaunchSDK.ts:277
-
-___
-
-### readFairLaunchV1\_1
-
-• `Readonly` **readFairLaunchV1\_1**: `ReadFairLaunchV1_1`
-
-Inherited from
-
-ReadFlaunchSDK.readFairLaunchV1_1
-
-src/sdk/FlaunchSDK.ts:278
+src/sdk/FlaunchSDK.ts:309
 
 ___
 
@@ -4227,171 +4300,7 @@ Inherited from
 
 ReadFlaunchSDK.readFeeEscrow
 
-src/sdk/FlaunchSDK.ts:272
-
-___
-
-### readFlaunch
-
-• `Readonly` **readFlaunch**: `ReadFlaunch`
-
-Inherited from
-
-ReadFlaunchSDK.readFlaunch
-
-src/sdk/FlaunchSDK.ts:282
-
-___
-
-### readFlaunchV1\_1
-
-• `Readonly` **readFlaunchV1\_1**: `ReadFlaunchV1_1`
-
-Inherited from
-
-ReadFlaunchSDK.readFlaunchV1_1
-
-src/sdk/FlaunchSDK.ts:283
-
-___
-
-### readFlaunchV1\_2
-
-• `Readonly` **readFlaunchV1\_2**: `ReadFlaunchV1_2`
-
-Inherited from
-
-ReadFlaunchSDK.readFlaunchV1_2
-
-src/sdk/FlaunchSDK.ts:292
-
-___
-
-### readFlaunchZap
-
-• `Readonly` **readFlaunchZap**: `ReadFlaunchZap`
-
-Inherited from
-
-ReadFlaunchSDK.readFlaunchZap
-
-src/sdk/FlaunchSDK.ts:274
-
-___
-
-### readPermit2
-
-• `Readonly` **readPermit2**: `ReadPermit2`
-
-Inherited from
-
-ReadFlaunchSDK.readPermit2
-
-src/sdk/FlaunchSDK.ts:286
-
-___
-
-### readPoolManager
-
-• `Readonly` **readPoolManager**: `ReadPoolManager`
-
-Inherited from
-
-ReadFlaunchSDK.readPoolManager
-
-src/sdk/FlaunchSDK.ts:275
-
-___
-
-### readPositionManager
-
-• `Readonly` **readPositionManager**: `ReadFlaunchPositionManager`
-
-Inherited from
-
-ReadFlaunchSDK.readPositionManager
-
-src/sdk/FlaunchSDK.ts:268
-
-___
-
-### readPositionManagerV1\_1
-
-• `Readonly` **readPositionManagerV1\_1**: `ReadFlaunchPositionManagerV1_1`
-
-Inherited from
-
-ReadFlaunchSDK.readPositionManagerV1_1
-
-src/sdk/FlaunchSDK.ts:269
-
-___
-
-### readPositionManagerV1\_2
-
-• `Readonly` **readPositionManagerV1\_2**: `ReadFlaunchPositionManagerV1_2`
-
-Inherited from
-
-ReadFlaunchSDK.readPositionManagerV1_2
-
-src/sdk/FlaunchSDK.ts:289
-
-___
-
-### readQuoter
-
-• `Readonly` **readQuoter**: `ReadQuoter`
-
-Inherited from
-
-ReadFlaunchSDK.readQuoter
-
-src/sdk/FlaunchSDK.ts:285
-
-___
-
-### readReferralEscrow
-
-• `Readonly` **readReferralEscrow**: `ReadReferralEscrow`
-
-Inherited from
-
-ReadFlaunchSDK.readReferralEscrow
-
-src/sdk/FlaunchSDK.ts:273
-
-___
-
-### readStateView
-
-• `Readonly` **readStateView**: `ReadStateView`
-
-Inherited from
-
-ReadFlaunchSDK.readStateView
-
-src/sdk/FlaunchSDK.ts:276
-
-___
-
-### readTokenImporter
-
-• `Readonly` **readTokenImporter**: `ReadTokenImporter`
-
-Inherited from
-
-ReadFlaunchSDK.readTokenImporter
-
-src/sdk/FlaunchSDK.ts:271
-
-___
-
-### readWriteAnyPositionManager
-
-• `Readonly` **readWriteAnyPositionManager**: `ReadWriteAnyPositionManager`
-
-src/sdk/FlaunchSDK.ts:2224
+src/sdk/FlaunchSDK.ts:312
 
 ___
 
@@ -4399,63 +4308,15 @@ ___
 
 • `Readonly` **readWriteFeeEscrow**: `ReadWriteFeeEscrow`
 
-src/sdk/FlaunchSDK.ts:2226
+src/sdk/FlaunchSDK.ts:2387
 
 ___
 
-### readWriteFlaunchZap
+### readWriteFlaunchZapMultichain
 
-• `Readonly` **readWriteFlaunchZap**: `ReadWriteFlaunchZap`
+• `Private` `Optional` `Readonly` **readWriteFlaunchZapMultichain**: `ReadWriteFlaunchZapMultichain`
 
-src/sdk/FlaunchSDK.ts:2228
-
-___
-
-### readWritePermit2
-
-• `Readonly` **readWritePermit2**: `ReadWritePermit2`
-
-src/sdk/FlaunchSDK.ts:2230
-
-___
-
-### readWritePositionManager
-
-• `Readonly` **readWritePositionManager**: `ReadWriteFlaunchPositionManager`
-
-src/sdk/FlaunchSDK.ts:2222
-
-___
-
-### readWritePositionManagerV1\_1
-
-• `Readonly` **readWritePositionManagerV1\_1**: `ReadWriteFlaunchPositionManagerV1_1`
-
-src/sdk/FlaunchSDK.ts:2223
-
-___
-
-### readWriteReferralEscrow
-
-• `Readonly` **readWriteReferralEscrow**: `ReadWriteReferralEscrow`
-
-src/sdk/FlaunchSDK.ts:2227
-
-___
-
-### readWriteTokenImporter
-
-• `Readonly` **readWriteTokenImporter**: `ReadWriteTokenImporter`
-
-src/sdk/FlaunchSDK.ts:2225
-
-___
-
-### readWriteTreasuryManagerFactory
-
-• `Readonly` **readWriteTreasuryManagerFactory**: `ReadWriteTreasuryManagerFactory`
-
-src/sdk/FlaunchSDK.ts:2229
+src/sdk/FlaunchSDK.ts:2386
 
 ___
 
@@ -4481,7 +4342,423 @@ Inherited from
 
 ReadFlaunchSDK.resolveIPFS
 
-src/sdk/FlaunchSDK.ts:295
+src/sdk/FlaunchSDK.ts:314
+
+## Accessors
+
+### readAnyBidWall
+
+• `get` **readAnyBidWall**(): `AnyBidWall`
+
+Returns
+
+`AnyBidWall`
+
+Inherited from
+
+ReadFlaunchSDK.readAnyBidWall
+
+src/sdk/FlaunchSDK.ts:371
+
+___
+
+### readAnyFlaunch
+
+• `get` **readAnyFlaunch**(): `ReadAnyFlaunch`
+
+Returns
+
+`ReadAnyFlaunch`
+
+Inherited from
+
+ReadFlaunchSDK.readAnyFlaunch
+
+src/sdk/FlaunchSDK.ts:383
+
+___
+
+### readAnyPositionManager
+
+• `get` **readAnyPositionManager**(): `ReadAnyPositionManager`
+
+Returns
+
+`ReadAnyPositionManager`
+
+Inherited from
+
+ReadFlaunchSDK.readAnyPositionManager
+
+src/sdk/FlaunchSDK.ts:341
+
+___
+
+### readBidWall
+
+• `get` **readBidWall**(): `ReadBidWall`
+
+Returns
+
+`ReadBidWall`
+
+Inherited from
+
+ReadFlaunchSDK.readBidWall
+
+src/sdk/FlaunchSDK.ts:365
+
+___
+
+### readBidWallV1\_1
+
+• `get` **readBidWallV1_1**(): `ReadBidWallV1_1`
+
+Returns
+
+`ReadBidWallV1_1`
+
+Inherited from
+
+ReadFlaunchSDK.readBidWallV1\_1
+
+src/sdk/FlaunchSDK.ts:368
+
+___
+
+### readFairLaunch
+
+• `get` **readFairLaunch**(): `ReadFairLaunch`
+
+Returns
+
+`ReadFairLaunch`
+
+Inherited from
+
+ReadFlaunchSDK.readFairLaunch
+
+src/sdk/FlaunchSDK.ts:359
+
+___
+
+### readFairLaunchV1\_1
+
+• `get` **readFairLaunchV1_1**(): `ReadFairLaunchV1_1`
+
+Returns
+
+`ReadFairLaunchV1_1`
+
+Inherited from
+
+ReadFlaunchSDK.readFairLaunchV1\_1
+
+src/sdk/FlaunchSDK.ts:362
+
+___
+
+### readFlaunch
+
+• `get` **readFlaunch**(): `ReadFlaunch`
+
+Returns
+
+`ReadFlaunch`
+
+Inherited from
+
+ReadFlaunchSDK.readFlaunch
+
+src/sdk/FlaunchSDK.ts:374
+
+___
+
+### readFlaunchV1\_1
+
+• `get` **readFlaunchV1_1**(): `ReadFlaunchV1_1`
+
+Returns
+
+`ReadFlaunchV1_1`
+
+Inherited from
+
+ReadFlaunchSDK.readFlaunchV1\_1
+
+src/sdk/FlaunchSDK.ts:377
+
+___
+
+### readFlaunchV1\_2
+
+• `get` **readFlaunchV1_2**(): `ReadFlaunchV1_2`
+
+Returns
+
+`ReadFlaunchV1_2`
+
+Inherited from
+
+ReadFlaunchSDK.readFlaunchV1\_2
+
+src/sdk/FlaunchSDK.ts:380
+
+___
+
+### readFlaunchZap
+
+• `get` **readFlaunchZap**(): `ReadFlaunchZap`
+
+Returns
+
+`ReadFlaunchZap`
+
+Inherited from
+
+ReadFlaunchSDK.readFlaunchZap
+
+src/sdk/FlaunchSDK.ts:350
+
+___
+
+### readPermit2
+
+• `get` **readPermit2**(): `ReadPermit2`
+
+Returns
+
+`ReadPermit2`
+
+Inherited from
+
+ReadFlaunchSDK.readPermit2
+
+src/sdk/FlaunchSDK.ts:389
+
+___
+
+### readPoolManager
+
+• `get` **readPoolManager**(): `ReadPoolManager`
+
+Returns
+
+`ReadPoolManager`
+
+Inherited from
+
+ReadFlaunchSDK.readPoolManager
+
+src/sdk/FlaunchSDK.ts:353
+
+___
+
+### readPositionManager
+
+• `get` **readPositionManager**(): `ReadFlaunchPositionManager`
+
+Returns
+
+`ReadFlaunchPositionManager`
+
+Inherited from
+
+ReadFlaunchSDK.readPositionManager
+
+src/sdk/FlaunchSDK.ts:332
+
+___
+
+### readPositionManagerV1\_1
+
+• `get` **readPositionManagerV1_1**(): `ReadFlaunchPositionManagerV1_1`
+
+Returns
+
+`ReadFlaunchPositionManagerV1_1`
+
+Inherited from
+
+ReadFlaunchSDK.readPositionManagerV1\_1
+
+src/sdk/FlaunchSDK.ts:335
+
+___
+
+### readPositionManagerV1\_2
+
+• `get` **readPositionManagerV1_2**(): `ReadFlaunchPositionManagerV1_2`
+
+Returns
+
+`ReadFlaunchPositionManagerV1_2`
+
+Inherited from
+
+ReadFlaunchSDK.readPositionManagerV1\_2
+
+src/sdk/FlaunchSDK.ts:338
+
+___
+
+### readQuoter
+
+• `get` **readQuoter**(): `ReadQuoter`
+
+Returns
+
+`ReadQuoter`
+
+Inherited from
+
+ReadFlaunchSDK.readQuoter
+
+src/sdk/FlaunchSDK.ts:386
+
+___
+
+### readReferralEscrow
+
+• `get` **readReferralEscrow**(): `ReadReferralEscrow`
+
+Returns
+
+`ReadReferralEscrow`
+
+Inherited from
+
+ReadFlaunchSDK.readReferralEscrow
+
+src/sdk/FlaunchSDK.ts:347
+
+___
+
+### readStateView
+
+• `get` **readStateView**(): `ReadStateView`
+
+Returns
+
+`ReadStateView`
+
+Inherited from
+
+ReadFlaunchSDK.readStateView
+
+src/sdk/FlaunchSDK.ts:356
+
+___
+
+### readTokenImporter
+
+• `get` **readTokenImporter**(): `ReadTokenImporter`
+
+Returns
+
+`ReadTokenImporter`
+
+Inherited from
+
+ReadFlaunchSDK.readTokenImporter
+
+src/sdk/FlaunchSDK.ts:344
+
+___
+
+### readWriteAnyPositionManager
+
+• `get` **readWriteAnyPositionManager**(): `ReadWriteAnyPositionManager`
+
+Returns
+
+`ReadWriteAnyPositionManager`
+
+src/sdk/FlaunchSDK.ts:2405
+
+___
+
+### readWriteFlaunchZap
+
+• `get` **readWriteFlaunchZap**(): `ReadWriteFlaunchZap`
+
+Returns
+
+`ReadWriteFlaunchZap`
+
+src/sdk/FlaunchSDK.ts:2414
+
+___
+
+### readWritePermit2
+
+• `get` **readWritePermit2**(): `ReadWritePermit2`
+
+Returns
+
+`ReadWritePermit2`
+
+src/sdk/FlaunchSDK.ts:2422
+
+___
+
+### readWritePositionManager
+
+• `get` **readWritePositionManager**(): `ReadWriteFlaunchPositionManager`
+
+Returns
+
+`ReadWriteFlaunchPositionManager`
+
+src/sdk/FlaunchSDK.ts:2399
+
+___
+
+### readWritePositionManagerV1\_1
+
+• `get` **readWritePositionManagerV1_1**(): `ReadWriteFlaunchPositionManagerV1_1`
+
+Returns
+
+`ReadWriteFlaunchPositionManagerV1_1`
+
+src/sdk/FlaunchSDK.ts:2402
+
+___
+
+### readWriteReferralEscrow
+
+• `get` **readWriteReferralEscrow**(): `ReadWriteReferralEscrow`
+
+Returns
+
+`ReadWriteReferralEscrow`
+
+src/sdk/FlaunchSDK.ts:2411
+
+___
+
+### readWriteTokenImporter
+
+• `get` **readWriteTokenImporter**(): `ReadWriteTokenImporter`
+
+Returns
+
+`ReadWriteTokenImporter`
+
+src/sdk/FlaunchSDK.ts:2408
+
+___
+
+### readWriteTreasuryManagerFactory
+
+• `get` **readWriteTreasuryManagerFactory**(): `ReadWriteTreasuryManagerFactory`
+
+Returns
+
+`ReadWriteTreasuryManagerFactory`
+
+src/sdk/FlaunchSDK.ts:2417
 
 ## Methods
 
@@ -4507,7 +4784,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2806
+src/sdk/FlaunchSDK.ts:3034
 
 ___
 
@@ -4529,7 +4806,29 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2438
+src/sdk/FlaunchSDK.ts:2659
+
+___
+
+### assertBaseOnlyOperation
+
+▸ **assertBaseOnlyOperation**(`operation`): `void`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `operation` | `string` |
+
+Returns
+
+`void`
+
+Inherited from
+
+ReadFlaunchSDK.assertBaseOnlyOperation
+
+src/sdk/FlaunchSDK.ts:326
 
 ___
 
@@ -4556,7 +4855,7 @@ Inherited from
 
 ReadFlaunchSDK.bidWallPosition
 
-src/sdk/FlaunchSDK.ts:1225
+src/sdk/FlaunchSDK.ts:1382
 
 ___
 
@@ -4579,7 +4878,7 @@ Returns
 
 Transaction response for the buy operation
 
-src/sdk/FlaunchSDK.ts:2460
+src/sdk/FlaunchSDK.ts:2681
 
 ___
 
@@ -4601,7 +4900,7 @@ Inherited from
 
 ReadFlaunchSDK.calculateAddLiquidityAmounts
 
-src/sdk/FlaunchSDK.ts:1954
+src/sdk/FlaunchSDK.ts:2117
 
 ___
 
@@ -4628,7 +4927,7 @@ Inherited from
 
 ReadFlaunchSDK.calculateAddLiquidityTicks
 
-src/sdk/FlaunchSDK.ts:1738
+src/sdk/FlaunchSDK.ts:1901
 
 ___
 
@@ -4661,7 +4960,7 @@ Final liquidity and amounts
 | `finalAmount1` | `bigint` |
 | `finalLiquidity` | `bigint` |
 
-src/sdk/FlaunchSDK.ts:3635
+src/sdk/FlaunchSDK.ts:3864
 
 ___
 
@@ -4691,7 +4990,7 @@ Inherited from
 
 ReadFlaunchSDK.calculateCurrentTickFromMarketCap
 
-src/sdk/FlaunchSDK.ts:1709
+src/sdk/FlaunchSDK.ts:1872
 
 ___
 
@@ -4713,7 +5012,7 @@ Inherited from
 
 ReadFlaunchSDK.checkSingleSidedAddLiquidity
 
-src/sdk/FlaunchSDK.ts:1855
+src/sdk/FlaunchSDK.ts:2018
 
 ___
 
@@ -4736,7 +5035,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2694
+src/sdk/FlaunchSDK.ts:2917
 
 ___
 
@@ -4758,7 +5057,7 @@ Returns
 
 Promise<bigint> - The balance of the coin
 
-src/sdk/FlaunchSDK.ts:2447
+src/sdk/FlaunchSDK.ts:2668
 
 ___
 
@@ -4783,7 +5082,7 @@ Inherited from
 
 ReadFlaunchSDK.coinMarketCapInUSD
 
-src/sdk/FlaunchSDK.ts:909
+src/sdk/FlaunchSDK.ts:1066
 
 ___
 
@@ -4810,7 +5109,7 @@ Inherited from
 
 ReadFlaunchSDK.coinPriceInETH
 
-src/sdk/FlaunchSDK.ts:869
+src/sdk/FlaunchSDK.ts:1026
 
 ___
 
@@ -4839,7 +5138,7 @@ Inherited from
 
 ReadFlaunchSDK.coinPriceInUSD
 
-src/sdk/FlaunchSDK.ts:893
+src/sdk/FlaunchSDK.ts:1050
 
 ___
 
@@ -4866,7 +5165,7 @@ Inherited from
 
 ReadFlaunchSDK.convertPriceToTick
 
-src/sdk/FlaunchSDK.ts:1691
+src/sdk/FlaunchSDK.ts:1854
 
 ___
 
@@ -4894,7 +5193,7 @@ Returns
 
 CallWithDescription for adding liquidity
 
-src/sdk/FlaunchSDK.ts:3745
+src/sdk/FlaunchSDK.ts:3974
 
 ___
 
@@ -4929,7 +5228,7 @@ Inherited from
 
 ReadFlaunchSDK.createPoolKey
 
-src/sdk/FlaunchSDK.ts:2208
+src/sdk/FlaunchSDK.ts:2371
 
 ___
 
@@ -4956,7 +5255,7 @@ Inherited from
 
 ReadFlaunchSDK.creatorRevenue
 
-src/sdk/FlaunchSDK.ts:1259
+src/sdk/FlaunchSDK.ts:1416
 
 ___
 
@@ -4983,7 +5282,7 @@ Inherited from
 
 ReadFlaunchSDK.currentTick
 
-src/sdk/FlaunchSDK.ts:854
+src/sdk/FlaunchSDK.ts:1011
 
 ___
 
@@ -5005,7 +5304,7 @@ Returns
 
 Address of the deployed BuyBack manager
 
-src/sdk/FlaunchSDK.ts:2335
+src/sdk/FlaunchSDK.ts:2541
 
 ___
 
@@ -5027,7 +5326,7 @@ Returns
 
 Address of the deployed revenue manager
 
-src/sdk/FlaunchSDK.ts:2288
+src/sdk/FlaunchSDK.ts:2494
 
 ___
 
@@ -5049,7 +5348,7 @@ Returns
 
 Address of the deployed staking manager
 
-src/sdk/FlaunchSDK.ts:2310
+src/sdk/FlaunchSDK.ts:2516
 
 ___
 
@@ -5076,7 +5375,7 @@ Inherited from
 
 ReadFlaunchSDK.determineCoinVersion
 
-src/sdk/FlaunchSDK.ts:2188
+src/sdk/FlaunchSDK.ts:2351
 
 ___
 
@@ -5105,7 +5404,7 @@ Inherited from
 
 ReadFlaunchSDK.ethRequiredToFlaunch
 
-src/sdk/FlaunchSDK.ts:1447
+src/sdk/FlaunchSDK.ts:1610
 
 ___
 
@@ -5132,7 +5431,7 @@ Inherited from
 
 ReadFlaunchSDK.fairLaunchCoinOnlyPosition
 
-src/sdk/FlaunchSDK.ts:1162
+src/sdk/FlaunchSDK.ts:1319
 
 ___
 
@@ -5159,7 +5458,7 @@ Inherited from
 
 ReadFlaunchSDK.fairLaunchDuration
 
-src/sdk/FlaunchSDK.ts:1069
+src/sdk/FlaunchSDK.ts:1226
 
 ___
 
@@ -5186,7 +5485,7 @@ Inherited from
 
 ReadFlaunchSDK.fairLaunchETHOnlyPosition
 
-src/sdk/FlaunchSDK.ts:1099
+src/sdk/FlaunchSDK.ts:1256
 
 ___
 
@@ -5213,7 +5512,7 @@ Inherited from
 
 ReadFlaunchSDK.fairLaunchInfo
 
-src/sdk/FlaunchSDK.ts:977
+src/sdk/FlaunchSDK.ts:1134
 
 ___
 
@@ -5239,7 +5538,7 @@ Inherited from
 
 ReadFlaunchSDK.flETHIsCurrencyZero
 
-src/sdk/FlaunchSDK.ts:1580
+src/sdk/FlaunchSDK.ts:1743
 
 ___
 
@@ -5261,7 +5560,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2350
+src/sdk/FlaunchSDK.ts:2556
 
 ___
 
@@ -5283,7 +5582,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2359
+src/sdk/FlaunchSDK.ts:2569
 
 ___
 
@@ -5305,7 +5604,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2427
+src/sdk/FlaunchSDK.ts:2645
 
 ___
 
@@ -5331,7 +5630,7 @@ Transaction response
 
 Error if FlaunchZap is not deployed on the current chain
 
-src/sdk/FlaunchSDK.ts:2383
+src/sdk/FlaunchSDK.ts:2593
 
 ___
 
@@ -5353,7 +5652,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2407
+src/sdk/FlaunchSDK.ts:2617
 
 ___
 
@@ -5375,7 +5674,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2416
+src/sdk/FlaunchSDK.ts:2626
 
 ___
 
@@ -5401,7 +5700,7 @@ Transaction response
 
 Error if FlaunchZap is not deployed on the current chain
 
-src/sdk/FlaunchSDK.ts:2369
+src/sdk/FlaunchSDK.ts:2579
 
 ___
 
@@ -5423,7 +5722,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2398
+src/sdk/FlaunchSDK.ts:2608
 
 ___
 
@@ -5445,7 +5744,31 @@ Returns
 
 Array of calls with descriptions
 
-src/sdk/FlaunchSDK.ts:2848
+src/sdk/FlaunchSDK.ts:3077
+
+___
+
+### getBaseReadWriteClient
+
+▸ **getBaseReadWriteClient**\<`K`\>(`name`): `BaseReadWriteClients`[`K`]
+
+Type parameters
+
+| Name | Type |
+| :------ | :------ |
+| `K` | extends keyof `BaseReadWriteClients` |
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `name` | `K` |
+
+Returns
+
+`BaseReadWriteClients`[`K`]
+
+src/sdk/FlaunchSDK.ts:2389
 
 ___
 
@@ -5469,7 +5792,7 @@ Inherited from
 
 ReadFlaunchSDK.getBidWall
 
-src/sdk/FlaunchSDK.ts:462
+src/sdk/FlaunchSDK.ts:569
 
 ___
 
@@ -5491,7 +5814,7 @@ Inherited from
 
 ReadFlaunchSDK.getBidWallAddress
 
-src/sdk/FlaunchSDK.ts:512
+src/sdk/FlaunchSDK.ts:619
 
 ___
 
@@ -5523,7 +5846,7 @@ Inherited from
 
 ReadFlaunchSDK.getBuyQuoteExactInput
 
-src/sdk/FlaunchSDK.ts:1511
+src/sdk/FlaunchSDK.ts:1674
 
 ___
 
@@ -5555,7 +5878,7 @@ Inherited from
 
 ReadFlaunchSDK.getBuyQuoteExactOutput
 
-src/sdk/FlaunchSDK.ts:1548
+src/sdk/FlaunchSDK.ts:1711
 
 ___
 
@@ -5579,7 +5902,7 @@ Inherited from
 
 ReadFlaunchSDK.getCoinInfo
 
-src/sdk/FlaunchSDK.ts:1632
+src/sdk/FlaunchSDK.ts:1795
 
 ___
 
@@ -5605,7 +5928,7 @@ Inherited from
 
 ReadFlaunchSDK.getCoinMetadata
 
-src/sdk/FlaunchSDK.ts:539
+src/sdk/FlaunchSDK.ts:646
 
 ___
 
@@ -5632,7 +5955,7 @@ Inherited from
 
 ReadFlaunchSDK.getCoinMetadataFromTokenId
 
-src/sdk/FlaunchSDK.ts:569
+src/sdk/FlaunchSDK.ts:676
 
 ___
 
@@ -5660,7 +5983,7 @@ Inherited from
 
 ReadFlaunchSDK.getCoinMetadataFromTokenIds
 
-src/sdk/FlaunchSDK.ts:585
+src/sdk/FlaunchSDK.ts:692
 
 ___
 
@@ -5686,7 +6009,7 @@ Inherited from
 
 ReadFlaunchSDK.getCoinVersion
 
-src/sdk/FlaunchSDK.ts:405
+src/sdk/FlaunchSDK.ts:512
 
 ___
 
@@ -5709,7 +6032,7 @@ Returns
 
 Promise<bigint> - The allowance of the coin to Permit2
 
-src/sdk/FlaunchSDK.ts:2648
+src/sdk/FlaunchSDK.ts:2869
 
 ___
 
@@ -5735,7 +6058,7 @@ Inherited from
 
 ReadFlaunchSDK.getETHUSDCPrice
 
-src/sdk/FlaunchSDK.ts:932
+src/sdk/FlaunchSDK.ts:1089
 
 ___
 
@@ -5759,7 +6082,7 @@ Inherited from
 
 ReadFlaunchSDK.getFairLaunch
 
-src/sdk/FlaunchSDK.ts:443
+src/sdk/FlaunchSDK.ts:550
 
 ___
 
@@ -5781,7 +6104,7 @@ Inherited from
 
 ReadFlaunchSDK.getFairLaunchAddress
 
-src/sdk/FlaunchSDK.ts:508
+src/sdk/FlaunchSDK.ts:615
 
 ___
 
@@ -5805,7 +6128,7 @@ Inherited from
 
 ReadFlaunchSDK.getFlaunch
 
-src/sdk/FlaunchSDK.ts:481
+src/sdk/FlaunchSDK.ts:588
 
 ___
 
@@ -5829,7 +6152,7 @@ Inherited from
 
 ReadFlaunchSDK.getFlaunchAddress
 
-src/sdk/FlaunchSDK.ts:500
+src/sdk/FlaunchSDK.ts:607
 
 ___
 
@@ -5855,7 +6178,7 @@ Inherited from
 
 ReadFlaunchSDK.getFlaunchTokenIdForMemecoin
 
-src/sdk/FlaunchSDK.ts:521
+src/sdk/FlaunchSDK.ts:628
 
 ___
 
@@ -5884,7 +6207,7 @@ Inherited from
 
 ReadFlaunchSDK.getFlaunchingFee
 
-src/sdk/FlaunchSDK.ts:1415
+src/sdk/FlaunchSDK.ts:1578
 
 ___
 
@@ -5933,7 +6256,7 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:3133
+src/sdk/FlaunchSDK.ts:3362
 
 ▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -5978,7 +6301,7 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:3157
+src/sdk/FlaunchSDK.ts:3386
 
 ▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -6021,7 +6344,7 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:3180
+src/sdk/FlaunchSDK.ts:3409
 
 ___
 
@@ -6061,7 +6384,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:3467
+src/sdk/FlaunchSDK.ts:3696
 
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -6092,7 +6415,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:3488
+src/sdk/FlaunchSDK.ts:3717
 
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -6128,7 +6451,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:3510
+src/sdk/FlaunchSDK.ts:3739
 
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -6159,7 +6482,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:3531
+src/sdk/FlaunchSDK.ts:3760
 
 ___
 
@@ -6184,7 +6507,7 @@ Inherited from
 
 ReadFlaunchSDK.getMarketContext
 
-src/sdk/FlaunchSDK.ts:1651
+src/sdk/FlaunchSDK.ts:1814
 
 ___
 
@@ -6206,7 +6529,7 @@ Returns
 
 Promise<{allowance: bigint, nonce: bigint}> - Current allowance and nonce
 
-src/sdk/FlaunchSDK.ts:2629
+src/sdk/FlaunchSDK.ts:2850
 
 ___
 
@@ -6229,7 +6552,7 @@ Returns
 
 The typed data object for signing
 
-src/sdk/FlaunchSDK.ts:2608
+src/sdk/FlaunchSDK.ts:2829
 
 ___
 
@@ -6255,7 +6578,7 @@ Inherited from
 
 ReadFlaunchSDK.getPoolCreatedFromTx
 
-src/sdk/FlaunchSDK.ts:748
+src/sdk/FlaunchSDK.ts:855
 
 ___
 
@@ -6279,7 +6602,7 @@ Inherited from
 
 ReadFlaunchSDK.getPositionManager
 
-src/sdk/FlaunchSDK.ts:424
+src/sdk/FlaunchSDK.ts:531
 
 ___
 
@@ -6301,7 +6624,7 @@ Inherited from
 
 ReadFlaunchSDK.getPositionManagerAddress
 
-src/sdk/FlaunchSDK.ts:504
+src/sdk/FlaunchSDK.ts:611
 
 ___
 
@@ -6331,7 +6654,7 @@ Inherited from
 
 ReadFlaunchSDK.getSellQuoteExactInput
 
-src/sdk/FlaunchSDK.ts:1480
+src/sdk/FlaunchSDK.ts:1643
 
 ___
 
@@ -6353,7 +6676,7 @@ Returns
 
 Array of calls with descriptions
 
-src/sdk/FlaunchSDK.ts:3236
+src/sdk/FlaunchSDK.ts:3465
 
 ___
 
@@ -6375,7 +6698,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2839
+src/sdk/FlaunchSDK.ts:3068
 
 ___
 
@@ -6399,7 +6722,7 @@ Inherited from
 
 ReadFlaunchSDK.initialSqrtPriceX96
 
-src/sdk/FlaunchSDK.ts:942
+src/sdk/FlaunchSDK.ts:1099
 
 ___
 
@@ -6426,7 +6749,7 @@ Inherited from
 
 ReadFlaunchSDK.initialTick
 
-src/sdk/FlaunchSDK.ts:1082
+src/sdk/FlaunchSDK.ts:1239
 
 ___
 
@@ -6453,7 +6776,7 @@ Inherited from
 
 ReadFlaunchSDK.isFairLaunchActive
 
-src/sdk/FlaunchSDK.ts:990
+src/sdk/FlaunchSDK.ts:1147
 
 ___
 
@@ -6481,7 +6804,7 @@ Inherited from
 
 ReadFlaunchSDK.isFlaunchTokenApprovedForAll
 
-src/sdk/FlaunchSDK.ts:2167
+src/sdk/FlaunchSDK.ts:2330
 
 ___
 
@@ -6507,7 +6830,7 @@ Inherited from
 
 ReadFlaunchSDK.isMemecoinImported
 
-src/sdk/FlaunchSDK.ts:2143
+src/sdk/FlaunchSDK.ts:2306
 
 ___
 
@@ -6533,7 +6856,7 @@ Inherited from
 
 ReadFlaunchSDK.isValidCoin
 
-src/sdk/FlaunchSDK.ts:391
+src/sdk/FlaunchSDK.ts:498
 
 ___
 
@@ -6559,7 +6882,7 @@ Inherited from
 
 ReadFlaunchSDK.marketCapToTokenPriceEth
 
-src/sdk/FlaunchSDK.ts:1679
+src/sdk/FlaunchSDK.ts:1842
 
 ___
 
@@ -6596,7 +6919,7 @@ Inherited from
 
 ReadFlaunchSDK.parseSwapTx
 
-src/sdk/FlaunchSDK.ts:1604
+src/sdk/FlaunchSDK.ts:1767
 
 ___
 
@@ -6622,7 +6945,7 @@ Inherited from
 
 ReadFlaunchSDK.pollPoolCreatedNow
 
-src/sdk/FlaunchSDK.ts:729
+src/sdk/FlaunchSDK.ts:836
 
 ___
 
@@ -6648,7 +6971,7 @@ Inherited from
 
 ReadFlaunchSDK.pollPoolSwapNow
 
-src/sdk/FlaunchSDK.ts:825
+src/sdk/FlaunchSDK.ts:982
 
 ___
 
@@ -6675,7 +6998,7 @@ Inherited from
 
 ReadFlaunchSDK.poolId
 
-src/sdk/FlaunchSDK.ts:1391
+src/sdk/FlaunchSDK.ts:1554
 
 ___
 
@@ -6701,7 +7024,7 @@ Inherited from
 
 ReadFlaunchSDK.positionInfo
 
-src/sdk/FlaunchSDK.ts:844
+src/sdk/FlaunchSDK.ts:1001
 
 ___
 
@@ -6728,7 +7051,7 @@ Inherited from
 
 ReadFlaunchSDK.referralBalance
 
-src/sdk/FlaunchSDK.ts:1273
+src/sdk/FlaunchSDK.ts:1430
 
 ___
 
@@ -6757,7 +7080,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerAllTokensByCreator
 
-src/sdk/FlaunchSDK.ts:1330
+src/sdk/FlaunchSDK.ts:1490
 
 ___
 
@@ -6785,7 +7108,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerAllTokensInManager
 
-src/sdk/FlaunchSDK.ts:1352
+src/sdk/FlaunchSDK.ts:1513
 
 ___
 
@@ -6813,7 +7136,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerBalance
 
-src/sdk/FlaunchSDK.ts:1284
+src/sdk/FlaunchSDK.ts:1441
 
 ___
 
@@ -6836,7 +7159,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2716
+src/sdk/FlaunchSDK.ts:2940
 
 ___
 
@@ -6860,7 +7183,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2729
+src/sdk/FlaunchSDK.ts:2954
 
 ___
 
@@ -6886,7 +7209,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerProtocolBalance
 
-src/sdk/FlaunchSDK.ts:1300
+src/sdk/FlaunchSDK.ts:1458
 
 ___
 
@@ -6909,7 +7232,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2703
+src/sdk/FlaunchSDK.ts:2926
 
 ___
 
@@ -6935,7 +7258,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerTokensCount
 
-src/sdk/FlaunchSDK.ts:1314
+src/sdk/FlaunchSDK.ts:1473
 
 ___
 
@@ -6958,7 +7281,7 @@ Returns
 
 Transaction response for the sell operation
 
-src/sdk/FlaunchSDK.ts:2552
+src/sdk/FlaunchSDK.ts:2773
 
 ___
 
@@ -6982,7 +7305,7 @@ Returns
 
 Promise<Hex> - The transaction hash
 
-src/sdk/FlaunchSDK.ts:2663
+src/sdk/FlaunchSDK.ts:2884
 
 ___
 
@@ -7006,7 +7329,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2782
+src/sdk/FlaunchSDK.ts:3010
 
 ___
 
@@ -7035,7 +7358,7 @@ Inherited from
 
 ReadFlaunchSDK.setIPFSResolver
 
-src/sdk/FlaunchSDK.ts:1590
+src/sdk/FlaunchSDK.ts:1753
 
 ___
 
@@ -7061,7 +7384,7 @@ Inherited from
 
 ReadFlaunchSDK.tokenImporterVerifyMemecoin
 
-src/sdk/FlaunchSDK.ts:1625
+src/sdk/FlaunchSDK.ts:1788
 
 ___
 
@@ -7087,7 +7410,7 @@ Inherited from
 
 ReadFlaunchSDK.treasuryManagerInfo
 
-src/sdk/FlaunchSDK.ts:1368
+src/sdk/FlaunchSDK.ts:1530
 
 ___
 
@@ -7110,7 +7433,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2746
+src/sdk/FlaunchSDK.ts:2972
 
 ___
 
@@ -7133,7 +7456,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2764
+src/sdk/FlaunchSDK.ts:2991
 
 ___
 
@@ -7156,7 +7479,7 @@ Inherited from
 
 ReadFlaunchSDK.trustedPoolKeySignerStatus
 
-src/sdk/FlaunchSDK.ts:997
+src/sdk/FlaunchSDK.ts:1154
 
 ___
 
@@ -7183,7 +7506,7 @@ Inherited from
 
 ReadFlaunchSDK.watchPoolCreated
 
-src/sdk/FlaunchSDK.ts:715
+src/sdk/FlaunchSDK.ts:822
 
 ___
 
@@ -7210,7 +7533,7 @@ Inherited from
 
 ReadFlaunchSDK.watchPoolSwap
 
-src/sdk/FlaunchSDK.ts:800
+src/sdk/FlaunchSDK.ts:957
 
 ___
 
@@ -7234,12 +7557,12 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2675
+src/sdk/FlaunchSDK.ts:2896
 
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / FlaunchVersion
+@flaunch/sdk - v0.9.20 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -7289,7 +7612,7 @@ src/types.ts:54
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / LiquidityMode
+@flaunch/sdk - v0.9.20 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -7319,7 +7642,7 @@ src/types.ts:71
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / Permissions
+@flaunch/sdk - v0.9.20 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -7360,7 +7683,7 @@ src/types.ts:84
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / Verifier
+@flaunch/sdk - v0.9.20 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -7428,7 +7751,7 @@ src/types.ts:67
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / Addresses
+@flaunch/sdk - v0.9.20 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -7439,7 +7762,7 @@ src/types.ts:67
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / BuySwapData
+@flaunch/sdk - v0.9.20 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -7477,7 +7800,7 @@ src/utils/parseSwap.ts:22
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / CallData
+@flaunch/sdk - v0.9.20 / Exports / CallData
 
 # Interface: CallData
 
@@ -7516,7 +7839,7 @@ src/sdk/calldata.ts:22
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / CoinMetadata
+@flaunch/sdk - v0.9.20 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -7600,7 +7923,7 @@ src/types.ts:32
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
+@flaunch/sdk - v0.9.20 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
 
 # Interface: FlaunchWithDynamicSplitManagerIPFSParams
 
@@ -7874,7 +8197,7 @@ src/clients/FlaunchZapClient.ts:52
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / FlaunchWithDynamicSplitManagerParams
+@flaunch/sdk - v0.9.20 / Exports / FlaunchWithDynamicSplitManagerParams
 
 # Interface: FlaunchWithDynamicSplitManagerParams
 
@@ -8102,7 +8425,7 @@ src/clients/FlaunchZapClient.ts:52
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / IPFSParams
+@flaunch/sdk - v0.9.20 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -8149,7 +8472,7 @@ src/types.ts:45
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / PinataConfig
+@flaunch/sdk - v0.9.20 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -8170,7 +8493,7 @@ src/helpers/ipfs.ts:27
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / PoolKey
+@flaunch/sdk - v0.9.20 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -8233,7 +8556,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / PoolWithHookData
+@flaunch/sdk - v0.9.20 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -8325,7 +8648,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / SellSwapData
+@flaunch/sdk - v0.9.20 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -8363,7 +8686,7 @@ src/utils/parseSwap.ts:31
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.9.20 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -8402,7 +8725,7 @@ src/types.ts:197
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / SwapFees
+@flaunch/sdk - v0.9.20 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -8432,7 +8755,7 @@ src/utils/parseSwap.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports / SwapLogArgs
+@flaunch/sdk - v0.9.20 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -8552,9 +8875,9 @@ src/utils/parseSwap.ts:13
 
 ---
 
-@flaunch/sdk - v0.9.19 / Exports
+@flaunch/sdk - v0.9.20 / Exports
 
-# @flaunch/sdk - v0.9.19
+# @flaunch/sdk - v0.9.20
 
 ## Table of contents
 
@@ -8641,13 +8964,16 @@ src/utils/parseSwap.ts:13
 - FastFlaunchZapAddress
 - FeeEscrowAddress
 - FlaunchAddress
+- FlaunchMultichainAddress
 - FlaunchPositionManagerAddress
+- FlaunchPositionManagerMultichainAddress
 - FlaunchPositionManagerV1\_1Address
 - FlaunchPositionManagerV1\_2Address
 - FlaunchSDK
 - FlaunchV1\_1Address
 - FlaunchV1\_2Address
 - FlaunchZapAddress
+- FlaunchZapMultichainAddress
 - PERMIT\_DETAILS
 - PERMIT\_TYPES
 - Permit2Address
@@ -8694,6 +9020,7 @@ src/utils/parseSwap.ts:13
 - getPoolId
 - getSqrtPriceX96FromTick
 - getValidTick
+- isChainSupported
 - maxLiquidityForAmount0Precise
 - maxLiquidityForAmount1
 - orderPoolKey
@@ -8715,7 +9042,7 @@ src/utils/parseSwap.ts:13
 
 Ƭ **BaseSwapLog**: `EventLog`\<`FlaunchPositionManagerABI`, ``"PoolSwap"``\> & \{ `timestamp`: `number`  }
 
-src/clients/FlaunchPositionManagerClient.ts:39
+src/clients/FlaunchPositionManagerClient.ts:40
 
 ___
 
@@ -8723,7 +9050,7 @@ ___
 
 Ƭ **BuySwapLog**: `BaseSwapLog` & \{ `delta`: \{ `coinsBought`: `bigint` ; `fees`: \{ `amount`: `bigint` ; `isInFLETH`: `boolean`  } ; `flETHSold`: `bigint`  } ; `type`: ``"BUY"``  }
 
-src/clients/FlaunchPositionManagerClient.ts:43
+src/clients/FlaunchPositionManagerClient.ts:44
 
 ___
 
@@ -8817,7 +9144,7 @@ Type declaration
 | `publicClient` | `PublicClient` |
 | `walletClient?` | `WalletClient` |
 
-src/sdk/factory.ts:6
+src/sdk/factory.ts:7
 
 ___
 
@@ -8996,7 +9323,7 @@ ___
 
 Ƭ **PoolCreatedLogs**: `PoolCreatedLog`[]
 
-src/clients/FlaunchPositionManagerClient.ts:26
+src/clients/FlaunchPositionManagerClient.ts:27
 
 ___
 
@@ -9004,7 +9331,7 @@ ___
 
 Ƭ **PoolSwapLog**: `BuySwapLog` \| `SellSwapLog` \| `BaseSwapLog`
 
-src/clients/FlaunchPositionManagerClient.ts:67
+src/clients/FlaunchPositionManagerClient.ts:68
 
 ___
 
@@ -9027,7 +9354,7 @@ ___
 
 Ƭ **SellSwapLog**: `BaseSwapLog` & \{ `delta`: \{ `coinsSold`: `bigint` ; `fees`: \{ `amount`: `bigint` ; `isInFLETH`: `boolean`  } ; `flETHBought`: `bigint`  } ; `type`: ``"SELL"``  }
 
-src/clients/FlaunchPositionManagerClient.ts:55
+src/clients/FlaunchPositionManagerClient.ts:56
 
 ## Variables
 
@@ -9035,7 +9362,7 @@ src/clients/FlaunchPositionManagerClient.ts:55
 
 • `Const` **AddressFeeSplitManagerAddress**: `Addresses`
 
-src/addresses.ts:88
+src/addresses.ts:112
 
 ___
 
@@ -9043,7 +9370,7 @@ ___
 
 • `Const` **AnyBidWallAddress**: `Addresses`
 
-src/addresses.ts:73
+src/addresses.ts:97
 
 ___
 
@@ -9051,7 +9378,7 @@ ___
 
 • `Const` **AnyFlaunchAddress**: `Addresses`
 
-src/addresses.ts:46
+src/addresses.ts:70
 
 ___
 
@@ -9059,7 +9386,7 @@ ___
 
 • `Const` **AnyPositionManagerAddress**: `Addresses`
 
-src/addresses.ts:26
+src/addresses.ts:50
 
 ___
 
@@ -9067,7 +9394,7 @@ ___
 
 • `Const` **BidWallAddress**: `Addresses`
 
-src/addresses.ts:62
+src/addresses.ts:86
 
 ___
 
@@ -9075,7 +9402,7 @@ ___
 
 • `Const` **BidWallV1\_1Address**: `Addresses`
 
-src/addresses.ts:68
+src/addresses.ts:92
 
 ___
 
@@ -9083,7 +9410,7 @@ ___
 
 • `Const` **BuyBackManagerAddress**: `Addresses`
 
-src/addresses.ts:103
+src/addresses.ts:127
 
 ___
 
@@ -9091,7 +9418,7 @@ ___
 
 • `Const` **ClankerWorldVerifierAddress**: `Addresses`
 
-src/addresses.ts:114
+src/addresses.ts:138
 
 ___
 
@@ -9101,7 +9428,7 @@ ___
 
 Permissions
 
-src/addresses.ts:147
+src/addresses.ts:171
 
 ___
 
@@ -9109,7 +9436,7 @@ ___
 
 • `Const` **DopplerVerifierAddress**: `Addresses`
 
-src/addresses.ts:119
+src/addresses.ts:143
 
 ___
 
@@ -9117,7 +9444,7 @@ ___
 
 • `Const` **DynamicAddressFeeSplitManagerAddress**: `Addresses`
 
-src/addresses.ts:93
+src/addresses.ts:117
 
 ___
 
@@ -9125,7 +9452,7 @@ ___
 
 • `Const` **FLETHAddress**: `Addresses`
 
-src/addresses.ts:168
+src/addresses.ts:195
 
 ___
 
@@ -9133,7 +9460,7 @@ ___
 
 • `Const` **FLETHHooksAddress**: `Addresses`
 
-src/addresses.ts:173
+src/addresses.ts:203
 
 ___
 
@@ -9141,7 +9468,7 @@ ___
 
 • `Const` **FairLaunchAddress**: `Addresses`
 
-src/addresses.ts:51
+src/addresses.ts:75
 
 ___
 
@@ -9149,7 +9476,7 @@ ___
 
 • `Const` **FairLaunchV1\_1Address**: `Addresses`
 
-src/addresses.ts:57
+src/addresses.ts:81
 
 ___
 
@@ -9157,7 +9484,7 @@ ___
 
 • `Const` **FastFlaunchZapAddress**: `Addresses`
 
-src/addresses.ts:179
+src/addresses.ts:209
 
 ___
 
@@ -9167,7 +9494,7 @@ ___
 
 ===========
 
-src/addresses.ts:158
+src/addresses.ts:182
 
 ___
 
@@ -9175,7 +9502,15 @@ ___
 
 • `Const` **FlaunchAddress**: `Addresses`
 
-src/addresses.ts:31
+src/addresses.ts:55
+
+___
+
+### FlaunchMultichainAddress
+
+• `Const` **FlaunchMultichainAddress**: `Addresses`
+
+src/addresses.ts:28
 
 ___
 
@@ -9183,7 +9518,15 @@ ___
 
 • `Const` **FlaunchPositionManagerAddress**: `Addresses`
 
-src/addresses.ts:11
+src/addresses.ts:35
+
+___
+
+### FlaunchPositionManagerMultichainAddress
+
+• `Const` **FlaunchPositionManagerMultichainAddress**: `Addresses`
+
+src/addresses.ts:22
 
 ___
 
@@ -9191,7 +9534,7 @@ ___
 
 • `Const` **FlaunchPositionManagerV1\_1Address**: `Addresses`
 
-src/addresses.ts:16
+src/addresses.ts:40
 
 ___
 
@@ -9199,7 +9542,7 @@ ___
 
 • `Const` **FlaunchPositionManagerV1\_2Address**: `Addresses`
 
-src/addresses.ts:21
+src/addresses.ts:45
 
 ___
 
@@ -9222,7 +9565,7 @@ ___
 
 • `Const` **FlaunchV1\_1Address**: `Addresses`
 
-src/addresses.ts:36
+src/addresses.ts:60
 
 ___
 
@@ -9230,7 +9573,7 @@ ___
 
 • `Const` **FlaunchV1\_2Address**: `Addresses`
 
-src/addresses.ts:41
+src/addresses.ts:65
 
 ___
 
@@ -9238,7 +9581,15 @@ ___
 
 • `Const` **FlaunchZapAddress**: `Addresses`
 
-src/addresses.ts:5
+src/addresses.ts:11
+
+___
+
+### FlaunchZapMultichainAddress
+
+• `Const` **FlaunchZapMultichainAddress**: `Addresses`
+
+src/addresses.ts:16
 
 ___
 
@@ -9269,7 +9620,7 @@ ___
 
 • `Const` **Permit2Address**: `Addresses`
 
-src/addresses.ts:204
+src/addresses.ts:240
 
 ___
 
@@ -9277,7 +9628,7 @@ ___
 
 • `Const` **PoolManagerAddress**: `Addresses`
 
-src/addresses.ts:184
+src/addresses.ts:214
 
 ___
 
@@ -9301,7 +9652,7 @@ ___
 
 • `Const` **QuoterAddress**: `Addresses`
 
-src/addresses.ts:194
+src/addresses.ts:227
 
 ___
 
@@ -9309,7 +9660,7 @@ ___
 
 • `Const` **ReferralEscrowAddress**: `Addresses`
 
-src/addresses.ts:163
+src/addresses.ts:190
 
 ___
 
@@ -9317,7 +9668,7 @@ ___
 
 • `Const` **RevenueManagerAddress**: `Addresses`
 
-src/addresses.ts:83
+src/addresses.ts:107
 
 ___
 
@@ -9325,7 +9676,7 @@ ___
 
 • `Const` **SolanaVerifierAddress**: `Addresses`
 
-src/addresses.ts:124
+src/addresses.ts:148
 
 ___
 
@@ -9333,7 +9684,7 @@ ___
 
 • `Const` **StakingManagerAddress**: `Addresses`
 
-src/addresses.ts:98
+src/addresses.ts:122
 
 ___
 
@@ -9341,7 +9692,7 @@ ___
 
 • `Const` **StateViewAddress**: `Addresses`
 
-src/addresses.ts:199
+src/addresses.ts:232
 
 ___
 
@@ -9374,7 +9725,7 @@ ___
 
 Verifiers
 
-src/addresses.ts:109
+src/addresses.ts:133
 
 ___
 
@@ -9382,7 +9733,7 @@ ___
 
 • `Const` **TreasuryManagerFactoryAddress**: `Addresses`
 
-src/addresses.ts:78
+src/addresses.ts:102
 
 ___
 
@@ -9394,7 +9745,7 @@ Index signature
 
 ▪ [chainId: `number`]: `PoolKey`
 
-src/addresses.ts:214
+src/addresses.ts:250
 
 ___
 
@@ -9402,7 +9753,7 @@ ___
 
 • `Const` **UniV4PositionManagerAddress**: `Addresses`
 
-src/addresses.ts:209
+src/addresses.ts:245
 
 ___
 
@@ -9410,7 +9761,7 @@ ___
 
 • `Const` **UniversalRouterAddress**: `Addresses`
 
-src/addresses.ts:189
+src/addresses.ts:222
 
 ___
 
@@ -9418,7 +9769,7 @@ ___
 
 • `Const` **VirtualsVerifierAddress**: `Addresses`
 
-src/addresses.ts:129
+src/addresses.ts:153
 
 ___
 
@@ -9426,7 +9777,7 @@ ___
 
 • `Const` **WhitelistVerifierAddress**: `Addresses`
 
-src/addresses.ts:134
+src/addresses.ts:158
 
 ___
 
@@ -9434,7 +9785,7 @@ ___
 
 • `Const` **WhitelistedPermissionsAddress**: `Addresses`
 
-src/addresses.ts:152
+src/addresses.ts:176
 
 ___
 
@@ -9442,7 +9793,7 @@ ___
 
 • `Const` **ZoraVerifierAddress**: `Addresses`
 
-src/addresses.ts:139
+src/addresses.ts:163
 
 ___
 
@@ -9454,7 +9805,7 @@ Index signature
 
 ▪ [key: `number`]: `Chain`
 
-src/helpers/chainIdToChain.ts:4
+src/helpers/chainIdToChain.ts:10
 
 ___
 
@@ -9639,7 +9990,7 @@ ReadFlaunchSDK for read-only operations
 
 Error if publicClient.chain is not configured
 
-src/sdk/factory.ts:17
+src/sdk/factory.ts:18
 
 ▸ **createFlaunch**(`params`): `ReadWriteFlaunchSDK`
 
@@ -9661,7 +10012,7 @@ ReadWriteFlaunchSDK for read and write operations
 
 Error if publicClient.chain is not configured
 
-src/sdk/factory.ts:26
+src/sdk/factory.ts:27
 
 ___
 
@@ -9968,6 +10319,24 @@ Returns
 `number`
 
 src/utils/univ4.ts:42
+
+___
+
+### isChainSupported
+
+▸ **isChainSupported**(`chainId`): `boolean`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `chainId` | `number` |
+
+Returns
+
+`boolean`
+
+src/helpers/supportedChains.ts:18
 
 ___
 

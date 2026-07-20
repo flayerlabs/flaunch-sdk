@@ -1,10 +1,34 @@
-import { base, baseSepolia } from "viem/chains";
+import {
+  base,
+  baseSepolia,
+  mainnet,
+  robinhood,
+  unichain,
+} from "viem/chains";
 import { Addresses, PoolKey } from "./types";
 import { zeroAddress } from "viem";
 
 export const FlaunchZapAddress: Addresses = {
   [base.id]: "0x39112541720078c70164EA4Deb61F0A4811910F9",
   [baseSepolia.id]: "0x25b747aeca2612b9804b5c3bb272a3daefdc6eaa",
+};
+
+export const FlaunchZapMultichainAddress: Addresses = {
+  [mainnet.id]: "0xC17a8523290ea839B4C1DdeF121D8736A06F5623",
+  [unichain.id]: "0xC17a8523290ea839B4C1DdeF121D8736A06F5623",
+  [robinhood.id]: "0xC17a8523290ea839B4C1DdeF121D8736A06F5623",
+};
+
+export const FlaunchPositionManagerMultichainAddress: Addresses = {
+  [mainnet.id]: "0x5Cf8e499C7c466C7E2cf127BDF129F57151E65Dc",
+  [unichain.id]: "0x5Cf8e499C7c466C7E2cf127BDF129F57151E65Dc",
+  [robinhood.id]: "0x5Cf8e499C7c466C7E2cf127BDF129F57151E65Dc",
+};
+
+export const FlaunchMultichainAddress: Addresses = {
+  [mainnet.id]: "0x0cf6BdF0a85A9d6763361037985B76C8893553Af",
+  [unichain.id]: "0x0cf6BdF0a85A9d6763361037985B76C8893553Af",
+  [robinhood.id]: "0x0cf6BdF0a85A9d6763361037985B76C8893553Af",
 };
 
 // only old V1.0: doesn't use FeeEscrow
@@ -158,6 +182,9 @@ export const WhitelistedPermissionsAddress: Addresses = {
 export const FeeEscrowAddress: Addresses = {
   [base.id]: "0x72e6f7948b1B1A343B477F39aAbd2E35E6D27dde",
   [baseSepolia.id]: "0x73E27908b7d35A9251a54799A8ef4C17e4ED9FF9",
+  [mainnet.id]: "0x77A4513CDbE72bBfa8CEE7890D244B66b47f9573",
+  [unichain.id]: "0x77A4513CDbE72bBfa8CEE7890D244B66b47f9573",
+  [robinhood.id]: "0x77A4513CDbE72bBfa8CEE7890D244B66b47f9573",
 };
 
 export const ReferralEscrowAddress: Addresses = {
@@ -168,6 +195,9 @@ export const ReferralEscrowAddress: Addresses = {
 export const FLETHAddress: Addresses = {
   [base.id]: "0x000000000D564D5be76f7f0d28fE52605afC7Cf8",
   [baseSepolia.id]: "0x79FC52701cD4BE6f9Ba9aDC94c207DE37e3314eb",
+  [mainnet.id]: "0x000000000bB1f9944965c64066D10038a84F9af2",
+  [unichain.id]: "0x000000000DD39073Cfc60e7102288ccBd7Bf23fE",
+  [robinhood.id]: "0x00000000043C1117DAFA3A3D0C7148Eb48B30130",
 };
 
 export const FLETHHooksAddress: Addresses = {
@@ -184,6 +214,9 @@ export const FastFlaunchZapAddress: Addresses = {
 export const PoolManagerAddress: Addresses = {
   [base.id]: "0x498581fF718922c3f8e6A244956aF099B2652b2b",
   [baseSepolia.id]: "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+  [mainnet.id]: "0x000000000004444c5dc75cB358380D2e3dE08A90",
+  [unichain.id]: "0x1F98400000000000000000000000000000000004",
+  [robinhood.id]: "0x8366a39CC670B4001A1121B8F6A443A643e40951",
 };
 
 export const UniversalRouterAddress: Addresses = {
@@ -199,6 +232,9 @@ export const QuoterAddress: Addresses = {
 export const StateViewAddress: Addresses = {
   [base.id]: "0xA3c0c9b65baD0b08107Aa264b0f3dB444b867A71",
   [baseSepolia.id]: "0x571291b572ed32ce6751a2Cb2486EbEe8DEfB9B4",
+  [mainnet.id]: "0x7fFE42C4a5DEeA5b0feC41C94C136Cf115597227",
+  [unichain.id]: "0x86e8631A016F9068C3f085fAF484Ee3F5fDee8f2",
+  [robinhood.id]: "0xF3334192D15450CdD385c8B70e03f9A6bD9E673b",
 };
 
 export const Permit2Address: Addresses = {
