@@ -20,7 +20,7 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 
 ## Network support
 
-Base and Base Sepolia remain fully supported and backward compatible. Ethereum, Unichain, and Robinhood support standard direct launches, `PoolCreated` receipt decoding, and creator fee claims only. Swaps, manager and importer flows, watchers, the IPFS launch helper, and dynamic split launches are not supported on these newer deployments.
+Base and Base Sepolia remain fully supported and backward compatible. Ethereum, Unichain, and Robinhood support standard direct launches, dynamic address fee split launches, `PoolCreated` receipt decoding, and creator fee claims. Swaps, other manager and importer flows, watchers, and the IPFS launch helper are not supported on these newer deployments.
 
 The planned Robinhood UI will route swaps through 0x only; the SDK does not provide a Robinhood swap fallback.
 

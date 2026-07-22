@@ -19,6 +19,7 @@ const {
   chainIdToChain,
   createFlaunch,
   createFlaunchCalldata,
+  doesChainSupportSplitManager,
   isChainSupported,
 } = require("../dist/index.cjs.js");
 
@@ -76,6 +77,14 @@ test("isChainSupported accepts exactly the five configured chain IDs", () => {
   }
 });
 
+test("dynamic split launches are supported on all configured chains", () => {
+  for (const { id } of supportedChains) {
+    assert.equal(doesChainSupportSplitManager(id), true);
+  }
+
+  assert.equal(doesChainSupportSplitManager(999_999), false);
+});
+
 test("unsupported factories reject before using their transports", () => {
   const unsupported = defineChain({
     id: 999_999,
@@ -128,7 +137,7 @@ test("multichain write factories reject a wallet configured for another chain", 
   assert.equal(requests.length, 0);
 });
 
-test("multichain dynamic split guards run before RPC or IPFS work", () => {
+test("multichain legacy-only guards run before RPC or IPFS work", () => {
   const requests = [];
   const publicClient = createPublicClient({
     chain: robinhood,
@@ -148,10 +157,6 @@ test("multichain dynamic split guards run before RPC or IPFS work", () => {
     /readWriteFlaunchZap is not supported on chain 4663/
   );
 
-  assert.throws(
-    () => sdk.flaunchWithDynamicSplitManager({}),
-    /flaunchWithDynamicSplitManager is not supported on chain 4663/
-  );
   assert.throws(
     () => sdk.flaunchIPFSWithDynamicSplitManager({}),
     /flaunchIPFSWithDynamicSplitManager is not supported on chain 4663/

@@ -21,7 +21,7 @@ export function isChainSupported(chainId: number): boolean {
 }
 
 /**
- * Whether the AddressFeeSplitManager (dynamic creator-fee splits) is deployed
+ * Whether the DynamicAddressFeeSplitManager is deployed
  * on the given chain. Split-manager flaunches revert on chains without a
  * deployment, so callers should gate on this before using them.
  */

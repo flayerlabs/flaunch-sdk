@@ -2650,14 +2650,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   flaunchWithDynamicSplitManager(
     params: FlaunchWithDynamicSplitManagerParams
   ) {
-    // ========================================================================
-    // BLOCKER / TODO: DO NOT ENABLE DYNAMIC SPLITS ON THE MULTICHAIN
-    // DEPLOYMENTS UNTIL THE
-    // MANAGER CONTRACT, ABI, DEPLOYED ADDRESSES, INITIALIZATION PAYLOAD, AND
-    // COMPLETE PAYOUT LIFECYCLE HAVE ALL BEEN VERIFIED WITH THE PROTOCOL TEAM.
-    // THIS GUARD MUST RUN BEFORE ANY RPC, UPLOAD, OR CONTRACT-CLIENT ACCESS.
-    // ========================================================================
-    this.assertBaseOnlyOperation("flaunchWithDynamicSplitManager");
+    if (isMultichainDeployment(this.chainId)) {
+      return this.readWriteFlaunchZapMultichain!.flaunchWithDynamicSplitManager(
+        this.chainId,
+        params
+      );
+    }
+
     return this.readWriteFlaunchZap.flaunchWithDynamicSplitManager(params);
   }
 

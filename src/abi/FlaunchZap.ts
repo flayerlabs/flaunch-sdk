@@ -14,6 +14,13 @@ const flaunchParams = [
   { name: "feeCalculatorParams", type: "bytes", internalType: "bytes" },
 ] as const;
 
+const treasuryManagerParams = [
+  { name: "manager", type: "address", internalType: "address" },
+  { name: "permissions", type: "address", internalType: "address" },
+  { name: "initializeData", type: "bytes", internalType: "bytes" },
+  { name: "depositData", type: "bytes", internalType: "bytes" },
+] as const;
+
 export const FlaunchZapAbi = [
   {
     type: "function",
@@ -59,6 +66,35 @@ export const FlaunchZapAbi = [
     outputs: [
       { name: "memecoin_", type: "address", internalType: "address" },
       { name: "ethSpent_", type: "uint256", internalType: "uint256" },
+    ],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "flaunch",
+    inputs: [
+      {
+        name: "_flaunchParams",
+        type: "tuple",
+        internalType: "struct IPositionManager.FlaunchParams",
+        components: flaunchParams,
+      },
+      {
+        name: "_treasuryManagerParams",
+        type: "tuple",
+        internalType: "struct IFlaunchZap.TreasuryManagerParams",
+        components: treasuryManagerParams,
+      },
+      {
+        name: "_trustedFeeSigner",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      { name: "memecoin_", type: "address", internalType: "address" },
+      { name: "ethSpent_", type: "uint256", internalType: "uint256" },
+      { name: "deployedManager_", type: "address", internalType: "address" },
     ],
     stateMutability: "payable",
   },

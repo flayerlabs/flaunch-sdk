@@ -11,6 +11,7 @@ const {
 } = require("viem");
 const { mainnet, robinhood, unichain } = require("viem/chains");
 const {
+  DynamicAddressFeeSplitManagerAddress,
   FlaunchZapAbi,
   FlaunchZapMultichainAddress,
   createFlaunchCalldata,
@@ -122,6 +123,85 @@ test("multichain launches encode the canonical tuple on all three chains", async
       assert.equal(flaunchCall.functionName, "flaunch");
       assert.deepEqual(flaunchCall.args[0], feeParams);
       assert.equal(flaunchCall.args[1], zeroAddress);
+    });
+  }
+});
+
+test("multichain dynamic split launches encode the v1.2.2 manager overload", async (t) => {
+  const secondRecipient = "0x2222222222222222222222222222222222222222";
+
+  for (const chain of multichainDeploymentChains) {
+    await t.test(`${chain.name} (${chain.id})`, async () => {
+      const harness = multichainHarness(chain);
+      const encodedCall = await harness.sdk.flaunchWithDynamicSplitManager({
+        ...params,
+        creatorShare: 0n,
+        managerOwnerShare: 0n,
+        moderator: CREATOR,
+        splitReceivers: [
+          { address: CREATOR, share: 5_000_000n },
+          { address: secondRecipient, share: 5_000_000n },
+        ],
+      });
+
+      assert.equal(harness.ethCalls.length, 1);
+
+      const transaction = decodeCallData(encodedCall);
+      assert.equal(
+        transaction.to.toLowerCase(),
+        FlaunchZapMultichainAddress[chain.id].toLowerCase()
+      );
+      assert.equal(transaction.value, FEE);
+
+      const flaunchCall = decodeFunctionData({
+        abi: FlaunchZapAbi,
+        data: transaction.data,
+      });
+      assert.equal(flaunchCall.functionName, "flaunch");
+
+      const managerParams = flaunchCall.args[1];
+      assert.equal(
+        managerParams.manager.toLowerCase(),
+        DynamicAddressFeeSplitManagerAddress[chain.id].toLowerCase()
+      );
+      assert.equal(managerParams.permissions, zeroAddress);
+      assert.equal(managerParams.depositData, "0x");
+      assert.equal(flaunchCall.args[2], zeroAddress);
+
+      const [initializeParams] = decodeAbiParameters(
+        [
+          {
+            type: "tuple",
+            components: [
+              { name: "creatorShare", type: "uint256" },
+              { name: "ownerShare", type: "uint256" },
+              { name: "moderator", type: "address" },
+              {
+                name: "recipientShares",
+                type: "tuple[]",
+                components: [
+                  { name: "recipient", type: "address" },
+                  { name: "share", type: "uint256" },
+                ],
+              },
+            ],
+          },
+        ],
+        managerParams.initializeData
+      );
+      assert.equal(initializeParams.creatorShare, 0n);
+      assert.equal(initializeParams.ownerShare, 0n);
+      assert.equal(initializeParams.moderator, CREATOR);
+      assert.deepEqual(
+        initializeParams.recipientShares.map(({ recipient, share }) => ({
+          recipient,
+          share,
+        })),
+        [
+          { recipient: CREATOR, share: 5_000_000n },
+          { recipient: secondRecipient, share: 5_000_000n },
+        ]
+      );
     });
   }
 });

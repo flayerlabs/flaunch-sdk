@@ -100,21 +100,33 @@ export const AnyBidWallAddress: Addresses = {
 };
 
 export const TreasuryManagerFactoryAddress: Addresses = {
+  [mainnet.id]: "0x656047FD43D2c3a121F2Ef859d7171D7Dd59F8b9",
+  [unichain.id]: "0x7A04367563A65DB574d6B7d084fDbCF4A570c5A6",
+  [robinhood.id]: "0x25f39fe1769D1A1FD622a41030D47314B338B2BF",
   [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763",
   [baseSepolia.id]: "0xD2F3C6185e06925dCBE794C6574315b2202E9CcD",
 };
 
 export const RevenueManagerAddress: Addresses = {
+  [mainnet.id]: "0x0A0f4073a4c663d4b5b3f9fAedC1b650f94f5259",
+  [unichain.id]: "0xeC82CC5A62d25E4b64344cBDb8452f2f1f0c7a6e",
+  [robinhood.id]: "0xb25d5415A87d531F374d43D5174B50B1fEa944c3",
   [base.id]: "0xc8d4B2Ca8eD6868eE768beAb1f932d7eecCc1b50",
   [baseSepolia.id]: "0xA8153b14c8CfdDfb02627807D84AB02D12A85477",
 };
 
 export const AddressFeeSplitManagerAddress: Addresses = {
+  [mainnet.id]: "0xeC82CC5A62d25E4b64344cBDb8452f2f1f0c7a6e",
+  [unichain.id]: "0x656047FD43D2c3a121F2Ef859d7171D7Dd59F8b9",
+  [robinhood.id]: "0x2900cC6bbD79C9518fe25D38F8262a1c523536Fb",
   [base.id]: "0xfAB4BA48a322Efc8b25815448BE6018D211e89f3",
   [baseSepolia.id]: "0x0A3AF63cd86E68a852A1D4923FEfC4e855D8499d",
 };
 
 export const DynamicAddressFeeSplitManagerAddress: Addresses = {
+  [mainnet.id]: "0xd1533e01e2B7C48D132A696DAC9fc9C7676bc86D",
+  [unichain.id]: "0x0A0f4073a4c663d4b5b3f9fAedC1b650f94f5259",
+  [robinhood.id]: "0x84B959Ee120d572EEEe3229d7a0EA1ee8236620f",
   [base.id]: "0x18713855492A778363e23e2CdE325344b8fd6F8d",
   [baseSepolia.id]: "0xA4A1a2Ca68151565d5200243a52EEBbCb2C878E0",
 };
@@ -169,11 +181,17 @@ export const ZoraVerifierAddress: Addresses = {
 
 /** Permissions */
 export const ClosedPermissionsAddress: Addresses = {
+  [mainnet.id]: "0xA5357e7bd0a03e8Ea65bE800a29C8fa6ff6b7720",
+  [unichain.id]: "0xd1533e01e2B7C48D132A696DAC9fc9C7676bc86D",
+  [robinhood.id]: "0xF0469beF728c498f3621008C65B95EDa56C82Ae3",
   [base.id]: "0x4dfc76A31A2a0110739611683a8b6C5201480fa1",
   [baseSepolia.id]: "0x551aeD820CAfaca2f9cD1C637AAc076D05a03AC2",
 };
 
 export const WhitelistedPermissionsAddress: Addresses = {
+  [mainnet.id]: "0xC1d6EDb8656Fd304e22fe42625Db850F96D990D2",
+  [unichain.id]: "0xA5357e7bd0a03e8Ea65bE800a29C8fa6ff6b7720",
+  [robinhood.id]: "0x0E3ACf44D030Cc632Fa006b56778E009bC9564d8",
   [base.id]: "0x828B58B2B2df8ff3221Fbe2b07e75a56a84493Cc",
   [baseSepolia.id]: "0xe8691E8f576A98c41EBB5E984207d4F51386621f",
 };
