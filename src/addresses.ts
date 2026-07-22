@@ -6,7 +6,7 @@ import {
   unichain,
 } from "viem/chains";
 import { Addresses, PoolKey } from "./types";
-import { zeroAddress } from "viem";
+import { type Address, zeroAddress } from "viem";
 
 export const FlaunchZapAddress: Addresses = {
   [base.id]: "0x39112541720078c70164EA4Deb61F0A4811910F9",
@@ -14,9 +14,9 @@ export const FlaunchZapAddress: Addresses = {
 };
 
 export const FlaunchZapMultichainAddress: Addresses = {
-  [mainnet.id]: "0xC17a8523290ea839B4C1DdeF121D8736A06F5623",
-  [unichain.id]: "0xC17a8523290ea839B4C1DdeF121D8736A06F5623",
-  [robinhood.id]: "0xC17a8523290ea839B4C1DdeF121D8736A06F5623",
+  [mainnet.id]: "0x65D673F25b5878df2a2e8a5203Fe2b2846c5CBba",
+  [unichain.id]: "0x65D673F25b5878df2a2e8a5203Fe2b2846c5CBba",
+  [robinhood.id]: "0x65D673F25b5878df2a2e8a5203Fe2b2846c5CBba",
 };
 
 export const FlaunchPositionManagerMultichainAddress: Addresses = {
@@ -200,9 +200,71 @@ export const FLETHAddress: Addresses = {
   [robinhood.id]: "0x00000000043C1117DAFA3A3D0C7148Eb48B30130",
 };
 
+type FreshChainNativeETHSwapConfig = {
+  flETHHooks: Address;
+  quoter: Address;
+  universalRouter: Address;
+  permit2: Address;
+  usesV4HopPriceLimits: boolean;
+};
+
+type FreshChainNativeETHSwapAddressKey = Exclude<
+  keyof FreshChainNativeETHSwapConfig,
+  "usesV4HopPriceLimits"
+>;
+
+/**
+ * Complete native-ETH swap deployments for fresh-chain protocol instances.
+ * Add a chain only after its ETH/flETH hook pool has been verified live.
+ */
+const freshChainNativeETHSwapConfigByChain: Partial<
+  Record<number, FreshChainNativeETHSwapConfig>
+> = {
+  [robinhood.id]: {
+    flETHHooks: "0xEA22Ae03085CAf74Ac3393f9902539fbE9786888",
+    quoter: "0x8Dc178eFB8111BB0973Dd9d722ebeFF267c98F94",
+    universalRouter: "0x8876789976dEcBfCbBbe364623C63652db8C0904",
+    permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    usesV4HopPriceLimits: true,
+  },
+};
+
+function freshChainNativeETHSwapAddresses(
+  key: FreshChainNativeETHSwapAddressKey
+): Addresses {
+  const addresses: Addresses = {};
+  for (const [chainId, config] of Object.entries(
+    freshChainNativeETHSwapConfigByChain
+  )) {
+    if (config) {
+      addresses[Number(chainId)] = config[key];
+    }
+  }
+  return addresses;
+}
+
+export function doesChainSupportMultichainNativeETHSwap(
+  chainId: number
+): boolean {
+  return (
+    freshChainNativeETHSwapConfigByChain[chainId] !== undefined &&
+    FLETHAddress[chainId] !== undefined &&
+    FlaunchPositionManagerMultichainAddress[chainId] !== undefined
+  );
+}
+
+export function doesUniversalRouterUseV4HopPriceLimits(
+  chainId: number
+): boolean {
+  return (
+    freshChainNativeETHSwapConfigByChain[chainId]?.usesV4HopPriceLimits === true
+  );
+}
+
 export const FLETHHooksAddress: Addresses = {
   [base.id]: "0x9E433F32bb5481a9CA7DFF5b3af74A7ed041a888",
   [baseSepolia.id]: "0x4bd2ca15286c96e4e731337de8b375da6841e888",
+  ...freshChainNativeETHSwapAddresses("flETHHooks"),
 };
 
 // @deprecated: FlaunchZap used instead
@@ -222,11 +284,13 @@ export const PoolManagerAddress: Addresses = {
 export const UniversalRouterAddress: Addresses = {
   [base.id]: "0x6fF5693b99212Da76ad316178A184AB56D299b43",
   [baseSepolia.id]: "0x492E6456D9528771018DeB9E87ef7750EF184104",
+  ...freshChainNativeETHSwapAddresses("universalRouter"),
 };
 
 export const QuoterAddress: Addresses = {
   [base.id]: "0x0d5e0f971ed27fbff6c2837bf31316121532048d",
   [baseSepolia.id]: "0x4a6513c898fe1b2d0e78d3b0e0a4a151589b1cba",
+  ...freshChainNativeETHSwapAddresses("quoter"),
 };
 
 export const StateViewAddress: Addresses = {
@@ -240,6 +304,7 @@ export const StateViewAddress: Addresses = {
 export const Permit2Address: Addresses = {
   [base.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
   [baseSepolia.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+  ...freshChainNativeETHSwapAddresses("permit2"),
 };
 
 export const UniV4PositionManagerAddress: Addresses = {

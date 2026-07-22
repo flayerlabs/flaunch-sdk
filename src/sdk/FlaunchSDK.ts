@@ -213,6 +213,9 @@ type BaseReadClients = {
   readFlaunchV1_1: ReadFlaunchV1_1;
   readFlaunchV1_2: ReadFlaunchV1_2;
   readAnyFlaunch: ReadAnyFlaunch;
+};
+
+type SwapReadClients = {
   readQuoter: ReadQuoter;
   readPermit2: ReadPermit2;
 };
@@ -309,6 +312,7 @@ export class ReadFlaunchSDK {
   public readonly publicClient: PublicClient | undefined;
   public readonly TICK_SPACING = TICK_SPACING;
   private readonly baseClients?: BaseReadClients;
+  private readonly swapClients?: SwapReadClients;
   public readonly readFeeEscrow: ReadFeeEscrow;
 
   public resolveIPFS: (value: string) => string;
@@ -317,6 +321,16 @@ export class ReadFlaunchSDK {
     name: K
   ): BaseReadClients[K] {
     const client = this.baseClients?.[name];
+    if (!client) {
+      throw new Error(`${name} is not supported on chain ${this.chainId}`);
+    }
+    return client;
+  }
+
+  private getSwapClient<K extends keyof SwapReadClients>(
+    name: K
+  ): SwapReadClients[K] {
+    const client = this.swapClients?.[name];
     if (!client) {
       throw new Error(`${name} is not supported on chain ${this.chainId}`);
     }
@@ -384,10 +398,10 @@ export class ReadFlaunchSDK {
     return this.getBaseClient("readAnyFlaunch");
   }
   get readQuoter() {
-    return this.getBaseClient("readQuoter");
+    return this.getSwapClient("readQuoter");
   }
   get readPermit2() {
-    return this.getBaseClient("readPermit2");
+    return this.getSwapClient("readPermit2");
   }
 
   constructor(
@@ -407,6 +421,15 @@ export class ReadFlaunchSDK {
       FeeEscrowAddress[this.chainId],
       drift
     );
+
+    const quoterAddress = QuoterAddress[this.chainId];
+    const permit2Address = Permit2Address[this.chainId];
+    if (quoterAddress && permit2Address) {
+      this.swapClients = {
+        readQuoter: new ReadQuoter(this.chainId, quoterAddress, drift),
+        readPermit2: new ReadPermit2(permit2Address, drift),
+      };
+    }
 
     if (isMultichainDeployment(this.chainId)) {
       return;
@@ -481,12 +504,6 @@ export class ReadFlaunchSDK {
         AnyFlaunchAddress[this.chainId],
         drift
       ),
-      readQuoter: new ReadQuoter(
-        this.chainId,
-        QuoterAddress[this.chainId],
-        drift
-      ),
-      readPermit2: new ReadPermit2(Permit2Address[this.chainId], drift),
     };
   }
 
@@ -609,6 +626,9 @@ export class ReadFlaunchSDK {
   }
 
   getPositionManagerAddress(version: FlaunchVersion) {
+    if (isMultichainDeployment(this.chainId)) {
+      return FlaunchPositionManagerMultichainAddress[this.chainId];
+    }
     return this.getPositionManager(version).contract.address;
   }
 
@@ -2352,6 +2372,10 @@ export class ReadFlaunchSDK {
     coinAddress: Address,
     version?: FlaunchVersion
   ): Promise<FlaunchVersion> {
+    if (isMultichainDeployment(this.chainId)) {
+      return version ?? FlaunchVersion.ANY;
+    }
+
     if (!version) {
       try {
         version = await this.getCoinVersion(coinAddress);
