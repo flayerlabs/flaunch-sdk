@@ -1106,7 +1106,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.9.20 / Exports / FlaunchBackend
+@flaunch/sdk - v0.10.0 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1214,7 +1214,7 @@ src/sdk/FlaunchBackend.ts:118
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / ReadDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.10.0 / Exports / ReadDynamicAddressFeeSplitManager
 
 # Class: ReadDynamicAddressFeeSplitManager
 
@@ -1525,7 +1525,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:62
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.10.0 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -3504,7 +3504,7 @@ src/sdk/FlaunchSDK.ts:977
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / ReadWriteDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.10.0 / Exports / ReadWriteDynamicAddressFeeSplitManager
 
 # Class: ReadWriteDynamicAddressFeeSplitManager
 
@@ -4079,7 +4079,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:168
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.10.0 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -5338,7 +5338,7 @@ Returns
 
 Address of the deployed BuyBack manager
 
-src/sdk/FlaunchSDK.ts:2566
+src/sdk/FlaunchSDK.ts:2565
 
 ___
 
@@ -5360,7 +5360,7 @@ Returns
 
 Address of the deployed revenue manager
 
-src/sdk/FlaunchSDK.ts:2519
+src/sdk/FlaunchSDK.ts:2518
 
 ___
 
@@ -5382,7 +5382,7 @@ Returns
 
 Address of the deployed staking manager
 
-src/sdk/FlaunchSDK.ts:2541
+src/sdk/FlaunchSDK.ts:2540
 
 ___
 
@@ -5594,7 +5594,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2581
+src/sdk/FlaunchSDK.ts:2580
 
 ___
 
@@ -5616,7 +5616,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2594
+src/sdk/FlaunchSDK.ts:2593
 
 ___
 
@@ -5664,7 +5664,7 @@ Transaction response
 
 Error if FlaunchZap is not deployed on the current chain
 
-src/sdk/FlaunchSDK.ts:2618
+src/sdk/FlaunchSDK.ts:2617
 
 ___
 
@@ -5686,7 +5686,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2642
+src/sdk/FlaunchSDK.ts:2641
 
 ___
 
@@ -5708,7 +5708,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2651
+src/sdk/FlaunchSDK.ts:2650
 
 ___
 
@@ -5734,7 +5734,7 @@ Transaction response
 
 Error if FlaunchZap is not deployed on the current chain
 
-src/sdk/FlaunchSDK.ts:2604
+src/sdk/FlaunchSDK.ts:2603
 
 ___
 
@@ -5756,7 +5756,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:2633
+src/sdk/FlaunchSDK.ts:2632
 
 ___
 
@@ -7596,7 +7596,7 @@ src/sdk/FlaunchSDK.ts:2919
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / FlaunchVersion
+@flaunch/sdk - v0.10.0 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -7646,7 +7646,7 @@ src/types.ts:54
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / LiquidityMode
+@flaunch/sdk - v0.10.0 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -7676,7 +7676,7 @@ src/types.ts:71
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / Permissions
+@flaunch/sdk - v0.10.0 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -7717,7 +7717,7 @@ src/types.ts:84
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / Verifier
+@flaunch/sdk - v0.10.0 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -7785,7 +7785,7 @@ src/types.ts:67
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / Addresses
+@flaunch/sdk - v0.10.0 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -7796,7 +7796,7 @@ src/types.ts:67
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / BuySwapData
+@flaunch/sdk - v0.10.0 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -7834,7 +7834,7 @@ src/utils/parseSwap.ts:22
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / CallData
+@flaunch/sdk - v0.10.0 / Exports / CallData
 
 # Interface: CallData
 
@@ -7873,7 +7873,7 @@ src/sdk/calldata.ts:22
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / CoinMetadata
+@flaunch/sdk - v0.10.0 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -7957,7 +7957,7 @@ src/types.ts:32
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
+@flaunch/sdk - v0.10.0 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
 
 # Interface: FlaunchWithDynamicSplitManagerIPFSParams
 
@@ -8231,7 +8231,7 @@ src/clients/FlaunchZapClient.ts:52
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / FlaunchWithDynamicSplitManagerParams
+@flaunch/sdk - v0.10.0 / Exports / FlaunchWithDynamicSplitManagerParams
 
 # Interface: FlaunchWithDynamicSplitManagerParams
 
@@ -8459,7 +8459,7 @@ src/clients/FlaunchZapClient.ts:52
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / IPFSParams
+@flaunch/sdk - v0.10.0 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -8506,7 +8506,7 @@ src/types.ts:45
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / PinataConfig
+@flaunch/sdk - v0.10.0 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -8527,7 +8527,7 @@ src/helpers/ipfs.ts:27
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / PoolKey
+@flaunch/sdk - v0.10.0 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -8590,7 +8590,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / PoolWithHookData
+@flaunch/sdk - v0.10.0 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -8682,7 +8682,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / SellSwapData
+@flaunch/sdk - v0.10.0 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -8720,7 +8720,7 @@ src/utils/parseSwap.ts:31
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.10.0 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -8759,7 +8759,7 @@ src/types.ts:197
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / SwapFees
+@flaunch/sdk - v0.10.0 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -8789,7 +8789,7 @@ src/utils/parseSwap.ts:17
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports / SwapLogArgs
+@flaunch/sdk - v0.10.0 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -8909,9 +8909,9 @@ src/utils/parseSwap.ts:13
 
 ---
 
-@flaunch/sdk - v0.9.20 / Exports
+@flaunch/sdk - v0.10.0 / Exports
 
-# @flaunch/sdk - v0.9.20
+# @flaunch/sdk - v0.10.0
 
 ## Table of contents
 
@@ -10145,7 +10145,7 @@ ___
 
 ▸ **doesChainSupportSplitManager**(`chainId`): `boolean`
 
-Whether the AddressFeeSplitManager (dynamic creator-fee splits) is deployed
+Whether the DynamicAddressFeeSplitManager is deployed
 on the given chain. Split-manager flaunches revert on chains without a
 deployment, so callers should gate on this before using them.
 

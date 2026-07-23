@@ -2,13 +2,31 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
-## [Unreleased]
+## [0.10.0] - 2026-07-23
 
 ### Added
 
-- Added Ethereum, Unichain, and Robinhood support for standard direct launches, `PoolCreated` receipt decoding, and creator fee claims.
-- Added dynamic address fee split launches on Ethereum, Unichain, and Robinhood through the selector-compatible v1.2.2 Zap and deployed manager factories.
-- Updated the unsuffixed `FlaunchPositionManagerAbi` and `FlaunchZapAbi` exports for the current multichain contracts. The Base ABIs remain available as `FlaunchPositionManagerV1_0Abi` and `FlaunchZapV1_1_6Abi` and continue to be used by Base SDK operations.
+- **Multichain deployment support** extending the SDK beyond Base to Ethereum, Unichain, and Robinhood
+  - Standard direct launches, `PoolCreated` receipt decoding, and creator fee claims on all three new chains
+  - Dynamic address fee split launches through the selector-compatible v1.2.2 Zap and deployed manager factories
+  - New `FlaunchZapMultichainAddress`, `FlaunchPositionManagerMultichainAddress`, and `FlaunchMultichainAddress` mappings
+  - Extended `TreasuryManagerFactoryAddress`, `RevenueManagerAddress`, `AddressFeeSplitManagerAddress`, `DynamicAddressFeeSplitManagerAddress`, `ClosedPermissionsAddress`, `WhitelistedPermissionsAddress`, `FeeEscrowAddress`, `FLETHAddress`, `PoolManagerAddress`, and `StateViewAddress` with the new chain deployments
+  - `chainIdToChain` now resolves `mainnet`, `unichain`, and `robinhood`
+- **Chain capability helpers** so callers can gate flows before they revert on-chain
+  - `isChainSupported()` and `doesChainSupportSplitManager()` exported from `helpers`
+  - `doesChainSupportMultichainNativeETHSwap()` and `doesUniversalRouterUseV4HopPriceLimits()` exported from `addresses`
+- **Native ETH swaps on Robinhood** via a verified ETH/flETH hook pool, with per-chain `UniversalRouterAddress`, `QuoterAddress`, `Permit2Address`, and `FLETHHooksAddress` entries driven by a single `freshChainNativeETHSwapConfigByChain` config
+- New `FlaunchZapMultichainClient.ts` with `ReadFlaunchZapMultichain` / `ReadWriteFlaunchZapMultichain` for the multichain Zap encoding path
+- New `FlaunchPositionManagerV1_0Abi` and `FlaunchZapV1_1_6Abi` exports preserving the Base contract ABIs
+- Test suite (`pnpm test`) covering multichain launch encoding, factory guards, native ETH swaps, `PoolCreated` decoding, and Base regression
+- `scripts/validate-multichain-deployments.mjs` (`pnpm validate:multichain`) for verifying deployed addresses on-chain
+
+### Changed
+
+- **BREAKING:** the unsuffixed `FlaunchPositionManagerAbi` and `FlaunchZapAbi` exports now resolve to the current multichain contracts. Consumers relying on the Base ABIs should import `FlaunchPositionManagerV1_0Abi` and `FlaunchZapV1_1_6Abi` instead — Base SDK operations continue to use these internally, so behaviour is unchanged unless you imported the ABIs directly
+- `createFlaunch()` now throws when a `walletClient` is on a different chain than the `publicClient` on multichain deployments, failing fast instead of broadcasting to the wrong network
+- Bumped the `viem` dependency from `^2.29.2` to `^2.55.2` for the `unichain` and `robinhood` chain definitions
+- Updated `README.md` with a Network support section describing per-chain coverage
 
 ### Compatibility
 
