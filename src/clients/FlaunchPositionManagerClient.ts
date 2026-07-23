@@ -8,7 +8,7 @@ import {
   createDrift,
   HexString,
 } from "@delvtech/drift";
-import { FlaunchPositionManagerAbi } from "../abi/FlaunchPositionManager";
+import { FlaunchPositionManagerV1_0Abi } from "../abi/FlaunchPositionManagerV1_0";
 import { encodeAbiParameters, parseUnits, zeroAddress, type Hex } from "viem";
 import { IPFSParams } from "../types";
 import { generateTokenUri } from "helpers/ipfs";
@@ -16,7 +16,8 @@ import { getAmountWithSlippage } from "utils/universalRouter";
 import { parseSwapData, type SwapLogArgs } from "utils/parseSwap";
 import { ReadInitialPrice } from "./InitialPriceClient";
 
-export type FlaunchPositionManagerABI = typeof FlaunchPositionManagerAbi;
+export type FlaunchPositionManagerABI =
+  typeof FlaunchPositionManagerV1_0Abi;
 export type PoolCreatedLog = EventLog<
   FlaunchPositionManagerABI,
   "PoolCreated"
@@ -113,7 +114,7 @@ export class ReadFlaunchPositionManager {
       throw new Error("Address is required");
     }
     this.contract = drift.contract({
-      abi: FlaunchPositionManagerAbi,
+      abi: FlaunchPositionManagerV1_0Abi,
       address,
     });
   }

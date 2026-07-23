@@ -2,6 +2,18 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Added Ethereum, Unichain, and Robinhood support for standard direct launches, `PoolCreated` receipt decoding, and creator fee claims.
+- Added dynamic address fee split launches on Ethereum, Unichain, and Robinhood through the selector-compatible v1.2.2 Zap and deployed manager factories.
+- Updated the unsuffixed `FlaunchPositionManagerAbi` and `FlaunchZapAbi` exports for the current multichain contracts. The Base ABIs remain available as `FlaunchPositionManagerV1_0Abi` and `FlaunchZapV1_1_6Abi` and continue to be used by Base SDK operations.
+
+### Compatibility
+
+- Base and Base Sepolia remain fully supported and backward compatible. Swaps, other manager and importer flows, watchers, and the IPFS launch helper remain unsupported on the newer chains; Robinhood UI swaps will use 0x without an SDK fallback.
+
 ## [0.9.20] - 2026-03-18
 
 ### Changed
