@@ -11,6 +11,7 @@ const {
 } = require("viem");
 const { mainnet, robinhood, unichain } = require("viem/chains");
 const {
+  AddressFeeSplitManagerAddress,
   DynamicAddressFeeSplitManagerAddress,
   FlaunchZapAbi,
   FlaunchZapMultichainAddress,
@@ -210,7 +211,6 @@ test("unsupported multichain launch inputs fail before eth_call", async (t) => {
   const invalidCases = [
     ["fair launch percent", { fairLaunchPercent: 1 }, /Fair launches/],
     ["fair launch duration", { fairLaunchDuration: 1 }, /Fair launches/],
-    ["treasury manager", { treasuryManagerParams: {} }, /Treasury managers/],
     [
       "trusted signer",
       { trustedSignerSettings: { enabled: false } },
@@ -226,4 +226,118 @@ test("unsupported multichain launch inputs fail before eth_call", async (t) => {
       assert.equal(harness.ethCalls.length, 0);
     });
   }
+});
+
+test("multichain revenue manager launches deposit into the existing instance", async (t) => {
+  const revenueManagerInstanceAddress =
+    "0x3333333333333333333333333333333333333333";
+
+  for (const chain of multichainDeploymentChains) {
+    await t.test(`${chain.name} (${chain.id})`, async () => {
+      const harness = multichainHarness(chain);
+      const encodedCall = await harness.sdk.flaunchWithRevenueManager({
+        ...params,
+        revenueManagerInstanceAddress,
+      });
+
+      const transaction = decodeCallData(encodedCall);
+      assert.equal(
+        transaction.to.toLowerCase(),
+        FlaunchZapMultichainAddress[chain.id].toLowerCase()
+      );
+      assert.equal(transaction.value, FEE);
+
+      const flaunchCall = decodeFunctionData({
+        abi: FlaunchZapAbi,
+        data: transaction.data,
+      });
+      assert.equal(flaunchCall.functionName, "flaunch");
+      // Three arguments means the treasury-manager overload was selected. The
+      // two-argument overload would encode a valid call that silently drops
+      // the manager.
+      assert.equal(flaunchCall.args.length, 3);
+
+      const managerParams = flaunchCall.args[1];
+      assert.equal(managerParams.manager, revenueManagerInstanceAddress);
+      // An existing instance is deposited into, never re-initialized.
+      assert.equal(managerParams.initializeData, "0x");
+      assert.equal(managerParams.depositData, "0x");
+      assert.equal(managerParams.permissions, zeroAddress);
+      assert.equal(flaunchCall.args[2], zeroAddress);
+    });
+  }
+});
+
+test("multichain static split launches deploy the AddressFeeSplitManager", async (t) => {
+  const secondRecipient = "0x2222222222222222222222222222222222222222";
+
+  for (const chain of multichainDeploymentChains) {
+    await t.test(`${chain.name} (${chain.id})`, async () => {
+      const harness = multichainHarness(chain);
+      const encodedCall = await harness.sdk.flaunchWithSplitManager({
+        ...params,
+        creatorSplitPercent: 20,
+        managerOwnerSplitPercent: 0,
+        splitReceivers: [
+          { address: CREATOR, percent: 40 },
+          { address: secondRecipient, percent: 40 },
+        ],
+      });
+
+      const flaunchCall = decodeFunctionData({
+        abi: FlaunchZapAbi,
+        data: decodeCallData(encodedCall).data,
+      });
+      assert.equal(flaunchCall.args.length, 3);
+
+      const managerParams = flaunchCall.args[1];
+      assert.equal(
+        managerParams.manager.toLowerCase(),
+        AddressFeeSplitManagerAddress[chain.id].toLowerCase()
+      );
+
+      const [initializeParams] = decodeAbiParameters(
+        [
+          {
+            type: "tuple",
+            components: [
+              { type: "uint256", name: "creatorShare" },
+              { type: "uint256", name: "ownerShare" },
+              {
+                type: "tuple[]",
+                name: "recipientShares",
+                components: [
+                  { type: "address", name: "recipient" },
+                  { type: "uint256", name: "share" },
+                ],
+              },
+            ],
+          },
+        ],
+        managerParams.initializeData
+      );
+      // Mirrors the base client exactly, including its quirk: the remainder is
+      // computed as total - recipients - owner, without subtracting the
+      // creator split, so a 20% creator split with 80% of recipients yields
+      // 20% + 20% remainder = 4_000_000. Preserved deliberately for parity.
+      assert.equal(initializeParams.creatorShare, 4_000_000n);
+      assert.equal(initializeParams.ownerShare, 0n);
+      assert.deepEqual(
+        initializeParams.recipientShares.map(({ share }) => share),
+        [4_000_000n, 4_000_000n]
+      );
+    });
+  }
+});
+
+test("multichain plain launches still use the two-argument overload", async () => {
+  const harness = multichainHarness(robinhood);
+  const encodedCall = await harness.sdk.flaunch(params);
+
+  const flaunchCall = decodeFunctionData({
+    abi: FlaunchZapAbi,
+    data: decodeCallData(encodedCall).data,
+  });
+  assert.equal(flaunchCall.args.length, 2);
+  assert.equal(flaunchCall.args[1], zeroAddress);
 });
