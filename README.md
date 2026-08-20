@@ -16,7 +16,13 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 - 🏗️ Build your own token launchpads on top of the flaunch protocol
 - 📊 Read functions for token and pool data
 - 🔒 Built-in Permit2 support for gasless approvals
-- 🔵 Works on Base and Base Sepolia networks
+- 🌐 Works on Base, Base Sepolia, Ethereum, Unichain, and Robinhood
+
+## Network support
+
+Base and Base Sepolia remain fully supported and backward compatible. Ethereum, Unichain, and Robinhood support standard direct launches, dynamic address fee split launches, `PoolCreated` receipt decoding, and creator fee claims. Swaps, other manager and importer flows, watchers, and the IPFS launch helper are not supported on these newer deployments.
+
+The planned Robinhood UI will route swaps through 0x only; the SDK does not provide a Robinhood swap fallback.
 
 ## Table of Contents
 

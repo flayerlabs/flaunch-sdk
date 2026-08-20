@@ -10,6 +10,7 @@ import {
   zeroAddress,
 } from "viem";
 import {
+  doesUniversalRouterUseV4HopPriceLimits,
   FLETHAddress,
   FLETHHooksAddress,
   Permit2Address,
@@ -53,6 +54,29 @@ const IV4RouterAbiExactInput = [
   },
 ] as const;
 
+const IV4RouterAbiExactInputWithHopPriceLimits = [
+  {
+    type: "tuple",
+    components: [
+      { type: "address", name: "currencyIn" },
+      {
+        type: "tuple[]",
+        name: "path",
+        components: [
+          { type: "address", name: "intermediateCurrency" },
+          { type: "uint24", name: "fee" },
+          { type: "int24", name: "tickSpacing" },
+          { type: "address", name: "hooks" },
+          { type: "bytes", name: "hookData" },
+        ],
+      },
+      { type: "uint256[]", name: "minHopPriceX36" },
+      { type: "uint128", name: "amountIn" },
+      { type: "uint128", name: "amountOutMinimum" },
+    ],
+  },
+] as const;
+
 const IV4RouterAbiExactOutput = [
   {
     type: "tuple",
@@ -69,6 +93,29 @@ const IV4RouterAbiExactOutput = [
           { type: "bytes", name: "hookData" },
         ],
       },
+      { type: "uint128", name: "amountOut" },
+      { type: "uint128", name: "amountInMaximum" },
+    ],
+  },
+] as const;
+
+const IV4RouterAbiExactOutputWithHopPriceLimits = [
+  {
+    type: "tuple",
+    components: [
+      { type: "address", name: "currencyOut" },
+      {
+        type: "tuple[]",
+        name: "path",
+        components: [
+          { type: "address", name: "intermediateCurrency" },
+          { type: "uint24", name: "fee" },
+          { type: "int24", name: "tickSpacing" },
+          { type: "address", name: "hooks" },
+          { type: "bytes", name: "hookData" },
+        ],
+      },
+      { type: "uint256[]", name: "minHopPriceX36" },
       { type: "uint128", name: "amountOut" },
       { type: "uint128", name: "amountInMaximum" },
     ],
@@ -114,6 +161,72 @@ export const getAmountWithSlippage = ({
 };
 
 const ETH = zeroAddress;
+
+type V4PathKey = {
+  intermediateCurrency: Address;
+  fee: number;
+  tickSpacing: number;
+  hooks: Address;
+  hookData: Hex;
+};
+
+function encodeV4ExactInputParams(params: {
+  chainId: number;
+  currencyIn: Address;
+  path: V4PathKey[];
+  amountIn: bigint;
+  amountOutMinimum: bigint;
+}) {
+  if (doesUniversalRouterUseV4HopPriceLimits(params.chainId)) {
+    return encodeAbiParameters(IV4RouterAbiExactInputWithHopPriceLimits, [
+      {
+        currencyIn: params.currencyIn,
+        path: params.path,
+        minHopPriceX36: [],
+        amountIn: params.amountIn,
+        amountOutMinimum: params.amountOutMinimum,
+      },
+    ]);
+  }
+
+  return encodeAbiParameters(IV4RouterAbiExactInput, [
+    {
+      currencyIn: params.currencyIn,
+      path: params.path,
+      amountIn: params.amountIn,
+      amountOutMinimum: params.amountOutMinimum,
+    },
+  ]);
+}
+
+function encodeV4ExactOutputParams(params: {
+  chainId: number;
+  currencyOut: Address;
+  path: V4PathKey[];
+  amountOut: bigint;
+  amountInMaximum: bigint;
+}) {
+  if (doesUniversalRouterUseV4HopPriceLimits(params.chainId)) {
+    return encodeAbiParameters(IV4RouterAbiExactOutputWithHopPriceLimits, [
+      {
+        currencyOut: params.currencyOut,
+        path: params.path,
+        minHopPriceX36: [],
+        amountOut: params.amountOut,
+        amountInMaximum: params.amountInMaximum,
+      },
+    ]);
+  }
+
+  return encodeAbiParameters(IV4RouterAbiExactOutput, [
+    {
+      currencyOut: params.currencyOut,
+      path: params.path,
+      amountOut: params.amountOut,
+      amountInMaximum: params.amountInMaximum,
+    },
+  ]);
+}
 
 export const buyMemecoin = (params: {
   sender: Address;
@@ -197,25 +310,24 @@ export const buyMemecoin = (params: {
     ];
 
     // Parameters for 'EXACT_IN' swap
-    v4Params = encodeAbiParameters(IV4RouterAbiExactInput, [
-      {
-        currencyIn: inputToken,
-        path: params.intermediatePoolKey
-          ? [
-              {
-                intermediateCurrency: ETH,
-                fee: params.intermediatePoolKey.fee,
-                tickSpacing: params.intermediatePoolKey.tickSpacing,
-                hooks: params.intermediatePoolKey.hooks,
-                hookData: params.intermediatePoolKey.hookData,
-              },
-              ...basePath,
-            ]
-          : basePath,
-        amountIn: params.amountIn,
-        amountOutMinimum: params.amountOutMin,
-      },
-    ]);
+    v4Params = encodeV4ExactInputParams({
+      chainId: params.chainId,
+      currencyIn: inputToken,
+      path: params.intermediatePoolKey
+        ? [
+            {
+              intermediateCurrency: ETH,
+              fee: params.intermediatePoolKey.fee,
+              tickSpacing: params.intermediatePoolKey.tickSpacing,
+              hooks: params.intermediatePoolKey.hooks,
+              hookData: params.intermediatePoolKey.hookData,
+            },
+            ...basePath,
+          ]
+        : basePath,
+      amountIn: params.amountIn,
+      amountOutMinimum: params.amountOutMin,
+    });
   } else {
     if (params.amountOut == null || params.amountInMax == null) {
       throw new Error(
@@ -246,25 +358,24 @@ export const buyMemecoin = (params: {
     ];
 
     // Parameters for 'EXACT_OUT' swap
-    v4Params = encodeAbiParameters(IV4RouterAbiExactOutput, [
-      {
-        currencyOut: params.memecoin,
-        path: params.intermediatePoolKey
-          ? [
-              {
-                fee: params.intermediatePoolKey.fee,
-                tickSpacing: params.intermediatePoolKey.tickSpacing,
-                hookData: params.intermediatePoolKey.hookData,
-                hooks: params.intermediatePoolKey.hooks,
-                intermediateCurrency: inputToken,
-              },
-              ...basePath,
-            ]
-          : basePath,
-        amountOut: params.amountOut,
-        amountInMaximum: params.amountInMax,
-      },
-    ]);
+    v4Params = encodeV4ExactOutputParams({
+      chainId: params.chainId,
+      currencyOut: params.memecoin,
+      path: params.intermediatePoolKey
+        ? [
+            {
+              fee: params.intermediatePoolKey.fee,
+              tickSpacing: params.intermediatePoolKey.tickSpacing,
+              hookData: params.intermediatePoolKey.hookData,
+              hooks: params.intermediatePoolKey.hooks,
+              intermediateCurrency: inputToken,
+            },
+            ...basePath,
+          ]
+        : basePath,
+      amountOut: params.amountOut,
+      amountInMaximum: params.amountInMax,
+    });
   }
 
   // Common parameters for both swap types
@@ -452,25 +563,24 @@ export const sellMemecoinWithPermit2 = (params: {
     },
   ];
 
-  const v4ExactInputParams = encodeAbiParameters(IV4RouterAbiExactInput, [
-    {
-      currencyIn: params.memecoin,
-      path: params.intermediatePoolKey
-        ? [
-            ...basePath,
-            {
-              intermediateCurrency: outputToken,
-              fee: params.intermediatePoolKey.fee,
-              tickSpacing: params.intermediatePoolKey.tickSpacing,
-              hooks: params.intermediatePoolKey.hooks,
-              hookData: params.intermediatePoolKey.hookData,
-            },
-          ]
-        : basePath,
-      amountIn: params.amountIn,
-      amountOutMinimum: params.amountOutMin,
-    },
-  ]);
+  const v4ExactInputParams = encodeV4ExactInputParams({
+    chainId: params.chainId,
+    currencyIn: params.memecoin,
+    path: params.intermediatePoolKey
+      ? [
+          ...basePath,
+          {
+            intermediateCurrency: outputToken,
+            fee: params.intermediatePoolKey.fee,
+            tickSpacing: params.intermediatePoolKey.tickSpacing,
+            hooks: params.intermediatePoolKey.hooks,
+            hookData: params.intermediatePoolKey.hookData,
+          },
+        ]
+      : basePath,
+    amountIn: params.amountIn,
+    amountOutMinimum: params.amountOutMin,
+  });
 
   const settleParams = encodeAbiParameters(
     [

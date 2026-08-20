@@ -16,6 +16,7 @@ import {
   erc721Abi,
   formatUnits,
   decodeEventLog,
+  isAddressEqual,
 } from "viem";
 import axios from "axios";
 import {
@@ -48,6 +49,8 @@ import {
   FlaunchPositionManagerV1_3Address,
   FlaunchV1_3Address,
   BidWallV1_3Address,
+  FlaunchPositionManagerMultichainAddress,
+  FlaunchZapMultichainAddress,
   // V1.2 and AnyPositionManager addresses will be imported here when available
 } from "../addresses";
 import {
@@ -82,6 +85,7 @@ import {
   DeployStakingManagerParams,
   DeployBuyBackManagerParams,
 } from "../clients/FlaunchZapClient";
+import { ReadWriteFlaunchZapMultichain } from "../clients/FlaunchZapMultichainClient";
 import { ReadFlaunch } from "../clients/FlaunchClient";
 import { ReadAnyFlaunch } from "../clients/AnyFlaunchClient";
 import { ReadMemecoin, ReadWriteMemecoin } from "../clients/MemecoinClient";
@@ -128,6 +132,7 @@ import {
 } from "clients/TreasuryManagerClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
 import { FlaunchPositionManagerV1_2Abi } from "abi/FlaunchPositionManagerV1_2";
+import { FlaunchPositionManagerAbi } from "abi/FlaunchPositionManager";
 import {
   CallWithDescription,
   CoinMetadata,
@@ -178,6 +183,10 @@ import { ReadMulticall } from "clients/MulticallClient";
 import { MemecoinAbi, Permit2Abi } from "abi";
 import { FLETHAbi } from "abi/FLETH";
 import { ReadTrustedSignerFeeCalculator } from "clients/TrustedSignerFeeCalculatorClient";
+import {
+  isChainSupported,
+  isMultichainDeployment,
+} from "helpers/supportedChains";
 
 // Re-export PoolCreatedEventData so it's available as part of FlaunchSDK module
 export type { PoolCreatedEventData } from "types";
@@ -187,6 +196,49 @@ type WatchPoolSwapParams = Omit<
   "flETHIsCurrencyZero"
 > & {
   filterByCoin?: Address;
+};
+
+type BaseReadClients = {
+  readPositionManager: ReadFlaunchPositionManager;
+  readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
+  readPositionManagerV1_2: ReadFlaunchPositionManagerV1_2;
+  // v1.3.1 clients are optional: v1.3.1 is deployed on Base mainnet only, so
+  // they are absent on baseSepolia and every multichain deployment. They reuse
+  // the V1_2 / V1_1 client classes since v1.3.1 shares those ABIs/interfaces.
+  readPositionManagerV1_3?: ReadFlaunchPositionManagerV1_2;
+  readAnyPositionManager: ReadAnyPositionManager;
+  readTokenImporter: ReadTokenImporter;
+  readReferralEscrow: ReadReferralEscrow;
+  readFlaunchZap: ReadFlaunchZap;
+  readPoolManager: ReadPoolManager;
+  readStateView: ReadStateView;
+  readFairLaunch: ReadFairLaunch;
+  readFairLaunchV1_1: ReadFairLaunchV1_1;
+  readBidWall: ReadBidWall;
+  readBidWallV1_1: ReadBidWallV1_1;
+  readBidWallV1_3?: ReadBidWallV1_1;
+  readAnyBidWall: AnyBidWall;
+  readFlaunch: ReadFlaunch;
+  readFlaunchV1_1: ReadFlaunchV1_1;
+  readFlaunchV1_2: ReadFlaunchV1_2;
+  readFlaunchV1_3?: ReadFlaunchV1_2;
+  readAnyFlaunch: ReadAnyFlaunch;
+};
+
+type SwapReadClients = {
+  readQuoter: ReadQuoter;
+  readPermit2: ReadPermit2;
+};
+
+type BaseReadWriteClients = {
+  readWritePositionManager: ReadWriteFlaunchPositionManager;
+  readWritePositionManagerV1_1: ReadWriteFlaunchPositionManagerV1_1;
+  readWriteAnyPositionManager: ReadWriteAnyPositionManager;
+  readWriteTokenImporter: ReadWriteTokenImporter;
+  readWriteReferralEscrow: ReadWriteReferralEscrow;
+  readWriteFlaunchZap: ReadWriteFlaunchZap;
+  readWriteTreasuryManagerFactory: ReadWriteTreasuryManagerFactory;
+  readWritePermit2: ReadWritePermit2;
 };
 
 // Generic swap log types that work across all position manager versions
@@ -269,149 +321,242 @@ export class ReadFlaunchSDK {
   public readonly chainId: number;
   public readonly publicClient: PublicClient | undefined;
   public readonly TICK_SPACING = TICK_SPACING;
-  public readonly readPositionManager: ReadFlaunchPositionManager;
-  public readonly readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
-  public readonly readAnyPositionManager: ReadAnyPositionManager;
-  public readonly readTokenImporter: ReadTokenImporter;
+  private readonly baseClients?: BaseReadClients;
+  private readonly swapClients?: SwapReadClients;
   public readonly readFeeEscrow: ReadFeeEscrow;
-  public readonly readReferralEscrow: ReadReferralEscrow;
-  public readonly readFlaunchZap: ReadFlaunchZap;
-  public readonly readPoolManager: ReadPoolManager;
-  public readonly readStateView: ReadStateView;
-  public readonly readFairLaunch: ReadFairLaunch;
-  public readonly readFairLaunchV1_1: ReadFairLaunchV1_1;
-  public readonly readBidWall: ReadBidWall;
-  public readonly readAnyBidWall: AnyBidWall;
-  public readonly readBidWallV1_1: ReadBidWallV1_1;
-  public readonly readFlaunch: ReadFlaunch;
-  public readonly readFlaunchV1_1: ReadFlaunchV1_1;
-  public readonly readAnyFlaunch: ReadAnyFlaunch;
-  public readonly readQuoter: ReadQuoter;
-  public readonly readPermit2: ReadPermit2;
-
-  // These properties will be initialized when the clients are available
-  public readonly readPositionManagerV1_2: ReadFlaunchPositionManagerV1_2;
-  // public readonly readFairLaunchV1_2: ReadFairLaunchV1_2;
-  // public readonly readBidWallV1_2: ReadBidWallV1_2;
-  public readonly readFlaunchV1_2: ReadFlaunchV1_2;
-  // public readonly readAnyFlaunch: ReadAnyFlaunch;
-
-  // v1.3.1 (GitHub release v1.3.1) - Base mainnet only; undefined on chains
-  // without a v1.3.1 deployment (e.g. baseSepolia). Reuses the V1_2 ABIs/clients
-  // since v1.3.1 is a patch release with the same interfaces.
-  public readonly readPositionManagerV1_3?: ReadFlaunchPositionManagerV1_2;
-  public readonly readFlaunchV1_3?: ReadFlaunchV1_2;
-  public readonly readBidWallV1_3?: ReadBidWallV1_1;
 
   public resolveIPFS: (value: string) => string;
+
+  private getBaseClient<K extends keyof BaseReadClients>(
+    name: K
+  ): BaseReadClients[K] {
+    const client = this.baseClients?.[name];
+    if (!client) {
+      throw new Error(`${name} is not supported on chain ${this.chainId}`);
+    }
+    return client;
+  }
+
+  private getSwapClient<K extends keyof SwapReadClients>(
+    name: K
+  ): SwapReadClients[K] {
+    const client = this.swapClients?.[name];
+    if (!client) {
+      throw new Error(`${name} is not supported on chain ${this.chainId}`);
+    }
+    return client;
+  }
+
+  protected assertBaseOnlyOperation(operation: string) {
+    if (isMultichainDeployment(this.chainId)) {
+      throw new Error(`${operation} is not supported on chain ${this.chainId}`);
+    }
+  }
+
+  get readPositionManager() {
+    return this.getBaseClient("readPositionManager");
+  }
+  get readPositionManagerV1_1() {
+    return this.getBaseClient("readPositionManagerV1_1");
+  }
+  get readPositionManagerV1_2() {
+    return this.getBaseClient("readPositionManagerV1_2");
+  }
+  // v1.3.1 is Base-mainnet only; null-safe access returns undefined elsewhere
+  get readPositionManagerV1_3() {
+    return this.baseClients?.readPositionManagerV1_3;
+  }
+  get readAnyPositionManager() {
+    return this.getBaseClient("readAnyPositionManager");
+  }
+  get readTokenImporter() {
+    return this.getBaseClient("readTokenImporter");
+  }
+  get readReferralEscrow() {
+    return this.getBaseClient("readReferralEscrow");
+  }
+  get readFlaunchZap() {
+    return this.getBaseClient("readFlaunchZap");
+  }
+  get readPoolManager() {
+    return this.getBaseClient("readPoolManager");
+  }
+  get readStateView() {
+    return this.getBaseClient("readStateView");
+  }
+  get readFairLaunch() {
+    return this.getBaseClient("readFairLaunch");
+  }
+  get readFairLaunchV1_1() {
+    return this.getBaseClient("readFairLaunchV1_1");
+  }
+  get readBidWall() {
+    return this.getBaseClient("readBidWall");
+  }
+  get readBidWallV1_1() {
+    return this.getBaseClient("readBidWallV1_1");
+  }
+  // v1.3.1 is Base-mainnet only; null-safe access returns undefined elsewhere
+  get readBidWallV1_3() {
+    return this.baseClients?.readBidWallV1_3;
+  }
+  get readAnyBidWall() {
+    return this.getBaseClient("readAnyBidWall");
+  }
+  get readFlaunch() {
+    return this.getBaseClient("readFlaunch");
+  }
+  get readFlaunchV1_1() {
+    return this.getBaseClient("readFlaunchV1_1");
+  }
+  get readFlaunchV1_2() {
+    return this.getBaseClient("readFlaunchV1_2");
+  }
+  // v1.3.1 is Base-mainnet only; null-safe access returns undefined elsewhere
+  get readFlaunchV1_3() {
+    return this.baseClients?.readFlaunchV1_3;
+  }
+  get readAnyFlaunch() {
+    return this.getBaseClient("readAnyFlaunch");
+  }
+  get readQuoter() {
+    return this.getSwapClient("readQuoter");
+  }
+  get readPermit2() {
+    return this.getSwapClient("readPermit2");
+  }
 
   constructor(
     chainId: number,
     drift: Drift = createDrift(),
     publicClient?: PublicClient
   ) {
+    if (!isChainSupported(chainId)) {
+      throw new Error(`Chain ${chainId} is not supported`);
+    }
+
     this.chainId = chainId;
     this.drift = drift;
     this.publicClient = publicClient;
     this.resolveIPFS = defaultResolveIPFS;
-    this.readPositionManager = new ReadFlaunchPositionManager(
-      FlaunchPositionManagerAddress[this.chainId],
-      drift
-    );
-    this.readPositionManagerV1_1 = new ReadFlaunchPositionManagerV1_1(
-      FlaunchPositionManagerV1_1Address[this.chainId],
-      drift
-    );
-    this.readPositionManagerV1_2 = new ReadFlaunchPositionManagerV1_2(
-      FlaunchPositionManagerV1_2Address[this.chainId],
-      drift
-    );
-    // v1.3.1: only wire the client on chains that have a v1.3.1 deployment
-    if (FlaunchPositionManagerV1_3Address[this.chainId]) {
-      this.readPositionManagerV1_3 = new ReadFlaunchPositionManagerV1_2(
-        FlaunchPositionManagerV1_3Address[this.chainId],
-        drift
-      );
-    }
-    this.readAnyPositionManager = new ReadAnyPositionManager(
-      AnyPositionManagerAddress[this.chainId],
-      drift
-    );
-    this.readTokenImporter = new ReadTokenImporter(
-      this.chainId,
-      TokenImporterAddress[this.chainId],
-      drift
-    );
     this.readFeeEscrow = new ReadFeeEscrow(
       FeeEscrowAddress[this.chainId],
       drift
     );
-    this.readReferralEscrow = new ReadReferralEscrow(
-      ReferralEscrowAddress[this.chainId],
-      drift
-    );
-    this.readFlaunchZap = new ReadFlaunchZap(
-      this.chainId,
-      FlaunchZapAddress[this.chainId],
-      drift
-    );
-    this.readPoolManager = new ReadPoolManager(
-      PoolManagerAddress[this.chainId],
-      drift
-    );
-    this.readStateView = new ReadStateView(
-      StateViewAddress[this.chainId],
-      drift
-    );
-    this.readFairLaunch = new ReadFairLaunch(
-      FairLaunchAddress[this.chainId],
-      drift
-    );
-    this.readFairLaunchV1_1 = new ReadFairLaunchV1_1(
-      FairLaunchV1_1Address[this.chainId],
-      drift
-    );
-    this.readBidWall = new ReadBidWall(BidWallAddress[this.chainId], drift);
-    this.readBidWallV1_1 = new ReadBidWallV1_1(
-      BidWallV1_1Address[this.chainId],
-      drift
-    );
-    this.readAnyBidWall = new AnyBidWall(
-      AnyBidWallAddress[this.chainId],
-      drift
-    );
-    this.readFlaunch = new ReadFlaunch(FlaunchAddress[this.chainId], drift);
-    this.readFlaunchV1_1 = new ReadFlaunchV1_1(
-      FlaunchV1_1Address[this.chainId],
-      drift
-    );
-    this.readFlaunchV1_2 = new ReadFlaunchV1_2(
-      FlaunchV1_2Address[this.chainId],
-      drift
-    );
-    // v1.3.1: only wire the clients on chains that have a v1.3.1 deployment
-    if (FlaunchV1_3Address[this.chainId]) {
-      this.readFlaunchV1_3 = new ReadFlaunchV1_2(
-        FlaunchV1_3Address[this.chainId],
-        drift
-      );
+
+    const quoterAddress = QuoterAddress[this.chainId];
+    const permit2Address = Permit2Address[this.chainId];
+    if (quoterAddress && permit2Address) {
+      this.swapClients = {
+        readQuoter: new ReadQuoter(this.chainId, quoterAddress, drift),
+        readPermit2: new ReadPermit2(permit2Address, drift),
+      };
     }
-    if (BidWallV1_3Address[this.chainId]) {
-      this.readBidWallV1_3 = new ReadBidWallV1_1(
-        BidWallV1_3Address[this.chainId],
-        drift
-      );
+
+    if (isMultichainDeployment(this.chainId)) {
+      return;
     }
-    this.readAnyFlaunch = new ReadAnyFlaunch(
-      AnyFlaunchAddress[this.chainId],
-      drift
-    );
-    this.readQuoter = new ReadQuoter(
-      this.chainId,
-      QuoterAddress[this.chainId],
-      drift
-    );
-    this.readPermit2 = new ReadPermit2(Permit2Address[this.chainId], drift);
+
+    this.baseClients = {
+      readPositionManager: new ReadFlaunchPositionManager(
+        FlaunchPositionManagerAddress[this.chainId],
+        drift
+      ),
+      readPositionManagerV1_1: new ReadFlaunchPositionManagerV1_1(
+        FlaunchPositionManagerV1_1Address[this.chainId],
+        drift
+      ),
+      readPositionManagerV1_2: new ReadFlaunchPositionManagerV1_2(
+        FlaunchPositionManagerV1_2Address[this.chainId],
+        drift
+      ),
+      // v1.3.1: only present on chains with a v1.3.1 deployment (Base mainnet).
+      // Reuses the V1_2 client/ABI since v1.3.1 shares the same interface.
+      ...(FlaunchPositionManagerV1_3Address[this.chainId]
+        ? {
+            readPositionManagerV1_3: new ReadFlaunchPositionManagerV1_2(
+              FlaunchPositionManagerV1_3Address[this.chainId],
+              drift
+            ),
+          }
+        : {}),
+      readAnyPositionManager: new ReadAnyPositionManager(
+        AnyPositionManagerAddress[this.chainId],
+        drift
+      ),
+      readTokenImporter: new ReadTokenImporter(
+        this.chainId,
+        TokenImporterAddress[this.chainId],
+        drift
+      ),
+      readReferralEscrow: new ReadReferralEscrow(
+        ReferralEscrowAddress[this.chainId],
+        drift
+      ),
+      readFlaunchZap: new ReadFlaunchZap(
+        this.chainId,
+        FlaunchZapAddress[this.chainId],
+        drift
+      ),
+      readPoolManager: new ReadPoolManager(
+        PoolManagerAddress[this.chainId],
+        drift
+      ),
+      readStateView: new ReadStateView(
+        StateViewAddress[this.chainId],
+        drift
+      ),
+      readFairLaunch: new ReadFairLaunch(
+        FairLaunchAddress[this.chainId],
+        drift
+      ),
+      readFairLaunchV1_1: new ReadFairLaunchV1_1(
+        FairLaunchV1_1Address[this.chainId],
+        drift
+      ),
+      readBidWall: new ReadBidWall(BidWallAddress[this.chainId], drift),
+      readBidWallV1_1: new ReadBidWallV1_1(
+        BidWallV1_1Address[this.chainId],
+        drift
+      ),
+      // v1.3.1: only present on chains with a v1.3.1 deployment (Base mainnet).
+      // Reuses the V1_1 BidWall client/ABI since v1.3.1 shares the interface.
+      ...(BidWallV1_3Address[this.chainId]
+        ? {
+            readBidWallV1_3: new ReadBidWallV1_1(
+              BidWallV1_3Address[this.chainId],
+              drift
+            ),
+          }
+        : {}),
+      readAnyBidWall: new AnyBidWall(
+        AnyBidWallAddress[this.chainId],
+        drift
+      ),
+      readFlaunch: new ReadFlaunch(FlaunchAddress[this.chainId], drift),
+      readFlaunchV1_1: new ReadFlaunchV1_1(
+        FlaunchV1_1Address[this.chainId],
+        drift
+      ),
+      readFlaunchV1_2: new ReadFlaunchV1_2(
+        FlaunchV1_2Address[this.chainId],
+        drift
+      ),
+      // v1.3.1: only present on chains with a v1.3.1 deployment (Base mainnet).
+      // Reuses the V1_2 Flaunch client/ABI since v1.3.1 shares the interface.
+      ...(FlaunchV1_3Address[this.chainId]
+        ? {
+            readFlaunchV1_3: new ReadFlaunchV1_2(
+              FlaunchV1_3Address[this.chainId],
+              drift
+            ),
+          }
+        : {}),
+      readAnyFlaunch: new ReadAnyFlaunch(
+        AnyFlaunchAddress[this.chainId],
+        drift
+      ),
+    };
   }
 
   /**
@@ -549,6 +694,9 @@ export class ReadFlaunchSDK {
   }
 
   getPositionManagerAddress(version: FlaunchVersion) {
+    if (isMultichainDeployment(this.chainId)) {
+      return FlaunchPositionManagerMultichainAddress[this.chainId];
+    }
     return this.getPositionManager(version).contract.address;
   }
 
@@ -806,6 +954,56 @@ export class ReadFlaunchSDK {
 
     if (!receipt) {
       throw new Error(`Transaction not found: ${txHash}`);
+    }
+
+    if (isMultichainDeployment(this.chainId)) {
+      const positionManager =
+        FlaunchPositionManagerMultichainAddress[this.chainId];
+
+      for (const log of receipt.logs) {
+        if (!isAddressEqual(log.address, positionManager)) {
+          continue;
+        }
+
+        try {
+          const decodedLog = decodeEventLog({
+            abi: FlaunchPositionManagerAbi,
+            data: log.data,
+            topics: log.topics,
+          });
+
+          if (decodedLog.eventName === "PoolCreated") {
+            return {
+              poolId: decodedLog.args._poolId,
+              memecoin: decodedLog.args._memecoin,
+              memecoinTreasury: decodedLog.args._memecoinTreasury,
+              tokenId: decodedLog.args._tokenId,
+              currencyFlipped: decodedLog.args._currencyFlipped,
+              flaunchFee: decodedLog.args._flaunchFee,
+              params: {
+                name: decodedLog.args._params.name,
+                symbol: decodedLog.args._params.symbol,
+                tokenUri: decodedLog.args._params.tokenUri,
+                initialTokenFairLaunch: 0n,
+                premineAmount: decodedLog.args._params.premineAmount,
+                creator: decodedLog.args._params.creator,
+                creatorFeeAllocation: Number(
+                  decodedLog.args._params.creatorFeeAllocation
+                ),
+                flaunchAt: decodedLog.args._params.flaunchAt,
+                initialPriceParams:
+                  decodedLog.args._params.initialPriceParams,
+                feeCalculatorParams:
+                  decodedLog.args._params.feeCalculatorParams,
+              },
+            };
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      return null;
     }
 
     // Find PoolCreated event in logs by trying to decode each log
@@ -1332,6 +1530,7 @@ export class ReadFlaunchSDK {
     revenueManagerAddress: Address;
     recipient: Address;
   }) {
+    this.assertBaseOnlyOperation("revenueManagerBalance");
     const readRevenueManager = new ReadRevenueManager(
       params.revenueManagerAddress,
       this.drift
@@ -1345,6 +1544,7 @@ export class ReadFlaunchSDK {
    * @returns Promise<bigint> - The claimable balance of ETH
    */
   async revenueManagerProtocolBalance(revenueManagerAddress: Address) {
+    this.assertBaseOnlyOperation("revenueManagerProtocolBalance");
     const readRevenueManager = new ReadRevenueManager(
       revenueManagerAddress,
       this.drift
@@ -1359,6 +1559,7 @@ export class ReadFlaunchSDK {
    * @returns Promise<bigint> - The total count of tokens
    */
   async revenueManagerTokensCount(revenueManagerAddress: Address) {
+    this.assertBaseOnlyOperation("revenueManagerTokensCount");
     const readRevenueManager = new ReadRevenueManager(
       revenueManagerAddress,
       this.drift
@@ -1379,6 +1580,7 @@ export class ReadFlaunchSDK {
     creator: Address;
     sortByDesc?: boolean;
   }) {
+    this.assertBaseOnlyOperation("revenueManagerAllTokensByCreator");
     const readRevenueManager = new ReadRevenueManager(
       params.revenueManagerAddress,
       this.drift
@@ -1400,6 +1602,7 @@ export class ReadFlaunchSDK {
     revenueManagerAddress: Address;
     sortByDesc?: boolean;
   }) {
+    this.assertBaseOnlyOperation("revenueManagerAllTokensInManager");
     const readRevenueManager = new ReadRevenueManager(
       params.revenueManagerAddress,
       this.drift
@@ -1413,6 +1616,7 @@ export class ReadFlaunchSDK {
    * @returns Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
    */
   async treasuryManagerInfo(treasuryManagerAddress: Address) {
+    this.assertBaseOnlyOperation("treasuryManagerInfo");
     const readTreasuryManager = new ReadTreasuryManager(
       treasuryManagerAddress,
       this.drift
@@ -2236,6 +2440,10 @@ export class ReadFlaunchSDK {
     coinAddress: Address,
     version?: FlaunchVersion
   ): Promise<FlaunchVersion> {
+    if (isMultichainDeployment(this.chainId)) {
+      return version ?? FlaunchVersion.ANY;
+    }
+
     if (!version) {
       try {
         version = await this.getCoinVersion(coinAddress);
@@ -2266,15 +2474,46 @@ export class ReadFlaunchSDK {
 
 export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   declare drift: Drift<ReadWriteAdapter>;
-  public readonly readWritePositionManager: ReadWriteFlaunchPositionManager;
-  public readonly readWritePositionManagerV1_1: ReadWriteFlaunchPositionManagerV1_1;
-  public readonly readWriteAnyPositionManager: ReadWriteAnyPositionManager;
-  public readonly readWriteTokenImporter: ReadWriteTokenImporter;
+  private readonly baseReadWriteClients?: BaseReadWriteClients;
+  private readonly readWriteFlaunchZapMultichain?: ReadWriteFlaunchZapMultichain;
   public readonly readWriteFeeEscrow: ReadWriteFeeEscrow;
-  public readonly readWriteReferralEscrow: ReadWriteReferralEscrow;
-  public readonly readWriteFlaunchZap: ReadWriteFlaunchZap;
-  public readonly readWriteTreasuryManagerFactory: ReadWriteTreasuryManagerFactory;
-  public readonly readWritePermit2: ReadWritePermit2;
+
+  private getBaseReadWriteClient<K extends keyof BaseReadWriteClients>(
+    name: K
+  ): BaseReadWriteClients[K] {
+    const client = this.baseReadWriteClients?.[name];
+    if (!client) {
+      throw new Error(`${name} is not supported on chain ${this.chainId}`);
+    }
+    return client;
+  }
+
+  get readWritePositionManager() {
+    return this.getBaseReadWriteClient("readWritePositionManager");
+  }
+  get readWritePositionManagerV1_1() {
+    return this.getBaseReadWriteClient("readWritePositionManagerV1_1");
+  }
+  get readWriteAnyPositionManager() {
+    return this.getBaseReadWriteClient("readWriteAnyPositionManager");
+  }
+  get readWriteTokenImporter() {
+    return this.getBaseReadWriteClient("readWriteTokenImporter");
+  }
+  get readWriteReferralEscrow() {
+    return this.getBaseReadWriteClient("readWriteReferralEscrow");
+  }
+  get readWriteFlaunchZap() {
+    return this.getBaseReadWriteClient("readWriteFlaunchZap");
+  }
+  get readWriteTreasuryManagerFactory() {
+    return this.getBaseReadWriteClient(
+      "readWriteTreasuryManagerFactory"
+    );
+  }
+  get readWritePermit2() {
+    return this.getBaseReadWriteClient("readWritePermit2");
+  }
 
   constructor(
     chainId: number,
@@ -2282,46 +2521,58 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     publicClient?: PublicClient
   ) {
     super(chainId, drift, publicClient);
-    this.readWritePositionManager = new ReadWriteFlaunchPositionManager(
-      FlaunchPositionManagerAddress[this.chainId],
-      drift
-    );
-    this.readWritePositionManagerV1_1 = new ReadWriteFlaunchPositionManagerV1_1(
-      FlaunchPositionManagerV1_1Address[this.chainId],
-      drift
-    );
-    this.readWriteAnyPositionManager = new ReadWriteAnyPositionManager(
-      AnyPositionManagerAddress[this.chainId],
-      drift
-    );
-    this.readWriteTokenImporter = new ReadWriteTokenImporter(
-      this.chainId,
-      TokenImporterAddress[this.chainId],
-      drift
-    );
     this.readWriteFeeEscrow = new ReadWriteFeeEscrow(
       FeeEscrowAddress[this.chainId],
       drift
     );
-    this.readWriteReferralEscrow = new ReadWriteReferralEscrow(
-      ReferralEscrowAddress[this.chainId],
-      drift
-    );
-    this.readWriteFlaunchZap = new ReadWriteFlaunchZap(
-      this.chainId,
-      FlaunchZapAddress[this.chainId],
-      drift
-    );
-    this.readWriteTreasuryManagerFactory = new ReadWriteTreasuryManagerFactory(
-      this.chainId,
-      TreasuryManagerFactoryAddress[this.chainId],
-      drift,
-      this.publicClient
-    );
-    this.readWritePermit2 = new ReadWritePermit2(
-      Permit2Address[this.chainId],
-      drift
-    );
+
+    if (isMultichainDeployment(this.chainId)) {
+      this.readWriteFlaunchZapMultichain = new ReadWriteFlaunchZapMultichain(
+        FlaunchZapMultichainAddress[this.chainId],
+        drift
+      );
+      return;
+    }
+
+    this.baseReadWriteClients = {
+      readWritePositionManager: new ReadWriteFlaunchPositionManager(
+        FlaunchPositionManagerAddress[this.chainId],
+        drift
+      ),
+      readWritePositionManagerV1_1:
+        new ReadWriteFlaunchPositionManagerV1_1(
+          FlaunchPositionManagerV1_1Address[this.chainId],
+          drift
+        ),
+      readWriteAnyPositionManager: new ReadWriteAnyPositionManager(
+        AnyPositionManagerAddress[this.chainId],
+        drift
+      ),
+      readWriteTokenImporter: new ReadWriteTokenImporter(
+        this.chainId,
+        TokenImporterAddress[this.chainId],
+        drift
+      ),
+      readWriteReferralEscrow: new ReadWriteReferralEscrow(
+        ReferralEscrowAddress[this.chainId],
+        drift
+      ),
+      readWriteFlaunchZap: new ReadWriteFlaunchZap(
+        this.chainId,
+        FlaunchZapAddress[this.chainId],
+        drift
+      ),
+      readWriteTreasuryManagerFactory: new ReadWriteTreasuryManagerFactory(
+        this.chainId,
+        TreasuryManagerFactoryAddress[this.chainId],
+        drift,
+        this.publicClient
+      ),
+      readWritePermit2: new ReadWritePermit2(
+        Permit2Address[this.chainId],
+        drift
+      ),
+    };
   }
 
   /**
@@ -2395,6 +2646,10 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response
    */
   flaunch(params: FlaunchParams) {
+    if (isMultichainDeployment(this.chainId)) {
+      return this.readWriteFlaunchZapMultichain!.flaunch(params);
+    }
+
     return this.readWriteFlaunchZap.flaunch(params);
   }
 
@@ -2463,6 +2718,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   flaunchWithDynamicSplitManager(
     params: FlaunchWithDynamicSplitManagerParams
   ) {
+    if (isMultichainDeployment(this.chainId)) {
+      return this.readWriteFlaunchZapMultichain!.flaunchWithDynamicSplitManager(
+        this.chainId,
+        params
+      );
+    }
+
     return this.readWriteFlaunchZap.flaunchWithDynamicSplitManager(params);
   }
 
@@ -2474,6 +2736,9 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   flaunchIPFSWithDynamicSplitManager(
     params: FlaunchWithDynamicSplitManagerIPFSParams
   ) {
+    // Keep this guard here (before the client call): the client uploads metadata
+    // before delegating to the direct dynamic-split method.
+    this.assertBaseOnlyOperation("flaunchIPFSWithDynamicSplitManager");
     return this.readWriteFlaunchZap.flaunchIPFSWithDynamicSplitManager(params);
   }
 
@@ -2723,13 +2988,15 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     recipient?: Address;
     isV1?: boolean;
   }) {
-    const recipient = params.recipient ?? (await this.drift.getSignerAddress());
-
     if (params.isV1) {
-      return this.readWritePositionManager.withdrawFees(recipient);
-    } else {
-      return this.readWriteFeeEscrow.withdrawFees(recipient);
+      const positionManager = this.readWritePositionManager;
+      const recipient =
+        params.recipient ?? (await this.drift.getSignerAddress());
+      return positionManager.withdrawFees(recipient);
     }
+
+    const recipient = params.recipient ?? (await this.drift.getSignerAddress());
+    return this.readWriteFeeEscrow.withdrawFees(recipient);
   }
 
   /**
@@ -2748,6 +3015,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response
    */
   revenueManagerProtocolClaim(params: { revenueManagerAddress: Address }) {
+    this.assertBaseOnlyOperation("revenueManagerProtocolClaim");
     const readWriteRevenueManager = new ReadWriteRevenueManager(
       params.revenueManagerAddress,
       this.drift
@@ -2761,6 +3029,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response
    */
   revenueManagerCreatorClaim(params: { revenueManagerAddress: Address }) {
+    this.assertBaseOnlyOperation("revenueManagerCreatorClaim");
     const readWriteRevenueManager = new ReadWriteRevenueManager(
       params.revenueManagerAddress,
       this.drift
@@ -2777,6 +3046,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     revenueManagerAddress: Address;
     flaunchTokens: { flaunch: Address; tokenId: bigint }[];
   }) {
+    this.assertBaseOnlyOperation("revenueManagerCreatorClaimForTokens");
     const readWriteRevenueManager = new ReadWriteRevenueManager(
       params.revenueManagerAddress,
       this.drift
@@ -2794,6 +3064,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     treasuryManagerAddress: Address,
     permissions: Permissions
   ) {
+    this.assertBaseOnlyOperation("treasuryManagerSetPermissions");
     const readWriteTreasuryManager = new ReadWriteTreasuryManager(
       treasuryManagerAddress,
       this.drift
@@ -2812,6 +3083,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     treasuryManagerAddress: Address,
     newManagerOwner: Address
   ) {
+    this.assertBaseOnlyOperation("treasuryManagerTransferOwnership");
     const readWriteTreasuryManager = new ReadWriteTreasuryManager(
       treasuryManagerAddress,
       this.drift
@@ -2857,6 +3129,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     creator?: Address,
     data: `0x${string}` = "0x"
   ) {
+    this.assertBaseOnlyOperation("addToTreasuryManager");
     const readWriteTreasuryManager = new ReadWriteTreasuryManager(
       treasuryManagerAddress,
       this.drift

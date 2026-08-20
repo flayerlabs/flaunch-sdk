@@ -1,6 +1,12 @@
-import { base, baseSepolia } from "viem/chains";
+import {
+  base,
+  baseSepolia,
+  mainnet,
+  robinhood,
+  unichain,
+} from "viem/chains";
 import { Addresses, PoolKey } from "./types";
-import { zeroAddress } from "viem";
+import { type Address, zeroAddress } from "viem";
 
 export const FlaunchZapAddress: Addresses = {
   [base.id]: "0x39112541720078c70164EA4Deb61F0A4811910F9",
@@ -10,6 +16,24 @@ export const FlaunchZapAddress: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
 export const FlaunchZapV1_3Address: Addresses = {
   [base.id]: "0x29b37dfe763a3bb4cacf0f98f537844be72a6bb8",
+};
+
+export const FlaunchZapMultichainAddress: Addresses = {
+  [mainnet.id]: "0x65D673F25b5878df2a2e8a5203Fe2b2846c5CBba",
+  [unichain.id]: "0x65D673F25b5878df2a2e8a5203Fe2b2846c5CBba",
+  [robinhood.id]: "0x65D673F25b5878df2a2e8a5203Fe2b2846c5CBba",
+};
+
+export const FlaunchPositionManagerMultichainAddress: Addresses = {
+  [mainnet.id]: "0x5Cf8e499C7c466C7E2cf127BDF129F57151E65Dc",
+  [unichain.id]: "0x5Cf8e499C7c466C7E2cf127BDF129F57151E65Dc",
+  [robinhood.id]: "0x5Cf8e499C7c466C7E2cf127BDF129F57151E65Dc",
+};
+
+export const FlaunchMultichainAddress: Addresses = {
+  [mainnet.id]: "0x0cf6BdF0a85A9d6763361037985B76C8893553Af",
+  [unichain.id]: "0x0cf6BdF0a85A9d6763361037985B76C8893553Af",
+  [robinhood.id]: "0x0cf6BdF0a85A9d6763361037985B76C8893553Af",
 };
 
 // only old V1.0: doesn't use FeeEscrow
@@ -111,21 +135,33 @@ export const AnyBidWallV1_3Address: Addresses = {
 };
 
 export const TreasuryManagerFactoryAddress: Addresses = {
+  [mainnet.id]: "0x656047FD43D2c3a121F2Ef859d7171D7Dd59F8b9",
+  [unichain.id]: "0x7A04367563A65DB574d6B7d084fDbCF4A570c5A6",
+  [robinhood.id]: "0x25f39fe1769D1A1FD622a41030D47314B338B2BF",
   [base.id]: "0x48af8b28DDC5e5A86c4906212fc35Fa808CA8763",
   [baseSepolia.id]: "0xD2F3C6185e06925dCBE794C6574315b2202E9CcD",
 };
 
 export const RevenueManagerAddress: Addresses = {
+  [mainnet.id]: "0x0A0f4073a4c663d4b5b3f9fAedC1b650f94f5259",
+  [unichain.id]: "0xeC82CC5A62d25E4b64344cBDb8452f2f1f0c7a6e",
+  [robinhood.id]: "0xb25d5415A87d531F374d43D5174B50B1fEa944c3",
   [base.id]: "0xc8d4B2Ca8eD6868eE768beAb1f932d7eecCc1b50",
   [baseSepolia.id]: "0xA8153b14c8CfdDfb02627807D84AB02D12A85477",
 };
 
 export const AddressFeeSplitManagerAddress: Addresses = {
+  [mainnet.id]: "0xeC82CC5A62d25E4b64344cBDb8452f2f1f0c7a6e",
+  [unichain.id]: "0x656047FD43D2c3a121F2Ef859d7171D7Dd59F8b9",
+  [robinhood.id]: "0x2900cC6bbD79C9518fe25D38F8262a1c523536Fb",
   [base.id]: "0xfAB4BA48a322Efc8b25815448BE6018D211e89f3",
   [baseSepolia.id]: "0x0A3AF63cd86E68a852A1D4923FEfC4e855D8499d",
 };
 
 export const DynamicAddressFeeSplitManagerAddress: Addresses = {
+  [mainnet.id]: "0xd1533e01e2B7C48D132A696DAC9fc9C7676bc86D",
+  [unichain.id]: "0x0A0f4073a4c663d4b5b3f9fAedC1b650f94f5259",
+  [robinhood.id]: "0x84B959Ee120d572EEEe3229d7a0EA1ee8236620f",
   [base.id]: "0x18713855492A778363e23e2CdE325344b8fd6F8d",
   [baseSepolia.id]: "0xA4A1a2Ca68151565d5200243a52EEBbCb2C878E0",
 };
@@ -180,11 +216,17 @@ export const ZoraVerifierAddress: Addresses = {
 
 /** Permissions */
 export const ClosedPermissionsAddress: Addresses = {
+  [mainnet.id]: "0xA5357e7bd0a03e8Ea65bE800a29C8fa6ff6b7720",
+  [unichain.id]: "0xd1533e01e2B7C48D132A696DAC9fc9C7676bc86D",
+  [robinhood.id]: "0xF0469beF728c498f3621008C65B95EDa56C82Ae3",
   [base.id]: "0x4dfc76A31A2a0110739611683a8b6C5201480fa1",
   [baseSepolia.id]: "0x551aeD820CAfaca2f9cD1C637AAc076D05a03AC2",
 };
 
 export const WhitelistedPermissionsAddress: Addresses = {
+  [mainnet.id]: "0xC1d6EDb8656Fd304e22fe42625Db850F96D990D2",
+  [unichain.id]: "0xA5357e7bd0a03e8Ea65bE800a29C8fa6ff6b7720",
+  [robinhood.id]: "0x0E3ACf44D030Cc632Fa006b56778E009bC9564d8",
   [base.id]: "0x828B58B2B2df8ff3221Fbe2b07e75a56a84493Cc",
   [baseSepolia.id]: "0xe8691E8f576A98c41EBB5E984207d4F51386621f",
 };
@@ -193,6 +235,9 @@ export const WhitelistedPermissionsAddress: Addresses = {
 export const FeeEscrowAddress: Addresses = {
   [base.id]: "0x72e6f7948b1B1A343B477F39aAbd2E35E6D27dde",
   [baseSepolia.id]: "0x73E27908b7d35A9251a54799A8ef4C17e4ED9FF9",
+  [mainnet.id]: "0x77A4513CDbE72bBfa8CEE7890D244B66b47f9573",
+  [unichain.id]: "0x77A4513CDbE72bBfa8CEE7890D244B66b47f9573",
+  [robinhood.id]: "0x77A4513CDbE72bBfa8CEE7890D244B66b47f9573",
 };
 
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
@@ -213,11 +258,76 @@ export const ReferralEscrowV1_3Address: Addresses = {
 export const FLETHAddress: Addresses = {
   [base.id]: "0x000000000D564D5be76f7f0d28fE52605afC7Cf8",
   [baseSepolia.id]: "0x79FC52701cD4BE6f9Ba9aDC94c207DE37e3314eb",
+  [mainnet.id]: "0x000000000bB1f9944965c64066D10038a84F9af2",
+  [unichain.id]: "0x000000000DD39073Cfc60e7102288ccBd7Bf23fE",
+  [robinhood.id]: "0x00000000043C1117DAFA3A3D0C7148Eb48B30130",
 };
+
+type FreshChainNativeETHSwapConfig = {
+  flETHHooks: Address;
+  quoter: Address;
+  universalRouter: Address;
+  permit2: Address;
+  usesV4HopPriceLimits: boolean;
+};
+
+type FreshChainNativeETHSwapAddressKey = Exclude<
+  keyof FreshChainNativeETHSwapConfig,
+  "usesV4HopPriceLimits"
+>;
+
+/**
+ * Complete native-ETH swap deployments for fresh-chain protocol instances.
+ * Add a chain only after its ETH/flETH hook pool has been verified live.
+ */
+const freshChainNativeETHSwapConfigByChain: Partial<
+  Record<number, FreshChainNativeETHSwapConfig>
+> = {
+  [robinhood.id]: {
+    flETHHooks: "0xEA22Ae03085CAf74Ac3393f9902539fbE9786888",
+    quoter: "0x8Dc178eFB8111BB0973Dd9d722ebeFF267c98F94",
+    universalRouter: "0x8876789976dEcBfCbBbe364623C63652db8C0904",
+    permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    usesV4HopPriceLimits: true,
+  },
+};
+
+function freshChainNativeETHSwapAddresses(
+  key: FreshChainNativeETHSwapAddressKey
+): Addresses {
+  const addresses: Addresses = {};
+  for (const [chainId, config] of Object.entries(
+    freshChainNativeETHSwapConfigByChain
+  )) {
+    if (config) {
+      addresses[Number(chainId)] = config[key];
+    }
+  }
+  return addresses;
+}
+
+export function doesChainSupportMultichainNativeETHSwap(
+  chainId: number
+): boolean {
+  return (
+    freshChainNativeETHSwapConfigByChain[chainId] !== undefined &&
+    FLETHAddress[chainId] !== undefined &&
+    FlaunchPositionManagerMultichainAddress[chainId] !== undefined
+  );
+}
+
+export function doesUniversalRouterUseV4HopPriceLimits(
+  chainId: number
+): boolean {
+  return (
+    freshChainNativeETHSwapConfigByChain[chainId]?.usesV4HopPriceLimits === true
+  );
+}
 
 export const FLETHHooksAddress: Addresses = {
   [base.id]: "0x9E433F32bb5481a9CA7DFF5b3af74A7ed041a888",
   [baseSepolia.id]: "0x4bd2ca15286c96e4e731337de8b375da6841e888",
+  ...freshChainNativeETHSwapAddresses("flETHHooks"),
 };
 
 // @deprecated: FlaunchZap used instead
@@ -229,26 +339,35 @@ export const FastFlaunchZapAddress: Addresses = {
 export const PoolManagerAddress: Addresses = {
   [base.id]: "0x498581fF718922c3f8e6A244956aF099B2652b2b",
   [baseSepolia.id]: "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+  [mainnet.id]: "0x000000000004444c5dc75cB358380D2e3dE08A90",
+  [unichain.id]: "0x1F98400000000000000000000000000000000004",
+  [robinhood.id]: "0x8366a39CC670B4001A1121B8F6A443A643e40951",
 };
 
 export const UniversalRouterAddress: Addresses = {
   [base.id]: "0x6fF5693b99212Da76ad316178A184AB56D299b43",
   [baseSepolia.id]: "0x492E6456D9528771018DeB9E87ef7750EF184104",
+  ...freshChainNativeETHSwapAddresses("universalRouter"),
 };
 
 export const QuoterAddress: Addresses = {
   [base.id]: "0x0d5e0f971ed27fbff6c2837bf31316121532048d",
   [baseSepolia.id]: "0x4a6513c898fe1b2d0e78d3b0e0a4a151589b1cba",
+  ...freshChainNativeETHSwapAddresses("quoter"),
 };
 
 export const StateViewAddress: Addresses = {
   [base.id]: "0xA3c0c9b65baD0b08107Aa264b0f3dB444b867A71",
   [baseSepolia.id]: "0x571291b572ed32ce6751a2Cb2486EbEe8DEfB9B4",
+  [mainnet.id]: "0x7fFE42C4a5DEeA5b0feC41C94C136Cf115597227",
+  [unichain.id]: "0x86e8631A016F9068C3f085fAF484Ee3F5fDee8f2",
+  [robinhood.id]: "0xF3334192D15450CdD385c8B70e03f9A6bD9E673b",
 };
 
 export const Permit2Address: Addresses = {
   [base.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
   [baseSepolia.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+  ...freshChainNativeETHSwapAddresses("permit2"),
 };
 
 export const UniV4PositionManagerAddress: Addresses = {
