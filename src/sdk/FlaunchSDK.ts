@@ -44,6 +44,10 @@ import {
   UniV4PositionManagerAddress,
   FlaunchPositionManagerV1_2Address,
   FlaunchV1_2Address,
+  // v1.3.1 (GitHub release v1.3.1) - Base mainnet only
+  FlaunchPositionManagerV1_3Address,
+  FlaunchV1_3Address,
+  BidWallV1_3Address,
   // V1.2 and AnyPositionManager addresses will be imported here when available
 } from "../addresses";
 import {
@@ -292,6 +296,13 @@ export class ReadFlaunchSDK {
   public readonly readFlaunchV1_2: ReadFlaunchV1_2;
   // public readonly readAnyFlaunch: ReadAnyFlaunch;
 
+  // v1.3.1 (GitHub release v1.3.1) - Base mainnet only; undefined on chains
+  // without a v1.3.1 deployment (e.g. baseSepolia). Reuses the V1_2 ABIs/clients
+  // since v1.3.1 is a patch release with the same interfaces.
+  public readonly readPositionManagerV1_3?: ReadFlaunchPositionManagerV1_2;
+  public readonly readFlaunchV1_3?: ReadFlaunchV1_2;
+  public readonly readBidWallV1_3?: ReadBidWallV1_1;
+
   public resolveIPFS: (value: string) => string;
 
   constructor(
@@ -315,6 +326,13 @@ export class ReadFlaunchSDK {
       FlaunchPositionManagerV1_2Address[this.chainId],
       drift
     );
+    // v1.3.1: only wire the client on chains that have a v1.3.1 deployment
+    if (FlaunchPositionManagerV1_3Address[this.chainId]) {
+      this.readPositionManagerV1_3 = new ReadFlaunchPositionManagerV1_2(
+        FlaunchPositionManagerV1_3Address[this.chainId],
+        drift
+      );
+    }
     this.readAnyPositionManager = new ReadAnyPositionManager(
       AnyPositionManagerAddress[this.chainId],
       drift
@@ -371,6 +389,19 @@ export class ReadFlaunchSDK {
       FlaunchV1_2Address[this.chainId],
       drift
     );
+    // v1.3.1: only wire the clients on chains that have a v1.3.1 deployment
+    if (FlaunchV1_3Address[this.chainId]) {
+      this.readFlaunchV1_3 = new ReadFlaunchV1_2(
+        FlaunchV1_3Address[this.chainId],
+        drift
+      );
+    }
+    if (BidWallV1_3Address[this.chainId]) {
+      this.readBidWallV1_3 = new ReadBidWallV1_1(
+        BidWallV1_3Address[this.chainId],
+        drift
+      );
+    }
     this.readAnyFlaunch = new ReadAnyFlaunch(
       AnyFlaunchAddress[this.chainId],
       drift
@@ -390,6 +421,9 @@ export class ReadFlaunchSDK {
    */
   async isValidCoin(coinAddress: Address) {
     return (
+      (this.readPositionManagerV1_3
+        ? await this.readPositionManagerV1_3.isValidCoin(coinAddress)
+        : false) ||
       (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) ||
       (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) ||
       (await this.readPositionManager.isValidCoin(coinAddress)) ||
@@ -403,7 +437,12 @@ export class ReadFlaunchSDK {
    * @returns Promise<FlaunchVersion> - The version of the coin
    */
   async getCoinVersion(coinAddress: Address): Promise<FlaunchVersion> {
-    if (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) {
+    if (
+      this.readPositionManagerV1_3 &&
+      (await this.readPositionManagerV1_3.isValidCoin(coinAddress))
+    ) {
+      return FlaunchVersion.V1_3;
+    } else if (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) {
       return FlaunchVersion.V1_2;
     } else if (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) {
       return FlaunchVersion.V1_1;
@@ -429,6 +468,8 @@ export class ReadFlaunchSDK {
         return this.readPositionManagerV1_1;
       case FlaunchVersion.V1_2:
         return this.readPositionManagerV1_2;
+      case FlaunchVersion.V1_3:
+        return this.readPositionManagerV1_3 ?? this.readPositionManagerV1_2;
       case FlaunchVersion.ANY:
         return this.readAnyPositionManager;
       default:
@@ -447,6 +488,8 @@ export class ReadFlaunchSDK {
       case FlaunchVersion.V1_1:
         return this.readFairLaunchV1_1;
       case FlaunchVersion.V1_2:
+        return this.readFairLaunchV1_1;
+      case FlaunchVersion.V1_3:
         return this.readFairLaunchV1_1;
       case FlaunchVersion.ANY:
         return this.readFairLaunchV1_1;
@@ -467,6 +510,8 @@ export class ReadFlaunchSDK {
         return this.readBidWallV1_1;
       case FlaunchVersion.V1_2:
         return this.readBidWallV1_1;
+      case FlaunchVersion.V1_3:
+        return this.readBidWallV1_3 ?? this.readBidWallV1_1;
       case FlaunchVersion.ANY:
         return this.readAnyBidWall;
       default:
@@ -486,6 +531,8 @@ export class ReadFlaunchSDK {
         return this.readFlaunchV1_1;
       case FlaunchVersion.V1_2:
         return this.readFlaunchV1_2;
+      case FlaunchVersion.V1_3:
+        return this.readFlaunchV1_3 ?? this.readFlaunchV1_2;
       case FlaunchVersion.ANY:
         return this.readAnyFlaunch;
       default:
