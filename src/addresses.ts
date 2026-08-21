@@ -13,9 +13,10 @@ export const FlaunchZapAddress: Addresses = {
   [baseSepolia.id]: "0x25b747aeca2612b9804b5c3bb272a3daefdc6eaa",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
+// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const FlaunchZapV1_3Address: Addresses = {
   [base.id]: "0x29b37dfe763a3bb4cacf0f98f537844be72a6bb8",
+  [robinhood.id]: "0x2e744436e35bc346777288b8dae2da23fd67e542",
 };
 
 export const FlaunchZapMultichainAddress: Addresses = {
@@ -52,9 +53,10 @@ export const FlaunchPositionManagerV1_2Address: Addresses = {
   [baseSepolia.id]: "0x4e7cb1e6800a7b297b38bddcecaf9ca5b6616fdc",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
+// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const FlaunchPositionManagerV1_3Address: Addresses = {
   [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
+  [robinhood.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // CREATE3 — same address as Base
 };
 
 export const AnyPositionManagerAddress: Addresses = {
@@ -62,9 +64,10 @@ export const AnyPositionManagerAddress: Addresses = {
   [baseSepolia.id]: "0xB4A535B9D35851972736495CC52FBfDaCF32e5dc",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
+// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyPositionManagerV1_3Address: Addresses = {
   [base.id]: "0x6ea0edee449a287504990df8d87951b9436825dc",
+  [robinhood.id]: "0x6ea0edee449a287504990df8d87951b9436825dc", // CREATE3 — same address as Base
 };
 
 export const FlaunchAddress: Addresses = {
@@ -82,9 +85,10 @@ export const FlaunchV1_2Address: Addresses = {
   [baseSepolia.id]: "0xe2ef58a54ee79dac0D4A130ea58b340124DF9438",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
+// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const FlaunchV1_3Address: Addresses = {
   [base.id]: "0x475a09618bfd00fa4cb03b8504e95b62075e6f7d",
+  [robinhood.id]: "0x929d4815fe415b85e53975aec58a8980bda3d90c",
 };
 
 export const AnyFlaunchAddress: Addresses = {
@@ -92,9 +96,10 @@ export const AnyFlaunchAddress: Addresses = {
   [baseSepolia.id]: "0x67Ee6C83956a75f67bD3Fc8Ca4080D95a145c7C9",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
+// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyFlaunchV1_3Address: Addresses = {
   [base.id]: "0x299c7e6992a4630d77a8cbd60aa78e17189e53f7",
+  [robinhood.id]: "0x33f04d3a76cffa25e5da285d97336e67611b2282",
 };
 
 export const FairLaunchAddress: Addresses = {
@@ -119,9 +124,10 @@ export const BidWallV1_1Address: Addresses = {
   [baseSepolia.id]: "0x6f2fa01a05ff8b6efbfefd91a3b85aaf19265a00",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
+// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const BidWallV1_3Address: Addresses = {
   [base.id]: "0x0dae90b70f62ce3b1d5278f4763bd1f595d6a687",
+  [robinhood.id]: "0x641d5cf4290c7c6e45cb672c4467a9e4fc89d72d",
 };
 
 export const AnyBidWallAddress: Addresses = {
@@ -129,9 +135,10 @@ export const AnyBidWallAddress: Addresses = {
   [baseSepolia.id]: "0xcfF222eA42E43F46A98755db237E4c9C2CA9B772",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
+// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyBidWallV1_3Address: Addresses = {
   [base.id]: "0x9d58ca8011096ad711babf0d990c45b9d5bb047d",
+  [robinhood.id]: "0x361a874945c07069beed611f950506a8e324b630",
 };
 
 export const TreasuryManagerFactoryAddress: Addresses = {
@@ -240,9 +247,10 @@ export const FeeEscrowAddress: Addresses = {
   [robinhood.id]: "0x77A4513CDbE72bBfa8CEE7890D244B66b47f9573",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
+// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const FeeEscrowV1_3Address: Addresses = {
   [base.id]: "0x17fbf54d6d15ebff82eee77e616f701952d08bb4",
+  [robinhood.id]: "0x4fb9de6bbe970a49c19fb967f937351728c01b8f",
 };
 
 export const ReferralEscrowAddress: Addresses = {
@@ -250,9 +258,10 @@ export const ReferralEscrowAddress: Addresses = {
   [baseSepolia.id]: "0xd3d9047CaBE3346C70b510435866565176e8CE12",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet only; no baseSepolia deployment
+// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const ReferralEscrowV1_3Address: Addresses = {
   [base.id]: "0xe86bfebc4f094d36074833618779d279a9af01aa",
+  [robinhood.id]: "0xb6c0cca8b3a354fa0f348c121657f4a952e92b3d",
 };
 
 export const FLETHAddress: Addresses = {
