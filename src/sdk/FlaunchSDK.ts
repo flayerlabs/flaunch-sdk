@@ -45,6 +45,10 @@ import {
   UniV4PositionManagerAddress,
   FlaunchPositionManagerV1_2Address,
   FlaunchV1_2Address,
+  // v1.3.1 (GitHub release v1.3.1) - Base mainnet only
+  FlaunchPositionManagerV1_3Address,
+  FlaunchV1_3Address,
+  BidWallV1_3Address,
   FlaunchPositionManagerMultichainAddress,
   FlaunchZapMultichainAddress,
   // V1.2 and AnyPositionManager addresses will be imported here when available
@@ -198,6 +202,10 @@ type BaseReadClients = {
   readPositionManager: ReadFlaunchPositionManager;
   readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
   readPositionManagerV1_2: ReadFlaunchPositionManagerV1_2;
+  // v1.3.1 clients are optional: v1.3.1 is deployed on Base mainnet only, so
+  // they are absent on baseSepolia and every multichain deployment. They reuse
+  // the V1_2 / V1_1 client classes since v1.3.1 shares those ABIs/interfaces.
+  readPositionManagerV1_3?: ReadFlaunchPositionManagerV1_2;
   readAnyPositionManager: ReadAnyPositionManager;
   readTokenImporter: ReadTokenImporter;
   readReferralEscrow: ReadReferralEscrow;
@@ -208,10 +216,12 @@ type BaseReadClients = {
   readFairLaunchV1_1: ReadFairLaunchV1_1;
   readBidWall: ReadBidWall;
   readBidWallV1_1: ReadBidWallV1_1;
+  readBidWallV1_3?: ReadBidWallV1_1;
   readAnyBidWall: AnyBidWall;
   readFlaunch: ReadFlaunch;
   readFlaunchV1_1: ReadFlaunchV1_1;
   readFlaunchV1_2: ReadFlaunchV1_2;
+  readFlaunchV1_3?: ReadFlaunchV1_2;
   readAnyFlaunch: ReadAnyFlaunch;
 };
 
@@ -352,6 +362,10 @@ export class ReadFlaunchSDK {
   get readPositionManagerV1_2() {
     return this.getBaseClient("readPositionManagerV1_2");
   }
+  // v1.3.1 is Base-mainnet only; null-safe access returns undefined elsewhere
+  get readPositionManagerV1_3() {
+    return this.baseClients?.readPositionManagerV1_3;
+  }
   get readAnyPositionManager() {
     return this.getBaseClient("readAnyPositionManager");
   }
@@ -382,6 +396,10 @@ export class ReadFlaunchSDK {
   get readBidWallV1_1() {
     return this.getBaseClient("readBidWallV1_1");
   }
+  // v1.3.1 is Base-mainnet only; null-safe access returns undefined elsewhere
+  get readBidWallV1_3() {
+    return this.baseClients?.readBidWallV1_3;
+  }
   get readAnyBidWall() {
     return this.getBaseClient("readAnyBidWall");
   }
@@ -393,6 +411,10 @@ export class ReadFlaunchSDK {
   }
   get readFlaunchV1_2() {
     return this.getBaseClient("readFlaunchV1_2");
+  }
+  // v1.3.1 is Base-mainnet only; null-safe access returns undefined elsewhere
+  get readFlaunchV1_3() {
+    return this.baseClients?.readFlaunchV1_3;
   }
   get readAnyFlaunch() {
     return this.getBaseClient("readAnyFlaunch");
@@ -448,6 +470,16 @@ export class ReadFlaunchSDK {
         FlaunchPositionManagerV1_2Address[this.chainId],
         drift
       ),
+      // v1.3.1: only present on chains with a v1.3.1 deployment (Base mainnet).
+      // Reuses the V1_2 client/ABI since v1.3.1 shares the same interface.
+      ...(FlaunchPositionManagerV1_3Address[this.chainId]
+        ? {
+            readPositionManagerV1_3: new ReadFlaunchPositionManagerV1_2(
+              FlaunchPositionManagerV1_3Address[this.chainId],
+              drift
+            ),
+          }
+        : {}),
       readAnyPositionManager: new ReadAnyPositionManager(
         AnyPositionManagerAddress[this.chainId],
         drift
@@ -487,6 +519,16 @@ export class ReadFlaunchSDK {
         BidWallV1_1Address[this.chainId],
         drift
       ),
+      // v1.3.1: only present on chains with a v1.3.1 deployment (Base mainnet).
+      // Reuses the V1_1 BidWall client/ABI since v1.3.1 shares the interface.
+      ...(BidWallV1_3Address[this.chainId]
+        ? {
+            readBidWallV1_3: new ReadBidWallV1_1(
+              BidWallV1_3Address[this.chainId],
+              drift
+            ),
+          }
+        : {}),
       readAnyBidWall: new AnyBidWall(
         AnyBidWallAddress[this.chainId],
         drift
@@ -500,6 +542,16 @@ export class ReadFlaunchSDK {
         FlaunchV1_2Address[this.chainId],
         drift
       ),
+      // v1.3.1: only present on chains with a v1.3.1 deployment (Base mainnet).
+      // Reuses the V1_2 Flaunch client/ABI since v1.3.1 shares the interface.
+      ...(FlaunchV1_3Address[this.chainId]
+        ? {
+            readFlaunchV1_3: new ReadFlaunchV1_2(
+              FlaunchV1_3Address[this.chainId],
+              drift
+            ),
+          }
+        : {}),
       readAnyFlaunch: new ReadAnyFlaunch(
         AnyFlaunchAddress[this.chainId],
         drift
@@ -514,6 +566,9 @@ export class ReadFlaunchSDK {
    */
   async isValidCoin(coinAddress: Address) {
     return (
+      (this.readPositionManagerV1_3
+        ? await this.readPositionManagerV1_3.isValidCoin(coinAddress)
+        : false) ||
       (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) ||
       (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) ||
       (await this.readPositionManager.isValidCoin(coinAddress)) ||
@@ -527,7 +582,12 @@ export class ReadFlaunchSDK {
    * @returns Promise<FlaunchVersion> - The version of the coin
    */
   async getCoinVersion(coinAddress: Address): Promise<FlaunchVersion> {
-    if (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) {
+    if (
+      this.readPositionManagerV1_3 &&
+      (await this.readPositionManagerV1_3.isValidCoin(coinAddress))
+    ) {
+      return FlaunchVersion.V1_3;
+    } else if (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) {
       return FlaunchVersion.V1_2;
     } else if (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) {
       return FlaunchVersion.V1_1;
@@ -553,6 +613,8 @@ export class ReadFlaunchSDK {
         return this.readPositionManagerV1_1;
       case FlaunchVersion.V1_2:
         return this.readPositionManagerV1_2;
+      case FlaunchVersion.V1_3:
+        return this.readPositionManagerV1_3 ?? this.readPositionManagerV1_2;
       case FlaunchVersion.ANY:
         return this.readAnyPositionManager;
       default:
@@ -571,6 +633,8 @@ export class ReadFlaunchSDK {
       case FlaunchVersion.V1_1:
         return this.readFairLaunchV1_1;
       case FlaunchVersion.V1_2:
+        return this.readFairLaunchV1_1;
+      case FlaunchVersion.V1_3:
         return this.readFairLaunchV1_1;
       case FlaunchVersion.ANY:
         return this.readFairLaunchV1_1;
@@ -591,6 +655,8 @@ export class ReadFlaunchSDK {
         return this.readBidWallV1_1;
       case FlaunchVersion.V1_2:
         return this.readBidWallV1_1;
+      case FlaunchVersion.V1_3:
+        return this.readBidWallV1_3 ?? this.readBidWallV1_1;
       case FlaunchVersion.ANY:
         return this.readAnyBidWall;
       default:
@@ -610,6 +676,8 @@ export class ReadFlaunchSDK {
         return this.readFlaunchV1_1;
       case FlaunchVersion.V1_2:
         return this.readFlaunchV1_2;
+      case FlaunchVersion.V1_3:
+        return this.readFlaunchV1_3 ?? this.readFlaunchV1_2;
       case FlaunchVersion.ANY:
         return this.readAnyFlaunch;
       default:
