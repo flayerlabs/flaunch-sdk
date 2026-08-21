@@ -45,7 +45,7 @@ import {
   UniV4PositionManagerAddress,
   FlaunchPositionManagerV1_2Address,
   FlaunchV1_2Address,
-  // v1.3.1 (GitHub release v1.3.1) - Base mainnet only
+  // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663)
   FlaunchPositionManagerV1_3Address,
   FlaunchV1_3Address,
   BidWallV1_3Address,
@@ -202,8 +202,9 @@ type BaseReadClients = {
   readPositionManager: ReadFlaunchPositionManager;
   readPositionManagerV1_1: ReadFlaunchPositionManagerV1_1;
   readPositionManagerV1_2: ReadFlaunchPositionManagerV1_2;
-  // v1.3.1 clients are optional: v1.3.1 is deployed on Base mainnet only, so
-  // they are absent on baseSepolia and every multichain deployment. They reuse
+  // v1.3.1 clients are optional: they are built only on the base-clients path
+  // (Base mainnet). Robinhood (4663) also runs v1.3.1 but is a multichain
+  // deployment, so its v1.3.1 addresses resolve via the *V1_3Address maps. They reuse
   // the V1_2 / V1_1 client classes since v1.3.1 shares those ABIs/interfaces.
   readPositionManagerV1_3?: ReadFlaunchPositionManagerV1_2;
   readAnyPositionManager: ReadAnyPositionManager;
@@ -362,7 +363,10 @@ export class ReadFlaunchSDK {
   get readPositionManagerV1_2() {
     return this.getBaseClient("readPositionManagerV1_2");
   }
-  // v1.3.1 is Base-mainnet only; null-safe access returns undefined elsewhere
+  // v1.3.1 read clients exist only where baseClients are built (Base mainnet).
+  // Robinhood (4663) also runs v1.3.1 but takes the multichain path, which does
+  // not construct these — resolve its addresses from the *V1_3Address maps.
+  // Null-safe access returns undefined elsewhere.
   get readPositionManagerV1_3() {
     return this.baseClients?.readPositionManagerV1_3;
   }
@@ -396,7 +400,10 @@ export class ReadFlaunchSDK {
   get readBidWallV1_1() {
     return this.getBaseClient("readBidWallV1_1");
   }
-  // v1.3.1 is Base-mainnet only; null-safe access returns undefined elsewhere
+  // v1.3.1 read clients exist only where baseClients are built (Base mainnet).
+  // Robinhood (4663) also runs v1.3.1 but takes the multichain path, which does
+  // not construct these — resolve its addresses from the *V1_3Address maps.
+  // Null-safe access returns undefined elsewhere.
   get readBidWallV1_3() {
     return this.baseClients?.readBidWallV1_3;
   }
@@ -412,7 +419,10 @@ export class ReadFlaunchSDK {
   get readFlaunchV1_2() {
     return this.getBaseClient("readFlaunchV1_2");
   }
-  // v1.3.1 is Base-mainnet only; null-safe access returns undefined elsewhere
+  // v1.3.1 read clients exist only where baseClients are built (Base mainnet).
+  // Robinhood (4663) also runs v1.3.1 but takes the multichain path, which does
+  // not construct these — resolve its addresses from the *V1_3Address maps.
+  // Null-safe access returns undefined elsewhere.
   get readFlaunchV1_3() {
     return this.baseClients?.readFlaunchV1_3;
   }
@@ -470,7 +480,8 @@ export class ReadFlaunchSDK {
         FlaunchPositionManagerV1_2Address[this.chainId],
         drift
       ),
-      // v1.3.1: only present on chains with a v1.3.1 deployment (Base mainnet).
+      // v1.3.1: present when this chain has a v1.3.1 deployment (Base mainnet here;
+      // Robinhood's v1.3.1 lives behind the multichain path and early-returns above).
       // Reuses the V1_2 client/ABI since v1.3.1 shares the same interface.
       ...(FlaunchPositionManagerV1_3Address[this.chainId]
         ? {
@@ -519,7 +530,8 @@ export class ReadFlaunchSDK {
         BidWallV1_1Address[this.chainId],
         drift
       ),
-      // v1.3.1: only present on chains with a v1.3.1 deployment (Base mainnet).
+      // v1.3.1: present when this chain has a v1.3.1 deployment (Base mainnet here;
+      // Robinhood's v1.3.1 lives behind the multichain path and early-returns above).
       // Reuses the V1_1 BidWall client/ABI since v1.3.1 shares the interface.
       ...(BidWallV1_3Address[this.chainId]
         ? {
@@ -542,7 +554,8 @@ export class ReadFlaunchSDK {
         FlaunchV1_2Address[this.chainId],
         drift
       ),
-      // v1.3.1: only present on chains with a v1.3.1 deployment (Base mainnet).
+      // v1.3.1: present when this chain has a v1.3.1 deployment (Base mainnet here;
+      // Robinhood's v1.3.1 lives behind the multichain path and early-returns above).
       // Reuses the V1_2 Flaunch client/ABI since v1.3.1 shares the interface.
       ...(FlaunchV1_3Address[this.chainId]
         ? {
