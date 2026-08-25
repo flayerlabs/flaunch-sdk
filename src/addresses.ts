@@ -247,9 +247,13 @@ export const FeeEscrowAddress: Addresses = {
   [robinhood.id]: "0x77A4513CDbE72bBfa8CEE7890D244B66b47f9573",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
+// v1.3.1 (GitHub release v1.3.1) multi-token FeeEscrow: ONE singleton per chain serving every
+// paired token, balances keyed (recipient, token). Base Sepolia runs the same contract from the
+// `.vpt2` deployment (flaunch-contracts deployments/base-sepolia.md); Robinhood from
+// deployments/robinhood-mainnet.md.
 export const FeeEscrowV1_3Address: Addresses = {
   [base.id]: "0x17fbf54d6d15ebff82eee77e616f701952d08bb4",
+  [baseSepolia.id]: "0xf4af7b459e971d9757c2100c626199c6c6334fca",
   [robinhood.id]: "0x4fb9de6bbe970a49c19fb967f937351728c01b8f",
 };
 
