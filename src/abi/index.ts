@@ -6,6 +6,7 @@ export * from "./FairLaunch";
 export * from "./FairLaunchV1_1";
 export * from "./FastFlaunchZap";
 export * from "./FeeEscrow";
+export * from "./FeeEscrowV1_3";
 export * from "./Flaunch";
 export * from "./FlaunchPositionManager";
 export * from "./FlaunchPositionManagerV1_0";

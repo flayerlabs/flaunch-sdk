@@ -27,6 +27,11 @@ export type {
   FlaunchWithDynamicSplitManagerParams,
   FlaunchWithDynamicSplitManagerIPFSParams,
 } from "./clients/FlaunchZapClient";
+export {
+  ReadFeeEscrowV1_3,
+  ReadWriteFeeEscrowV1_3,
+} from "./clients/FeeEscrowV1_3Client";
+export type { EscrowTokenBalance } from "./clients/FeeEscrowV1_3Client";
 
 export { ReadFlaunchSDK, ReadWriteFlaunchSDK };
 export { createFlaunch } from "./sdk/factory";

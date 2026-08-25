@@ -2,6 +2,17 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **v1.3.1 multi-token FeeEscrow support.** Coins paired with anything other than flETH (native ETH, the B20 equities on Base) escrow their creator fees in one multi-token escrow per chain, keyed `(recipient, token)` and denominated in the paired token — a balance the legacy `creatorRevenue()` / `withdrawCreatorRevenue()` path cannot see or claim (its `withdrawFees(address,bool)` selector does not exist on that contract)
+  - `creatorRevenueByToken({ creator, tokens })` returns the claimable balance per escrow token
+  - `withdrawCreatorRevenueByToken({ tokens, recipient?, unwrap? })` sweeps every listed key in one transaction via `withdrawFees(address[],address,bool)`
+  - `ReadFeeEscrowV1_3` / `ReadWriteFeeEscrowV1_3` clients, the `FeeEscrowV1_3Abi`, the `EscrowTokenBalance` type, and `readFeeEscrowV1_3` / `readWriteFeeEscrowV1_3` accessors on the SDK
+  - `doesChainSupportMultiTokenFeeEscrow()` helper, exported from `helpers`
+  - `FeeEscrowV1_3Address` now covers Base Sepolia and Robinhood alongside Base
+
 ## [0.10.0] - 2026-07-23
 
 ### Added

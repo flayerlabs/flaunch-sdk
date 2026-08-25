@@ -40,6 +40,7 @@ import {
   AnyBidWallAddress,
   AnyFlaunchAddress,
   FeeEscrowAddress,
+  FeeEscrowV1_3Address,
   ReferralEscrowAddress,
   TokenImporterAddress,
   UniV4PositionManagerAddress,
@@ -112,6 +113,11 @@ import {
   ReadWriteTokenImporter,
 } from "clients/TokenImporter";
 import { ReadFeeEscrow, ReadWriteFeeEscrow } from "clients/FeeEscrowClient";
+import {
+  ReadFeeEscrowV1_3,
+  ReadWriteFeeEscrowV1_3,
+  type EscrowTokenBalance,
+} from "clients/FeeEscrowV1_3Client";
 import {
   ReadReferralEscrow,
   ReadWriteReferralEscrow,
@@ -325,8 +331,22 @@ export class ReadFlaunchSDK {
   private readonly baseClients?: BaseReadClients;
   private readonly swapClients?: SwapReadClients;
   public readonly readFeeEscrow: ReadFeeEscrow;
+  private readonly feeEscrowV1_3?: ReadFeeEscrowV1_3;
 
   public resolveIPFS: (value: string) => string;
+
+  /**
+   * The v1.3.1 multi-token FeeEscrow. Throws on chains without one — gate with
+   * `doesChainSupportMultiTokenFeeEscrow()`.
+   */
+  get readFeeEscrowV1_3(): ReadFeeEscrowV1_3 {
+    if (!this.feeEscrowV1_3) {
+      throw new Error(
+        `Multi-token FeeEscrow is not supported on chain ${this.chainId}`
+      );
+    }
+    return this.feeEscrowV1_3;
+  }
 
   private getBaseClient<K extends keyof BaseReadClients>(
     name: K
@@ -453,6 +473,10 @@ export class ReadFlaunchSDK {
       FeeEscrowAddress[this.chainId],
       drift
     );
+    const feeEscrowV1_3Address = FeeEscrowV1_3Address[this.chainId];
+    if (feeEscrowV1_3Address) {
+      this.feeEscrowV1_3 = new ReadFeeEscrowV1_3(feeEscrowV1_3Address, drift);
+    }
 
     const quoterAddress = QuoterAddress[this.chainId];
     const permit2Address = Permit2Address[this.chainId];
@@ -1523,6 +1547,25 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets the creator's claimable revenue on the v1.3.1 multi-token FeeEscrow, per escrow token.
+   * Coins paired with anything other than flETH (native ETH, the B20 equities, …) escrow their
+   * creator fees there, denominated in the paired token, where `creatorRevenue()` cannot see
+   * them. The escrow cannot enumerate a recipient's keys, so pass the paired tokens to look at.
+   * @param params.creator - The address of the creator to check
+   * @param params.tokens - The escrow tokens to read (`zeroAddress` for native ETH)
+   * @returns The claimable amount per token, in that token's raw units (zero balances included)
+   */
+  creatorRevenueByToken(params: {
+    creator: Address;
+    tokens: Address[];
+  }): Promise<EscrowTokenBalance[]> {
+    return this.readFeeEscrowV1_3.balancesForTokens(
+      params.creator,
+      params.tokens
+    );
+  }
+
+  /**
    * Gets the balance of a recipient for a given coin
    * @param recipient - The address of the recipient to check
    * @param coinAddress - The address of the coin
@@ -2490,6 +2533,20 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   private readonly baseReadWriteClients?: BaseReadWriteClients;
   private readonly readWriteFlaunchZapMultichain?: ReadWriteFlaunchZapMultichain;
   public readonly readWriteFeeEscrow: ReadWriteFeeEscrow;
+  private readonly readWriteFeeEscrowV1_3Client?: ReadWriteFeeEscrowV1_3;
+
+  /**
+   * The v1.3.1 multi-token FeeEscrow with write capabilities. Throws on chains without one —
+   * gate with `doesChainSupportMultiTokenFeeEscrow()`.
+   */
+  get readWriteFeeEscrowV1_3(): ReadWriteFeeEscrowV1_3 {
+    if (!this.readWriteFeeEscrowV1_3Client) {
+      throw new Error(
+        `Multi-token FeeEscrow is not supported on chain ${this.chainId}`
+      );
+    }
+    return this.readWriteFeeEscrowV1_3Client;
+  }
 
   private getBaseReadWriteClient<K extends keyof BaseReadWriteClients>(
     name: K
@@ -2538,6 +2595,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       FeeEscrowAddress[this.chainId],
       drift
     );
+    const feeEscrowV1_3Address = FeeEscrowV1_3Address[this.chainId];
+    if (feeEscrowV1_3Address) {
+      this.readWriteFeeEscrowV1_3Client = new ReadWriteFeeEscrowV1_3(
+        feeEscrowV1_3Address,
+        drift
+      );
+    }
 
     if (isMultichainDeployment(this.chainId)) {
       this.readWriteFlaunchZapMultichain = new ReadWriteFlaunchZapMultichain(
@@ -3010,6 +3074,30 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
 
     const recipient = params.recipient ?? (await this.drift.getSignerAddress());
     return this.readWriteFeeEscrow.withdrawFees(recipient);
+  }
+
+  /**
+   * Withdraws the creator's revenue from the v1.3.1 multi-token FeeEscrow across the given
+   * escrow tokens, in one transaction. Pass every token with a balance from
+   * `creatorRevenueByToken()`; a zero balance is a harmless no-op. flETH pays out as ETH while
+   * `unwrap` is left on; a stock pairing is delivered as the stock itself either way.
+   * @param params - Parameters for withdrawing the creator's revenue
+   * @param params.tokens - The escrow tokens to withdraw (`zeroAddress` for native ETH)
+   * @param params.recipient - The address to withdraw the revenue to. Defaults to the connected wallet
+   * @param params.unwrap - Whether to unwrap wrappers to their underlying asset. Defaults to true
+   * @returns Transaction response
+   */
+  async withdrawCreatorRevenueByToken(params: {
+    tokens: Address[];
+    recipient?: Address;
+    unwrap?: boolean;
+  }) {
+    const recipient = params.recipient ?? (await this.drift.getSignerAddress());
+    return this.readWriteFeeEscrowV1_3.withdrawFees({
+      tokens: params.tokens,
+      recipient,
+      unwrap: params.unwrap,
+    });
   }
 
   /**

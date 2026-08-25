@@ -37,6 +37,7 @@ The planned Robinhood UI will route swaps through 0x only; the SDK does not prov
   - [Buying a Flaunch coin](#buying-a-flaunch-coin)
   - [Selling with Permit2](#selling-with-permit2)
   - [Swap using USDC or other tokens by passing `intermediatePoolKey`](#swap-using-usdc-or-other-tokens-by-passing-intermediatepoolkey)
+  - [Claiming creator revenue](#claiming-creator-revenue)
   - [Advanced Integration: Revenue Sharing with RevenueManager](#advanced-integration-revenue-sharing-with-revenuemanager)
   - [Bot Protection during Fair Launch via TrustedSigner](#bot-protection-during-fair-launch-via-trustedsigner)
   - [Groups](#groups)
@@ -477,6 +478,34 @@ if (allowance < parseEther(coinAmount)) {
 ```
 
 3. The quote functions `getSellQuoteExactInput`, `getBuyQuoteExactInput` and `getBuyQuoteExactOutput` also support passing optional `intermediatePoolKey`.
+
+### Claiming creator revenue
+
+Creator fees accrue in a fee escrow and are claimed by the creator (the current holder of the coin's Flaunch NFT). Which escrow depends on the coin's pairing:
+
+- **flETH-paired coins** (the default) use the single-token `FeeEscrow`: `creatorRevenue()` returns the claimable ETH and `withdrawCreatorRevenue()` claims it.
+- **Coins paired with anything else** — native ETH, or a registry token such as the B20 equities on Base (AAPLc, GOOGLc, …) — use the v1.3.1 **multi-token `FeeEscrow`**: one contract per chain, balances keyed `(recipient, token)` and denominated in the paired token. The contract cannot enumerate a recipient's keys, so you name the tokens to look at. A flETH key pays out as ETH; a stock key is delivered as the stock itself.
+
+```ts
+import { zeroAddress } from "viem";
+import { doesChainSupportMultiTokenFeeEscrow } from "@flaunch/sdk";
+
+const AAPLC = "0xb200000000000000000000C2e324d24d7eEcd1fb";
+
+if (doesChainSupportMultiTokenFeeEscrow(base.id)) {
+  // One entry per token, in that token's raw units (AAPLc has 8 decimals)
+  const balances = await flaunchRead.creatorRevenueByToken({
+    creator: creatorAddress,
+    tokens: [zeroAddress, AAPLC],
+  });
+
+  const tokens = balances.filter((b) => b.amount > 0n).map((b) => b.token);
+  if (tokens.length > 0) {
+    // One transaction sweeps every key
+    await flaunchWrite.withdrawCreatorRevenueByToken({ tokens });
+  }
+}
+```
 
 ### Advanced Integration: Revenue Sharing with RevenueManager
 

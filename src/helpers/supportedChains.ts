@@ -4,7 +4,10 @@ import {
   unichain,
 } from "viem/chains";
 import { chainIdToChain } from "./chainIdToChain";
-import { DynamicAddressFeeSplitManagerAddress } from "../addresses";
+import {
+  DynamicAddressFeeSplitManagerAddress,
+  FeeEscrowV1_3Address,
+} from "../addresses";
 
 const multichainDeploymentChainIds = new Set<number>([
   mainnet.id,
@@ -27,4 +30,15 @@ export function isChainSupported(chainId: number): boolean {
  */
 export function doesChainSupportSplitManager(chainId: number): boolean {
   return DynamicAddressFeeSplitManagerAddress[chainId] !== undefined;
+}
+
+/**
+ * Whether the v1.3.1 multi-token FeeEscrow is deployed on the given chain.
+ * Coins launched against a non-flETH pairing (native ETH, the B20 equities)
+ * escrow their creator fees there, keyed (recipient, token) and denominated in
+ * that token; `creatorRevenue()` / `withdrawCreatorRevenue()` only see the
+ * legacy single-token escrow, so gate on this before reading or claiming.
+ */
+export function doesChainSupportMultiTokenFeeEscrow(chainId: number): boolean {
+  return FeeEscrowV1_3Address[chainId] !== undefined;
 }
