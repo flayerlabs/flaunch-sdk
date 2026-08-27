@@ -34,6 +34,7 @@ The v1.3.1 multi-asset manager generation (the `*V1_3` manager addresses, client
   - [Read Operations (with Viem)](#read-operations-with-viem)
   - [Write Operations (with Viem + Wagmi)](#write-operations-with-viem--wagmi)
   - [Flaunching a Memecoin](#flaunching-a-memecoin)
+  - [Flaunching with a Paired Token](#flaunching-with-a-paired-token)
     - [How to generate `base64Image` from User uploaded file](#how-to-generate-base64image-from-user-uploaded-file)
   - [Flaunch with Address Fee Splits](#flaunch-with-address-fee-splits)
   - [Buying a Flaunch coin](#buying-a-flaunch-coin)
@@ -187,6 +188,54 @@ if (poolCreatedData) {
   // ... other params
 }
 ```
+
+### Flaunching with a Paired Token
+
+Base, Base Sepolia, and Robinhood support the V1.3 paired-token launch path.
+The paired token must be approved by that chain's `PairedTokenRegistry`; use
+`zeroAddress` to select native ETH.
+
+```ts
+import { doesChainSupportPairedTokenLaunch } from "@flaunch/sdk";
+import { zeroAddress } from "viem";
+
+if (!doesChainSupportPairedTokenLaunch(publicClient.chain.id)) {
+  throw new Error("Paired-token launches are not supported on this chain");
+}
+
+const flaunchParams = {
+  name: "Paired Coin",
+  symbol: "PAIR",
+  tokenUri: "ipfs://...",
+  premineAmount: 0n,
+  creator: address,
+  creatorFeeAllocation: 8_000,
+  flaunchAt: 0n,
+  initialPriceParams,
+  feeCalculatorParams: "0x" as const,
+  pairedToken,
+};
+
+if (!(await flaunchRead.isPairedTokenApproved(pairedToken))) {
+  throw new Error("Paired token is not approved");
+}
+
+const quote = await flaunchRead.calculatePairedTokenFlaunchFee({
+  flaunchParams,
+  slippageBps: 100n,
+});
+
+const hash = await flaunchWrite.flaunchPairedToken({
+  flaunchParams,
+  trustedFeeSigner: zeroAddress,
+  value: quote.ethRequired,
+  maxPremineCost: quote.pairedPremineCost,
+});
+```
+
+The SDK does not auto-approve ERC20 spending or enforce a sponsorship policy.
+Applications that promise a gas-sponsored launch should reject unexpected
+non-zero quote values before signing, as the API service does.
 
 #### How to generate `base64Image` from User uploaded file
 

@@ -1,5 +1,4 @@
 import { concat, keccak256, pad, toHex } from "viem";
-import { TickMath } from "@uniswap/v3-sdk";
 import { PoolKey } from "../types";
 
 // our min/max tick range that is valid for the tick spacing (60)

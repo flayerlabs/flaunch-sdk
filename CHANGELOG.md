@@ -2,7 +2,7 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
-## [Unreleased]
+## [0.11.0] - 2026-08-26
 
 ### Added
 
@@ -22,9 +22,21 @@ All notable changes to the @flaunch/sdk package will be documented in this file.
   - `ReadFeeEscrowV1_3` / `ReadWriteFeeEscrowV1_3` clients, the `FeeEscrowV1_3Abi`, the `EscrowTokenBalance` type, and `readFeeEscrowV1_3` / `readWriteFeeEscrowV1_3` accessors on the SDK
   - `doesChainSupportMultiTokenFeeEscrow()` helper, exported from `helpers`
   - `FeeEscrowV1_3Address` now covers Base Sepolia and Robinhood alongside Base
+- **Paired-token launch support** on Base, Base Sepolia, and Robinhood
+  - Added verified V1.3 Zap, PositionManager, and PairedTokenRegistry addresses and ABIs
+  - Added registry approval, two-asset fee quoting, and explicit-value launch clients
+  - Added `doesChainSupportPairedTokenLaunch()` and paired-token methods on `ReadFlaunchSDK` / `ReadWriteFlaunchSDK`
+  - Added address-filtered V1.3 `PoolCreated` decoding that preserves `pairedToken`
+
+### Fixed
+
+- Corrected the published `./addresses` export paths, added the missing `./utils` build outputs, and made ESM exports explicit `.mjs` files
+- Removed avoidable declaration-map and UMD global warnings from package builds
 
 ### Changed
 
+- Raised the Axios floor to `^1.18.0` for current security fixes; this also updates Node proxy handling through `proxy-from-env` 2.x
+- Removed the unused `@uniswap/v3-sdk` runtime dependency and its build-tool transitive tree
 - `FlaunchZapV1_3Address[base.id]` now points at the redeployed core zap `0xf787d757…`, bound to the v1.3.1 `TreasuryManagerFactory`. The previous `0x29b37dfe…` had no factory, and a launch passing it a manager implementation would have parked the coin's NFT inside that implementation with no way to rescue it
 
 ## [0.10.0] - 2026-07-23

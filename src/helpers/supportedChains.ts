@@ -9,6 +9,9 @@ import {
   FeeEscrowV1_3Address,
   FlaunchManagerZapV1_3Address,
   TreasuryManagerFactoryV1_3Address,
+  FlaunchZapV1_3Address,
+  PairedTokenPositionManagerV1_3Address,
+  PairedTokenRegistryV1_3Address,
 } from "../addresses";
 
 const multichainDeploymentChainIds = new Set<number>([
@@ -57,5 +60,14 @@ export function doesChainSupportMultiAssetManagers(chainId: number): boolean {
   return (
     TreasuryManagerFactoryV1_3Address[chainId] !== undefined &&
     FlaunchManagerZapV1_3Address[chainId] !== undefined
+  );
+}
+
+/** Whether all contracts required for paired-token launches are deployed. */
+export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
+  return (
+    FlaunchZapV1_3Address[chainId] !== undefined &&
+    PairedTokenPositionManagerV1_3Address[chainId] !== undefined &&
+    PairedTokenRegistryV1_3Address[chainId] !== undefined
   );
 }

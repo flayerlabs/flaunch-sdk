@@ -13,11 +13,14 @@ export const FlaunchZapAddress: Addresses = {
   [baseSepolia.id]: "0x25b747aeca2612b9804b5c3bb272a3daefdc6eaa",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
-// Base: redeployed bound to the v1.3.1 TreasuryManagerFactory (replaces 0x29b37dfe…, which had
-// no factory and could strand a launch NFT inside a manager implementation).
+// v1.3.1 (GitHub release v1.3.1) paired-token FlaunchZap deployments.
+// Base: redeployed 2026-08-27 bound to the v1.3.1 TreasuryManagerFactory (replaces
+// 0x29b37dfe…, which had no factory and could strand a launch NFT inside a manager
+// implementation). Robinhood's v1.3.1 zap is still factory-less — the same hazard applies there,
+// so do not route manager launches through it until it is rebound (FLA2-388).
 export const FlaunchZapV1_3Address: Addresses = {
   [base.id]: "0xf787d757674b21efd713fb636b16ed994bfa82a8",
+  [baseSepolia.id]: "0xe8476aa6508f0c31e3126f2340d18e9c6fbf8dd3",
   [robinhood.id]: "0x2e744436e35bc346777288b8dae2da23fd67e542",
 };
 
@@ -59,6 +62,20 @@ export const FlaunchPositionManagerV1_2Address: Addresses = {
 export const FlaunchPositionManagerV1_3Address: Addresses = {
   [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
   [robinhood.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // CREATE3 — same address as Base
+};
+
+// PositionManagers used by the paired-token launch path. This is separate from
+// FlaunchPositionManagerV1_3Address because that map also drives version routing.
+export const PairedTokenPositionManagerV1_3Address: Addresses = {
+  [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
+  [baseSepolia.id]: "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc",
+  [robinhood.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // CREATE3 — same address as Base
+};
+
+export const PairedTokenRegistryV1_3Address: Addresses = {
+  [base.id]: "0x26958422636655b5a4eCE23a062e2EB61332c6da",
+  [baseSepolia.id]: "0x23cb441d18ca75c6a14964b06806df668d45a1c6",
+  [robinhood.id]: "0xC3F4E72DE4D37988F12C101b0766Fd8462F6Faf9",
 };
 
 export const AnyPositionManagerAddress: Addresses = {
