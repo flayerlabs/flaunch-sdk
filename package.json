@@ -1,6 +1,6 @@
 {
   "name": "@flaunch/sdk",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Flaunch SDK to easily interact with the Flaunch protocol",
   "license": "MIT",
   "author": "Apoorv Lathey <apoorv@flayer.io>",
@@ -24,38 +24,38 @@
     "sdk"
   ],
   "main": "dist/index.cjs.js",
-  "module": "dist/index.esm.js",
+  "module": "dist/index.mjs",
   "unpkg": "dist/index.umd.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.esm.js",
+      "import": "./dist/index.mjs",
       "require": "./dist/index.cjs.js"
     },
     "./abi": {
       "types": "./dist/abi/index.d.ts",
-      "import": "./dist/abi/index.js",
+      "import": "./dist/abi/index.mjs",
       "require": "./dist/abi/index.cjs"
     },
     "./addresses": {
       "types": "./dist/addresses.d.ts",
-      "import": "./dist/addresses.js",
-      "require": "./dist/addresses.cjs"
+      "import": "./dist/addresses/index.mjs",
+      "require": "./dist/addresses/index.cjs"
     },
     "./helpers": {
       "types": "./dist/helpers/index.d.ts",
-      "import": "./dist/helpers/index.js",
+      "import": "./dist/helpers/index.mjs",
       "require": "./dist/helpers/index.cjs"
     },
     "./hooks": {
       "types": "./dist/hooks/index.d.ts",
-      "import": "./dist/hooks/index.js",
+      "import": "./dist/hooks/index.mjs",
       "require": "./dist/hooks/index.cjs"
     },
     "./utils": {
       "types": "./dist/utils/index.d.ts",
-      "import": "./dist/utils/index.js",
+      "import": "./dist/utils/index.mjs",
       "require": "./dist/utils/index.cjs"
     }
   },
@@ -63,10 +63,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc --emitDeclarationOnly && rollup -c",
+    "build": "rimraf dist && tsc --emitDeclarationOnly --declarationMap false && rollup -c",
     "dev": "rollup -c -w",
     "clean": "rimraf dist",
-    "prebuild": "npm run clean",
     "prepublishOnly": "npm run build",
     "test": "pnpm build && node --test test/*.test.cjs",
     "typecheck": "tsc --noEmit",
@@ -92,8 +91,7 @@
   "dependencies": {
     "@delvtech/drift": "^0.11.0",
     "@delvtech/drift-viem": "^0.11.0",
-    "@uniswap/v3-sdk": "^3.24.1",
-    "axios": "^1.8.1",
+    "axios": "^1.18.0",
     "react": "^19.0.0",
     "viem": "^2.55.2"
   }

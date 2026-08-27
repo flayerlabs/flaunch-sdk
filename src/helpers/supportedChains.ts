@@ -7,6 +7,9 @@ import { chainIdToChain } from "./chainIdToChain";
 import {
   DynamicAddressFeeSplitManagerAddress,
   FeeEscrowV1_3Address,
+  FlaunchZapV1_3Address,
+  PairedTokenPositionManagerV1_3Address,
+  PairedTokenRegistryV1_3Address,
 } from "../addresses";
 
 const multichainDeploymentChainIds = new Set<number>([
@@ -41,4 +44,13 @@ export function doesChainSupportSplitManager(chainId: number): boolean {
  */
 export function doesChainSupportMultiTokenFeeEscrow(chainId: number): boolean {
   return FeeEscrowV1_3Address[chainId] !== undefined;
+}
+
+/** Whether all contracts required for paired-token launches are deployed. */
+export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
+  return (
+    FlaunchZapV1_3Address[chainId] !== undefined &&
+    PairedTokenPositionManagerV1_3Address[chainId] !== undefined &&
+    PairedTokenRegistryV1_3Address[chainId] !== undefined
+  );
 }
