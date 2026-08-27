@@ -13,9 +13,10 @@ export const FlaunchZapAddress: Addresses = {
   [baseSepolia.id]: "0x25b747aeca2612b9804b5c3bb272a3daefdc6eaa",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
+// Paired-token FlaunchZap V1.3 deployments
 export const FlaunchZapV1_3Address: Addresses = {
   [base.id]: "0x29b37dfe763a3bb4cacf0f98f537844be72a6bb8",
+  [baseSepolia.id]: "0xe8476aa6508f0c31e3126f2340d18e9c6fbf8dd3",
   [robinhood.id]: "0x2e744436e35bc346777288b8dae2da23fd67e542",
 };
 
@@ -57,6 +58,20 @@ export const FlaunchPositionManagerV1_2Address: Addresses = {
 export const FlaunchPositionManagerV1_3Address: Addresses = {
   [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
   [robinhood.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // CREATE3 — same address as Base
+};
+
+// PositionManagers used by the paired-token launch path. This is separate from
+// FlaunchPositionManagerV1_3Address because that map also drives version routing.
+export const PairedTokenPositionManagerV1_3Address: Addresses = {
+  [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
+  [baseSepolia.id]: "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc",
+  [robinhood.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // CREATE3 — same address as Base
+};
+
+export const PairedTokenRegistryV1_3Address: Addresses = {
+  [base.id]: "0x26958422636655b5a4eCE23a062e2EB61332c6da",
+  [baseSepolia.id]: "0x23cb441d18ca75c6a14964b06806df668d45a1c6",
+  [robinhood.id]: "0xC3F4E72DE4D37988F12C101b0766Fd8462F6Faf9",
 };
 
 export const AnyPositionManagerAddress: Addresses = {

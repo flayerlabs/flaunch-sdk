@@ -17,6 +17,7 @@ import {
   formatUnits,
   decodeEventLog,
   isAddressEqual,
+  type Log,
 } from "viem";
 import axios from "axios";
 import {
@@ -48,6 +49,9 @@ import {
   FlaunchV1_2Address,
   // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663)
   FlaunchPositionManagerV1_3Address,
+  FlaunchZapV1_3Address,
+  PairedTokenPositionManagerV1_3Address,
+  PairedTokenRegistryV1_3Address,
   FlaunchV1_3Address,
   BidWallV1_3Address,
   FlaunchPositionManagerMultichainAddress,
@@ -87,6 +91,13 @@ import {
   DeployBuyBackManagerParams,
 } from "../clients/FlaunchZapClient";
 import { ReadWriteFlaunchZapMultichain } from "../clients/FlaunchZapMultichainClient";
+import {
+  type CalculatePairedTokenFlaunchFeeParams,
+  type FlaunchPairedTokenParams,
+  ReadFlaunchZapV1_3,
+  ReadWriteFlaunchZapV1_3,
+} from "../clients/FlaunchZapV1_3Client";
+import { ReadPairedTokenRegistryV1_3 } from "../clients/PairedTokenRegistryV1_3Client";
 import { ReadFlaunch } from "../clients/FlaunchClient";
 import { ReadAnyFlaunch } from "../clients/AnyFlaunchClient";
 import { ReadMemecoin, ReadWriteMemecoin } from "../clients/MemecoinClient";
@@ -138,6 +149,7 @@ import {
 } from "clients/TreasuryManagerClient";
 import { UniversalRouterAbi } from "abi/UniversalRouter";
 import { FlaunchPositionManagerV1_2Abi } from "abi/FlaunchPositionManagerV1_2";
+import { FlaunchPositionManagerV1_3Abi } from "abi/FlaunchPositionManagerV1_3";
 import { FlaunchPositionManagerAbi } from "abi/FlaunchPositionManager";
 import {
   CallWithDescription,
@@ -192,6 +204,7 @@ import { ReadTrustedSignerFeeCalculator } from "clients/TrustedSignerFeeCalculat
 import {
   isChainSupported,
   isMultichainDeployment,
+  doesChainSupportPairedTokenLaunch,
 } from "helpers/supportedChains";
 
 // Re-export PoolCreatedEventData so it's available as part of FlaunchSDK module
@@ -332,6 +345,8 @@ export class ReadFlaunchSDK {
   private readonly swapClients?: SwapReadClients;
   public readonly readFeeEscrow: ReadFeeEscrow;
   private readonly feeEscrowV1_3?: ReadFeeEscrowV1_3;
+  private readonly flaunchZapV1_3?: ReadFlaunchZapV1_3;
+  private readonly pairedTokenRegistryV1_3?: ReadPairedTokenRegistryV1_3;
 
   public resolveIPFS: (value: string) => string;
 
@@ -383,12 +398,24 @@ export class ReadFlaunchSDK {
   get readPositionManagerV1_2() {
     return this.getBaseClient("readPositionManagerV1_2");
   }
-  // v1.3.1 read clients exist only where baseClients are built (Base mainnet).
-  // Robinhood (4663) also runs v1.3.1 but takes the multichain path, which does
-  // not construct these — resolve its addresses from the *V1_3Address maps.
-  // Null-safe access returns undefined elsewhere.
   get readPositionManagerV1_3() {
     return this.baseClients?.readPositionManagerV1_3;
+  }
+  get readFlaunchZapV1_3(): ReadFlaunchZapV1_3 {
+    if (!this.flaunchZapV1_3) {
+      throw new Error(
+        `Paired-token launches are not supported on chain ${this.chainId}`
+      );
+    }
+    return this.flaunchZapV1_3;
+  }
+  get readPairedTokenRegistryV1_3(): ReadPairedTokenRegistryV1_3 {
+    if (!this.pairedTokenRegistryV1_3) {
+      throw new Error(
+        `Paired-token launches are not supported on chain ${this.chainId}`
+      );
+    }
+    return this.pairedTokenRegistryV1_3;
   }
   get readAnyPositionManager() {
     return this.getBaseClient("readAnyPositionManager");
@@ -476,6 +503,17 @@ export class ReadFlaunchSDK {
     const feeEscrowV1_3Address = FeeEscrowV1_3Address[this.chainId];
     if (feeEscrowV1_3Address) {
       this.feeEscrowV1_3 = new ReadFeeEscrowV1_3(feeEscrowV1_3Address, drift);
+    }
+
+    if (doesChainSupportPairedTokenLaunch(this.chainId)) {
+      this.flaunchZapV1_3 = new ReadFlaunchZapV1_3(
+        FlaunchZapV1_3Address[this.chainId],
+        drift
+      );
+      this.pairedTokenRegistryV1_3 = new ReadPairedTokenRegistryV1_3(
+        PairedTokenRegistryV1_3Address[this.chainId],
+        drift
+      );
     }
 
     const quoterAddress = QuoterAddress[this.chainId];
@@ -594,6 +632,16 @@ export class ReadFlaunchSDK {
         drift
       ),
     };
+  }
+
+  isPairedTokenApproved(token: Address) {
+    return this.readPairedTokenRegistryV1_3.isApproved(token);
+  }
+
+  calculatePairedTokenFlaunchFee(
+    params: CalculatePairedTokenFlaunchFeeParams
+  ) {
+    return this.readFlaunchZapV1_3.calculateFee(params);
   }
 
   /**
@@ -972,32 +1020,52 @@ export class ReadFlaunchSDK {
     return poll();
   }
 
-  /**
-   * Parses a transaction to extract PoolCreated event data
-   * @param txHash - The transaction hash to parse
-   * @returns PoolCreated event parameters or null if not found
-   */
-  async getPoolCreatedFromTx(
-    txHash: Hex
-  ): Promise<PoolCreatedEventData | null> {
-    if (!this.publicClient) {
-      throw new Error("Public client is required to fetch transaction data");
-    }
+  /** Parses PoolCreated from logs emitted by a PositionManager on this chain. */
+  getPoolCreatedFromLogs(logs: readonly Log[]): PoolCreatedEventData | null {
+    const positionManagerV1_3 =
+      PairedTokenPositionManagerV1_3Address[this.chainId];
 
-    // Get transaction receipt
-    const receipt = await this.publicClient.getTransactionReceipt({
-      hash: txHash,
-    });
+    if (positionManagerV1_3) {
+      for (const log of logs) {
+        if (!isAddressEqual(log.address, positionManagerV1_3)) {
+          continue;
+        }
 
-    if (!receipt) {
-      throw new Error(`Transaction not found: ${txHash}`);
+        try {
+          const decodedLog = decodeEventLog({
+            abi: FlaunchPositionManagerV1_3Abi,
+            data: log.data,
+            topics: log.topics,
+          });
+
+          if (decodedLog.eventName === "PoolCreated") {
+            return {
+              poolId: decodedLog.args._poolId,
+              memecoin: decodedLog.args._memecoin,
+              memecoinTreasury: decodedLog.args._memecoinTreasury,
+              tokenId: decodedLog.args._tokenId,
+              currencyFlipped: decodedLog.args._currencyFlipped,
+              flaunchFee: decodedLog.args._flaunchFee,
+              params: {
+                ...decodedLog.args._params,
+                initialTokenFairLaunch: 0n,
+                creatorFeeAllocation: Number(
+                  decodedLog.args._params.creatorFeeAllocation
+                ),
+              },
+            };
+          }
+        } catch {
+          continue;
+        }
+      }
     }
 
     if (isMultichainDeployment(this.chainId)) {
       const positionManager =
         FlaunchPositionManagerMultichainAddress[this.chainId];
 
-      for (const log of receipt.logs) {
+      for (const log of logs) {
         if (!isAddressEqual(log.address, positionManager)) {
           continue;
         }
@@ -1043,9 +1111,7 @@ export class ReadFlaunchSDK {
       return null;
     }
 
-    // Find PoolCreated event in logs by trying to decode each log
-    // Using V1_2 ABI which is compatible with all versions (V1_2 has extra fields that are optional)
-    for (const log of receipt.logs) {
+    for (const log of logs) {
       try {
         const decodedLog = decodeEventLog({
           abi: FlaunchPositionManagerV1_2Abi,
@@ -1061,16 +1127,38 @@ export class ReadFlaunchSDK {
             tokenId: decodedLog.args._tokenId as bigint,
             currencyFlipped: decodedLog.args._currencyFlipped as boolean,
             flaunchFee: decodedLog.args._flaunchFee as bigint,
-            params: decodedLog.args._params as any,
+            params: decodedLog.args._params as PoolCreatedEventData["params"],
           };
         }
-      } catch (error) {
-        // Not a PoolCreated event or decoding failed, continue to next log
+      } catch {
         continue;
       }
     }
 
     return null;
+  }
+
+  /**
+   * Parses a transaction to extract PoolCreated event data
+   * @param txHash - The transaction hash to parse
+   * @returns PoolCreated event parameters or null if not found
+   */
+  async getPoolCreatedFromTx(
+    txHash: Hex
+  ): Promise<PoolCreatedEventData | null> {
+    if (!this.publicClient) {
+      throw new Error("Public client is required to fetch transaction data");
+    }
+
+    const receipt = await this.publicClient.getTransactionReceipt({
+      hash: txHash,
+    });
+
+    if (!receipt) {
+      throw new Error(`Transaction not found: ${txHash}`);
+    }
+
+    return this.getPoolCreatedFromLogs(receipt.logs);
   }
 
   /**
@@ -2532,6 +2620,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   declare drift: Drift<ReadWriteAdapter>;
   private readonly baseReadWriteClients?: BaseReadWriteClients;
   private readonly readWriteFlaunchZapMultichain?: ReadWriteFlaunchZapMultichain;
+  private readonly readWriteFlaunchZapV1_3Client?: ReadWriteFlaunchZapV1_3;
   public readonly readWriteFeeEscrow: ReadWriteFeeEscrow;
   private readonly readWriteFeeEscrowV1_3Client?: ReadWriteFeeEscrowV1_3;
 
@@ -2546,6 +2635,15 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       );
     }
     return this.readWriteFeeEscrowV1_3Client;
+  }
+
+  get readWriteFlaunchZapV1_3(): ReadWriteFlaunchZapV1_3 {
+    if (!this.readWriteFlaunchZapV1_3Client) {
+      throw new Error(
+        `Paired-token launches are not supported on chain ${this.chainId}`
+      );
+    }
+    return this.readWriteFlaunchZapV1_3Client;
   }
 
   private getBaseReadWriteClient<K extends keyof BaseReadWriteClients>(
@@ -2599,6 +2697,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     if (feeEscrowV1_3Address) {
       this.readWriteFeeEscrowV1_3Client = new ReadWriteFeeEscrowV1_3(
         feeEscrowV1_3Address,
+        drift
+      );
+    }
+
+    if (doesChainSupportPairedTokenLaunch(this.chainId)) {
+      this.readWriteFlaunchZapV1_3Client = new ReadWriteFlaunchZapV1_3(
+        FlaunchZapV1_3Address[this.chainId],
         drift
       );
     }
@@ -2728,6 +2833,10 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     }
 
     return this.readWriteFlaunchZap.flaunch(params);
+  }
+
+  flaunchPairedToken(params: FlaunchPairedTokenParams) {
+    return this.readWriteFlaunchZapV1_3.flaunch(params);
   }
 
   /**

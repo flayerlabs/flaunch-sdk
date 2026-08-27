@@ -294,5 +294,7 @@ export type PoolCreatedEventData = {
     flaunchAt: bigint;
     initialPriceParams: Hex;
     feeCalculatorParams: Hex;
+    /** Undefined for pre-V1.3 pools; zeroAddress selects native ETH in V1.3. */
+    pairedToken?: Address;
   };
 };

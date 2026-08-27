@@ -32,6 +32,17 @@ export {
   ReadWriteFeeEscrowV1_3,
 } from "./clients/FeeEscrowV1_3Client";
 export type { EscrowTokenBalance } from "./clients/FeeEscrowV1_3Client";
+export {
+  ReadFlaunchZapV1_3,
+  ReadWriteFlaunchZapV1_3,
+} from "./clients/FlaunchZapV1_3Client";
+export type {
+  CalculatePairedTokenFlaunchFeeParams,
+  FlaunchPairedTokenParams,
+  PairedTokenFlaunchFee,
+  PairedTokenFlaunchParams,
+} from "./clients/FlaunchZapV1_3Client";
+export { ReadPairedTokenRegistryV1_3 } from "./clients/PairedTokenRegistryV1_3Client";
 
 export { ReadFlaunchSDK, ReadWriteFlaunchSDK };
 export { createFlaunch } from "./sdk/factory";
