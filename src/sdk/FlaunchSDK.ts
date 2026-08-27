@@ -42,6 +42,8 @@ import {
   AnyFlaunchAddress,
   FeeEscrowAddress,
   FeeEscrowV1_3Address,
+  FlaunchManagerZapV1_3Address,
+  TreasuryManagerFactoryV1_3Address,
   ReferralEscrowAddress,
   TokenImporterAddress,
   UniV4PositionManagerAddress,
@@ -130,6 +132,19 @@ import {
   type EscrowTokenBalance,
 } from "clients/FeeEscrowV1_3Client";
 import {
+  ReadTreasuryManagerV1_3,
+  ReadWriteTreasuryManagerV1_3,
+  type AssetBalance,
+} from "clients/TreasuryManagerV1_3Client";
+import {
+  ReadRevenueManagerV1_3,
+  ReadWriteRevenueManagerV1_3,
+} from "clients/RevenueManagerV1_3Client";
+import {
+  ReadFlaunchManagerZapV1_3,
+  ReadWriteFlaunchManagerZapV1_3,
+} from "clients/FlaunchManagerZapV1_3Client";
+import {
   ReadReferralEscrow,
   ReadWriteReferralEscrow,
 } from "clients/ReferralEscrowClient";
@@ -137,7 +152,10 @@ import { ReadBidWallV1_1 } from "clients/BidWallV1_1Client";
 import { ReadFairLaunchV1_1 } from "clients/FairLaunchV1_1Client";
 import { ReadFlaunchV1_1 } from "clients/FlaunchV1_1Client";
 import { ReadFlaunchV1_2 } from "clients/FlaunchV1_2Client";
-import { ReadWriteTreasuryManagerFactory } from "clients/TreasuryManagerFactoryClient";
+import {
+  ReadTreasuryManagerFactory,
+  ReadWriteTreasuryManagerFactory,
+} from "clients/TreasuryManagerFactoryClient";
 import {
   ReadRevenueManager,
   ReadWriteRevenueManager,
@@ -204,6 +222,7 @@ import { ReadTrustedSignerFeeCalculator } from "clients/TrustedSignerFeeCalculat
 import {
   isChainSupported,
   isMultichainDeployment,
+  doesChainSupportMultiAssetManagers,
   doesChainSupportPairedTokenLaunch,
 } from "helpers/supportedChains";
 
@@ -345,6 +364,8 @@ export class ReadFlaunchSDK {
   private readonly swapClients?: SwapReadClients;
   public readonly readFeeEscrow: ReadFeeEscrow;
   private readonly feeEscrowV1_3?: ReadFeeEscrowV1_3;
+  private readonly flaunchManagerZapV1_3?: ReadFlaunchManagerZapV1_3;
+  private readonly treasuryManagerFactoryV1_3?: ReadTreasuryManagerFactory;
   private readonly flaunchZapV1_3?: ReadFlaunchZapV1_3;
   private readonly pairedTokenRegistryV1_3?: ReadPairedTokenRegistryV1_3;
 
@@ -361,6 +382,33 @@ export class ReadFlaunchSDK {
       );
     }
     return this.feeEscrowV1_3;
+  }
+
+  /**
+   * The v1.3.1 FlaunchManagerZap, which deploys managers of the multi-asset generation.
+   * Throws on chains without one — gate with `doesChainSupportMultiAssetManagers()`.
+   */
+  get readFlaunchManagerZapV1_3(): ReadFlaunchManagerZapV1_3 {
+    if (!this.flaunchManagerZapV1_3) {
+      throw new Error(
+        `Multi-asset managers are not supported on chain ${this.chainId}`
+      );
+    }
+    return this.flaunchManagerZapV1_3;
+  }
+
+  /**
+   * The v1.3.1 TreasuryManagerFactory (multi-asset manager generation), used to resolve
+   * `ManagerDeployed` events from that factory only. Throws on chains without one — gate
+   * with `doesChainSupportMultiAssetManagers()`.
+   */
+  get readTreasuryManagerFactoryV1_3(): ReadTreasuryManagerFactory {
+    if (!this.treasuryManagerFactoryV1_3) {
+      throw new Error(
+        `Multi-asset managers are not supported on chain ${this.chainId}`
+      );
+    }
+    return this.treasuryManagerFactoryV1_3;
   }
 
   private getBaseClient<K extends keyof BaseReadClients>(
@@ -386,6 +434,18 @@ export class ReadFlaunchSDK {
   protected assertBaseOnlyOperation(operation: string) {
     if (isMultichainDeployment(this.chainId)) {
       throw new Error(`${operation} is not supported on chain ${this.chainId}`);
+    }
+  }
+
+  /**
+   * The v1.3.1 multi-asset manager generation is Base mainnet only; the `*V1_3` manager
+   * methods refuse to run anywhere it is not deployed rather than sending calls that revert.
+   */
+  protected assertMultiAssetManagersSupported(operation: string) {
+    if (!doesChainSupportMultiAssetManagers(this.chainId)) {
+      throw new Error(
+        `${operation} is not supported on chain ${this.chainId}: multi-asset managers are not deployed there`
+      );
     }
   }
 
@@ -503,6 +563,19 @@ export class ReadFlaunchSDK {
     const feeEscrowV1_3Address = FeeEscrowV1_3Address[this.chainId];
     if (feeEscrowV1_3Address) {
       this.feeEscrowV1_3 = new ReadFeeEscrowV1_3(feeEscrowV1_3Address, drift);
+    }
+    if (doesChainSupportMultiAssetManagers(this.chainId)) {
+      this.flaunchManagerZapV1_3 = new ReadFlaunchManagerZapV1_3(
+        this.chainId,
+        FlaunchManagerZapV1_3Address[this.chainId],
+        drift
+      );
+      this.treasuryManagerFactoryV1_3 = new ReadTreasuryManagerFactory(
+        this.chainId,
+        TreasuryManagerFactoryV1_3Address[this.chainId],
+        drift,
+        publicClient
+      );
     }
 
     if (doesChainSupportPairedTokenLaunch(this.chainId)) {
@@ -1778,6 +1851,96 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * Gets the claimable balance of one payout asset for a recipient on a v1.3.1 multi-asset
+   * RevenueManager. Managers of that generation keep a balance per payout asset — native ETH
+   * (`zeroAddress`) for flETH / native pools, otherwise the coin's paired token (a wrapper's
+   * underlying, or a B20 stock as itself) — so a stock-paired coin's fees do not show up under
+   * ETH. `revenueManagerBalance()` only speaks to the previous generation.
+   * @param params.revenueManagerAddress - The address of the v1.3.1 revenue manager
+   * @param params.recipient - The address of the recipient to check
+   * @param params.asset - The payout asset to read. Defaults to native ETH
+   * @returns Promise<bigint> - The claimable balance in the asset's raw units
+   */
+  revenueManagerBalanceV1_3(params: {
+    revenueManagerAddress: Address;
+    recipient: Address;
+    asset?: Address;
+  }) {
+    this.assertMultiAssetManagersSupported("revenueManagerBalanceV1_3");
+    const readRevenueManager = new ReadRevenueManagerV1_3(
+      params.revenueManagerAddress,
+      this.drift
+    );
+    return readRevenueManager.balances(
+      params.recipient,
+      params.asset ?? zeroAddress
+    );
+  }
+
+  /**
+   * Gets every payout asset a v1.3.1 revenue manager has ever been credited in. Native ETH
+   * (`zeroAddress`) is always present; other entries come from the paired tokens of the coins
+   * deposited into it. Use it to know which assets to read or claim.
+   * @param revenueManagerAddress - The address of the v1.3.1 revenue manager
+   * @returns Promise<readonly Address[]> - The payout assets
+   */
+  revenueManagerPayoutAssets(revenueManagerAddress: Address) {
+    this.assertMultiAssetManagersSupported("revenueManagerPayoutAssets");
+    const readRevenueManager = new ReadRevenueManagerV1_3(
+      revenueManagerAddress,
+      this.drift
+    );
+    return readRevenueManager.payoutAssets();
+  }
+
+  /**
+   * Gets the claimable balance of one payout asset for the protocol on a v1.3.1 revenue manager
+   * @param params.revenueManagerAddress - The address of the v1.3.1 revenue manager
+   * @param params.asset - The payout asset to read. Defaults to native ETH
+   * @returns Promise<bigint> - The claimable balance in the asset's raw units
+   */
+  async revenueManagerProtocolBalanceV1_3(params: {
+    revenueManagerAddress: Address;
+    asset?: Address;
+  }) {
+    this.assertMultiAssetManagersSupported("revenueManagerProtocolBalanceV1_3");
+    const readRevenueManager = new ReadRevenueManagerV1_3(
+      params.revenueManagerAddress,
+      this.drift
+    );
+    const protocolRecipient = await readRevenueManager.protocolRecipient();
+    return readRevenueManager.balances(
+      protocolRecipient,
+      params.asset ?? zeroAddress
+    );
+  }
+
+  /**
+   * Gets a recipient's claimable balances across payout assets on any v1.3.1 multi-asset
+   * treasury manager (RevenueManager, the fee-split managers, StakingManager). Zero balances are
+   * kept so callers can decide what to claim.
+   * @param params.treasuryManagerAddress - The address of the v1.3.1 treasury manager
+   * @param params.recipient - The address of the recipient to check
+   * @param params.assets - The payout assets to read. Defaults to every asset the manager has paid out in
+   * @returns Promise<AssetBalance[]> - One entry per asset, in the order given
+   */
+  treasuryManagerBalancesV1_3(params: {
+    treasuryManagerAddress: Address;
+    recipient: Address;
+    assets?: Address[];
+  }): Promise<AssetBalance[]> {
+    this.assertMultiAssetManagersSupported("treasuryManagerBalancesV1_3");
+    const readTreasuryManager = new ReadTreasuryManagerV1_3(
+      params.treasuryManagerAddress,
+      this.drift
+    );
+    return readTreasuryManager.balancesForAssets(
+      params.recipient,
+      params.assets
+    );
+  }
+
+  /**
    * Gets the pool ID for a given coin
    * @param coinAddress - The address of the coin
    * @param version - Optional specific version to use
@@ -2623,6 +2786,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   private readonly readWriteFlaunchZapV1_3Client?: ReadWriteFlaunchZapV1_3;
   public readonly readWriteFeeEscrow: ReadWriteFeeEscrow;
   private readonly readWriteFeeEscrowV1_3Client?: ReadWriteFeeEscrowV1_3;
+  private readonly readWriteFlaunchManagerZapV1_3Client?: ReadWriteFlaunchManagerZapV1_3;
 
   /**
    * The v1.3.1 multi-token FeeEscrow with write capabilities. Throws on chains without one —
@@ -2635,6 +2799,20 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       );
     }
     return this.readWriteFeeEscrowV1_3Client;
+  }
+
+  /**
+   * The v1.3.1 FlaunchManagerZap with write capabilities: deploys managers of the multi-asset
+   * generation through the v1.3.1 factory. Throws on chains without one — gate with
+   * `doesChainSupportMultiAssetManagers()`.
+   */
+  get readWriteFlaunchManagerZapV1_3(): ReadWriteFlaunchManagerZapV1_3 {
+    if (!this.readWriteFlaunchManagerZapV1_3Client) {
+      throw new Error(
+        `Multi-asset managers are not supported on chain ${this.chainId}`
+      );
+    }
+    return this.readWriteFlaunchManagerZapV1_3Client;
   }
 
   get readWriteFlaunchZapV1_3(): ReadWriteFlaunchZapV1_3 {
@@ -2699,6 +2877,14 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         feeEscrowV1_3Address,
         drift
       );
+    }
+    if (doesChainSupportMultiAssetManagers(this.chainId)) {
+      this.readWriteFlaunchManagerZapV1_3Client =
+        new ReadWriteFlaunchManagerZapV1_3(
+          this.chainId,
+          FlaunchManagerZapV1_3Address[this.chainId],
+          drift
+        );
     }
 
     if (doesChainSupportPairedTokenLaunch(this.chainId)) {
@@ -2771,6 +2957,30 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     const hash = await this.readWriteFlaunchZap.deployRevenueManager(params);
 
     return await this.readWriteTreasuryManagerFactory.getManagerDeployedAddressFromTx(
+      hash
+    );
+  }
+
+  /**
+   * Deploys a new v1.3.1 multi-asset revenue manager through the v1.3.1 FlaunchManagerZap.
+   * Managers of this generation pay out per payout asset (native ETH or a coin's paired
+   * token), so they are the ones to use for coins paired with a B20 stock or native ETH;
+   * `deployRevenueManager()` keeps deploying the previous generation. The address is resolved
+   * from the `ManagerDeployed` event of the v1.3.1 factory only.
+   * @param params - Parameters for deploying the revenue manager
+   * @param params.protocolRecipient - The address of the protocol recipient (and manager owner)
+   * @param params.protocolFeePercent - The percentage of fees taken by the protocol (0-100)
+   * @param params.permissions - The permissions for the revenue manager. Defaults to OPEN
+   * @returns Address of the deployed revenue manager
+   */
+  async deployRevenueManagerV1_3(
+    params: DeployRevenueManagerParams
+  ): Promise<Address> {
+    this.assertMultiAssetManagersSupported("deployRevenueManagerV1_3");
+    const hash =
+      await this.readWriteFlaunchManagerZapV1_3.deployRevenueManager(params);
+
+    return await this.readTreasuryManagerFactoryV1_3.getManagerDeployedAddressFromTx(
       hash
     );
   }
@@ -3262,6 +3472,82 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       this.drift
     );
     return readWriteRevenueManager.creatorClaimForTokens(params.flaunchTokens);
+  }
+
+  /**
+   * Claims the protocol's share from a v1.3.1 multi-asset revenue manager. With no `assets`
+   * every payout asset is settled; pass a subset when one asset would block the claim (a
+   * transfer-restricted stock). The connected wallet must be the protocol recipient.
+   * @param params.revenueManagerAddress - The address of the v1.3.1 revenue manager
+   * @param params.assets - Optionally, the payout assets to settle (`zeroAddress` for native ETH)
+   * @returns Transaction response
+   */
+  revenueManagerProtocolClaimV1_3(params: {
+    revenueManagerAddress: Address;
+    assets?: Address[];
+  }) {
+    this.assertMultiAssetManagersSupported("revenueManagerProtocolClaimV1_3");
+    const readWriteRevenueManager = new ReadWriteRevenueManagerV1_3(
+      params.revenueManagerAddress,
+      this.drift
+    );
+    return params.assets
+      ? readWriteRevenueManager.claimAssets(params.assets)
+      : readWriteRevenueManager.claim();
+  }
+
+  /**
+   * Claims a creator's share from a v1.3.1 multi-asset revenue manager. With no `assets`
+   * every payout asset is settled, across all the creator's tokens or the `flaunchTokens`
+   * given; pass `assets` to settle a subset (e.g. skip a transfer-restricted stock). The
+   * connected wallet must be the creator.
+   * @param params.revenueManagerAddress - The address of the v1.3.1 revenue manager
+   * @param params.assets - Optionally, the payout assets to settle (`zeroAddress` for native ETH)
+   * @param params.flaunchTokens - Optionally, the flaunch tokens to claim against
+   * @returns Transaction response
+   */
+  revenueManagerCreatorClaimV1_3(params: {
+    revenueManagerAddress: Address;
+    assets?: Address[];
+    flaunchTokens?: { flaunch: Address; tokenId: bigint }[];
+  }) {
+    this.assertMultiAssetManagersSupported("revenueManagerCreatorClaimV1_3");
+    const readWriteRevenueManager = new ReadWriteRevenueManagerV1_3(
+      params.revenueManagerAddress,
+      this.drift
+    );
+    if (params.assets) {
+      return readWriteRevenueManager.claimAssets(
+        params.assets,
+        params.flaunchTokens
+      );
+    }
+    if (params.flaunchTokens?.length) {
+      return readWriteRevenueManager.claimForTokens(params.flaunchTokens);
+    }
+    return readWriteRevenueManager.claim();
+  }
+
+  /**
+   * Claims a subset of payout assets from any v1.3.1 multi-asset treasury manager, so a
+   * recipient blocked on one asset can still collect the others. Every asset must be one the
+   * manager has paid out in (`treasuryManagerBalancesV1_3()` / `payoutAssets()`).
+   * @param params.treasuryManagerAddress - The address of the v1.3.1 treasury manager
+   * @param params.assets - The payout assets to settle (`zeroAddress` for native ETH)
+   * @param params.data - Manager-specific claim data (defaults to empty)
+   * @returns Transaction response
+   */
+  treasuryManagerClaimAssetsV1_3(params: {
+    treasuryManagerAddress: Address;
+    assets: Address[];
+    data?: HexString;
+  }) {
+    this.assertMultiAssetManagersSupported("treasuryManagerClaimAssetsV1_3");
+    const readWriteTreasuryManager = new ReadWriteTreasuryManagerV1_3(
+      params.treasuryManagerAddress,
+      this.drift
+    );
+    return readWriteTreasuryManager.claimAssets(params.assets, params.data);
   }
 
   /**

@@ -5,6 +5,7 @@ export {
   isChainSupported,
   doesChainSupportSplitManager,
   doesChainSupportMultiTokenFeeEscrow,
+  doesChainSupportMultiAssetManagers,
   doesChainSupportPairedTokenLaunch,
 } from "./supportedChains";
 export * from "./permissions";
