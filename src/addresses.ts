@@ -14,8 +14,10 @@ export const FlaunchZapAddress: Addresses = {
 };
 
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
+// Base: redeployed bound to the v1.3.1 TreasuryManagerFactory (replaces 0x29b37dfe…, which had
+// no factory and could strand a launch NFT inside a manager implementation).
 export const FlaunchZapV1_3Address: Addresses = {
-  [base.id]: "0x29b37dfe763a3bb4cacf0f98f537844be72a6bb8",
+  [base.id]: "0xf787d757674b21efd713fb636b16ed994bfa82a8",
   [robinhood.id]: "0x2e744436e35bc346777288b8dae2da23fd67e542",
 };
 
@@ -183,6 +185,44 @@ export const BuyBackManagerAddress: Addresses = {
   [baseSepolia.id]: "0xc3947EC9d687053bBA72b36Fd6b2567e775E82C7",
 };
 
+// v1.3.1 multi-asset managers (flaunch-managers release v1.3.1-base) - Base mainnet only
+// A separate generation from the *ManagerAddress maps above: its own factory, implementations
+// and zap, paying out per payout asset (ETH = address(0), or the coin's paired token). Managers
+// deployed from the old factory keep working through the unsuffixed APIs.
+export const TreasuryManagerFactoryV1_3Address: Addresses = {
+  [base.id]: "0xB03Be6c735ef90189D6a22bBC8F6A45a33348fDe",
+};
+
+export const RevenueManagerV1_3Address: Addresses = {
+  [base.id]: "0x908D692E628073A5B644Bc32B8dF57A5d1842288",
+};
+
+export const AddressFeeSplitManagerV1_3Address: Addresses = {
+  [base.id]: "0x7dC776cf57DacA91b315fe4F8803577dAb560ba5",
+};
+
+export const DynamicAddressFeeSplitManagerV1_3Address: Addresses = {
+  [base.id]: "0xC4a0B79A0dB1F7F67da97E7F9A8867B6CaF017b2",
+};
+
+export const ERC721OwnerFeeSplitManagerV1_3Address: Addresses = {
+  [base.id]: "0xDbFA9d3cab72EAE6Ba44ebC27175706aA451d9c0",
+};
+
+export const StakingManagerV1_3Address: Addresses = {
+  [base.id]: "0x72b9192017361eA00cDc1Cf1AC0F178cf89920cA",
+};
+
+export const GroupMapperV1_3Address: Addresses = {
+  [base.id]: "0x4a68638179De37163d86B10e6B4b927CA1a0dE87",
+};
+
+// Deploys + initializes a v1.3.1 manager through the v1.3.1 factory in one call. Launching a coin
+// straight into a manager stays with the core FlaunchZap.
+export const FlaunchManagerZapV1_3Address: Addresses = {
+  [base.id]: "0xD7E0c1D2B2a588cEC3b2Bdc9428FfE59b739749B",
+};
+
 /** Verifiers */
 export const TokenImporterAddress: Addresses = {
   [base.id]: "0x6fb66f4fc262dc86e12136c481ba7c411e668197",
@@ -236,6 +276,13 @@ export const WhitelistedPermissionsAddress: Addresses = {
   [robinhood.id]: "0x0E3ACf44D030Cc632Fa006b56778E009bC9564d8",
   [base.id]: "0x828B58B2B2df8ff3221Fbe2b07e75a56a84493Cc",
   [baseSepolia.id]: "0xe8691E8f576A98c41EBB5E984207d4F51386621f",
+};
+
+// v1.3.1 multi-asset managers (flaunch-managers release v1.3.1-base) - Base mainnet only
+// WhitelistedPermissions validates a group against the factory it was built with, so managers
+// from the v1.3.1 factory need this instance. ClosedPermissions is factory-agnostic and reused.
+export const WhitelistedPermissionsV1_3Address: Addresses = {
+  [base.id]: "0xaCE028CB08A19C4d2a6e442516EbA7d114C09Af9",
 };
 /** =========== */
 
