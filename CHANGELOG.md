@@ -67,7 +67,7 @@ All notable changes to the @flaunch/sdk package will be documented in this file.
 
 ### Compatibility
 
-- Base and Base Sepolia remain fully supported and backward compatible. Swaps, other manager and importer flows, watchers, and the IPFS launch helper remain unsupported on the newer chains; Robinhood UI swaps will use 0x without an SDK fallback.
+- Base and Base Sepolia remain fully supported and backward compatible. Other manager and importer flows, watchers, and the IPFS launch helper remain unsupported on the newer chains; Robinhood supports the native ETH swap route described above.
 
 ## [0.9.20] - 2026-03-18
 
