@@ -51,7 +51,7 @@ export function doesChainSupportMultiTokenFeeEscrow(chainId: number): boolean {
 /**
  * Whether the v1.3.1 multi-asset manager generation (its own TreasuryManagerFactory,
  * manager implementations and FlaunchManagerZap) is deployed on the given chain — Base
- * mainnet only today. Managers from this generation pay out per payout asset (ETH or the
+ * mainnet and Robinhood Chain today. Managers from this generation pay out per payout asset (ETH or the
  * coin's paired token) and are driven through the `*V1_3` manager APIs; the unsuffixed
  * manager APIs keep talking to the previous generation. Gate on this before deploying,
  * reading or claiming from a v1.3.1 manager.

@@ -2,6 +2,17 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.11.1] - 2026-09-02
+
+### Added
+
+- **v1.3.1 multi-asset managers on Robinhood Chain (4663)** — flaunch-managers' `v1.3.1-base` generation deployed on 2026-09-02 (FLA2-388): `TreasuryManagerFactoryV1_3Address`, `RevenueManagerV1_3Address`, `AddressFeeSplitManagerV1_3Address`, `DynamicAddressFeeSplitManagerV1_3Address`, `ERC721OwnerFeeSplitManagerV1_3Address`, `StakingManagerV1_3Address`, `GroupMapperV1_3Address`, `FlaunchManagerZapV1_3Address` and `WhitelistedPermissionsV1_3Address` gain a `robinhood` row, so `doesChainSupportMultiAssetManagers(4663)` is now `true` and every `*V1_3` manager method works there
+- `TokenImporterV1_3Address` — the v1.3.1 `TokenImporter` on Base (`0xea78c266…`) and Robinhood (`0x08222EA6…`). The unsuffixed `TokenImporterAddress` keeps pointing at the previous generation's importer
+
+### Changed
+
+- `FlaunchZapV1_3Address[robinhood]` → `0xFCd1eB4BFA9A97059CaF4D160d28C871F5f3077a`, the zap redeployed on 2026-09-02 bound to the new Robinhood factory. The factory-less `0x2e744436…` it replaces routes a manager launch into the manager implementation and strands the launch NFT; `flaunchPairedToken()` and `doesChainSupportPairedTokenLaunch()` now target the bound zap
+
 ## [0.11.0] - 2026-08-26
 
 ### Added
