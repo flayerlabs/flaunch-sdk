@@ -100,6 +100,19 @@ export const PairedTokenRegistryV1_3Address: Addresses = {
   [robinhood.id]: "0xC3F4E72DE4D37988F12C101b0766Fd8462F6Faf9",
 };
 
+// Flaunch PoolSwap router of the v1.3.1 paired-token generation: a single-pool `swap` against any
+// PoolKey on the PairedTokenPositionManager (mUSD-, native-ETH-, flETH- or B20-paired coins alike),
+// with `msgSender()` published for hooks (the spend gate's approved-router buyer binding). The
+// Universal Router path assumes an flETH hop and cannot reach these pools. PoolSwap is
+// hook-agnostic: one router serves every v1.3 hook generation on a chain (Robinhood's v1.3.3
+// regeneration also shipped 0x92d2df3ec1ebd126f0708b879b1fe25c84482028, which works too but is
+// not required).
+export const PoolSwapV1_3Address: Addresses = {
+  [base.id]: "0xafD627ea5D02251B13E7D6C90b468328376b61A3",
+  [baseSepolia.id]: "0x62eb5b7b066ff80ce5e32ff1ed42b31c485f716b",
+  [robinhood.id]: "0x8476ED156f731335ECA8Cc8A8eE759330ee4A91f",
+};
+
 export const AnyPositionManagerAddress: Addresses = {
   [base.id]: "0x8DC3b85e1dc1C846ebf3971179a751896842e5dC",
   [baseSepolia.id]: "0xB4A535B9D35851972736495CC52FBfDaCF32e5dc",

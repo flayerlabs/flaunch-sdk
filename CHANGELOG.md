@@ -2,6 +2,23 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.12.0] - 2026-09-02
+
+### Added
+
+- **Paired-token swaps through PoolSwap.** Coins launched with `flaunchPairedToken` trade on the paired-token PositionManager against their own paired side — mUSD (6 decimals) on Base Sepolia, native ETH, flETH, or a B20 equity on Base — and the Universal Router path (which assumes an flETH hop) cannot reach those pools. The SDK now swaps them through the v1.3.1 `PoolSwap` router: one exact-input `swap` against the pool's key, with `hookData` for signer-gated pools (Game Mode's spend gate), so integrators no longer need their own raw-PoolSwap code
+  - Addresses: `PoolSwapV1_3Address` (Base, Base Sepolia, Robinhood)
+  - ABIs: `PoolSwapV1_3Abi` (the three `swap` overloads — no referrer, `address _referrer`, `bytes _hookData` — plus `msgSender()`), with the per-overload slices `PoolSwapV1_3SwapAbi` / `PoolSwapV1_3SwapWithReferrerAbi` / `PoolSwapV1_3SwapWithHookDataAbi`; `PairedTokenRegistryV1_3Abi` gains `tokenConfig(address)`; `FlaunchPositionManagerV1_3Abi` gains `poolKey(address)` and `pairedToken(bytes32)`
+  - Clients: `ReadPoolSwapV1_3` (`msgSender`) / `ReadWritePoolSwapV1_3` (`swap({ poolKey, params, hookData?, referrer?, value? })` — the overload follows the payload), `ReadPairedTokenPositionManagerV1_3` (`poolKey`, `pairedToken`), `ReadPairedTokenRegistryV1_3.tokenConfig()` returning the `PairedTokenConfig` row (approval, `tokenType`, `decimals`, escrow and pricing hooks), `ReadQuoter.getQuoteExactInputSingle({ poolKey, zeroForOne, exactAmount, hookData?, userWallet? })`
+  - SDK: `resolvePairedPool(coin, pairedToken?)` (the pool's key, id and paired side from one `poolKey` read, or built locally when the pairing is known), `getPairedPoolQuoteExactInput()`, `planPairedTokenSwap(params, "buy" | "sell")` → `PairedSwapPlan` (an optional ERC20 `approve(PoolSwap, amountIn)` when the allowance is short, then the `swap` call — native-ETH buys fund via `value` and skip the approve — ready for a batched `wallet_sendCalls` or two sequential transactions), `buyCoinPairedToken()` / `sellCoinPairedToken()` which run that plan; `readPoolSwapV1_3` / `readPairedTokenPositionManagerV1_3` / `readWritePoolSwapV1_3` accessors; the `PairedTokenSwapParams`, `PairedPoolQuoteParams`, `PairedSwapPlan`, `PairedSwapCall`, `PairedSwapApproveCall`, `ResolvedPairedPool`, `PairedSwapDirection` types
+  - Utils (`utils/univ4`): `pairedPoolKey(memecoin, pairedToken, hooks)`, `isZeroForOne`, `pairedTokenOfPoolKey`, `isEmptyPoolKey`, `decodeBalanceDelta`, `MIN_SQRT_PRICE_LIMIT` / `MAX_SQRT_PRICE_LIMIT`, and `sqrtPriceLimitFromSlippage(currentSqrtPriceX96, slippageBps, zeroForOne)` — PoolSwap has no `minOut`, so this sqrt-price bound is the only on-chain slippage control
+  - The pool key is read from the hook the coin was launched on, probed per coin across the chain's current and superseded v1.3 PositionManagers (`getV1_3PositionManagers`) and memoised — a coin on Robinhood's superseded v1.3.1 hook still resolves and swaps; PoolSwap is hook-agnostic
+  - `doesChainSupportPairedTokenSwap()` (exported from `helpers`); every paired-swap method throws on chains without the deployment instead of sending a call that reverts. `PAIRED_TOKEN_TYPE` / `PairedTokenType` exported from `types`
+  - `sellCoin()` and `sellMemecoinWithPermit2()` accept an optional `hookData` for the coin ↔ flETH hop; `ReadQuoter.getSellQuoteExactInput()` accepts `hookData` / `userWallet`
+  - Not included: exact-output paired swaps (the spend gate rejects them), and ETH → paired-token acquisition routing (the B20 / Aerodrome leg stays app-side for now)
+
+## [0.11.3] - UNRELEASED (prepared 2026-09-03)
+
 ## [0.11.4] - UNRELEASED (prepared 2026-09-03)
 
 ### Added

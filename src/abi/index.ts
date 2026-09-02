@@ -36,3 +36,4 @@ export * from "./StateView";
 export * from "./TreasuryManagerFactory";
 export * from "./TreasuryManagerV1_3";
 export * from "./UniversalRouter";
+export * from "./PoolSwapV1_3";

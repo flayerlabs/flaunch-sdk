@@ -16,6 +16,7 @@ const {
   FlaunchPositionManagerMultichainAddress,
   FlaunchZapMultichainAddress,
   PoolManagerAddress,
+  PoolSwapV1_3Address,
   StateViewAddress,
 } = addressExports;
 const { FlaunchZapAbi } = abiExports;
@@ -29,6 +30,10 @@ function addressesFor(chainId) {
     flETH: FLETHAddress[chainId],
     poolManager: PoolManagerAddress[chainId],
     stateView: StateViewAddress[chainId],
+    // Only chains with a paired-token PoolSwap carry the key; `getCode` below skips undefined.
+    ...(PoolSwapV1_3Address[chainId]
+      ? { poolSwap: PoolSwapV1_3Address[chainId] }
+      : {}),
   };
 }
 

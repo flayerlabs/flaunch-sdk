@@ -8,5 +8,6 @@ export {
   doesChainSupportMultiAssetManagers,
   getV1_3PositionManagers,
   doesChainSupportPairedTokenLaunch,
+  doesChainSupportPairedTokenSwap,
 } from "./supportedChains";
 export * from "./permissions";

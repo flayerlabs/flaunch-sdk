@@ -14,6 +14,9 @@ import {
   PairedTokenPositionManagerV1_3Address,
   PairedTokenRegistryV1_3Address,
   SupersededPositionManagerV1_3Address,
+  PoolSwapV1_3Address,
+  QuoterAddress,
+  StateViewAddress,
 } from "../addresses";
 
 const multichainDeploymentChainIds = new Set<number>([
@@ -85,4 +88,19 @@ export function getV1_3PositionManagers(chainId: number): Address[] {
     ...(current ? [current] : []),
     ...(SupersededPositionManagerV1_3Address[chainId] ?? []),
   ];
+}
+
+/**
+ * Whether a coin on the paired-token PositionManager can be swapped through the SDK: the v1.3.1
+ * PoolSwap router plus the v4 Quoter and StateView the plan needs for its quote and sqrt-price
+ * slippage bound. `buyCoinPairedToken` / `sellCoinPairedToken` / `planPairedTokenSwap` throw on
+ * chains without all four rather than sending a call that reverts.
+ */
+export function doesChainSupportPairedTokenSwap(chainId: number): boolean {
+  return (
+    PairedTokenPositionManagerV1_3Address[chainId] !== undefined &&
+    PoolSwapV1_3Address[chainId] !== undefined &&
+    QuoterAddress[chainId] !== undefined &&
+    StateViewAddress[chainId] !== undefined
+  );
 }

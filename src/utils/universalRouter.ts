@@ -510,6 +510,7 @@ export const sellMemecoinWithPermit2 = (params: {
   referrer: Address | null;
   positionManagerAddress: Address;
   intermediatePoolKey?: PoolWithHookData; // Optional intermediate pool key to use containing outputToken and ETH as currencies
+  hookData?: Hex; // Optional hook data for the coin <> flETH hop (spend-gated pools); replaces the referrer encoding
 }) => {
   const flETH = FLETHAddress[params.chainId];
 
@@ -544,15 +545,17 @@ export const sellMemecoinWithPermit2 = (params: {
       fee: 0,
       tickSpacing: 60,
       hooks: flaunchHooks,
-      hookData: encodeAbiParameters(
-        [
-          {
-            type: "address",
-            name: "referrer",
-          },
-        ],
-        [params.referrer ?? zeroAddress]
-      ),
+      hookData:
+        params.hookData ??
+        encodeAbiParameters(
+          [
+            {
+              type: "address",
+              name: "referrer",
+            },
+          ],
+          [params.referrer ?? zeroAddress]
+        ),
     },
     {
       intermediateCurrency: ETH,
