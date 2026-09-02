@@ -12,7 +12,7 @@ const {
   toHex,
   zeroAddress,
 } = require("viem");
-const { base, baseSepolia, mainnet } = require("viem/chains");
+const { base, robinhood, baseSepolia, mainnet } = require("viem/chains");
 const {
   createFlaunchCalldata,
   decodeCallData,
@@ -61,16 +61,17 @@ const PAYOUT_ASSETS_SELECTOR = "0x27b72e39";
 const PROTOCOL_RECIPIENT_SELECTOR = toFunctionSelector("protocolRecipient()");
 
 /** The flaunch-managers `v1.3.1-base` release (Base mainnet, blocks 50439728–50439746). */
+// [map, Base address, Robinhood address] — Robinhood rows landed with FLA2-388 (2026-09-02).
 const RELEASE_ADDRESSES = {
-  TreasuryManagerFactoryV1_3Address: [TreasuryManagerFactoryV1_3Address, "0xB03Be6c735ef90189D6a22bBC8F6A45a33348fDe"],
-  RevenueManagerV1_3Address: [RevenueManagerV1_3Address, "0x908D692E628073A5B644Bc32B8dF57A5d1842288"],
-  AddressFeeSplitManagerV1_3Address: [AddressFeeSplitManagerV1_3Address, "0x7dC776cf57DacA91b315fe4F8803577dAb560ba5"],
-  DynamicAddressFeeSplitManagerV1_3Address: [DynamicAddressFeeSplitManagerV1_3Address, "0xC4a0B79A0dB1F7F67da97E7F9A8867B6CaF017b2"],
-  ERC721OwnerFeeSplitManagerV1_3Address: [ERC721OwnerFeeSplitManagerV1_3Address, "0xDbFA9d3cab72EAE6Ba44ebC27175706aA451d9c0"],
-  StakingManagerV1_3Address: [StakingManagerV1_3Address, "0x72b9192017361eA00cDc1Cf1AC0F178cf89920cA"],
-  GroupMapperV1_3Address: [GroupMapperV1_3Address, "0x4a68638179De37163d86B10e6B4b927CA1a0dE87"],
-  FlaunchManagerZapV1_3Address: [FlaunchManagerZapV1_3Address, "0xD7E0c1D2B2a588cEC3b2Bdc9428FfE59b739749B"],
-  WhitelistedPermissionsV1_3Address: [WhitelistedPermissionsV1_3Address, "0xaCE028CB08A19C4d2a6e442516EbA7d114C09Af9"],
+  TreasuryManagerFactoryV1_3Address: [TreasuryManagerFactoryV1_3Address, "0xB03Be6c735ef90189D6a22bBC8F6A45a33348fDe", "0xE1eBcD62AEBd327A4c22dB9e68A8E81119a7eABF"],
+  RevenueManagerV1_3Address: [RevenueManagerV1_3Address, "0x908D692E628073A5B644Bc32B8dF57A5d1842288", "0xFc28B339376018727eFcD45fdb257D0A0861A391"],
+  AddressFeeSplitManagerV1_3Address: [AddressFeeSplitManagerV1_3Address, "0x7dC776cf57DacA91b315fe4F8803577dAb560ba5", "0x7dc0f14204841e0314eB0265a0c420995F200243"],
+  DynamicAddressFeeSplitManagerV1_3Address: [DynamicAddressFeeSplitManagerV1_3Address, "0xC4a0B79A0dB1F7F67da97E7F9A8867B6CaF017b2", "0x1969bcF2779D53FeEA95480a7ab79f7cEfeE1681"],
+  ERC721OwnerFeeSplitManagerV1_3Address: [ERC721OwnerFeeSplitManagerV1_3Address, "0xDbFA9d3cab72EAE6Ba44ebC27175706aA451d9c0", "0x51BdE7C1e2Ea54949C015F4f3ED3CAE185543C0b"],
+  StakingManagerV1_3Address: [StakingManagerV1_3Address, "0x72b9192017361eA00cDc1Cf1AC0F178cf89920cA", "0xd992F465d55B005E8D2Aff9fcE977Cb78f5652e0"],
+  GroupMapperV1_3Address: [GroupMapperV1_3Address, "0x4a68638179De37163d86B10e6B4b927CA1a0dE87", "0xBdbF379f9EdFB5993FC00b41AAEfeE8475eAC0Ac"],
+  FlaunchManagerZapV1_3Address: [FlaunchManagerZapV1_3Address, "0xD7E0c1D2B2a588cEC3b2Bdc9428FfE59b739749B", "0xAf037090FF86EFdc8d4ba82728aC93042ad1EC73"],
+  WhitelistedPermissionsV1_3Address: [WhitelistedPermissionsV1_3Address, "0xaCE028CB08A19C4d2a6e442516EbA7d114C09Af9", "0xF772256B811D2241488d3d659E9cf797B387eFC3"],
 };
 
 /** Drift batches concurrent reads through Multicall3; answer each inner call on its own. */
@@ -132,15 +133,19 @@ function decodeBalancesArgs(call) {
   return decodeFunctionData({ abi: TreasuryManagerV1_3Abi, data: call.data }).args;
 }
 
-test("the v1.3.1 manager generation is pinned to the Base release and absent elsewhere", () => {
-  for (const [name, [map, expected]] of Object.entries(RELEASE_ADDRESSES)) {
-    assert.deepEqual(Object.keys(map), [String(base.id)], `${name} should be Base-only`);
-    assert.equal(getAddress(map[base.id]), getAddress(expected), name);
+test("the v1.3.1 manager generation is pinned to the Base and Robinhood releases and absent elsewhere", () => {
+  for (const [name, [map, expectedBase, expectedRobinhood]] of Object.entries(RELEASE_ADDRESSES)) {
+    assert.deepEqual(Object.keys(map).sort(), [String(robinhood.id), String(base.id)].sort(), `${name} should be Base + Robinhood only`);
+    assert.equal(getAddress(map[base.id]), getAddress(expectedBase), name);
+    assert.equal(getAddress(map[robinhood.id]), getAddress(expectedRobinhood), name);
   }
   // ClosedPermissions is factory-agnostic and reused by the new generation
   assert.equal(getAddress(ClosedPermissionsAddress[base.id]), "0x4dfc76A31A2a0110739611683a8b6C5201480fa1");
-  // the redeployed core zap, bound to the v1.3.1 factory (replaces 0x29b37dfe…)
+  assert.equal(getAddress(ClosedPermissionsAddress[robinhood.id]), "0xF0469beF728c498f3621008C65B95EDa56C82Ae3");
+  // the redeployed core zaps, bound to each chain's v1.3.1 factory (replace 0x29b37dfe… / 0x2e744436…)
   assert.equal(getAddress(FlaunchZapV1_3Address[base.id]), "0xf787d757674b21efD713fB636B16ed994bfa82A8");
+  assert.equal(getAddress(FlaunchZapV1_3Address[robinhood.id]), "0xFCd1eB4BFA9A97059CaF4D160d28C871F5f3077a");
+  assert.equal(doesChainSupportMultiAssetManagers(robinhood.id), true);
 
   assert.equal(doesChainSupportMultiAssetManagers(base.id), true);
   assert.equal(doesChainSupportMultiAssetManagers(baseSepolia.id), false);

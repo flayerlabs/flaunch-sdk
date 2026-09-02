@@ -1272,7 +1272,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.11.0 / Exports / FlaunchBackend
+@flaunch/sdk - v0.11.1 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1380,7 +1380,7 @@ src/sdk/FlaunchBackend.ts:119
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.11.1 / Exports / ReadDynamicAddressFeeSplitManager
 
 # Class: ReadDynamicAddressFeeSplitManager
 
@@ -1691,7 +1691,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:62
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadDynamicAddressFeeSplitManagerV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadDynamicAddressFeeSplitManagerV1\_3
 
 # Class: ReadDynamicAddressFeeSplitManagerV1\_3
 
@@ -2088,7 +2088,7 @@ src/clients/DynamicAddressFeeSplitManagerV1_3Client.ts:67
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadFeeEscrowV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadFeeEscrowV1\_3
 
 # Class: ReadFeeEscrowV1\_3
 
@@ -2244,7 +2244,7 @@ src/clients/FeeEscrowV1_3Client.ts:84
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadFlaunchManagerZapV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadFlaunchManagerZapV1\_3
 
 # Class: ReadFlaunchManagerZapV1\_3
 
@@ -2336,7 +2336,7 @@ src/clients/FlaunchManagerZapV1_3Client.ts:69
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.11.1 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
 
@@ -4691,7 +4691,7 @@ src/sdk/FlaunchSDK.ts:1243
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadFlaunchZapV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadFlaunchZapV1\_3
 
 # Class: ReadFlaunchZapV1\_3
 
@@ -4763,7 +4763,7 @@ src/clients/FlaunchZapV1_3Client.ts:55
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadPairedTokenRegistryV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadPairedTokenRegistryV1\_3
 
 # Class: ReadPairedTokenRegistryV1\_3
 
@@ -4829,7 +4829,7 @@ src/clients/PairedTokenRegistryV1_3Client.ts:26
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadRevenueManagerV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadRevenueManagerV1\_3
 
 # Class: ReadRevenueManagerV1\_3
 
@@ -5164,7 +5164,7 @@ src/clients/RevenueManagerV1_3Client.ts:194
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadStakingManagerV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadStakingManagerV1\_3
 
 # Class: ReadStakingManagerV1\_3
 
@@ -5579,7 +5579,7 @@ src/clients/StakingManagerV1_3Client.ts:100
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadTreasuryManagerV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadTreasuryManagerV1\_3
 
 # Class: ReadTreasuryManagerV1\_3
 
@@ -5850,7 +5850,7 @@ src/clients/TreasuryManagerV1_3Client.ts:147
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadWriteDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.11.1 / Exports / ReadWriteDynamicAddressFeeSplitManager
 
 # Class: ReadWriteDynamicAddressFeeSplitManager
 
@@ -6425,7 +6425,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:168
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadWriteDynamicAddressFeeSplitManagerV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadWriteDynamicAddressFeeSplitManagerV1\_3
 
 # Class: ReadWriteDynamicAddressFeeSplitManagerV1\_3
 
@@ -7165,7 +7165,7 @@ src/clients/DynamicAddressFeeSplitManagerV1_3Client.ts:295
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadWriteFeeEscrowV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadWriteFeeEscrowV1\_3
 
 # Class: ReadWriteFeeEscrowV1\_3
 
@@ -7363,7 +7363,7 @@ src/clients/FeeEscrowV1_3Client.ts:123
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadWriteFlaunchManagerZapV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadWriteFlaunchManagerZapV1\_3
 
 # Class: ReadWriteFlaunchManagerZapV1\_3
 
@@ -7533,7 +7533,7 @@ src/clients/FlaunchManagerZapV1_3Client.ts:69
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.11.1 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
 
@@ -11681,7 +11681,7 @@ src/sdk/FlaunchSDK.ts:3409
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadWriteFlaunchZapV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadWriteFlaunchZapV1\_3
 
 # Class: ReadWriteFlaunchZapV1\_3
 
@@ -11784,7 +11784,7 @@ src/clients/FlaunchZapV1_3Client.ts:84
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadWriteRevenueManagerV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadWriteRevenueManagerV1\_3
 
 # Class: ReadWriteRevenueManagerV1\_3
 
@@ -12356,7 +12356,7 @@ src/clients/RevenueManagerV1_3Client.ts:259
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadWriteStakingManagerV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadWriteStakingManagerV1\_3
 
 # Class: ReadWriteStakingManagerV1\_3
 
@@ -13128,7 +13128,7 @@ src/clients/StakingManagerV1_3Client.ts:281
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / ReadWriteTreasuryManagerV1\_3
+@flaunch/sdk - v0.11.1 / Exports / ReadWriteTreasuryManagerV1\_3
 
 # Class: ReadWriteTreasuryManagerV1\_3
 
@@ -13601,7 +13601,7 @@ src/clients/TreasuryManagerV1_3Client.ts:147
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / FlaunchVersion
+@flaunch/sdk - v0.11.1 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -13660,7 +13660,7 @@ src/types.ts:55
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / LiquidityMode
+@flaunch/sdk - v0.11.1 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -13690,7 +13690,7 @@ src/types.ts:72
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / Permissions
+@flaunch/sdk - v0.11.1 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -13731,7 +13731,7 @@ src/types.ts:85
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / Verifier
+@flaunch/sdk - v0.11.1 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -13799,7 +13799,7 @@ src/types.ts:68
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / Addresses
+@flaunch/sdk - v0.11.1 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -13810,7 +13810,7 @@ src/types.ts:68
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / AssetBalance
+@flaunch/sdk - v0.11.1 / Exports / AssetBalance
 
 # Interface: AssetBalance
 
@@ -13844,7 +13844,7 @@ src/clients/TreasuryManagerV1_3Client.ts:19
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / BuySwapData
+@flaunch/sdk - v0.11.1 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -13882,7 +13882,7 @@ src/utils/parseSwap.ts:22
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / CallData
+@flaunch/sdk - v0.11.1 / Exports / CallData
 
 # Interface: CallData
 
@@ -13921,7 +13921,7 @@ src/sdk/calldata.ts:22
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / CoinMetadata
+@flaunch/sdk - v0.11.1 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -14005,7 +14005,7 @@ src/types.ts:32
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / DeployManagerV1\_3Params
+@flaunch/sdk - v0.11.1 / Exports / DeployManagerV1\_3Params
 
 # Interface: DeployManagerV1\_3Params
 
@@ -14061,7 +14061,7 @@ src/clients/FlaunchManagerZapV1_3Client.ts:33
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / EscrowTokenBalance
+@flaunch/sdk - v0.11.1 / Exports / EscrowTokenBalance
 
 # Interface: EscrowTokenBalance
 
@@ -14095,7 +14095,7 @@ src/clients/FeeEscrowV1_3Client.ts:16
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
+@flaunch/sdk - v0.11.1 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
 
 # Interface: FlaunchWithDynamicSplitManagerIPFSParams
 
@@ -14369,7 +14369,7 @@ src/clients/FlaunchZapClient.ts:52
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / FlaunchWithDynamicSplitManagerParams
+@flaunch/sdk - v0.11.1 / Exports / FlaunchWithDynamicSplitManagerParams
 
 # Interface: FlaunchWithDynamicSplitManagerParams
 
@@ -14597,7 +14597,7 @@ src/clients/FlaunchZapClient.ts:52
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / IPFSParams
+@flaunch/sdk - v0.11.1 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -14644,7 +14644,7 @@ src/types.ts:45
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / PinataConfig
+@flaunch/sdk - v0.11.1 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -14665,7 +14665,7 @@ src/helpers/ipfs.ts:27
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / PoolKey
+@flaunch/sdk - v0.11.1 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -14728,7 +14728,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / PoolWithHookData
+@flaunch/sdk - v0.11.1 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -14820,7 +14820,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / SellSwapData
+@flaunch/sdk - v0.11.1 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -14858,7 +14858,7 @@ src/utils/parseSwap.ts:31
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.11.1 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -14897,7 +14897,7 @@ src/types.ts:198
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / SwapFees
+@flaunch/sdk - v0.11.1 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -14927,7 +14927,7 @@ src/utils/parseSwap.ts:17
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports / SwapLogArgs
+@flaunch/sdk - v0.11.1 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -15047,9 +15047,9 @@ src/utils/parseSwap.ts:13
 
 ---
 
-@flaunch/sdk - v0.11.0 / Exports
+@flaunch/sdk - v0.11.1 / Exports
 
-# @flaunch/sdk - v0.11.0
+# @flaunch/sdk - v0.11.1
 
 ## Table of contents
 
@@ -15204,6 +15204,7 @@ src/utils/parseSwap.ts:13
 - TICK\_SPACING
 - TickFinder
 - TokenImporterAddress
+- TokenImporterV1\_3Address
 - TreasuryManagerFactoryAddress
 - TreasuryManagerFactoryV1\_3Address
 - USDCETHPoolKeys
@@ -15719,7 +15720,7 @@ ___
 
 • `Const` **AddressFeeSplitManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:217
+src/addresses.ts:220
 
 ___
 
@@ -15807,7 +15808,7 @@ ___
 
 • `Const` **ClankerWorldVerifierAddress**: `Addresses`
 
-src/addresses.ts:249
+src/addresses.ts:266
 
 ___
 
@@ -15817,7 +15818,7 @@ ___
 
 Permissions
 
-src/addresses.ts:282
+src/addresses.ts:299
 
 ___
 
@@ -15825,7 +15826,7 @@ ___
 
 • `Const` **DopplerVerifierAddress**: `Addresses`
 
-src/addresses.ts:254
+src/addresses.ts:271
 
 ___
 
@@ -15841,7 +15842,7 @@ ___
 
 • `Const` **DynamicAddressFeeSplitManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:221
+src/addresses.ts:225
 
 ___
 
@@ -15849,7 +15850,7 @@ ___
 
 • `Const` **ERC721OwnerFeeSplitManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:225
+src/addresses.ts:230
 
 ___
 
@@ -15857,7 +15858,7 @@ ___
 
 • `Const` **FLETHAddress**: `Addresses`
 
-src/addresses.ts:335
+src/addresses.ts:353
 
 ___
 
@@ -15865,7 +15866,7 @@ ___
 
 • `Const` **FLETHHooksAddress**: `Addresses`
 
-src/addresses.ts:404
+src/addresses.ts:422
 
 ___
 
@@ -15889,7 +15890,7 @@ ___
 
 • `Const` **FastFlaunchZapAddress**: `Addresses`
 
-src/addresses.ts:411
+src/addresses.ts:429
 
 ___
 
@@ -15899,7 +15900,7 @@ ___
 
 ===========
 
-src/addresses.ts:306
+src/addresses.ts:324
 
 ___
 
@@ -15907,7 +15908,7 @@ ___
 
 • `Const` **FeeEscrowV1\_3Address**: `Addresses`
 
-src/addresses.ts:318
+src/addresses.ts:336
 
 ___
 
@@ -15923,7 +15924,7 @@ ___
 
 • `Const` **FlaunchManagerZapV1\_3Address**: `Addresses`
 
-src/addresses.ts:239
+src/addresses.ts:247
 
 ___
 
@@ -16042,7 +16043,7 @@ ___
 
 • `Const` **GroupMapperV1\_3Address**: `Addresses`
 
-src/addresses.ts:233
+src/addresses.ts:240
 
 ___
 
@@ -16089,7 +16090,7 @@ ___
 
 • `Const` **Permit2Address**: `Addresses`
 
-src/addresses.ts:444
+src/addresses.ts:462
 
 ___
 
@@ -16097,7 +16098,7 @@ ___
 
 • `Const` **PoolManagerAddress**: `Addresses`
 
-src/addresses.ts:416
+src/addresses.ts:434
 
 ___
 
@@ -16121,7 +16122,7 @@ ___
 
 • `Const` **QuoterAddress**: `Addresses`
 
-src/addresses.ts:430
+src/addresses.ts:448
 
 ___
 
@@ -16129,7 +16130,7 @@ ___
 
 • `Const` **ReferralEscrowAddress**: `Addresses`
 
-src/addresses.ts:324
+src/addresses.ts:342
 
 ___
 
@@ -16137,7 +16138,7 @@ ___
 
 • `Const` **ReferralEscrowV1\_3Address**: `Addresses`
 
-src/addresses.ts:330
+src/addresses.ts:348
 
 ___
 
@@ -16153,7 +16154,7 @@ ___
 
 • `Const` **RevenueManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:213
+src/addresses.ts:215
 
 ___
 
@@ -16161,7 +16162,7 @@ ___
 
 • `Const` **SolanaVerifierAddress**: `Addresses`
 
-src/addresses.ts:259
+src/addresses.ts:276
 
 ___
 
@@ -16177,7 +16178,7 @@ ___
 
 • `Const` **StakingManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:229
+src/addresses.ts:235
 
 ___
 
@@ -16185,7 +16186,7 @@ ___
 
 • `Const` **StateViewAddress**: `Addresses`
 
-src/addresses.ts:436
+src/addresses.ts:454
 
 ___
 
@@ -16218,7 +16219,15 @@ ___
 
 Verifiers
 
-src/addresses.ts:244
+src/addresses.ts:253
+
+___
+
+### TokenImporterV1\_3Address
+
+• `Const` **TokenImporterV1\_3Address**: `Addresses`
+
+src/addresses.ts:261
 
 ___
 
@@ -16234,7 +16243,7 @@ ___
 
 • `Const` **TreasuryManagerFactoryV1\_3Address**: `Addresses`
 
-src/addresses.ts:209
+src/addresses.ts:210
 
 ___
 
@@ -16246,7 +16255,7 @@ Index signature
 
 ▪ [chainId: `number`]: `PoolKey`
 
-src/addresses.ts:455
+src/addresses.ts:473
 
 ___
 
@@ -16254,7 +16263,7 @@ ___
 
 • `Const` **UniV4PositionManagerAddress**: `Addresses`
 
-src/addresses.ts:450
+src/addresses.ts:468
 
 ___
 
@@ -16262,7 +16271,7 @@ ___
 
 • `Const` **UniversalRouterAddress**: `Addresses`
 
-src/addresses.ts:424
+src/addresses.ts:442
 
 ___
 
@@ -16270,7 +16279,7 @@ ___
 
 • `Const` **VirtualsVerifierAddress**: `Addresses`
 
-src/addresses.ts:264
+src/addresses.ts:281
 
 ___
 
@@ -16278,7 +16287,7 @@ ___
 
 • `Const` **WhitelistVerifierAddress**: `Addresses`
 
-src/addresses.ts:269
+src/addresses.ts:286
 
 ___
 
@@ -16286,7 +16295,7 @@ ___
 
 • `Const` **WhitelistedPermissionsAddress**: `Addresses`
 
-src/addresses.ts:290
+src/addresses.ts:307
 
 ___
 
@@ -16294,7 +16303,7 @@ ___
 
 • `Const` **WhitelistedPermissionsV1\_3Address**: `Addresses`
 
-src/addresses.ts:301
+src/addresses.ts:318
 
 ___
 
@@ -16302,7 +16311,7 @@ ___
 
 • `Const` **ZoraVerifierAddress**: `Addresses`
 
-src/addresses.ts:274
+src/addresses.ts:291
 
 ___
 
@@ -16601,7 +16610,7 @@ ___
 
 Whether the v1.3.1 multi-asset manager generation (its own TreasuryManagerFactory,
 manager implementations and FlaunchManagerZap) is deployed on the given chain — Base
-mainnet only today. Managers from this generation pay out per payout asset (ETH or the
+mainnet and Robinhood Chain today. Managers from this generation pay out per payout asset (ETH or the
 coin's paired token) and are driven through the `*V1_3` manager APIs; the unsuffixed
 manager APIs keep talking to the previous generation. Gate on this before deploying,
 reading or claiming from a v1.3.1 manager.
@@ -16658,7 +16667,7 @@ Returns
 
 `boolean`
 
-src/addresses.ts:386
+src/addresses.ts:404
 
 ___
 
@@ -16718,7 +16727,7 @@ Returns
 
 `boolean`
 
-src/addresses.ts:396
+src/addresses.ts:414
 
 ___
 
