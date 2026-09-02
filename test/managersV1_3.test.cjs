@@ -35,6 +35,9 @@ const {
   GroupMapperV1_3Address,
   FlaunchManagerZapV1_3Address,
   WhitelistedPermissionsV1_3Address,
+  SupersededPositionManagerV1_3Address,
+  FlaunchPositionManagerV1_3Address,
+  getV1_3PositionManagers,
   FlaunchManagerZapV1_3Abi,
   RevenueManagerV1_3Abi,
   TreasuryManagerV1_3Abi,
@@ -142,9 +145,21 @@ test("the v1.3.1 manager generation is pinned to the Base and Robinhood releases
   // ClosedPermissions is factory-agnostic and reused by the new generation
   assert.equal(getAddress(ClosedPermissionsAddress[base.id]), "0x4dfc76A31A2a0110739611683a8b6C5201480fa1");
   assert.equal(getAddress(ClosedPermissionsAddress[robinhood.id]), "0xF0469beF728c498f3621008C65B95EDa56C82Ae3");
-  // the redeployed core zaps, bound to each chain's v1.3.1 factory (replace 0x29b37dfe… / 0x2e744436…)
+  // the core zaps bound to each chain's v1.3.1 factory: Base's 08-27 rebind, Robinhood's v1.3.3
+  // regeneration zap (deployed bound in-run; supersedes the 09-02 rebind 0xFCd1eB4B… and the
+  // factory-less 0x2e744436…). PREDICTED from the fork rehearsal — confirm from the broadcast.
   assert.equal(getAddress(FlaunchZapV1_3Address[base.id]), "0xf787d757674b21efD713fB636B16ed994bfa82A8");
-  assert.equal(getAddress(FlaunchZapV1_3Address[robinhood.id]), "0xFCd1eB4BFA9A97059CaF4D160d28C871F5f3077a");
+  assert.equal(getAddress(FlaunchZapV1_3Address[robinhood.id]), "0x740f8278Fd9C548fF50b64805337eA8Ad24b2553");
+  // Robinhood's superseded v1.3.1 hooks stay resolvable for the coins that live on them.
+  assert.deepEqual(
+    SupersededPositionManagerV1_3Address[robinhood.id].map((a) => a.toLowerCase()),
+    ["0x588c683ecc450f8b2aadb13d7f63792b840425dc", "0x6ea0edee449a287504990df8d87951b9436825dc"]
+  );
+  assert.equal(SupersededPositionManagerV1_3Address[base.id], undefined);
+  assert.deepEqual(
+    getV1_3PositionManagers(robinhood.id).map((a) => a.toLowerCase()),
+    [FlaunchPositionManagerV1_3Address[robinhood.id].toLowerCase(), "0x588c683ecc450f8b2aadb13d7f63792b840425dc", "0x6ea0edee449a287504990df8d87951b9436825dc"]
+  );
   assert.equal(doesChainSupportMultiAssetManagers(robinhood.id), true);
 
   assert.equal(doesChainSupportMultiAssetManagers(base.id), true);

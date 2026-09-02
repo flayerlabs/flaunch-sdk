@@ -1,3 +1,4 @@
+import type { Address } from "viem";
 import {
   mainnet,
   robinhood,
@@ -12,6 +13,7 @@ import {
   FlaunchZapV1_3Address,
   PairedTokenPositionManagerV1_3Address,
   PairedTokenRegistryV1_3Address,
+  SupersededPositionManagerV1_3Address,
 } from "../addresses";
 
 const multichainDeploymentChainIds = new Set<number>([
@@ -70,4 +72,17 @@ export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
     PairedTokenPositionManagerV1_3Address[chainId] !== undefined &&
     PairedTokenRegistryV1_3Address[chainId] !== undefined
   );
+}
+
+/**
+ * Every v1.3 hook that has ever been the paired-token PositionManager on a chain: the current
+ * one plus any superseded generations that still serve their pools. Use this when deciding
+ * whether an arbitrary hook address (e.g. from an indexer `Pool.positionManager`) is a v1.3 hook.
+ */
+export function getV1_3PositionManagers(chainId: number): Address[] {
+  const current = PairedTokenPositionManagerV1_3Address[chainId];
+  return [
+    ...(current ? [current] : []),
+    ...(SupersededPositionManagerV1_3Address[chainId] ?? []),
+  ];
 }

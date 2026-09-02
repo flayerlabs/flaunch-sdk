@@ -51,6 +51,7 @@ import {
   FlaunchV1_2Address,
   // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663)
   FlaunchPositionManagerV1_3Address,
+  SupersededPositionManagerV1_3Address,
   FlaunchZapV1_3Address,
   PairedTokenPositionManagerV1_3Address,
   PairedTokenRegistryV1_3Address,
@@ -1097,10 +1098,16 @@ export class ReadFlaunchSDK {
   getPoolCreatedFromLogs(logs: readonly Log[]): PoolCreatedEventData | null {
     const positionManagerV1_3 =
       PairedTokenPositionManagerV1_3Address[this.chainId];
+    // A chain can carry more than one v1.3 hook generation (Robinhood: the v1.3.1 hooks were
+    // regenerated as v1.3.3); a receipt from either is a v1.3 PoolCreated.
+    const v1_3Hooks = [
+      ...(positionManagerV1_3 ? [positionManagerV1_3] : []),
+      ...(SupersededPositionManagerV1_3Address[this.chainId] ?? []),
+    ];
 
-    if (positionManagerV1_3) {
+    if (v1_3Hooks.length > 0) {
       for (const log of logs) {
-        if (!isAddressEqual(log.address, positionManagerV1_3)) {
+        if (!v1_3Hooks.some((hook) => isAddressEqual(log.address, hook))) {
           continue;
         }
 

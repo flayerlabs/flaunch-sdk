@@ -2,6 +2,18 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.11.2] - UNRELEASED (prepared 2026-09-02)
+
+### Changed
+
+- **Robinhood v1.3.3 hook regeneration.** The 2026-08-21 v1.3.1 hooks on Robinhood were wired to a pre-#285 `InternalSwapPool`; the generation was regenerated onto a fresh, fixed ISP with the SAME `PairedTokenRegistry`, multi-token `FeeEscrow`, `TreasuryManagerFactory` and managers. The 4663 rows of `FlaunchPositionManagerV1_3Address`, `PairedTokenPositionManagerV1_3Address`, `AnyPositionManagerV1_3Address`, `FlaunchV1_3Address`, `AnyFlaunchV1_3Address`, `BidWallV1_3Address`, `AnyBidWallV1_3Address`, `FlaunchZapV1_3Address`, `TokenImporterV1_3Address` and `ReferralEscrowV1_3Address` now point at the v1.3.3 contracts. Registry, escrow, factory, manager, flETH and PoolSwap rows are unchanged. (Addresses marked PREDICTED in `src/addresses.ts` are confirmed against the broadcast before publish.)
+
+### Added
+
+- `SupersededPositionManagerV1_3Address: Record<chainId, Address[]>` — hooks a chain's v1.3 generation moved off but that still serve the pools launched on them (Robinhood: `0x588c683e…`, `0x6ea0edee…`). Coins never migrate, so anything resolving "which hook is this coin on" must consult these alongside the current maps.
+- `getV1_3PositionManagers(chainId)` (helpers) — current + superseded v1.3 hooks in one list.
+- `getPoolCreatedFromLogs()` accepts `PoolCreated` from any current or superseded v1.3 hook on the chain.
+
 ## [0.11.1] - 2026-09-02
 
 ### Added
