@@ -223,6 +223,7 @@ import { ReadTrustedSignerFeeCalculator } from "clients/TrustedSignerFeeCalculat
 import {
   isChainSupported,
   isMultichainDeployment,
+  getV1_3PositionManagers,
   doesChainSupportMultiAssetManagers,
   doesChainSupportPairedTokenLaunch,
 } from "helpers/supportedChains";
@@ -718,12 +719,90 @@ export class ReadFlaunchSDK {
     return this.readFlaunchZapV1_3.calculateFee(params);
   }
 
+  /** Per-coin hook resolution results on multichain deployments (a coin never changes hook). */
+  private multichainCoinHooks = new Map<string, { hook: Address; version: FlaunchVersion } | null>();
+
+  /**
+   * On a multichain deployment a chain can serve several hook generations at once (Robinhood:
+   * the v1.2 multichain hook, the 2026-08-21 v1.3.1 hooks and the v1.3.3 regeneration). Every
+   * pool key — and so every quote and swap — derives from the hook the coin was created on, so
+   * it has to be probed per coin rather than taken from the chain's current default. Probes the
+   * current and superseded v1.3 hooks first, then the multichain (v1.2) hook.
+   * @returns The coin's hook and version, or null when no hook on this chain knows the coin.
+   */
+  protected async probeMultichainCoinHook(
+    coinAddress: Address
+  ): Promise<{ hook: Address; version: FlaunchVersion } | null> {
+    const key = coinAddress.toLowerCase();
+    const cached = this.multichainCoinHooks.get(key);
+    if (cached !== undefined) return cached;
+
+    const isValidOn = async (hook: Address) => {
+      try {
+        return await new ReadFlaunchPositionManagerV1_2(
+          hook,
+          this.drift
+        ).isValidCoin(coinAddress);
+      } catch {
+        return false;
+      }
+    };
+
+    let result: { hook: Address; version: FlaunchVersion } | null = null;
+    for (const hook of getV1_3PositionManagers(this.chainId)) {
+      if (await isValidOn(hook)) {
+        result = { hook, version: FlaunchVersion.V1_3 };
+        break;
+      }
+    }
+    if (!result) {
+      const multichainHook = FlaunchPositionManagerMultichainAddress[this.chainId];
+      if (multichainHook && (await isValidOn(multichainHook))) {
+        result = { hook: multichainHook, version: FlaunchVersion.V1_2 };
+      }
+    }
+
+    this.multichainCoinHooks.set(key, result);
+    return result;
+  }
+
+  /**
+   * The hook (PositionManager) a coin's pool lives on. On Base this is the position manager
+   * for the coin's version; on a multichain deployment it is probed per coin (see
+   * `probeMultichainCoinHook`), falling back to the chain's multichain hook for an unknown coin.
+   * @param coinAddress - The coin to resolve
+   * @param version - Optional version override (skips detection on Base; on multichain a
+   *   non-v1.3 version short-circuits to the multichain hook)
+   */
+  async getPositionManagerAddressForCoin(
+    coinAddress: Address,
+    version?: FlaunchVersion
+  ): Promise<Address> {
+    if (!isMultichainDeployment(this.chainId)) {
+      return this.getPositionManagerAddress(
+        await this.determineCoinVersion(coinAddress, version)
+      );
+    }
+    if (
+      version !== undefined &&
+      version !== FlaunchVersion.V1_3 &&
+      version !== FlaunchVersion.ANY
+    ) {
+      return FlaunchPositionManagerMultichainAddress[this.chainId];
+    }
+    const probed = await this.probeMultichainCoinHook(coinAddress);
+    return probed?.hook ?? FlaunchPositionManagerMultichainAddress[this.chainId];
+  }
+
   /**
    * Checks if a given coin address is a valid Flaunch coin (supports all versions)
    * @param coinAddress - The address of the coin to check
    * @returns Promise<boolean> - True if the coin is valid, false otherwise
    */
   async isValidCoin(coinAddress: Address) {
+    if (isMultichainDeployment(this.chainId)) {
+      return (await this.probeMultichainCoinHook(coinAddress)) !== null;
+    }
     return (
       (this.readPositionManagerV1_3
         ? await this.readPositionManagerV1_3.isValidCoin(coinAddress)
@@ -741,6 +820,11 @@ export class ReadFlaunchSDK {
    * @returns Promise<FlaunchVersion> - The version of the coin
    */
   async getCoinVersion(coinAddress: Address): Promise<FlaunchVersion> {
+    if (isMultichainDeployment(this.chainId)) {
+      const probed = await this.probeMultichainCoinHook(coinAddress);
+      if (probed) return probed.version;
+      throw new Error(`Unknown coin version for address: ${coinAddress}`);
+    }
     if (
       this.readPositionManagerV1_3 &&
       (await this.readPositionManagerV1_3.isValidCoin(coinAddress))
@@ -1954,10 +2038,10 @@ export class ReadFlaunchSDK {
    * @returns Promise<string> - The pool ID
    */
   async poolId(coinAddress: Address, version?: FlaunchVersion) {
-    let hookAddress: Address;
-
-    const coinVersion = await this.determineCoinVersion(coinAddress, version);
-    hookAddress = this.getPositionManagerAddress(coinVersion);
+    const hookAddress = await this.getPositionManagerAddressForCoin(
+      coinAddress,
+      version
+    );
 
     return getPoolId(
       orderPoolKey({
@@ -2053,12 +2137,15 @@ export class ReadFlaunchSDK {
     amountIn: bigint;
     intermediatePoolKey?: PoolWithHookData;
   }) {
-    const coinVersion = await this.determineCoinVersion(coinAddress, version);
+    const hookAddress = await this.getPositionManagerAddressForCoin(
+      coinAddress,
+      version
+    );
 
     return this.readQuoter.getSellQuoteExactInput({
       coinAddress,
       amountIn,
-      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      positionManagerAddress: hookAddress,
       intermediatePoolKey,
     });
   }
@@ -2088,12 +2175,15 @@ export class ReadFlaunchSDK {
     hookData?: Hex;
     userWallet?: Address;
   }) {
-    const coinVersion = await this.determineCoinVersion(coinAddress, version);
+    const hookAddress = await this.getPositionManagerAddressForCoin(
+      coinAddress,
+      version
+    );
 
     return this.readQuoter.getBuyQuoteExactInput({
       coinAddress,
       amountIn,
-      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      positionManagerAddress: hookAddress,
       intermediatePoolKey,
       hookData,
       userWallet,
@@ -2125,12 +2215,15 @@ export class ReadFlaunchSDK {
     hookData?: Hex;
     userWallet?: Address;
   }) {
-    const coinVersion = await this.determineCoinVersion(coinAddress, version);
+    const hookAddress = await this.getPositionManagerAddressForCoin(
+      coinAddress,
+      version
+    );
 
     return this.readQuoter.getBuyQuoteExactOutput({
       coinAddress,
       coinOut: amountOut,
-      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      positionManagerAddress: hookAddress,
       intermediatePoolKey,
       hookData,
       userWallet,
@@ -3173,7 +3266,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response for the buy operation
    */
   async buyCoin(params: BuyCoinParams, version?: FlaunchVersion) {
-    const coinVersion = await this.determineCoinVersion(
+    const hookAddress = await this.getPositionManagerAddressForCoin(
       params.coinAddress,
       version
     );
@@ -3194,7 +3287,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
           amount: await this.readQuoter.getBuyQuoteExactInput({
             coinAddress: params.coinAddress,
             amountIn,
-            positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+            positionManagerAddress: hookAddress,
             intermediatePoolKey: params.intermediatePoolKey,
             hookData: params.hookData,
             userWallet: sender,
@@ -3212,7 +3305,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
           amount: await this.readQuoter.getBuyQuoteExactOutput({
             coinAddress: params.coinAddress,
             coinOut: amountOut,
-            positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+            positionManagerAddress: hookAddress,
             intermediatePoolKey: params.intermediatePoolKey,
             hookData: params.hookData,
             userWallet: sender,
@@ -3235,7 +3328,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       amountOutMin: amountOutMin,
       amountOut: amountOut,
       amountInMax: amountInMax,
-      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      positionManagerAddress: hookAddress,
       intermediatePoolKey: params.intermediatePoolKey,
       permitSingle: params.permitSingle,
       signature: params.signature,
@@ -3265,7 +3358,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response for the sell operation
    */
   async sellCoin(params: SellCoinParams, version?: FlaunchVersion) {
-    const coinVersion = await this.determineCoinVersion(
+    const hookAddress = await this.getPositionManagerAddressForCoin(
       params.coinAddress,
       version
     );
@@ -3279,7 +3372,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         amount: await this.readQuoter.getSellQuoteExactInput({
           coinAddress: params.coinAddress,
           amountIn: params.amountIn,
-          positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+          positionManagerAddress: hookAddress,
           intermediatePoolKey: params.intermediatePoolKey,
         }),
         slippage: (params.slippagePercent / 100).toFixed(18).toString(),
@@ -3299,7 +3392,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       permitSingle: params.permitSingle,
       signature: params.signature,
       referrer: params.referrer ?? null,
-      positionManagerAddress: this.getPositionManagerAddress(coinVersion),
+      positionManagerAddress: hookAddress,
       intermediatePoolKey: params.intermediatePoolKey,
     });
 
