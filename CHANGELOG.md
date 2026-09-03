@@ -2,6 +2,13 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.11.4] - UNRELEASED (prepared 2026-09-03)
+
+### Added
+
+- **Base Sepolia (84532) at parity.** flaunch-contracts v1.3.3 regeneration (blocks 46349133–46349202) and the v1.3.1 multi-asset manager generation (blocks 46348872–46348885) landed on Base Sepolia on 2026-09-03. Every `*V1_3Address` map gains (or updates) its `baseSepolia` row: hooks `0x8D346f24…` / `0x9AbfbDc3…` (the same CREATE3 addresses as Robinhood), zap `0x0c560537…` bound to factory `0x98dfdd0A…`, Flaunch/AnyFlaunch `0xc17a8523…` / `0x2154c604…`, BidWalls, ReferralEscrow, TokenImporter, and the full manager set — so `doesChainSupportMultiAssetManagers(84532)` is now `true`. `PairedTokenRegistryV1_3Address` and `FeeEscrowV1_3Address` are unchanged (retained on-chain).
+- `SupersededPositionManagerV1_3Address[baseSepolia.id]` = the `.vpt2` hooks `0x5558e727…` / `0x28118f40…`, which keep serving the pools launched on them.
+
 ## [0.11.3] - 2026-09-03
 
 ### Fixed

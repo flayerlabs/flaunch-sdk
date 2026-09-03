@@ -21,7 +21,7 @@ export const FlaunchZapAddress: Addresses = {
 // at one. Base Sepolia's zap is still factory-less.
 export const FlaunchZapV1_3Address: Addresses = {
   [base.id]: "0xf787d757674b21efd713fb636b16ed994bfa82a8",
-  [baseSepolia.id]: "0xe8476aa6508f0c31e3126f2340d18e9c6fbf8dd3",
+  [baseSepolia.id]: "0x0c560537301396683c150eade42277a04b96e6d8", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202); bound to factory 0x98dfdd0A…
   [robinhood.id]: "0x740f8278Fd9C548fF50b64805337eA8Ad24b2553",
 };
 
@@ -64,6 +64,7 @@ export const FlaunchPositionManagerV1_2Address: Addresses = {
 // superseded v1.3.1 hooks still serve their pools — see SupersededPositionManagerV1_3Address.
 export const FlaunchPositionManagerV1_3Address: Addresses = {
   [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
+  [baseSepolia.id]: "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0x8D346f24278C5CD786309161aAC0fC2bbe4c25dc",
 };
 
@@ -78,13 +79,18 @@ export const SupersededPositionManagerV1_3Address: Record<number, Address[]> = {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // v1.3.1 PositionManager (CREATE3, shared with Base)
     "0x6ea0edee449a287504990df8d87951b9436825dc", // v1.3.1 AnyPositionManager
   ],
+  // Base Sepolia `.vpt2` hooks (2026-08-06), superseded by the v1.3.3 regeneration on 2026-09-03
+  [baseSepolia.id]: [
+    "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc", // `.vpt2` PositionManager
+    "0x28118f40eca9b884beb42b0196409a73269525dc", // `.vpt2` AnyPositionManager
+  ],
 };
 
 // PositionManagers used by the paired-token launch path. This is separate from
 // FlaunchPositionManagerV1_3Address because that map also drives version routing.
 export const PairedTokenPositionManagerV1_3Address: Addresses = {
   [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
-  [baseSepolia.id]: "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc",
+  [baseSepolia.id]: "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0x8D346f24278C5CD786309161aAC0fC2bbe4c25dc",
 };
 
@@ -102,6 +108,7 @@ export const AnyPositionManagerAddress: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyPositionManagerV1_3Address: Addresses = {
   [base.id]: "0x6ea0edee449a287504990df8d87951b9436825dc",
+  [baseSepolia.id]: "0x9abfbdc34a294de5210c0889f21d5af54c4965dc", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0x9AbfbDc34A294De5210C0889f21D5Af54C4965DC",
 };
 
@@ -123,6 +130,7 @@ export const FlaunchV1_2Address: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const FlaunchV1_3Address: Addresses = {
   [base.id]: "0x475a09618bfd00fa4cb03b8504e95b62075e6f7d",
+  [baseSepolia.id]: "0xc17a8523290ea839b4c1ddef121d8736a06f5623", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0x373c037C90a681079c3343ddAFCEEa8d9D8DE96E",
 };
 
@@ -134,6 +142,7 @@ export const AnyFlaunchAddress: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyFlaunchV1_3Address: Addresses = {
   [base.id]: "0x299c7e6992a4630d77a8cbd60aa78e17189e53f7",
+  [baseSepolia.id]: "0x2154c604df568a5285284d1c4918dc98c39240df", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0x1bbbD15A6D5176edc7B42f2cc6cA800D9d74015D",
 };
 
@@ -162,6 +171,7 @@ export const BidWallV1_1Address: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const BidWallV1_3Address: Addresses = {
   [base.id]: "0x0dae90b70f62ce3b1d5278f4763bd1f595d6a687",
+  [baseSepolia.id]: "0xdedfd72f5e0555bd21e3c3d94297dee2a435b366", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0xB95ad380B6C2F39b67d8582Eb198ba3881Aa06D4",
 };
 
@@ -173,6 +183,7 @@ export const AnyBidWallAddress: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyBidWallV1_3Address: Addresses = {
   [base.id]: "0x9d58ca8011096ad711babf0d990c45b9d5bb047d",
+  [baseSepolia.id]: "0x4c8a5c0fe00448c5bbbd0d7aec95c9ef3b81262b", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0xf32316145caf0A381FA587A7CE1bf850d58Af3aC",
 };
 
@@ -225,36 +236,43 @@ export const BuyBackManagerAddress: Addresses = {
 // deployed from the old factory keep working through the unsuffixed APIs.
 export const TreasuryManagerFactoryV1_3Address: Addresses = {
   [base.id]: "0xB03Be6c735ef90189D6a22bBC8F6A45a33348fDe",
+  [baseSepolia.id]: "0x98dfdd0aac46c85fa35d67941d394019b7e3a18d", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
   [robinhood.id]: "0xE1eBcD62AEBd327A4c22dB9e68A8E81119a7eABF",
 };
 
 export const RevenueManagerV1_3Address: Addresses = {
   [base.id]: "0x908D692E628073A5B644Bc32B8dF57A5d1842288",
+  [baseSepolia.id]: "0x0cf6bdf0a85a9d6763361037985b76c8893553af", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
   [robinhood.id]: "0xFc28B339376018727eFcD45fdb257D0A0861A391",
 };
 
 export const AddressFeeSplitManagerV1_3Address: Addresses = {
   [base.id]: "0x7dC776cf57DacA91b315fe4F8803577dAb560ba5",
+  [baseSepolia.id]: "0x7397390360bd9d559d9277e60d47b99933791232", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
   [robinhood.id]: "0x7dc0f14204841e0314eB0265a0c420995F200243",
 };
 
 export const DynamicAddressFeeSplitManagerV1_3Address: Addresses = {
   [base.id]: "0xC4a0B79A0dB1F7F67da97E7F9A8867B6CaF017b2",
+  [baseSepolia.id]: "0xd37aee3edebf59f149b5d3b29b6ad2239f8a6b00", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
   [robinhood.id]: "0x1969bcF2779D53FeEA95480a7ab79f7cEfeE1681",
 };
 
 export const ERC721OwnerFeeSplitManagerV1_3Address: Addresses = {
   [base.id]: "0xDbFA9d3cab72EAE6Ba44ebC27175706aA451d9c0",
+  [baseSepolia.id]: "0xce84bdd578c60e98e79a3a05392010b443ddaa9e", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
   [robinhood.id]: "0x51BdE7C1e2Ea54949C015F4f3ED3CAE185543C0b",
 };
 
 export const StakingManagerV1_3Address: Addresses = {
   [base.id]: "0x72b9192017361eA00cDc1Cf1AC0F178cf89920cA",
+  [baseSepolia.id]: "0x4d5616c04e59ce47b40e54c1d106363da74c1a2e", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
   [robinhood.id]: "0xd992F465d55B005E8D2Aff9fcE977Cb78f5652e0",
 };
 
 export const GroupMapperV1_3Address: Addresses = {
   [base.id]: "0x4a68638179De37163d86B10e6B4b927CA1a0dE87",
+  [baseSepolia.id]: "0x41964dd84f25cd5830f5c4deeb54efab3ed7e087", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
   [robinhood.id]: "0xBdbF379f9EdFB5993FC00b41AAEfeE8475eAC0Ac",
 };
 
@@ -262,6 +280,7 @@ export const GroupMapperV1_3Address: Addresses = {
 // straight into a manager stays with the core FlaunchZap.
 export const FlaunchManagerZapV1_3Address: Addresses = {
   [base.id]: "0xD7E0c1D2B2a588cEC3b2Bdc9428FfE59b739749B",
+  [baseSepolia.id]: "0xf175a370eb26ea26c42caaecd10ee723ed844c50", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
   [robinhood.id]: "0xAf037090FF86EFdc8d4ba82728aC93042ad1EC73",
 };
 
@@ -276,6 +295,7 @@ export const TokenImporterAddress: Addresses = {
 // callers importing into the old hooks.
 export const TokenImporterV1_3Address: Addresses = {
   [base.id]: "0xea78c26690b5a0dde2a5a8db7760b5da79bfd76e",
+  [baseSepolia.id]: "0xc65fc67fa953869df97ab2dba96fa58f2bdc9891", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0xf7579C3cb8607F6CE00311465d28Ac45666f39Ad",
 };
 
@@ -333,6 +353,7 @@ export const WhitelistedPermissionsAddress: Addresses = {
 // from the v1.3.1 factory need this instance. ClosedPermissions is factory-agnostic and reused.
 export const WhitelistedPermissionsV1_3Address: Addresses = {
   [base.id]: "0xaCE028CB08A19C4d2a6e442516EbA7d114C09Af9",
+  [baseSepolia.id]: "0xbe6245b2c8d59618a080bd5b2d67b3c813a9ab7c", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
   [robinhood.id]: "0xF772256B811D2241488d3d659E9cf797B387eFC3",
 };
 /** =========== */
@@ -363,6 +384,7 @@ export const ReferralEscrowAddress: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const ReferralEscrowV1_3Address: Addresses = {
   [base.id]: "0xe86bfebc4f094d36074833618779d279a9af01aa",
+  [baseSepolia.id]: "0x7c6088c1185fbb770deb1ca7ddeed4ba57659663", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0xB9827C0c7Cb61be4D58700B114E34D8448889eD8",
 };
 

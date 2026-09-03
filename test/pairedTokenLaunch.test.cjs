@@ -84,7 +84,8 @@ test("paired-token launch addresses and capability cover deployed V1.3 chains", 
 
   assert.equal(doesChainSupportPairedTokenLaunch(mainnet.id), false);
   assert.equal(doesChainSupportPairedTokenLaunch(999_999), false);
-  assert.equal(FlaunchPositionManagerV1_3Address[baseSepolia.id], undefined);
+  // Base Sepolia gained a full v1.3 generation on 2026-09-03 (v1.3.3 regeneration)
+  assert.equal(FlaunchPositionManagerV1_3Address[baseSepolia.id].toLowerCase(), "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc");
 });
 
 test("paired-token clients preserve named fee outputs and explicit spend limits", async () => {
