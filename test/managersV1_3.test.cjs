@@ -147,7 +147,7 @@ test("the v1.3.1 manager generation is pinned to the Base and Robinhood releases
   assert.equal(getAddress(ClosedPermissionsAddress[robinhood.id]), "0xF0469beF728c498f3621008C65B95EDa56C82Ae3");
   // the core zaps bound to each chain's v1.3.1 factory: Base's 08-27 rebind, Robinhood's v1.3.3
   // regeneration zap (deployed bound in-run; supersedes the 09-02 rebind 0xFCd1eB4B… and the
-  // factory-less 0x2e744436…). PREDICTED from the fork rehearsal — confirm from the broadcast.
+  // factory-less 0x2e744436…). Live on 4663 since 2026-09-03.
   assert.equal(getAddress(FlaunchZapV1_3Address[base.id]), "0xf787d757674b21efD713fB636B16ed994bfa82A8");
   assert.equal(getAddress(FlaunchZapV1_3Address[robinhood.id]), "0x740f8278Fd9C548fF50b64805337eA8Ad24b2553");
   // Robinhood's superseded v1.3.1 hooks stay resolvable for the coins that live on them.
