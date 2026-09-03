@@ -76,6 +76,19 @@ const RELEASE_ADDRESSES = {
   FlaunchManagerZapV1_3Address: [FlaunchManagerZapV1_3Address, "0xD7E0c1D2B2a588cEC3b2Bdc9428FfE59b739749B", "0xAf037090FF86EFdc8d4ba82728aC93042ad1EC73"],
   WhitelistedPermissionsV1_3Address: [WhitelistedPermissionsV1_3Address, "0xaCE028CB08A19C4d2a6e442516EbA7d114C09Af9", "0xF772256B811D2241488d3d659E9cf797B387eFC3"],
 };
+// Base Sepolia (84532) — v1.3.1 managers deployed 2026-09-03 (blocks 46348872–46348885)
+const SEPOLIA_RELEASE_ADDRESSES = {
+  TreasuryManagerFactoryV1_3Address: "0x98dfdd0AAc46c85FA35d67941d394019b7e3a18d",
+  RevenueManagerV1_3Address: "0x0cf6BdF0a85A9d6763361037985B76C8893553Af",
+  AddressFeeSplitManagerV1_3Address: "0x7397390360Bd9D559D9277E60d47b99933791232",
+  DynamicAddressFeeSplitManagerV1_3Address: "0xD37aeE3eDebf59F149b5D3b29B6Ad2239F8A6B00",
+  ERC721OwnerFeeSplitManagerV1_3Address: "0xcE84bdD578c60E98E79A3A05392010b443DdaA9e",
+  StakingManagerV1_3Address: "0x4D5616c04e59CE47b40e54c1D106363DA74c1a2E",
+  GroupMapperV1_3Address: "0x41964Dd84F25Cd5830F5c4deEb54eFab3eD7E087",
+  FlaunchManagerZapV1_3Address: "0xF175A370Eb26Ea26C42caAEcD10EE723ed844C50",
+  WhitelistedPermissionsV1_3Address: "0xBe6245B2C8d59618A080BD5B2d67B3c813a9AB7c",
+};
+
 
 /** Drift batches concurrent reads through Multicall3; answer each inner call on its own. */
 const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
@@ -136,12 +149,23 @@ function decodeBalancesArgs(call) {
   return decodeFunctionData({ abi: TreasuryManagerV1_3Abi, data: call.data }).args;
 }
 
-test("the v1.3.1 manager generation is pinned to the Base and Robinhood releases and absent elsewhere", () => {
+test("the v1.3.1 manager generation is pinned to the Base, Robinhood and Base Sepolia releases and absent elsewhere", () => {
   for (const [name, [map, expectedBase, expectedRobinhood]] of Object.entries(RELEASE_ADDRESSES)) {
-    assert.deepEqual(Object.keys(map).sort(), [String(robinhood.id), String(base.id)].sort(), `${name} should be Base + Robinhood only`);
+    assert.deepEqual(
+      Object.keys(map).sort(),
+      [String(robinhood.id), String(base.id), String(baseSepolia.id)].sort(),
+      `${name} should be Base + Robinhood + Base Sepolia only`
+    );
     assert.equal(getAddress(map[base.id]), getAddress(expectedBase), name);
     assert.equal(getAddress(map[robinhood.id]), getAddress(expectedRobinhood), name);
+    assert.equal(getAddress(map[baseSepolia.id]), getAddress(SEPOLIA_RELEASE_ADDRESSES[name]), `${name} (Base Sepolia)`);
   }
+  assert.equal(doesChainSupportMultiAssetManagers(baseSepolia.id), true);
+  // Base Sepolia's `.vpt2` hooks were superseded by the v1.3.3 regeneration on 2026-09-03
+  assert.deepEqual(
+    SupersededPositionManagerV1_3Address[baseSepolia.id].map((a) => a.toLowerCase()),
+    ["0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc", "0x28118f40eca9b884beb42b0196409a73269525dc"]
+  );
   // ClosedPermissions is factory-agnostic and reused by the new generation
   assert.equal(getAddress(ClosedPermissionsAddress[base.id]), "0x4dfc76A31A2a0110739611683a8b6C5201480fa1");
   assert.equal(getAddress(ClosedPermissionsAddress[robinhood.id]), "0xF0469beF728c498f3621008C65B95EDa56C82Ae3");
@@ -163,7 +187,7 @@ test("the v1.3.1 manager generation is pinned to the Base and Robinhood releases
   assert.equal(doesChainSupportMultiAssetManagers(robinhood.id), true);
 
   assert.equal(doesChainSupportMultiAssetManagers(base.id), true);
-  assert.equal(doesChainSupportMultiAssetManagers(baseSepolia.id), false);
+  assert.equal(doesChainSupportMultiAssetManagers(baseSepolia.id), true); // since 2026-09-03
   assert.equal(doesChainSupportMultiAssetManagers(mainnet.id), false);
 });
 
@@ -434,7 +458,7 @@ test("revenueManagerPayoutAssets and treasuryManagerBalancesV1_3 enumerate the m
 });
 
 test("chains without the v1.3.1 manager generation say so before anything is sent", async () => {
-  for (const chain of [mainnet, baseSepolia]) {
+  for (const chain of [mainnet]) {
     const requests = [];
     const sdk = calldataSdk(chain, (call) => {
       requests.push(call);
