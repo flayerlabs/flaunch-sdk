@@ -2553,13 +2553,10 @@ export class ReadFlaunchSDK {
 
     // If no current tick is provided from the above calculation, get it from the pool state
     if (!currentTick) {
-      const version = await this.determineCoinVersion(
-        coinAddress,
-        params.version
-      );
-
       const poolState = await this.readStateView.poolSlot0({
-        poolId: getPoolId(this.createPoolKey(coinAddress, version)),
+        poolId: getPoolId(
+          await this.createPoolKeyForCoin(coinAddress, params.version)
+        ),
       });
       currentTick = poolState.tick;
     }
@@ -2659,13 +2656,10 @@ export class ReadFlaunchSDK {
 
     // get the current pool state for the coin
     if (!currentTick) {
-      const version = await this.determineCoinVersion(
-        coinAddress,
-        params.version
-      );
-
       const poolState = await this.readStateView.poolSlot0({
-        poolId: getPoolId(this.createPoolKey(coinAddress, version)),
+        poolId: getPoolId(
+          await this.createPoolKeyForCoin(coinAddress, params.version)
+        ),
       });
       currentTick = poolState.tick;
     }
@@ -2875,6 +2869,25 @@ export class ReadFlaunchSDK {
       fee: 0,
       tickSpacing: this.TICK_SPACING,
       hooks: this.getPositionManagerAddress(version),
+    });
+  }
+
+  /**
+   * `createPoolKey` resolved by coin rather than by version: on a multichain deployment the
+   * hook is probed per coin (see `getPositionManagerAddressForCoin`), so the key matches the
+   * pool the coin was actually created on. The liquidity helpers use this.
+   */
+  protected async createPoolKeyForCoin(
+    coinAddress: Address,
+    version?: FlaunchVersion
+  ) {
+    const flethAddress = FLETHAddress[this.chainId];
+    return orderPoolKey({
+      currency0: coinAddress,
+      currency1: flethAddress,
+      fee: 0,
+      tickSpacing: this.TICK_SPACING,
+      hooks: await this.getPositionManagerAddressForCoin(coinAddress, version),
     });
   }
 }
@@ -3777,7 +3790,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       coinAddress,
       params.version
     );
-    const poolKey = this.createPoolKey(coinAddress, version);
+    const poolKey = await this.createPoolKeyForCoin(coinAddress, params.version);
 
     // Check if we need to calculate values or use direct values
     if ("tickLower" in params) {
@@ -4158,7 +4171,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       coinAddress,
       params.version
     );
-    const poolKey = this.createPoolKey(coinAddress, version);
+    const poolKey = await this.createPoolKeyForCoin(coinAddress, params.version);
 
     let currentTick: number;
 

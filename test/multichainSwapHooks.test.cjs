@@ -6,6 +6,7 @@ const {
   FlaunchVersion,
   PairedTokenPositionManagerV1_3Address,
   ReadFlaunchSDK,
+  ReadWriteFlaunchSDK,
   SupersededPositionManagerV1_3Address,
 } = require("../dist/index.cjs.js");
 
@@ -128,4 +129,20 @@ test("an explicit non-v1.3 version short-circuits to the multichain hook without
     lower(V12_HOOK)
   );
   assert.equal(reads.length, 0);
+});
+
+test("add-liquidity helpers resolve the coin's hook before touching pool state", async () => {
+  const { drift, reads } = makeDrift(pools);
+  // The liquidity helpers live on the read-write SDK. On Robinhood the SDK has no state-view
+  // client, so the helper stops at `readStateView` — but only AFTER building the pool key, which
+  // must now come from a per-coin probe rather than the chain's default hook.
+  const sdk = new ReadWriteFlaunchSDK(robinhood.id, drift);
+
+  await assert.rejects(
+    () => sdk.getSingleSidedCoinAddLiquidityCalls({ coinAddress: V133_COIN, coinAmount: 10n ** 18n }),
+    /readStateView is not supported on chain 4663/
+  );
+  const probes = reads.filter((r) => r.fn === "poolKey" && lower(r.args._token) === lower(V133_COIN));
+  assert.equal(probes.length, 1, "the coin's hook was probed exactly once");
+  assert.equal(lower(probes[0].address), lower(V133_HOOK));
 });
