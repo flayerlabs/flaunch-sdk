@@ -13,15 +13,16 @@ export const FlaunchZapAddress: Addresses = {
   [baseSepolia.id]: "0x25b747aeca2612b9804b5c3bb272a3daefdc6eaa",
 };
 
-// v1.3.1 (GitHub release v1.3.1) paired-token FlaunchZap deployments, each bound to its chain's
-// v1.3.1 TreasuryManagerFactory. Base: redeployed 2026-08-27 (replaces 0x29b37dfe…). Robinhood:
-// redeployed 2026-09-02 (FLA2-388; replaces 0x2e744436…). The replaced zaps had no factory and
-// route a manager launch into the manager IMPLEMENTATION, stranding the launch NFT — never point
-// a manager launch back at them. Base Sepolia's zap is still factory-less.
+// v1.3.x paired-token FlaunchZap deployments, each bound to its chain's v1.3.1
+// TreasuryManagerFactory. Base: redeployed 2026-08-27 (replaces the factory-less 0x29b37dfe…).
+// Robinhood: the v1.3.3 regeneration's zap, deployed bound in-run 2026-09-03 (supersedes the
+// 09-02 rebind 0xFCd1eB4B… and the factory-less 0x2e744436…). Factory-less zaps route a manager
+// launch into the manager IMPLEMENTATION, stranding the launch NFT — never point a manager launch
+// at one. Base Sepolia's zap is still factory-less.
 export const FlaunchZapV1_3Address: Addresses = {
   [base.id]: "0xf787d757674b21efd713fb636b16ed994bfa82a8",
   [baseSepolia.id]: "0xe8476aa6508f0c31e3126f2340d18e9c6fbf8dd3",
-  [robinhood.id]: "0xFCd1eB4BFA9A97059CaF4D160d28C871F5f3077a",
+  [robinhood.id]: "0x740f8278Fd9C548fF50b64805337eA8Ad24b2553",
 };
 
 export const FlaunchZapMultichainAddress: Addresses = {
@@ -58,10 +59,25 @@ export const FlaunchPositionManagerV1_2Address: Addresses = {
   [baseSepolia.id]: "0x4e7cb1e6800a7b297b38bddcecaf9ca5b6616fdc",
 };
 
-// v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
+// v1.3.x paired-token hooks. Base: v1.3.1 (2026-08-20). Robinhood: the v1.3.3 regeneration
+// (fresh post-#285 InternalSwapPool; same registry / escrow / factory as v1.3.1). Robinhood's
+// superseded v1.3.1 hooks still serve their pools — see SupersededPositionManagerV1_3Address.
 export const FlaunchPositionManagerV1_3Address: Addresses = {
   [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
-  [robinhood.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // CREATE3 — same address as Base
+  [robinhood.id]: "0x8D346f24278C5CD786309161aAC0fC2bbe4c25dc",
+};
+
+/**
+ * Hooks that a chain's v1.3 generation has moved OFF but that still serve the pools launched on
+ * them (coins never migrate). Consumers resolving "which hook is this coin on" must consult
+ * these alongside the current maps. Robinhood 2026-08-21 -> 2026-09-xx: the v1.3.1 hooks were
+ * regenerated onto a fixed InternalSwapPool (v1.3.3).
+ */
+export const SupersededPositionManagerV1_3Address: Record<number, Address[]> = {
+  [robinhood.id]: [
+    "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // v1.3.1 PositionManager (CREATE3, shared with Base)
+    "0x6ea0edee449a287504990df8d87951b9436825dc", // v1.3.1 AnyPositionManager
+  ],
 };
 
 // PositionManagers used by the paired-token launch path. This is separate from
@@ -69,7 +85,7 @@ export const FlaunchPositionManagerV1_3Address: Addresses = {
 export const PairedTokenPositionManagerV1_3Address: Addresses = {
   [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
   [baseSepolia.id]: "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc",
-  [robinhood.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // CREATE3 — same address as Base
+  [robinhood.id]: "0x8D346f24278C5CD786309161aAC0fC2bbe4c25dc",
 };
 
 export const PairedTokenRegistryV1_3Address: Addresses = {
@@ -86,7 +102,7 @@ export const AnyPositionManagerAddress: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyPositionManagerV1_3Address: Addresses = {
   [base.id]: "0x6ea0edee449a287504990df8d87951b9436825dc",
-  [robinhood.id]: "0x6ea0edee449a287504990df8d87951b9436825dc", // CREATE3 — same address as Base
+  [robinhood.id]: "0x9AbfbDc34A294De5210C0889f21D5Af54C4965DC",
 };
 
 export const FlaunchAddress: Addresses = {
@@ -107,7 +123,7 @@ export const FlaunchV1_2Address: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const FlaunchV1_3Address: Addresses = {
   [base.id]: "0x475a09618bfd00fa4cb03b8504e95b62075e6f7d",
-  [robinhood.id]: "0x929d4815fe415b85e53975aec58a8980bda3d90c",
+  [robinhood.id]: "0x373c037C90a681079c3343ddAFCEEa8d9D8DE96E",
 };
 
 export const AnyFlaunchAddress: Addresses = {
@@ -118,7 +134,7 @@ export const AnyFlaunchAddress: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyFlaunchV1_3Address: Addresses = {
   [base.id]: "0x299c7e6992a4630d77a8cbd60aa78e17189e53f7",
-  [robinhood.id]: "0x33f04d3a76cffa25e5da285d97336e67611b2282",
+  [robinhood.id]: "0x1bbbD15A6D5176edc7B42f2cc6cA800D9d74015D",
 };
 
 export const FairLaunchAddress: Addresses = {
@@ -146,7 +162,7 @@ export const BidWallV1_1Address: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const BidWallV1_3Address: Addresses = {
   [base.id]: "0x0dae90b70f62ce3b1d5278f4763bd1f595d6a687",
-  [robinhood.id]: "0x641d5cf4290c7c6e45cb672c4467a9e4fc89d72d",
+  [robinhood.id]: "0xB95ad380B6C2F39b67d8582Eb198ba3881Aa06D4",
 };
 
 export const AnyBidWallAddress: Addresses = {
@@ -157,7 +173,7 @@ export const AnyBidWallAddress: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyBidWallV1_3Address: Addresses = {
   [base.id]: "0x9d58ca8011096ad711babf0d990c45b9d5bb047d",
-  [robinhood.id]: "0x361a874945c07069beed611f950506a8e324b630",
+  [robinhood.id]: "0xf32316145caf0A381FA587A7CE1bf850d58Af3aC",
 };
 
 export const TreasuryManagerFactoryAddress: Addresses = {
@@ -260,7 +276,7 @@ export const TokenImporterAddress: Addresses = {
 // callers importing into the old hooks.
 export const TokenImporterV1_3Address: Addresses = {
   [base.id]: "0xea78c26690b5a0dde2a5a8db7760b5da79bfd76e",
-  [robinhood.id]: "0x08222EA6aBe9111b77cf006Dc7F0a7c71fcCF390",
+  [robinhood.id]: "0xf7579C3cb8607F6CE00311465d28Ac45666f39Ad",
 };
 
 export const ClankerWorldVerifierAddress: Addresses = {
@@ -347,7 +363,7 @@ export const ReferralEscrowAddress: Addresses = {
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const ReferralEscrowV1_3Address: Addresses = {
   [base.id]: "0xe86bfebc4f094d36074833618779d279a9af01aa",
-  [robinhood.id]: "0xb6c0cca8b3a354fa0f348c121657f4a952e92b3d",
+  [robinhood.id]: "0xB9827C0c7Cb61be4D58700B114E34D8448889eD8",
 };
 
 export const FLETHAddress: Addresses = {
