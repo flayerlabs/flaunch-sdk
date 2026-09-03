@@ -13,11 +13,12 @@ export const FlaunchZapAddress: Addresses = {
   [baseSepolia.id]: "0x25b747aeca2612b9804b5c3bb272a3daefdc6eaa",
 };
 
-// v1.3.1 (GitHub release v1.3.1) paired-token FlaunchZap deployments, each bound to its chain's
-// v1.3.1 TreasuryManagerFactory. Base: redeployed 2026-08-27 (replaces 0x29b37dfe…). Robinhood:
-// redeployed 2026-09-02 (FLA2-388; replaces 0x2e744436…). The replaced zaps had no factory and
-// route a manager launch into the manager IMPLEMENTATION, stranding the launch NFT — never point
-// a manager launch back at them. Base Sepolia's zap is still factory-less.
+// v1.3.x paired-token FlaunchZap deployments, each bound to its chain's v1.3.1
+// TreasuryManagerFactory. Base: redeployed 2026-08-27 (replaces the factory-less 0x29b37dfe…).
+// Robinhood: the v1.3.3 regeneration's zap, deployed bound in-run 2026-09-03 (supersedes the
+// 09-02 rebind 0xFCd1eB4B… and the factory-less 0x2e744436…). Factory-less zaps route a manager
+// launch into the manager IMPLEMENTATION, stranding the launch NFT — never point a manager launch
+// at one. Base Sepolia's zap is still factory-less.
 export const FlaunchZapV1_3Address: Addresses = {
   [base.id]: "0xf787d757674b21efd713fb636b16ed994bfa82a8",
   [baseSepolia.id]: "0xe8476aa6508f0c31e3126f2340d18e9c6fbf8dd3",
