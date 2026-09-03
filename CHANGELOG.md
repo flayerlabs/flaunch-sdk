@@ -2,7 +2,13 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
-## [0.11.2] - UNRELEASED (prepared 2026-09-02)
+## [0.11.3] - UNRELEASED (prepared 2026-09-03)
+
+### Fixed
+
+- **Swaps and quotes on multichain deployments resolve the hook per coin (FLA2-397).** On Robinhood the SDK always built pool keys from the chain's multichain (v1.2) hook, so `buyCoin`, `sellCoin`, `getBuyQuoteExactInput`/`ExactOutput`, `getSellQuoteExactInput` and `poolId` reverted at the quoter for every v1.3.x coin. `getPositionManagerAddressForCoin(coinAddress, version?)` now probes the current and superseded v1.3 hooks (`getV1_3PositionManagers`) and then the multichain hook, caching the answer per coin; the swap and quote paths use it. `isValidCoin` and `getCoinVersion` work on multichain deployments instead of throwing. Note: on a multichain deployment these calls now read the chain (one `poolKey` per candidate hook, cached per coin) unless a `version` is passed explicitly.
+
+## [0.11.2] - 2026-09-03
 
 ### Changed
 
