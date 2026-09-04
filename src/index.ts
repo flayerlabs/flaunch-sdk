@@ -43,6 +43,34 @@ export type {
   PairedTokenFlaunchParams,
 } from "./clients/FlaunchZapV1_3Client";
 export { ReadPairedTokenRegistryV1_3 } from "./clients/PairedTokenRegistryV1_3Client";
+export type { PairedTokenConfig } from "./clients/PairedTokenRegistryV1_3Client";
+// v1.3.1 paired-token swaps through PoolSwap (mUSD-, native-ETH-, flETH- or B20-paired pools)
+export {
+  ReadPoolSwapV1_3,
+  ReadWritePoolSwapV1_3,
+} from "./clients/PoolSwapV1_3Client";
+export type {
+  PoolSwapParams,
+  PoolSwapV1_3SwapParams,
+} from "./clients/PoolSwapV1_3Client";
+export { ReadPairedTokenPositionManagerV1_3 } from "./clients/PairedTokenPositionManagerV1_3Client";
+// Buying a non-ETH paired token (a B20 equity) from ETH or the USD hub, before it is spent on a coin's pool
+export { ReadPairedTokenAcquisition } from "./clients/PairedTokenAcquisitionClient";
+export type { PairedTokenAcquisitionQuote } from "./clients/PairedTokenAcquisitionClient";
+export * from "./utils/pairedTokenAcquisition";
+export type {
+  PairedTokenApprovalParams,
+  PairedTokenAcquisitionParams,
+  PairedTokenAcquisitionPlan,
+  PairedSwapDirection,
+  PairedTokenSwapParams,
+  PairedSwapPlanParams,
+  PairedPoolQuoteParams,
+  PairedSwapCall,
+  PairedSwapApproveCall,
+  PairedSwapPlan,
+  ResolvedPairedPool,
+} from "./sdk/FlaunchSDK";
 
 // v1.3.1 multi-asset managers (Base mainnet only) — a separate generation from the clients above
 export {

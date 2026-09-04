@@ -158,7 +158,7 @@ const hash = await flaunchWrite.flaunchIPFS({
   symbol: "TEST",
   fairLaunchPercent: 0, // 0%
   fairLaunchDuration: 30 * 60, // 30 mins
-  initialMarketCapUSD: 10_000, // $10k
+  initialMarketCapUSD: 4_000, // $4k
   creator: address,
   creatorFeeAllocationPercent: 80, // 80% to creator, 20% to community
   metadata: {
@@ -1272,7 +1272,7 @@ For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
 
 # API Documentation
 
-@flaunch/sdk - v0.11.1 / Exports / FlaunchBackend
+@flaunch/sdk - v0.12.0 / Exports / FlaunchBackend
 
 # Class: FlaunchBackend
 
@@ -1380,7 +1380,7 @@ src/sdk/FlaunchBackend.ts:119
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.12.0 / Exports / ReadDynamicAddressFeeSplitManager
 
 # Class: ReadDynamicAddressFeeSplitManager
 
@@ -1691,7 +1691,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:62
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadDynamicAddressFeeSplitManagerV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadDynamicAddressFeeSplitManagerV1\_3
 
 # Class: ReadDynamicAddressFeeSplitManagerV1\_3
 
@@ -2088,7 +2088,7 @@ src/clients/DynamicAddressFeeSplitManagerV1_3Client.ts:67
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadFeeEscrowV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadFeeEscrowV1\_3
 
 # Class: ReadFeeEscrowV1\_3
 
@@ -2244,7 +2244,7 @@ src/clients/FeeEscrowV1_3Client.ts:84
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadFlaunchManagerZapV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadFlaunchManagerZapV1\_3
 
 # Class: ReadFlaunchManagerZapV1\_3
 
@@ -2336,11 +2336,9 @@ src/clients/FlaunchManagerZapV1_3Client.ts:69
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadFlaunchSDK
+@flaunch/sdk - v0.12.0 / Exports / ReadFlaunchSDK
 
 # Class: ReadFlaunchSDK
-
-Base class for interacting with Flaunch protocol in read-only mode
 
 ## Hierarchy
 
@@ -2363,7 +2361,14 @@ Base class for interacting with Flaunch protocol in read-only mode
 - feeEscrowV1\_3
 - flaunchManagerZapV1\_3
 - flaunchZapV1\_3
+- multichainCoinHooks
+- pairedPoolsByCoin
+- pairedPositionManagersByHook
+- pairedSwapStateView
+- pairedTokenAcquisition
+- pairedTokenPositionManagerV1\_3
 - pairedTokenRegistryV1\_3
+- poolSwapV1\_3
 - publicClient
 - readFeeEscrow
 - resolveIPFS
@@ -2388,9 +2393,12 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readFlaunchV1\_3
 - readFlaunchZap
 - readFlaunchZapV1\_3
+- readPairedTokenAcquisition
+- readPairedTokenPositionManagerV1\_3
 - readPairedTokenRegistryV1\_3
 - readPermit2
 - readPoolManager
+- readPoolSwapV1\_3
 - readPositionManager
 - readPositionManagerV1\_1
 - readPositionManagerV1\_2
@@ -2405,6 +2413,8 @@ Base class for interacting with Flaunch protocol in read-only mode
 
 - assertBaseOnlyOperation
 - assertMultiAssetManagersSupported
+- assertPairedTokenAcquisitionSupported
+- assertPairedTokenSwapSupported
 - bidWallPosition
 - calculateAddLiquidityAmounts
 - calculateAddLiquidityTicks
@@ -2416,6 +2426,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - coinPriceInUSD
 - convertPriceToTick
 - createPoolKey
+- createPoolKeyForCoin
 - creatorRevenue
 - creatorRevenueByToken
 - currentTick
@@ -2444,10 +2455,12 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getFlaunchTokenIdForMemecoin
 - getFlaunchingFee
 - getMarketContext
+- getPairedPoolQuoteExactInput
 - getPoolCreatedFromLogs
 - getPoolCreatedFromTx
 - getPositionManager
 - getPositionManagerAddress
+- getPositionManagerAddressForCoin
 - getSellQuoteExactInput
 - getSwapClient
 - initialSqrtPriceX96
@@ -2457,13 +2470,22 @@ Base class for interacting with Flaunch protocol in read-only mode
 - isMemecoinImported
 - isPairedTokenApproved
 - isValidCoin
+- locatePairedPool
 - marketCapToTokenPriceEth
+- pairedTokenPositionManagerAt
 - parseSwapTx
+- planPairedTokenAcquisition
+- planPairedTokenAcquisitionForBudget
+- planPairedTokenApproval
+- planPairedTokenSwap
 - pollPoolCreatedNow
 - pollPoolSwapNow
 - poolId
 - positionInfo
+- probeMultichainCoinHook
+- quotePairedTokenAcquisition
 - referralBalance
+- resolvePairedPool
 - revenueManagerAllTokensByCreator
 - revenueManagerAllTokensInManager
 - revenueManagerBalance
@@ -2472,6 +2494,8 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerProtocolBalance
 - revenueManagerProtocolBalanceV1\_3
 - revenueManagerTokensCount
+- routerForPool
+- senderFor
 - setIPFSResolver
 - tokenImporterVerifyMemecoin
 - treasuryManagerBalancesV1\_3
@@ -2498,7 +2522,7 @@ Returns
 
 `ReadFlaunchSDK`
 
-src/sdk/FlaunchSDK.ts:546
+src/sdk/FlaunchSDK.ts:744
 
 ## Properties
 
@@ -2506,7 +2530,7 @@ src/sdk/FlaunchSDK.ts:546
 
 • `Readonly` **TICK\_SPACING**: ``60``
 
-src/sdk/FlaunchSDK.ts:362
+src/sdk/FlaunchSDK.ts:534
 
 ___
 
@@ -2514,7 +2538,7 @@ ___
 
 • `Private` `Optional` `Readonly` **baseClients**: `BaseReadClients`
 
-src/sdk/FlaunchSDK.ts:363
+src/sdk/FlaunchSDK.ts:535
 
 ___
 
@@ -2522,7 +2546,7 @@ ___
 
 • `Readonly` **chainId**: `number`
 
-src/sdk/FlaunchSDK.ts:360
+src/sdk/FlaunchSDK.ts:532
 
 ___
 
@@ -2530,7 +2554,7 @@ ___
 
 • `Readonly` **drift**: `Drift`
 
-src/sdk/FlaunchSDK.ts:359
+src/sdk/FlaunchSDK.ts:531
 
 ___
 
@@ -2538,7 +2562,7 @@ ___
 
 • `Private` `Optional` `Readonly` **feeEscrowV1\_3**: `ReadFeeEscrowV1_3`
 
-src/sdk/FlaunchSDK.ts:366
+src/sdk/FlaunchSDK.ts:538
 
 ___
 
@@ -2546,7 +2570,7 @@ ___
 
 • `Private` `Optional` `Readonly` **flaunchManagerZapV1\_3**: `ReadFlaunchManagerZapV1_3`
 
-src/sdk/FlaunchSDK.ts:367
+src/sdk/FlaunchSDK.ts:539
 
 ___
 
@@ -2554,7 +2578,61 @@ ___
 
 • `Private` `Optional` `Readonly` **flaunchZapV1\_3**: `ReadFlaunchZapV1_3`
 
-src/sdk/FlaunchSDK.ts:369
+src/sdk/FlaunchSDK.ts:541
+
+___
+
+### multichainCoinHooks
+
+• `Private` **multichainCoinHooks**: `Map`\<`string`, ``null`` \| \{ `hook`: \`0x$\{string}\` ; `version`: `FlaunchVersion`  }\>
+
+Per-coin hook resolution results on multichain deployments (a coin never changes hook).
+
+src/sdk/FlaunchSDK.ts:935
+
+___
+
+### pairedPoolsByCoin
+
+• `Private` **pairedPoolsByCoin**: `Map`\<`string`, \{ `hook`: \`0x$\{string}\` ; `poolKey`: `PoolKey`  }\>
+
+Per-coin memo of the v1.3 hook a paired-token pool lives on, with its key — a coin never migrates hooks.
+
+src/sdk/FlaunchSDK.ts:937
+
+___
+
+### pairedPositionManagersByHook
+
+• `Private` **pairedPositionManagersByHook**: `Map`\<`string`, `ReadPairedTokenPositionManagerV1_3`\>
+
+src/sdk/FlaunchSDK.ts:938
+
+___
+
+### pairedSwapStateView
+
+• `Private` `Optional` `Readonly` **pairedSwapStateView**: `ReadStateView`
+
+StateView for paired-pool spot prices; separate from `baseClients` so multichain chains (Robinhood) have one too.
+
+src/sdk/FlaunchSDK.ts:547
+
+___
+
+### pairedTokenAcquisition
+
+• `Private` `Optional` **pairedTokenAcquisition**: `ReadPairedTokenAcquisition`
+
+src/sdk/FlaunchSDK.ts:545
+
+___
+
+### pairedTokenPositionManagerV1\_3
+
+• `Private` `Optional` `Readonly` **pairedTokenPositionManagerV1\_3**: `ReadPairedTokenPositionManagerV1_3`
+
+src/sdk/FlaunchSDK.ts:544
 
 ___
 
@@ -2562,7 +2640,15 @@ ___
 
 • `Private` `Optional` `Readonly` **pairedTokenRegistryV1\_3**: `ReadPairedTokenRegistryV1_3`
 
-src/sdk/FlaunchSDK.ts:370
+src/sdk/FlaunchSDK.ts:542
+
+___
+
+### poolSwapV1\_3
+
+• `Private` `Optional` `Readonly` **poolSwapV1\_3**: `ReadPoolSwapV1_3`
+
+src/sdk/FlaunchSDK.ts:543
 
 ___
 
@@ -2570,7 +2656,7 @@ ___
 
 • `Readonly` **publicClient**: `undefined` \| {}
 
-src/sdk/FlaunchSDK.ts:361
+src/sdk/FlaunchSDK.ts:533
 
 ___
 
@@ -2578,7 +2664,7 @@ ___
 
 • `Readonly` **readFeeEscrow**: `ReadFeeEscrow`
 
-src/sdk/FlaunchSDK.ts:365
+src/sdk/FlaunchSDK.ts:537
 
 ___
 
@@ -2600,7 +2686,7 @@ Type declaration
 
 `string`
 
-src/sdk/FlaunchSDK.ts:372
+src/sdk/FlaunchSDK.ts:549
 
 ___
 
@@ -2608,7 +2694,7 @@ ___
 
 • `Private` `Optional` `Readonly` **swapClients**: `SwapReadClients`
 
-src/sdk/FlaunchSDK.ts:364
+src/sdk/FlaunchSDK.ts:536
 
 ___
 
@@ -2616,7 +2702,7 @@ ___
 
 • `Private` `Optional` `Readonly` **treasuryManagerFactoryV1\_3**: `ReadTreasuryManagerFactory`
 
-src/sdk/FlaunchSDK.ts:368
+src/sdk/FlaunchSDK.ts:540
 
 ## Accessors
 
@@ -2628,7 +2714,7 @@ Returns
 
 `AnyBidWall`
 
-src/sdk/FlaunchSDK.ts:517
+src/sdk/FlaunchSDK.ts:715
 
 ___
 
@@ -2640,7 +2726,7 @@ Returns
 
 `ReadAnyFlaunch`
 
-src/sdk/FlaunchSDK.ts:536
+src/sdk/FlaunchSDK.ts:734
 
 ___
 
@@ -2652,7 +2738,7 @@ Returns
 
 `ReadAnyPositionManager`
 
-src/sdk/FlaunchSDK.ts:480
+src/sdk/FlaunchSDK.ts:678
 
 ___
 
@@ -2664,7 +2750,7 @@ Returns
 
 `ReadBidWall`
 
-src/sdk/FlaunchSDK.ts:504
+src/sdk/FlaunchSDK.ts:702
 
 ___
 
@@ -2676,7 +2762,7 @@ Returns
 
 `ReadBidWallV1_1`
 
-src/sdk/FlaunchSDK.ts:507
+src/sdk/FlaunchSDK.ts:705
 
 ___
 
@@ -2688,7 +2774,7 @@ Returns
 
 `undefined` \| `ReadBidWallV1_1`
 
-src/sdk/FlaunchSDK.ts:514
+src/sdk/FlaunchSDK.ts:712
 
 ___
 
@@ -2700,7 +2786,7 @@ Returns
 
 `ReadFairLaunch`
 
-src/sdk/FlaunchSDK.ts:498
+src/sdk/FlaunchSDK.ts:696
 
 ___
 
@@ -2712,7 +2798,7 @@ Returns
 
 `ReadFairLaunchV1_1`
 
-src/sdk/FlaunchSDK.ts:501
+src/sdk/FlaunchSDK.ts:699
 
 ___
 
@@ -2727,7 +2813,7 @@ Returns
 
 `ReadFeeEscrowV1_3`
 
-src/sdk/FlaunchSDK.ts:378
+src/sdk/FlaunchSDK.ts:555
 
 ___
 
@@ -2739,7 +2825,7 @@ Returns
 
 `ReadFlaunch`
 
-src/sdk/FlaunchSDK.ts:520
+src/sdk/FlaunchSDK.ts:718
 
 ___
 
@@ -2754,7 +2840,7 @@ Returns
 
 `ReadFlaunchManagerZapV1_3`
 
-src/sdk/FlaunchSDK.ts:391
+src/sdk/FlaunchSDK.ts:568
 
 ___
 
@@ -2766,7 +2852,7 @@ Returns
 
 `ReadFlaunchV1_1`
 
-src/sdk/FlaunchSDK.ts:523
+src/sdk/FlaunchSDK.ts:721
 
 ___
 
@@ -2778,7 +2864,7 @@ Returns
 
 `ReadFlaunchV1_2`
 
-src/sdk/FlaunchSDK.ts:526
+src/sdk/FlaunchSDK.ts:724
 
 ___
 
@@ -2790,7 +2876,7 @@ Returns
 
 `undefined` \| `ReadFlaunchV1_2`
 
-src/sdk/FlaunchSDK.ts:533
+src/sdk/FlaunchSDK.ts:731
 
 ___
 
@@ -2802,7 +2888,7 @@ Returns
 
 `ReadFlaunchZap`
 
-src/sdk/FlaunchSDK.ts:489
+src/sdk/FlaunchSDK.ts:687
 
 ___
 
@@ -2814,7 +2900,35 @@ Returns
 
 `ReadFlaunchZapV1_3`
 
-src/sdk/FlaunchSDK.ts:464
+src/sdk/FlaunchSDK.ts:641
+
+___
+
+### readPairedTokenAcquisition
+
+• `get` **readPairedTokenAcquisition**(): `ReadPairedTokenAcquisition`
+
+Reads for buying a non-ETH paired token from ETH / the USD hub. Gate with `doesChainSupportPairedTokenAcquisition()`.
+
+Returns
+
+`ReadPairedTokenAcquisition`
+
+src/sdk/FlaunchSDK.ts:1178
+
+___
+
+### readPairedTokenPositionManagerV1\_3
+
+• `get` **readPairedTokenPositionManagerV1_3**(): `ReadPairedTokenPositionManagerV1_3`
+
+The paired-token PositionManager V1.3 (pool keys, paired tokens). Same gate as `readPoolSwapV1_3`.
+
+Returns
+
+`ReadPairedTokenPositionManagerV1_3`
+
+src/sdk/FlaunchSDK.ts:670
 
 ___
 
@@ -2826,7 +2940,7 @@ Returns
 
 `ReadPairedTokenRegistryV1_3`
 
-src/sdk/FlaunchSDK.ts:472
+src/sdk/FlaunchSDK.ts:649
 
 ___
 
@@ -2838,7 +2952,7 @@ Returns
 
 `ReadPermit2`
 
-src/sdk/FlaunchSDK.ts:542
+src/sdk/FlaunchSDK.ts:740
 
 ___
 
@@ -2850,7 +2964,22 @@ Returns
 
 `ReadPoolManager`
 
-src/sdk/FlaunchSDK.ts:492
+src/sdk/FlaunchSDK.ts:690
+
+___
+
+### readPoolSwapV1\_3
+
+• `get` **readPoolSwapV1_3**(): `ReadPoolSwapV1_3`
+
+The v1.3.1 PoolSwap router. Throws on chains without paired-token swap support — gate with
+`doesChainSupportPairedTokenSwap()`.
+
+Returns
+
+`ReadPoolSwapV1_3`
+
+src/sdk/FlaunchSDK.ts:661
 
 ___
 
@@ -2862,7 +2991,7 @@ Returns
 
 `ReadFlaunchPositionManager`
 
-src/sdk/FlaunchSDK.ts:452
+src/sdk/FlaunchSDK.ts:629
 
 ___
 
@@ -2874,7 +3003,7 @@ Returns
 
 `ReadFlaunchPositionManagerV1_1`
 
-src/sdk/FlaunchSDK.ts:455
+src/sdk/FlaunchSDK.ts:632
 
 ___
 
@@ -2886,7 +3015,7 @@ Returns
 
 `ReadFlaunchPositionManagerV1_2`
 
-src/sdk/FlaunchSDK.ts:458
+src/sdk/FlaunchSDK.ts:635
 
 ___
 
@@ -2898,7 +3027,7 @@ Returns
 
 `undefined` \| `ReadFlaunchPositionManagerV1_2`
 
-src/sdk/FlaunchSDK.ts:461
+src/sdk/FlaunchSDK.ts:638
 
 ___
 
@@ -2910,7 +3039,7 @@ Returns
 
 `ReadQuoter`
 
-src/sdk/FlaunchSDK.ts:539
+src/sdk/FlaunchSDK.ts:737
 
 ___
 
@@ -2922,7 +3051,7 @@ Returns
 
 `ReadReferralEscrow`
 
-src/sdk/FlaunchSDK.ts:486
+src/sdk/FlaunchSDK.ts:684
 
 ___
 
@@ -2934,7 +3063,7 @@ Returns
 
 `ReadStateView`
 
-src/sdk/FlaunchSDK.ts:495
+src/sdk/FlaunchSDK.ts:693
 
 ___
 
@@ -2946,7 +3075,7 @@ Returns
 
 `ReadTokenImporter`
 
-src/sdk/FlaunchSDK.ts:483
+src/sdk/FlaunchSDK.ts:681
 
 ___
 
@@ -2962,7 +3091,7 @@ Returns
 
 `ReadTreasuryManagerFactory`
 
-src/sdk/FlaunchSDK.ts:405
+src/sdk/FlaunchSDK.ts:582
 
 ## Methods
 
@@ -2980,7 +3109,7 @@ Returns
 
 `void`
 
-src/sdk/FlaunchSDK.ts:434
+src/sdk/FlaunchSDK.ts:611
 
 ___
 
@@ -3001,7 +3130,43 @@ Returns
 
 `void`
 
-src/sdk/FlaunchSDK.ts:444
+src/sdk/FlaunchSDK.ts:621
+
+___
+
+### assertPairedTokenAcquisitionSupported
+
+▸ **assertPairedTokenAcquisitionSupported**(`operation`): `void`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `operation` | `string` |
+
+Returns
+
+`void`
+
+src/sdk/FlaunchSDK.ts:1169
+
+___
+
+### assertPairedTokenSwapSupported
+
+▸ **assertPairedTokenSwapSupported**(`operation`): `void`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `operation` | `string` |
+
+Returns
+
+`void`
+
+src/sdk/FlaunchSDK.ts:1012
 
 ___
 
@@ -3024,7 +3189,7 @@ Returns
 
 Promise<{flETHAmount: bigint, coinAmount: bigint, pendingEth: bigint, tickLower: number, tickUpper: number}> - Bid wall position details
 
-src/sdk/FlaunchSDK.ts:1668
+src/sdk/FlaunchSDK.ts:2357
 
 ___
 
@@ -3042,7 +3207,7 @@ Returns
 
 `Promise`\<\{ `coinAmount`: `bigint` ; `currentTick`: `number` ; `ethAmount`: `bigint` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
-src/sdk/FlaunchSDK.ts:2512
+src/sdk/FlaunchSDK.ts:3207
 
 ___
 
@@ -3065,7 +3230,7 @@ Returns
 
 `Promise`\<\{ `coinDecimals`: `number` ; `coinTotalSupply`: `bigint` ; `currentTick?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number`  }\>
 
-src/sdk/FlaunchSDK.ts:2296
+src/sdk/FlaunchSDK.ts:2994
 
 ___
 
@@ -3091,7 +3256,7 @@ Returns
 
 `undefined` \| `number`
 
-src/sdk/FlaunchSDK.ts:2267
+src/sdk/FlaunchSDK.ts:2965
 
 ___
 
@@ -3109,7 +3274,7 @@ Returns
 
 `Promise`\<`PairedTokenFlaunchFee`\>
 
-src/sdk/FlaunchSDK.ts:714
+src/sdk/FlaunchSDK.ts:928
 
 ___
 
@@ -3127,7 +3292,7 @@ Returns
 
 `Promise`\<`SingleSidedLiquidityInfo`\>
 
-src/sdk/FlaunchSDK.ts:2413
+src/sdk/FlaunchSDK.ts:3111
 
 ___
 
@@ -3148,7 +3313,7 @@ Returns
 
 `Promise`\<`string`\>
 
-src/sdk/FlaunchSDK.ts:1352
+src/sdk/FlaunchSDK.ts:2041
 
 ___
 
@@ -3171,7 +3336,7 @@ Returns
 
 Promise<string> - The price of the coin in ETH with 18 decimals precision
 
-src/sdk/FlaunchSDK.ts:1312
+src/sdk/FlaunchSDK.ts:2001
 
 ___
 
@@ -3196,7 +3361,7 @@ Returns
 
 Promise<string> - The price of the coin in USD with 18 decimal precision
 
-src/sdk/FlaunchSDK.ts:1336
+src/sdk/FlaunchSDK.ts:2025
 
 ___
 
@@ -3219,7 +3384,7 @@ Returns
 
 `number`
 
-src/sdk/FlaunchSDK.ts:2249
+src/sdk/FlaunchSDK.ts:2947
 
 ___
 
@@ -3250,7 +3415,30 @@ The ordered pool key
 | `hooks` | \`0x$\{string}\` |
 | `tickSpacing` | `number` |
 
-src/sdk/FlaunchSDK.ts:2770
+src/sdk/FlaunchSDK.ts:3462
+
+___
+
+### createPoolKeyForCoin
+
+▸ **createPoolKeyForCoin**(`coinAddress`, `version?`): `Promise`\<\{ `currency0`: \`0x$\{string}\` ; `currency1`: \`0x$\{string}\` ; `fee`: `number` ; `hooks`: \`0x$\{string}\` ; `tickSpacing`: `number`  }\>
+
+`createPoolKey` resolved by coin rather than by version: on a multichain deployment the
+hook is probed per coin (see `getPositionManagerAddressForCoin`), so the key matches the
+pool the coin was actually created on. The liquidity helpers use this.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+| `version?` | `FlaunchVersion` |
+
+Returns
+
+`Promise`\<\{ `currency0`: \`0x$\{string}\` ; `currency1`: \`0x$\{string}\` ; `fee`: `number` ; `hooks`: \`0x$\{string}\` ; `tickSpacing`: `number`  }\>
+
+src/sdk/FlaunchSDK.ts:3478
 
 ___
 
@@ -3273,7 +3461,7 @@ Returns
 
 The balance of the creator
 
-src/sdk/FlaunchSDK.ts:1702
+src/sdk/FlaunchSDK.ts:2391
 
 ___
 
@@ -3300,7 +3488,7 @@ Returns
 
 The claimable amount per token, in that token's raw units (zero balances included)
 
-src/sdk/FlaunchSDK.ts:1719
+src/sdk/FlaunchSDK.ts:2408
 
 ___
 
@@ -3323,7 +3511,7 @@ Returns
 
 Promise<number> - The current tick of the pool
 
-src/sdk/FlaunchSDK.ts:1297
+src/sdk/FlaunchSDK.ts:1986
 
 ___
 
@@ -3346,7 +3534,7 @@ Returns
 
 The determined version
 
-src/sdk/FlaunchSDK.ts:2746
+src/sdk/FlaunchSDK.ts:3438
 
 ___
 
@@ -3371,7 +3559,7 @@ Returns
 
 Promise<bigint> - The ETH required to flaunch
 
-src/sdk/FlaunchSDK.ts:2005
+src/sdk/FlaunchSDK.ts:2694
 
 ___
 
@@ -3394,7 +3582,7 @@ Returns
 
 Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
 
-src/sdk/FlaunchSDK.ts:1605
+src/sdk/FlaunchSDK.ts:2294
 
 ___
 
@@ -3417,7 +3605,7 @@ Returns
 
 Promise<number> - The duration in seconds (30 minutes for V1, variable for V1.1)
 
-src/sdk/FlaunchSDK.ts:1512
+src/sdk/FlaunchSDK.ts:2201
 
 ___
 
@@ -3440,7 +3628,7 @@ Returns
 
 Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: number}> - Position details
 
-src/sdk/FlaunchSDK.ts:1542
+src/sdk/FlaunchSDK.ts:2231
 
 ___
 
@@ -3463,7 +3651,7 @@ Returns
 
 Fair launch information from the appropriate contract version
 
-src/sdk/FlaunchSDK.ts:1420
+src/sdk/FlaunchSDK.ts:2109
 
 ___
 
@@ -3485,7 +3673,7 @@ Returns
 
 boolean - True if flETH is currency0, false otherwise
 
-src/sdk/FlaunchSDK.ts:2138
+src/sdk/FlaunchSDK.ts:2836
 
 ___
 
@@ -3509,7 +3697,7 @@ Returns
 
 `BaseReadClients`[`K`]
 
-src/sdk/FlaunchSDK.ts:414
+src/sdk/FlaunchSDK.ts:591
 
 ___
 
@@ -3529,7 +3717,7 @@ Returns
 
 `ReadBidWall` \| `AnyBidWall` \| `ReadBidWallV1_1`
 
-src/sdk/FlaunchSDK.ts:808
+src/sdk/FlaunchSDK.ts:1491
 
 ___
 
@@ -3547,7 +3735,7 @@ Returns
 
 \`0x$\{string}\`
 
-src/sdk/FlaunchSDK.ts:865
+src/sdk/FlaunchSDK.ts:1548
 
 ___
 
@@ -3575,7 +3763,7 @@ Returns
 
 Promise<bigint> - The expected amount of coins to receive
 
-src/sdk/FlaunchSDK.ts:2069
+src/sdk/FlaunchSDK.ts:2761
 
 ___
 
@@ -3603,7 +3791,7 @@ Returns
 
 Promise<bigint> - The required amount of ETH or inputToken to spend
 
-src/sdk/FlaunchSDK.ts:2106
+src/sdk/FlaunchSDK.ts:2801
 
 ___
 
@@ -3623,7 +3811,7 @@ Returns
 
 `Promise`\<\{ `decimals`: `number` ; `formattedTotalSupplyInDecimals`: `number` ; `totalSupply`: `bigint`  }\>
 
-src/sdk/FlaunchSDK.ts:2190
+src/sdk/FlaunchSDK.ts:2888
 
 ___
 
@@ -3645,7 +3833,7 @@ Returns
 
 Promise<CoinMetadata & { symbol: string }> - The coin's metadata including name, symbol, description, and social links
 
-src/sdk/FlaunchSDK.ts:892
+src/sdk/FlaunchSDK.ts:1575
 
 ___
 
@@ -3668,7 +3856,7 @@ Returns
 
 The coin's metadata including name, symbol, description, and social links
 
-src/sdk/FlaunchSDK.ts:922
+src/sdk/FlaunchSDK.ts:1605
 
 ___
 
@@ -3692,7 +3880,7 @@ Returns
 
 An array of objects containing coin address, name, symbol, description, and social links
 
-src/sdk/FlaunchSDK.ts:938
+src/sdk/FlaunchSDK.ts:1621
 
 ___
 
@@ -3714,7 +3902,7 @@ Returns
 
 Promise<FlaunchVersion> - The version of the coin
 
-src/sdk/FlaunchSDK.ts:742
+src/sdk/FlaunchSDK.ts:1420
 
 ___
 
@@ -3736,7 +3924,7 @@ Returns
 
 Promise<number> - The current ETH/USDC price
 
-src/sdk/FlaunchSDK.ts:1375
+src/sdk/FlaunchSDK.ts:2064
 
 ___
 
@@ -3756,7 +3944,7 @@ Returns
 
 `ReadFairLaunch` \| `ReadFairLaunchV1_1`
 
-src/sdk/FlaunchSDK.ts:787
+src/sdk/FlaunchSDK.ts:1470
 
 ___
 
@@ -3774,7 +3962,7 @@ Returns
 
 \`0x$\{string}\`
 
-src/sdk/FlaunchSDK.ts:861
+src/sdk/FlaunchSDK.ts:1544
 
 ___
 
@@ -3794,7 +3982,7 @@ Returns
 
 `ReadFlaunch` \| `ReadAnyFlaunch` \| `ReadFlaunchV1_1` \| `ReadFlaunchV1_2`
 
-src/sdk/FlaunchSDK.ts:829
+src/sdk/FlaunchSDK.ts:1512
 
 ___
 
@@ -3814,7 +4002,7 @@ Returns
 
 \`0x$\{string}\`
 
-src/sdk/FlaunchSDK.ts:850
+src/sdk/FlaunchSDK.ts:1533
 
 ___
 
@@ -3836,7 +4024,7 @@ Returns
 
 Promise<{ flaunchAddress: Address; tokenId: bigint }> - The flaunch contract address and token ID
 
-src/sdk/FlaunchSDK.ts:874
+src/sdk/FlaunchSDK.ts:1557
 
 ___
 
@@ -3861,7 +4049,7 @@ Returns
 
 Promise<bigint> - The flaunching fee
 
-src/sdk/FlaunchSDK.ts:1973
+src/sdk/FlaunchSDK.ts:2662
 
 ___
 
@@ -3882,7 +4070,28 @@ Returns
 
 `Promise`\<\{ `decimals0`: `number` ; `decimals1`: `number` ; `ethUsdPrice`: `number` ; `isFlethZero`: `boolean`  }\>
 
-src/sdk/FlaunchSDK.ts:2209
+src/sdk/FlaunchSDK.ts:2907
+
+___
+
+### getPairedPoolQuoteExactInput
+
+▸ **getPairedPoolQuoteExactInput**(`«destructured»`): `Promise`\<`bigint`\>
+
+Expected output of an exact-input swap on a paired-token pool, via the v4 Quoter's single-hop
+quote (hook fees included). A buy spends the paired token for the coin; a sell the reverse.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `PairedPoolQuoteParams` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/sdk/FlaunchSDK.ts:1104
 
 ___
 
@@ -3902,7 +4111,7 @@ Returns
 
 ``null`` \| `PoolCreatedEventData`
 
-src/sdk/FlaunchSDK.ts:1097
+src/sdk/FlaunchSDK.ts:1780
 
 ___
 
@@ -3924,7 +4133,7 @@ Returns
 
 PoolCreated event parameters or null if not found
 
-src/sdk/FlaunchSDK.ts:1219
+src/sdk/FlaunchSDK.ts:1908
 
 ___
 
@@ -3944,7 +4153,7 @@ Returns
 
 `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
-src/sdk/FlaunchSDK.ts:766
+src/sdk/FlaunchSDK.ts:1449
 
 ___
 
@@ -3962,7 +4171,30 @@ Returns
 
 \`0x$\{string}\`
 
-src/sdk/FlaunchSDK.ts:854
+src/sdk/FlaunchSDK.ts:1537
+
+___
+
+### getPositionManagerAddressForCoin
+
+▸ **getPositionManagerAddressForCoin**(`coinAddress`, `version?`): `Promise`\<\`0x$\{string}\`\>
+
+The hook (PositionManager) a coin's pool lives on. On Base this is the position manager
+for the coin's version; on a multichain deployment it is probed per coin (see
+`probeMultichainCoinHook`), falling back to the chain's multichain hook for an unknown coin.
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The coin to resolve |
+| `version?` | `FlaunchVersion` | Optional version override (skips detection on Base; on multichain a non-v1.3 version short-circuits to the multichain hook) |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/sdk/FlaunchSDK.ts:992
 
 ___
 
@@ -3988,7 +4220,7 @@ Returns
 
 Promise<bigint> - The expected amount of ETH to receive
 
-src/sdk/FlaunchSDK.ts:2038
+src/sdk/FlaunchSDK.ts:2727
 
 ___
 
@@ -4012,7 +4244,7 @@ Returns
 
 `SwapReadClients`[`K`]
 
-src/sdk/FlaunchSDK.ts:424
+src/sdk/FlaunchSDK.ts:601
 
 ___
 
@@ -4032,7 +4264,7 @@ Returns
 
 `Promise`\<`bigint`\>
 
-src/sdk/FlaunchSDK.ts:1385
+src/sdk/FlaunchSDK.ts:2074
 
 ___
 
@@ -4055,7 +4287,7 @@ Returns
 
 Promise<number> - The initial tick value
 
-src/sdk/FlaunchSDK.ts:1525
+src/sdk/FlaunchSDK.ts:2214
 
 ___
 
@@ -4078,7 +4310,7 @@ Returns
 
 Promise<boolean> - True if fair launch is active, false otherwise
 
-src/sdk/FlaunchSDK.ts:1433
+src/sdk/FlaunchSDK.ts:2122
 
 ___
 
@@ -4102,7 +4334,7 @@ Returns
 
 Promise<boolean> - True if operator is approved for all tokens
 
-src/sdk/FlaunchSDK.ts:2725
+src/sdk/FlaunchSDK.ts:3417
 
 ___
 
@@ -4124,7 +4356,7 @@ Returns
 
 Promise<boolean> - True if the memecoin has been imported
 
-src/sdk/FlaunchSDK.ts:2701
+src/sdk/FlaunchSDK.ts:3393
 
 ___
 
@@ -4142,7 +4374,7 @@ Returns
 
 `Promise`\<`boolean`\>
 
-src/sdk/FlaunchSDK.ts:710
+src/sdk/FlaunchSDK.ts:924
 
 ___
 
@@ -4164,7 +4396,37 @@ Returns
 
 Promise<boolean> - True if the coin is valid, false otherwise
 
-src/sdk/FlaunchSDK.ts:725
+src/sdk/FlaunchSDK.ts:1400
+
+___
+
+### locatePairedPool
+
+▸ **locatePairedPool**(`coinAddress`): `Promise`\<``null`` \| \{ `hook`: \`0x$\{string}\` ; `poolKey`: `PoolKey`  }\>
+
+Which v1.3 hook a coin's paired pool lives on, and its key.
+
+A chain can carry more than one v1.3 hook generation — on Robinhood the 2026-08-21 v1.3.1
+hooks were regenerated as v1.3.3 and both keep serving their pools — so the hook is probed per
+coin (`poolKey(coin)` on the current paired PositionManager, then each superseded one) rather
+than taken from the chain's current default: a key built on the wrong hook names a pool that
+does not exist, and the swap reverts. A hook that never launched the coin answers a zeroed key
+(or reverts, for the AnyPositionManager in that list); the first real key wins. Memoised per
+coin.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<``null`` \| \{ `hook`: \`0x$\{string}\` ; `poolKey`: `PoolKey`  }\>
+
+The hook and pool key, or null when no v1.3 hook on this chain knows the coin.
+
+src/sdk/FlaunchSDK.ts:1043
 
 ___
 
@@ -4186,7 +4448,27 @@ Returns
 
 `number`
 
-src/sdk/FlaunchSDK.ts:2237
+src/sdk/FlaunchSDK.ts:2935
+
+___
+
+### pairedTokenPositionManagerAt
+
+▸ **pairedTokenPositionManagerAt**(`hook`): `ReadPairedTokenPositionManagerV1_3`
+
+The paired-token PositionManager client for a given hook address, memoised per hook.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `hook` | \`0x$\{string}\` |
+
+Returns
+
+`ReadPairedTokenPositionManagerV1_3`
+
+src/sdk/FlaunchSDK.ts:1021
 
 ___
 
@@ -4219,7 +4501,111 @@ Parsed swap log or undefined if no PoolSwap event found.
          If flETHIsCurrencyZero is provided, returns typed swap data with BUY/SELL information.
          If flETHIsCurrencyZero is undefined, returns basic swap log without parsed delta.
 
-src/sdk/FlaunchSDK.ts:2162
+src/sdk/FlaunchSDK.ts:2860
+
+___
+
+### planPairedTokenAcquisition
+
+▸ **planPairedTokenAcquisition**(`params`): `Promise`\<`PairedTokenAcquisitionPlan`\>
+
+The calls that buy exactly `target` of a paired token from ETH or the USD hub: an optional
+hub-token approve to the venue's router, then the exact-output router call (ETH rides as
+`value = maxIn`; the router refunds the unspent part). Exact-output so a following PoolSwap leg
+can be encoded up front — batched wallets resolve every call before the first executes.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `PairedTokenAcquisitionParams` |
+
+Returns
+
+`Promise`\<`PairedTokenAcquisitionPlan`\>
+
+src/sdk/FlaunchSDK.ts:1203
+
+___
+
+### planPairedTokenAcquisitionForBudget
+
+▸ **planPairedTokenAcquisitionForBudget**(`params`): `Promise`\<`PairedTokenAcquisitionPlan` & \{ `quote`: `PairedTokenAcquisitionQuote`  }\>
+
+Sizes and plans a routed buy from a BUDGET: quotes the exact input, takes `slippageBps` off, and
+plans an exact-output buy of that much with the whole budget as the price protection — the
+pattern that keeps a downstream PoolSwap leg deterministic. Returns the plan and the target.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amountIn` | `bigint` |
+| `params.deadline?` | `bigint` |
+| `params.input` | `PairedTokenAcquisitionInput` |
+| `params.pairedToken` | \`0x$\{string}\` |
+| `params.recipient` | \`0x$\{string}\` |
+| `params.sender?` | \`0x$\{string}\` |
+| `params.slippageBps` | `number` |
+
+Returns
+
+`Promise`\<`PairedTokenAcquisitionPlan` & \{ `quote`: `PairedTokenAcquisitionQuote`  }\>
+
+src/sdk/FlaunchSDK.ts:1251
+
+___
+
+### planPairedTokenApproval
+
+▸ **planPairedTokenApproval**(`params`): `Promise`\<`undefined` \| `PairedSwapApproveCall`\>
+
+Just the ERC20 approve a paired-token BUY needs, sized to `amount` — for a host that wants the
+player ready before a round starts (approve the whole wallet cap once; every in-round buy is
+then a single swap). `undefined` when the pool is paired with native ETH (nothing to approve)
+or the standing allowance already covers `amount`.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `PairedTokenApprovalParams` |
+
+Returns
+
+`Promise`\<`undefined` \| `PairedSwapApproveCall`\>
+
+src/sdk/FlaunchSDK.ts:1152
+
+___
+
+### planPairedTokenSwap
+
+▸ **planPairedTokenSwap**(`params`): `Promise`\<`PairedSwapPlan`\>
+
+Builds the calls for an exact-input swap on a paired-token pool without sending them:
+an optional ERC20 `approve(PoolSwap, amountIn)` when the standing allowance is short, then the
+PoolSwap `swap` (the `bytes` overload when `hookData` is given, else the referrer overload).
+
+Funding by pairing: a buy on a native-ETH pool sends `amountIn` as `swap.value` and needs no
+approve; flETH / ERC20 (mUSD, B20 equities) input settles by allowance pull; a sell always
+spends the coin. `amountSpecified` is negative (v4 exact-input). The sqrt-price bound comes from
+the pool's spot price and `slippageBps` — PoolSwap has no `minOut`, so this is the price
+protection. Hosts that batch calls (`wallet_sendCalls`) run `approve` then `swap`; wallets that
+cannot batch send them as two transactions.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `PairedSwapPlanParams` |
+
+Returns
+
+`Promise`\<`PairedSwapPlan`\>
+
+src/sdk/FlaunchSDK.ts:1294
 
 ___
 
@@ -4241,7 +4627,7 @@ Returns
 
 Current pool creation events or undefined if polling is not available
 
-src/sdk/FlaunchSDK.ts:1082
+src/sdk/FlaunchSDK.ts:1765
 
 ___
 
@@ -4263,7 +4649,7 @@ Returns
 
 Current pool swap events or undefined if polling is not available
 
-src/sdk/FlaunchSDK.ts:1268
+src/sdk/FlaunchSDK.ts:1957
 
 ___
 
@@ -4286,7 +4672,7 @@ Returns
 
 Promise<string> - The pool ID
 
-src/sdk/FlaunchSDK.ts:1949
+src/sdk/FlaunchSDK.ts:2638
 
 ___
 
@@ -4308,7 +4694,56 @@ Returns
 
 Position information from the state view contract
 
-src/sdk/FlaunchSDK.ts:1287
+src/sdk/FlaunchSDK.ts:1976
+
+___
+
+### probeMultichainCoinHook
+
+▸ **probeMultichainCoinHook**(`coinAddress`): `Promise`\<``null`` \| \{ `hook`: \`0x$\{string}\` ; `version`: `FlaunchVersion`  }\>
+
+On a multichain deployment a chain can serve several hook generations at once (Robinhood:
+the v1.2 multichain hook, the 2026-08-21 v1.3.1 hooks and the v1.3.3 regeneration). Every
+pool key — and so every quote and swap — derives from the hook the coin was created on, so
+it has to be probed per coin rather than taken from the chain's current default. Probes the
+current and superseded v1.3 hooks first, then the multichain (v1.2) hook.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<``null`` \| \{ `hook`: \`0x$\{string}\` ; `version`: `FlaunchVersion`  }\>
+
+The coin's hook and version, or null when no hook on this chain knows the coin.
+
+src/sdk/FlaunchSDK.ts:948
+
+___
+
+### quotePairedTokenAcquisition
+
+▸ **quotePairedTokenAcquisition**(`params`): `Promise`\<`PairedTokenAcquisitionQuote`\>
+
+Expected paired-token output (and the venue) for an exact ETH / hub-token input.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amountIn` | `bigint` |
+| `params.input` | `PairedTokenAcquisitionInput` |
+| `params.pairedToken` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`PairedTokenAcquisitionQuote`\>
+
+src/sdk/FlaunchSDK.ts:1187
 
 ___
 
@@ -4331,7 +4766,36 @@ Returns
 
 Promise<bigint> - The balance of the recipient
 
-src/sdk/FlaunchSDK.ts:1735
+src/sdk/FlaunchSDK.ts:2424
+
+___
+
+### resolvePairedPool
+
+▸ **resolvePairedPool**(`coinAddress`, `pairedToken?`): `Promise`\<`ResolvedPairedPool`\>
+
+The pool a paired-token coin trades on: its full key, id and paired side, read from the hook
+the coin was launched on (see `locatePairedPool` — one `poolKey` read per hook probed, then
+memoised). `pairedToken`, when given, is checked against the pool's real paired side rather
+than trusted: building a key from a caller's belief about the pairing is how a swap ends up
+aimed at a pool that does not exist.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+| `pairedToken?` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`ResolvedPairedPool`\>
+
+**`Throws`**
+
+when no v1.3 hook on this chain launched the coin, or `pairedToken` disagrees with the pool
+
+src/sdk/FlaunchSDK.ts:1073
 
 ___
 
@@ -4356,7 +4820,7 @@ Returns
 
 Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
 
-src/sdk/FlaunchSDK.ts:1795
+src/sdk/FlaunchSDK.ts:2484
 
 ___
 
@@ -4380,7 +4844,7 @@ Returns
 
 Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects containing flaunch address and token ID
 
-src/sdk/FlaunchSDK.ts:1818
+src/sdk/FlaunchSDK.ts:2507
 
 ___
 
@@ -4404,7 +4868,7 @@ Returns
 
 Promise<bigint> - The claimable balance of ETH
 
-src/sdk/FlaunchSDK.ts:1746
+src/sdk/FlaunchSDK.ts:2435
 
 ___
 
@@ -4433,7 +4897,7 @@ Returns
 
 Promise<bigint> - The claimable balance in the asset's raw units
 
-src/sdk/FlaunchSDK.ts:1864
+src/sdk/FlaunchSDK.ts:2553
 
 ___
 
@@ -4457,7 +4921,7 @@ Returns
 
 Promise<readonly Address[]> - The payout assets
 
-src/sdk/FlaunchSDK.ts:1887
+src/sdk/FlaunchSDK.ts:2576
 
 ___
 
@@ -4479,7 +4943,7 @@ Returns
 
 Promise<bigint> - The claimable balance of ETH
 
-src/sdk/FlaunchSDK.ts:1763
+src/sdk/FlaunchSDK.ts:2452
 
 ___
 
@@ -4503,7 +4967,7 @@ Returns
 
 Promise<bigint> - The claimable balance in the asset's raw units
 
-src/sdk/FlaunchSDK.ts:1902
+src/sdk/FlaunchSDK.ts:2591
 
 ___
 
@@ -4525,7 +4989,47 @@ Returns
 
 Promise<bigint> - The total count of tokens
 
-src/sdk/FlaunchSDK.ts:1778
+src/sdk/FlaunchSDK.ts:2467
+
+___
+
+### routerForPool
+
+▸ **routerForPool**(`hook`): \`0x$\{string}\`
+
+The PoolSwap a pool on `hook` must be traded through. Router approval is per spend gate and
+each hook generation ships its own gate, so a gated buy sent through the wrong generation's
+router is refused on chain — see `PoolSwapForHookV1_3Address`.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `hook` | \`0x$\{string}\` |
+
+Returns
+
+\`0x$\{string}\`
+
+src/sdk/FlaunchSDK.ts:1131
+
+___
+
+### senderFor
+
+▸ **senderFor**(`explicit?`): `Promise`\<`undefined` \| \`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `explicit?` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`undefined` \| \`0x$\{string}\`\>
+
+src/sdk/FlaunchSDK.ts:1139
 
 ___
 
@@ -4550,7 +5054,7 @@ Returns
 this is used to resolve IPFS hash to a gateway URL
 eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
 
-src/sdk/FlaunchSDK.ts:2148
+src/sdk/FlaunchSDK.ts:2846
 
 ___
 
@@ -4572,7 +5076,7 @@ Returns
 
 Promise<{ isValid: boolean; verifier: Address }> - The result of the verification
 
-src/sdk/FlaunchSDK.ts:2183
+src/sdk/FlaunchSDK.ts:2881
 
 ___
 
@@ -4599,7 +5103,7 @@ Returns
 
 Promise<AssetBalance[]> - One entry per asset, in the order given
 
-src/sdk/FlaunchSDK.ts:1927
+src/sdk/FlaunchSDK.ts:2616
 
 ___
 
@@ -4621,7 +5125,7 @@ Returns
 
 Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner and permissions contract addresses
 
-src/sdk/FlaunchSDK.ts:1835
+src/sdk/FlaunchSDK.ts:2524
 
 ___
 
@@ -4640,7 +5144,7 @@ Returns
 
 `Promise`\<\{ `fairLaunchEndsAt`: `number` ; `fairLaunchStartsAt`: `number` ; `isCurrentlyEnabled`: `boolean` ; `isFairLaunchActive`: `boolean` ; `signer`: \`0x$\{string}\` ; `trustedSignerEnabled`: `boolean`  }\>
 
-src/sdk/FlaunchSDK.ts:1440
+src/sdk/FlaunchSDK.ts:2129
 
 ___
 
@@ -4663,7 +5167,7 @@ Returns
 
 Subscription to pool creation events
 
-src/sdk/FlaunchSDK.ts:1068
+src/sdk/FlaunchSDK.ts:1751
 
 ___
 
@@ -4686,12 +5190,12 @@ Returns
 
 Subscription to pool swap events
 
-src/sdk/FlaunchSDK.ts:1243
+src/sdk/FlaunchSDK.ts:1932
 
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadFlaunchZapV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadFlaunchZapV1\_3
 
 # Class: ReadFlaunchZapV1\_3
 
@@ -4763,7 +5267,340 @@ src/clients/FlaunchZapV1_3Client.ts:55
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadPairedTokenRegistryV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadPairedTokenAcquisition
+
+# Class: ReadPairedTokenAcquisition
+
+Reads for buying a non-ETH paired token from ETH or the chain's USD hub. Route resolution comes
+from live protocol config rather than a table: the registry's `tokenConfig(token).priceCalculator`
+already binds the exact pool the launch pricing reads (`hubPairedPool`), so a newly registered
+equity routes with no SDK change. On a chain with a `QuoterV2`, every existing pool for the token
+is quoted and the best output wins.
+
+## Table of contents
+
+### Constructors
+
+- constructor
+
+### Properties
+
+- chainId
+- dex
+- drift
+- registry
+- routes
+- venues
+
+### Methods
+
+- enumerateVenues
+- pool
+- poolPrice
+- quote
+- quoteSpot
+- resolveRoute
+
+## Constructors
+
+### constructor
+
+• **new ReadPairedTokenAcquisition**(`chainId`, `drift?`): `ReadPairedTokenAcquisition`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `chainId` | `number` |
+| `drift` | `Drift` |
+
+Returns
+
+`ReadPairedTokenAcquisition`
+
+src/clients/PairedTokenAcquisitionClient.ts:49
+
+## Properties
+
+### chainId
+
+• `Readonly` **chainId**: `number`
+
+src/clients/PairedTokenAcquisitionClient.ts:42
+
+___
+
+### dex
+
+• `Readonly` **dex**: `PairedTokenAcquisitionDex`
+
+src/clients/PairedTokenAcquisitionClient.ts:43
+
+___
+
+### drift
+
+• `Private` `Readonly` **drift**: `Drift`
+
+src/clients/PairedTokenAcquisitionClient.ts:44
+
+___
+
+### registry
+
+• `Private` `Readonly` **registry**: `ReadPairedTokenRegistryV1_3`
+
+src/clients/PairedTokenAcquisitionClient.ts:45
+
+___
+
+### routes
+
+• `Private` `Readonly` **routes**: `Map`\<`string`, `PairedTokenAcquisitionRoute`\>
+
+src/clients/PairedTokenAcquisitionClient.ts:46
+
+___
+
+### venues
+
+• `Private` `Readonly` **venues**: `Map`\<`string`, \{ `expiresAt`: `number` ; `venues`: `PairedTokenAcquisitionRoute`[]  }\>
+
+src/clients/PairedTokenAcquisitionClient.ts:47
+
+## Methods
+
+### enumerateVenues
+
+▸ **enumerateVenues**(`pairedToken`, `input`): `Promise`\<`PairedTokenAcquisitionRoute`[]\>
+
+Every existing pool the token can be bought through on the chain's V3 factory (uniswapV3 only).
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `pairedToken` | \`0x$\{string}\` |
+| `input` | `PairedTokenAcquisitionInput` |
+
+Returns
+
+`Promise`\<`PairedTokenAcquisitionRoute`[]\>
+
+src/clients/PairedTokenAcquisitionClient.ts:109
+
+___
+
+### pool
+
+▸ **pool**(`address`): `ReadContract`\<readonly [\{ `inputs`: readonly [] = []; `name`: ``"slot0"`` = "slot0"; `outputs`: readonly [\{ `name`: ``"sqrtPriceX96"`` = "sqrtPriceX96"; `type`: ``"uint160"`` = "uint160" }, \{ `name`: ``"tick"`` = "tick"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"observationIndex"`` = "observationIndex"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinality"`` = "observationCardinality"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinalityNext"`` = "observationCardinalityNext"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"unlocked"`` = "unlocked"; `type`: ``"bool"`` = "bool" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"fee"`` = "fee"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"uint24"`` = "uint24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"tickSpacing"`` = "tickSpacing"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"int24"`` = "int24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"token0"`` = "token0"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }] \| readonly [\{ `inputs`: readonly [] = []; `name`: ``"slot0"`` = "slot0"; `outputs`: readonly [\{ `name`: ``"sqrtPriceX96"`` = "sqrtPriceX96"; `type`: ``"uint160"`` = "uint160" }, \{ `name`: ``"tick"`` = "tick"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"observationIndex"`` = "observationIndex"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinality"`` = "observationCardinality"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinalityNext"`` = "observationCardinalityNext"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"feeProtocol"`` = "feeProtocol"; `type`: ``"uint8"`` = "uint8" }, \{ `name`: ``"unlocked"`` = "unlocked"; `type`: ``"bool"`` = "bool" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"fee"`` = "fee"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"uint24"`` = "uint24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"token0"`` = "token0"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }], `Adapter`, `Store`, `Drift`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `address` | \`0x$\{string}\` |
+
+Returns
+
+`ReadContract`\<readonly [\{ `inputs`: readonly [] = []; `name`: ``"slot0"`` = "slot0"; `outputs`: readonly [\{ `name`: ``"sqrtPriceX96"`` = "sqrtPriceX96"; `type`: ``"uint160"`` = "uint160" }, \{ `name`: ``"tick"`` = "tick"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"observationIndex"`` = "observationIndex"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinality"`` = "observationCardinality"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinalityNext"`` = "observationCardinalityNext"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"unlocked"`` = "unlocked"; `type`: ``"bool"`` = "bool" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"fee"`` = "fee"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"uint24"`` = "uint24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"tickSpacing"`` = "tickSpacing"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"int24"`` = "int24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"token0"`` = "token0"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }] \| readonly [\{ `inputs`: readonly [] = []; `name`: ``"slot0"`` = "slot0"; `outputs`: readonly [\{ `name`: ``"sqrtPriceX96"`` = "sqrtPriceX96"; `type`: ``"uint160"`` = "uint160" }, \{ `name`: ``"tick"`` = "tick"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"observationIndex"`` = "observationIndex"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinality"`` = "observationCardinality"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinalityNext"`` = "observationCardinalityNext"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"feeProtocol"`` = "feeProtocol"; `type`: ``"uint8"`` = "uint8" }, \{ `name`: ``"unlocked"`` = "unlocked"; `type`: ``"bool"`` = "bool" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"fee"`` = "fee"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"uint24"`` = "uint24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"token0"`` = "token0"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }], `Adapter`, `Store`, `Drift`\>
+
+src/clients/PairedTokenAcquisitionClient.ts:61
+
+___
+
+### poolPrice
+
+▸ **poolPrice**(`pool`): `Promise`\<\{ `fee`: `bigint` ; `sqrtPriceX96`: `bigint`  }\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `pool` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\{ `fee`: `bigint` ; `sqrtPriceX96`: `bigint`  }\>
+
+src/clients/PairedTokenAcquisitionClient.ts:103
+
+___
+
+### quote
+
+▸ **quote**(`pairedToken`, `input`, `amountIn`): `Promise`\<`PairedTokenAcquisitionQuote`\>
+
+Picks the venue and expected output for buying the paired token with an exact input. With a
+QuoterV2 every existing pool is quoted depth-aware and the best output wins; otherwise (Slipstream,
+no quoter, quoter failure) the registry calculator's pool is priced at its single-tick spot.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `pairedToken` | \`0x$\{string}\` |
+| `input` | `PairedTokenAcquisitionInput` |
+| `amountIn` | `bigint` |
+
+Returns
+
+`Promise`\<`PairedTokenAcquisitionQuote`\>
+
+src/clients/PairedTokenAcquisitionClient.ts:174
+
+___
+
+### quoteSpot
+
+▸ **quoteSpot**(`pairedToken`, `route`, `input`, `amountIn`): `Promise`\<`bigint`\>
+
+Spot output through a HUB route: ETH takes the WETH:hub hop first.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `pairedToken` | \`0x$\{string}\` |
+| `route` | `PairedTokenAcquisitionRoute` |
+| `input` | `PairedTokenAcquisitionInput` |
+| `amountIn` | `bigint` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+src/clients/PairedTokenAcquisitionClient.ts:145
+
+___
+
+### resolveRoute
+
+▸ **resolveRoute**(`pairedToken`): `Promise`\<`PairedTokenAcquisitionRoute`\>
+
+The calculator-bound hub pool for a paired token. Everything resolved here is immutable on
+chain, so it caches for the session; a failed resolution is not cached.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `pairedToken` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`PairedTokenAcquisitionRoute`\>
+
+src/clients/PairedTokenAcquisitionClient.ts:69
+
+
+---
+
+@flaunch/sdk - v0.12.0 / Exports / ReadPairedTokenPositionManagerV1\_3
+
+# Class: ReadPairedTokenPositionManagerV1\_3
+
+Read side of the paired-token PositionManager V1.3 — the hook every `.vpt2` pool lives on.
+Wired at `PairedTokenPositionManagerV1_3Address` (which, unlike `FlaunchPositionManagerV1_3Address`,
+also covers Base Sepolia).
+
+## Table of contents
+
+### Constructors
+
+- constructor
+
+### Properties
+
+- address
+- contract
+
+### Methods
+
+- pairedToken
+- poolKey
+
+## Constructors
+
+### constructor
+
+• **new ReadPairedTokenPositionManagerV1_3**(`address`, `drift?`): `ReadPairedTokenPositionManagerV1_3`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `address` | \`0x$\{string}\` |
+| `drift` | `Drift` |
+
+Returns
+
+`ReadPairedTokenPositionManagerV1_3`
+
+src/clients/PairedTokenPositionManagerV1_3Client.ts:23
+
+## Properties
+
+### address
+
+• `Readonly` **address**: \`0x$\{string}\`
+
+src/clients/PairedTokenPositionManagerV1_3Client.ts:21
+
+___
+
+### contract
+
+• `Readonly` **contract**: `ReadContract`\<readonly [{}, {}, {}], `ReadAdapter`, `Store`, `Client`\<`ReadAdapter`, `Store`, {}\>\>
+
+src/clients/PairedTokenPositionManagerV1_3Client.ts:20
+
+## Methods
+
+### pairedToken
+
+▸ **pairedToken**(`poolId`): `Promise`\<\`0x$\{string}\`\>
+
+The currency `poolId` is paired with; `address(0)` is native ETH. Reverts `UnknownPool` otherwise.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `poolId` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/PairedTokenPositionManagerV1_3Client.ts:45
+
+___
+
+### poolKey
+
+▸ **poolKey**(`memecoin`): `Promise`\<`PoolKey`\>
+
+The pool key this manager launched for `memecoin`. An unknown coin yields a zeroed key
+(`hooks === address(0)`) rather than reverting — callers should treat that as "not a
+paired-token coin on this manager".
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `memecoin` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`PoolKey`\>
+
+src/clients/PairedTokenPositionManagerV1_3Client.ts:40
+
+
+---
+
+@flaunch/sdk - v0.12.0 / Exports / ReadPairedTokenRegistryV1\_3
 
 # Class: ReadPairedTokenRegistryV1\_3
 
@@ -4780,6 +5617,7 @@ src/clients/FlaunchZapV1_3Client.ts:55
 ### Methods
 
 - isApproved
+- tokenConfig
 
 ## Constructors
 
@@ -4798,15 +5636,15 @@ Returns
 
 `ReadPairedTokenRegistryV1_3`
 
-src/clients/PairedTokenRegistryV1_3Client.ts:15
+src/clients/PairedTokenRegistryV1_3Client.ts:29
 
 ## Properties
 
 ### contract
 
-• `Readonly` **contract**: `ReadContract`\<readonly [{}], `ReadAdapter`, `Store`, `Client`\<`ReadAdapter`, `Store`, {}\>\>
+• `Readonly` **contract**: `ReadContract`\<readonly [{}, {}], `ReadAdapter`, `Store`, `Client`\<`ReadAdapter`, `Store`, {}\>\>
 
-src/clients/PairedTokenRegistryV1_3Client.ts:13
+src/clients/PairedTokenRegistryV1_3Client.ts:27
 
 ## Methods
 
@@ -4824,12 +5662,111 @@ Returns
 
 `Promise`\<`boolean`\>
 
-src/clients/PairedTokenRegistryV1_3Client.ts:26
+src/clients/PairedTokenRegistryV1_3Client.ts:40
+
+___
+
+### tokenConfig
+
+▸ **tokenConfig**(`token`): `Promise`\<`PairedTokenConfig`\>
+
+The full registry row: approval, type, decimals, escrow and pricing hooks.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `token` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`PairedTokenConfig`\>
+
+src/clients/PairedTokenRegistryV1_3Client.ts:45
 
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadRevenueManagerV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadPoolSwapV1\_3
+
+# Class: ReadPoolSwapV1\_3
+
+The v1.3.1 PoolSwap router: single-pool swaps against any PoolKey on the paired-token
+PositionManager. Read side exposes `msgSender()`, the transient slot hooks read to learn who
+initiated the in-flight swap (the spend gate's approved-router buyer binding); it is zero at rest.
+
+## Hierarchy
+
+- **`ReadPoolSwapV1_3`**
+
+  ↳ `ReadWritePoolSwapV1_3`
+
+## Table of contents
+
+### Constructors
+
+- constructor
+
+### Properties
+
+- address
+- contract
+
+### Methods
+
+- msgSender
+
+## Constructors
+
+### constructor
+
+• **new ReadPoolSwapV1_3**(`address`, `drift?`): `ReadPoolSwapV1_3`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `address` | \`0x$\{string}\` |
+| `drift` | `Drift` |
+
+Returns
+
+`ReadPoolSwapV1_3`
+
+src/clients/PoolSwapV1_3Client.ts:50
+
+## Properties
+
+### address
+
+• `Readonly` **address**: \`0x$\{string}\`
+
+src/clients/PoolSwapV1_3Client.ts:48
+
+___
+
+### contract
+
+• `Readonly` **contract**: `ReadContract`\<readonly [{}, {}, {}, {}], `ReadAdapter`, `Store`, `Client`\<`ReadAdapter`, `Store`, {}\>\>
+
+src/clients/PoolSwapV1_3Client.ts:47
+
+## Methods
+
+### msgSender
+
+▸ **msgSender**(): `Promise`\<\`0x$\{string}\`\>
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/PoolSwapV1_3Client.ts:59
+
+
+---
+
+@flaunch/sdk - v0.12.0 / Exports / ReadRevenueManagerV1\_3
 
 # Class: ReadRevenueManagerV1\_3
 
@@ -5164,7 +6101,7 @@ src/clients/RevenueManagerV1_3Client.ts:194
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadStakingManagerV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadStakingManagerV1\_3
 
 # Class: ReadStakingManagerV1\_3
 
@@ -5579,7 +6516,7 @@ src/clients/StakingManagerV1_3Client.ts:100
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadTreasuryManagerV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadTreasuryManagerV1\_3
 
 # Class: ReadTreasuryManagerV1\_3
 
@@ -5850,7 +6787,7 @@ src/clients/TreasuryManagerV1_3Client.ts:147
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadWriteDynamicAddressFeeSplitManager
+@flaunch/sdk - v0.12.0 / Exports / ReadWriteDynamicAddressFeeSplitManager
 
 # Class: ReadWriteDynamicAddressFeeSplitManager
 
@@ -6425,7 +7362,7 @@ src/clients/DynamicAddressFeeSplitManagerClient.ts:168
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadWriteDynamicAddressFeeSplitManagerV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadWriteDynamicAddressFeeSplitManagerV1\_3
 
 # Class: ReadWriteDynamicAddressFeeSplitManagerV1\_3
 
@@ -7165,7 +8102,7 @@ src/clients/DynamicAddressFeeSplitManagerV1_3Client.ts:295
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadWriteFeeEscrowV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadWriteFeeEscrowV1\_3
 
 # Class: ReadWriteFeeEscrowV1\_3
 
@@ -7363,7 +8300,7 @@ src/clients/FeeEscrowV1_3Client.ts:123
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadWriteFlaunchManagerZapV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadWriteFlaunchManagerZapV1\_3
 
 # Class: ReadWriteFlaunchManagerZapV1\_3
 
@@ -7533,11 +8470,9 @@ src/clients/FlaunchManagerZapV1_3Client.ts:69
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadWriteFlaunchSDK
+@flaunch/sdk - v0.12.0 / Exports / ReadWriteFlaunchSDK
 
 # Class: ReadWriteFlaunchSDK
-
-Base class for interacting with Flaunch protocol in read-only mode
 
 ## Hierarchy
 
@@ -7557,6 +8492,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - baseReadWriteClients
 - chainId
 - drift
+- poolSwapWriters
 - publicClient
 - readFeeEscrow
 - readWriteFeeEscrow
@@ -7564,6 +8500,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readWriteFlaunchManagerZapV1\_3Client
 - readWriteFlaunchZapMultichain
 - readWriteFlaunchZapV1\_3Client
+- readWritePoolSwapV1\_3Client
 - resolveIPFS
 
 ### Accessors
@@ -7584,9 +8521,12 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readFlaunchV1\_3
 - readFlaunchZap
 - readFlaunchZapV1\_3
+- readPairedTokenAcquisition
+- readPairedTokenPositionManagerV1\_3
 - readPairedTokenRegistryV1\_3
 - readPermit2
 - readPoolManager
+- readPoolSwapV1\_3
 - readPositionManager
 - readPositionManagerV1\_1
 - readPositionManagerV1\_2
@@ -7602,6 +8542,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - readWriteFlaunchZap
 - readWriteFlaunchZapV1\_3
 - readWritePermit2
+- readWritePoolSwapV1\_3
 - readWritePositionManager
 - readWritePositionManagerV1\_1
 - readWriteReferralEscrow
@@ -7614,8 +8555,11 @@ Base class for interacting with Flaunch protocol in read-only mode
 - anyFlaunch
 - assertBaseOnlyOperation
 - assertMultiAssetManagersSupported
+- assertPairedTokenAcquisitionSupported
+- assertPairedTokenSwapSupported
 - bidWallPosition
 - buyCoin
+- buyCoinPairedToken
 - calculateAddLiquidityAmounts
 - calculateAddLiquidityTicks
 - calculateConstrainedLiquidity
@@ -7630,6 +8574,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - convertPriceToTick
 - createLiquidityCall
 - createPoolKey
+- createPoolKeyForCoin
 - creatorRevenue
 - creatorRevenueByToken
 - currentTick
@@ -7639,6 +8584,7 @@ Base class for interacting with Flaunch protocol in read-only mode
 - deployStakingManager
 - determineCoinVersion
 - ethRequiredToFlaunch
+- executePairedTokenSwap
 - fairLaunchCoinOnlyPosition
 - fairLaunchDuration
 - fairLaunchETHOnlyPosition
@@ -7675,12 +8621,14 @@ Base class for interacting with Flaunch protocol in read-only mode
 - getImportAndAddLiquidityCalls
 - getImportAndSingleSidedCoinAddLiquidityCalls
 - getMarketContext
+- getPairedPoolQuoteExactInput
 - getPermit2AllowanceAndNonce
 - getPermit2TypedData
 - getPoolCreatedFromLogs
 - getPoolCreatedFromTx
 - getPositionManager
 - getPositionManagerAddress
+- getPositionManagerAddressForCoin
 - getSellQuoteExactInput
 - getSingleSidedCoinAddLiquidityCalls
 - importMemecoin
@@ -7691,13 +8639,23 @@ Base class for interacting with Flaunch protocol in read-only mode
 - isMemecoinImported
 - isPairedTokenApproved
 - isValidCoin
+- locatePairedPool
 - marketCapToTokenPriceEth
+- pairedTokenPositionManagerAt
 - parseSwapTx
+- planPairedTokenAcquisition
+- planPairedTokenAcquisitionForBudget
+- planPairedTokenApproval
+- planPairedTokenSwap
 - pollPoolCreatedNow
 - pollPoolSwapNow
 - poolId
+- poolSwapWriterAt
 - positionInfo
+- probeMultichainCoinHook
+- quotePairedTokenAcquisition
 - referralBalance
+- resolvePairedPool
 - revenueManagerAllTokensByCreator
 - revenueManagerAllTokensInManager
 - revenueManagerBalance
@@ -7711,7 +8669,9 @@ Base class for interacting with Flaunch protocol in read-only mode
 - revenueManagerProtocolClaim
 - revenueManagerProtocolClaimV1\_3
 - revenueManagerTokensCount
+- routerForPool
 - sellCoin
+- sellCoinPairedToken
 - setERC20AllowanceToPermit2
 - setFlaunchTokenApprovalForAll
 - setIPFSResolver
@@ -7749,7 +8709,7 @@ Overrides
 
 ReadFlaunchSDK.constructor
 
-src/sdk/FlaunchSDK.ts:2864
+src/sdk/FlaunchSDK.ts:3599
 
 ## Properties
 
@@ -7761,7 +8721,7 @@ Inherited from
 
 ReadFlaunchSDK.TICK_SPACING
 
-src/sdk/FlaunchSDK.ts:362
+src/sdk/FlaunchSDK.ts:534
 
 ___
 
@@ -7769,7 +8729,7 @@ ___
 
 • `Private` `Optional` `Readonly` **baseReadWriteClients**: `BaseReadWriteClients`
 
-src/sdk/FlaunchSDK.ts:2784
+src/sdk/FlaunchSDK.ts:3495
 
 ___
 
@@ -7781,7 +8741,7 @@ Inherited from
 
 ReadFlaunchSDK.chainId
 
-src/sdk/FlaunchSDK.ts:360
+src/sdk/FlaunchSDK.ts:532
 
 ___
 
@@ -7793,7 +8753,15 @@ Overrides
 
 ReadFlaunchSDK.drift
 
-src/sdk/FlaunchSDK.ts:2783
+src/sdk/FlaunchSDK.ts:3494
+
+___
+
+### poolSwapWriters
+
+• `Private` `Readonly` **poolSwapWriters**: `Map`\<`string`, `ReadWritePoolSwapV1_3`\>
+
+src/sdk/FlaunchSDK.ts:3539
 
 ___
 
@@ -7805,7 +8773,7 @@ Inherited from
 
 ReadFlaunchSDK.publicClient
 
-src/sdk/FlaunchSDK.ts:361
+src/sdk/FlaunchSDK.ts:533
 
 ___
 
@@ -7817,7 +8785,7 @@ Inherited from
 
 ReadFlaunchSDK.readFeeEscrow
 
-src/sdk/FlaunchSDK.ts:365
+src/sdk/FlaunchSDK.ts:537
 
 ___
 
@@ -7825,7 +8793,7 @@ ___
 
 • `Readonly` **readWriteFeeEscrow**: `ReadWriteFeeEscrow`
 
-src/sdk/FlaunchSDK.ts:2787
+src/sdk/FlaunchSDK.ts:3499
 
 ___
 
@@ -7833,7 +8801,7 @@ ___
 
 • `Private` `Optional` `Readonly` **readWriteFeeEscrowV1\_3Client**: `ReadWriteFeeEscrowV1_3`
 
-src/sdk/FlaunchSDK.ts:2788
+src/sdk/FlaunchSDK.ts:3500
 
 ___
 
@@ -7841,7 +8809,7 @@ ___
 
 • `Private` `Optional` `Readonly` **readWriteFlaunchManagerZapV1\_3Client**: `ReadWriteFlaunchManagerZapV1_3`
 
-src/sdk/FlaunchSDK.ts:2789
+src/sdk/FlaunchSDK.ts:3501
 
 ___
 
@@ -7849,7 +8817,7 @@ ___
 
 • `Private` `Optional` `Readonly` **readWriteFlaunchZapMultichain**: `ReadWriteFlaunchZapMultichain`
 
-src/sdk/FlaunchSDK.ts:2785
+src/sdk/FlaunchSDK.ts:3496
 
 ___
 
@@ -7857,7 +8825,15 @@ ___
 
 • `Private` `Optional` `Readonly` **readWriteFlaunchZapV1\_3Client**: `ReadWriteFlaunchZapV1_3`
 
-src/sdk/FlaunchSDK.ts:2786
+src/sdk/FlaunchSDK.ts:3497
+
+___
+
+### readWritePoolSwapV1\_3Client
+
+• `Private` `Optional` `Readonly` **readWritePoolSwapV1\_3Client**: `ReadWritePoolSwapV1_3`
+
+src/sdk/FlaunchSDK.ts:3498
 
 ___
 
@@ -7883,7 +8859,7 @@ Inherited from
 
 ReadFlaunchSDK.resolveIPFS
 
-src/sdk/FlaunchSDK.ts:372
+src/sdk/FlaunchSDK.ts:549
 
 ## Accessors
 
@@ -7899,7 +8875,7 @@ Inherited from
 
 ReadFlaunchSDK.readAnyBidWall
 
-src/sdk/FlaunchSDK.ts:517
+src/sdk/FlaunchSDK.ts:715
 
 ___
 
@@ -7915,7 +8891,7 @@ Inherited from
 
 ReadFlaunchSDK.readAnyFlaunch
 
-src/sdk/FlaunchSDK.ts:536
+src/sdk/FlaunchSDK.ts:734
 
 ___
 
@@ -7931,7 +8907,7 @@ Inherited from
 
 ReadFlaunchSDK.readAnyPositionManager
 
-src/sdk/FlaunchSDK.ts:480
+src/sdk/FlaunchSDK.ts:678
 
 ___
 
@@ -7947,7 +8923,7 @@ Inherited from
 
 ReadFlaunchSDK.readBidWall
 
-src/sdk/FlaunchSDK.ts:504
+src/sdk/FlaunchSDK.ts:702
 
 ___
 
@@ -7963,7 +8939,7 @@ Inherited from
 
 ReadFlaunchSDK.readBidWallV1\_1
 
-src/sdk/FlaunchSDK.ts:507
+src/sdk/FlaunchSDK.ts:705
 
 ___
 
@@ -7979,7 +8955,7 @@ Inherited from
 
 ReadFlaunchSDK.readBidWallV1\_3
 
-src/sdk/FlaunchSDK.ts:514
+src/sdk/FlaunchSDK.ts:712
 
 ___
 
@@ -7995,7 +8971,7 @@ Inherited from
 
 ReadFlaunchSDK.readFairLaunch
 
-src/sdk/FlaunchSDK.ts:498
+src/sdk/FlaunchSDK.ts:696
 
 ___
 
@@ -8011,7 +8987,7 @@ Inherited from
 
 ReadFlaunchSDK.readFairLaunchV1\_1
 
-src/sdk/FlaunchSDK.ts:501
+src/sdk/FlaunchSDK.ts:699
 
 ___
 
@@ -8030,7 +9006,7 @@ Inherited from
 
 ReadFlaunchSDK.readFeeEscrowV1\_3
 
-src/sdk/FlaunchSDK.ts:378
+src/sdk/FlaunchSDK.ts:555
 
 ___
 
@@ -8046,7 +9022,7 @@ Inherited from
 
 ReadFlaunchSDK.readFlaunch
 
-src/sdk/FlaunchSDK.ts:520
+src/sdk/FlaunchSDK.ts:718
 
 ___
 
@@ -8065,7 +9041,7 @@ Inherited from
 
 ReadFlaunchSDK.readFlaunchManagerZapV1\_3
 
-src/sdk/FlaunchSDK.ts:391
+src/sdk/FlaunchSDK.ts:568
 
 ___
 
@@ -8081,7 +9057,7 @@ Inherited from
 
 ReadFlaunchSDK.readFlaunchV1\_1
 
-src/sdk/FlaunchSDK.ts:523
+src/sdk/FlaunchSDK.ts:721
 
 ___
 
@@ -8097,7 +9073,7 @@ Inherited from
 
 ReadFlaunchSDK.readFlaunchV1\_2
 
-src/sdk/FlaunchSDK.ts:526
+src/sdk/FlaunchSDK.ts:724
 
 ___
 
@@ -8113,7 +9089,7 @@ Inherited from
 
 ReadFlaunchSDK.readFlaunchV1\_3
 
-src/sdk/FlaunchSDK.ts:533
+src/sdk/FlaunchSDK.ts:731
 
 ___
 
@@ -8129,7 +9105,7 @@ Inherited from
 
 ReadFlaunchSDK.readFlaunchZap
 
-src/sdk/FlaunchSDK.ts:489
+src/sdk/FlaunchSDK.ts:687
 
 ___
 
@@ -8145,7 +9121,43 @@ Inherited from
 
 ReadFlaunchSDK.readFlaunchZapV1\_3
 
-src/sdk/FlaunchSDK.ts:464
+src/sdk/FlaunchSDK.ts:641
+
+___
+
+### readPairedTokenAcquisition
+
+• `get` **readPairedTokenAcquisition**(): `ReadPairedTokenAcquisition`
+
+Reads for buying a non-ETH paired token from ETH / the USD hub. Gate with `doesChainSupportPairedTokenAcquisition()`.
+
+Returns
+
+`ReadPairedTokenAcquisition`
+
+Inherited from
+
+ReadFlaunchSDK.readPairedTokenAcquisition
+
+src/sdk/FlaunchSDK.ts:1178
+
+___
+
+### readPairedTokenPositionManagerV1\_3
+
+• `get` **readPairedTokenPositionManagerV1_3**(): `ReadPairedTokenPositionManagerV1_3`
+
+The paired-token PositionManager V1.3 (pool keys, paired tokens). Same gate as `readPoolSwapV1_3`.
+
+Returns
+
+`ReadPairedTokenPositionManagerV1_3`
+
+Inherited from
+
+ReadFlaunchSDK.readPairedTokenPositionManagerV1\_3
+
+src/sdk/FlaunchSDK.ts:670
 
 ___
 
@@ -8161,7 +9173,7 @@ Inherited from
 
 ReadFlaunchSDK.readPairedTokenRegistryV1\_3
 
-src/sdk/FlaunchSDK.ts:472
+src/sdk/FlaunchSDK.ts:649
 
 ___
 
@@ -8177,7 +9189,7 @@ Inherited from
 
 ReadFlaunchSDK.readPermit2
 
-src/sdk/FlaunchSDK.ts:542
+src/sdk/FlaunchSDK.ts:740
 
 ___
 
@@ -8193,7 +9205,26 @@ Inherited from
 
 ReadFlaunchSDK.readPoolManager
 
-src/sdk/FlaunchSDK.ts:492
+src/sdk/FlaunchSDK.ts:690
+
+___
+
+### readPoolSwapV1\_3
+
+• `get` **readPoolSwapV1_3**(): `ReadPoolSwapV1_3`
+
+The v1.3.1 PoolSwap router. Throws on chains without paired-token swap support — gate with
+`doesChainSupportPairedTokenSwap()`.
+
+Returns
+
+`ReadPoolSwapV1_3`
+
+Inherited from
+
+ReadFlaunchSDK.readPoolSwapV1\_3
+
+src/sdk/FlaunchSDK.ts:661
 
 ___
 
@@ -8209,7 +9240,7 @@ Inherited from
 
 ReadFlaunchSDK.readPositionManager
 
-src/sdk/FlaunchSDK.ts:452
+src/sdk/FlaunchSDK.ts:629
 
 ___
 
@@ -8225,7 +9256,7 @@ Inherited from
 
 ReadFlaunchSDK.readPositionManagerV1\_1
 
-src/sdk/FlaunchSDK.ts:455
+src/sdk/FlaunchSDK.ts:632
 
 ___
 
@@ -8241,7 +9272,7 @@ Inherited from
 
 ReadFlaunchSDK.readPositionManagerV1\_2
 
-src/sdk/FlaunchSDK.ts:458
+src/sdk/FlaunchSDK.ts:635
 
 ___
 
@@ -8257,7 +9288,7 @@ Inherited from
 
 ReadFlaunchSDK.readPositionManagerV1\_3
 
-src/sdk/FlaunchSDK.ts:461
+src/sdk/FlaunchSDK.ts:638
 
 ___
 
@@ -8273,7 +9304,7 @@ Inherited from
 
 ReadFlaunchSDK.readQuoter
 
-src/sdk/FlaunchSDK.ts:539
+src/sdk/FlaunchSDK.ts:737
 
 ___
 
@@ -8289,7 +9320,7 @@ Inherited from
 
 ReadFlaunchSDK.readReferralEscrow
 
-src/sdk/FlaunchSDK.ts:486
+src/sdk/FlaunchSDK.ts:684
 
 ___
 
@@ -8305,7 +9336,7 @@ Inherited from
 
 ReadFlaunchSDK.readStateView
 
-src/sdk/FlaunchSDK.ts:495
+src/sdk/FlaunchSDK.ts:693
 
 ___
 
@@ -8321,7 +9352,7 @@ Inherited from
 
 ReadFlaunchSDK.readTokenImporter
 
-src/sdk/FlaunchSDK.ts:483
+src/sdk/FlaunchSDK.ts:681
 
 ___
 
@@ -8341,7 +9372,7 @@ Inherited from
 
 ReadFlaunchSDK.readTreasuryManagerFactoryV1\_3
 
-src/sdk/FlaunchSDK.ts:405
+src/sdk/FlaunchSDK.ts:582
 
 ___
 
@@ -8353,7 +9384,7 @@ Returns
 
 `ReadWriteAnyPositionManager`
 
-src/sdk/FlaunchSDK.ts:2843
+src/sdk/FlaunchSDK.ts:3578
 
 ___
 
@@ -8368,7 +9399,7 @@ Returns
 
 `ReadWriteFeeEscrowV1_3`
 
-src/sdk/FlaunchSDK.ts:2795
+src/sdk/FlaunchSDK.ts:3507
 
 ___
 
@@ -8384,7 +9415,7 @@ Returns
 
 `ReadWriteFlaunchManagerZapV1_3`
 
-src/sdk/FlaunchSDK.ts:2809
+src/sdk/FlaunchSDK.ts:3521
 
 ___
 
@@ -8396,7 +9427,7 @@ Returns
 
 `ReadWriteFlaunchZap`
 
-src/sdk/FlaunchSDK.ts:2852
+src/sdk/FlaunchSDK.ts:3587
 
 ___
 
@@ -8408,7 +9439,7 @@ Returns
 
 `ReadWriteFlaunchZapV1_3`
 
-src/sdk/FlaunchSDK.ts:2818
+src/sdk/FlaunchSDK.ts:3530
 
 ___
 
@@ -8420,7 +9451,21 @@ Returns
 
 `ReadWritePermit2`
 
-src/sdk/FlaunchSDK.ts:2860
+src/sdk/FlaunchSDK.ts:3595
+
+___
+
+### readWritePoolSwapV1\_3
+
+• `get` **readWritePoolSwapV1_3**(): `ReadWritePoolSwapV1_3`
+
+The chain's CURRENT v1.3 PoolSwap router with write capabilities — gate with `doesChainSupportPairedTokenSwap()`.
+
+Returns
+
+`ReadWritePoolSwapV1_3`
+
+src/sdk/FlaunchSDK.ts:3553
 
 ___
 
@@ -8432,7 +9477,7 @@ Returns
 
 `ReadWriteFlaunchPositionManager`
 
-src/sdk/FlaunchSDK.ts:2837
+src/sdk/FlaunchSDK.ts:3572
 
 ___
 
@@ -8444,7 +9489,7 @@ Returns
 
 `ReadWriteFlaunchPositionManagerV1_1`
 
-src/sdk/FlaunchSDK.ts:2840
+src/sdk/FlaunchSDK.ts:3575
 
 ___
 
@@ -8456,7 +9501,7 @@ Returns
 
 `ReadWriteReferralEscrow`
 
-src/sdk/FlaunchSDK.ts:2849
+src/sdk/FlaunchSDK.ts:3584
 
 ___
 
@@ -8468,7 +9513,7 @@ Returns
 
 `ReadWriteTokenImporter`
 
-src/sdk/FlaunchSDK.ts:2846
+src/sdk/FlaunchSDK.ts:3581
 
 ___
 
@@ -8480,7 +9525,7 @@ Returns
 
 `ReadWriteTreasuryManagerFactory`
 
-src/sdk/FlaunchSDK.ts:2855
+src/sdk/FlaunchSDK.ts:3590
 
 ## Methods
 
@@ -8506,7 +9551,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3621
+src/sdk/FlaunchSDK.ts:4409
 
 ___
 
@@ -8528,7 +9573,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3146
+src/sdk/FlaunchSDK.ts:3929
 
 ___
 
@@ -8550,7 +9595,7 @@ Inherited from
 
 ReadFlaunchSDK.assertBaseOnlyOperation
 
-src/sdk/FlaunchSDK.ts:434
+src/sdk/FlaunchSDK.ts:611
 
 ___
 
@@ -8575,7 +9620,51 @@ Inherited from
 
 ReadFlaunchSDK.assertMultiAssetManagersSupported
 
-src/sdk/FlaunchSDK.ts:444
+src/sdk/FlaunchSDK.ts:621
+
+___
+
+### assertPairedTokenAcquisitionSupported
+
+▸ **assertPairedTokenAcquisitionSupported**(`operation`): `void`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `operation` | `string` |
+
+Returns
+
+`void`
+
+Inherited from
+
+ReadFlaunchSDK.assertPairedTokenAcquisitionSupported
+
+src/sdk/FlaunchSDK.ts:1169
+
+___
+
+### assertPairedTokenSwapSupported
+
+▸ **assertPairedTokenSwapSupported**(`operation`): `void`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `operation` | `string` |
+
+Returns
+
+`void`
+
+Inherited from
+
+ReadFlaunchSDK.assertPairedTokenSwapSupported
+
+src/sdk/FlaunchSDK.ts:1012
 
 ___
 
@@ -8602,7 +9691,7 @@ Inherited from
 
 ReadFlaunchSDK.bidWallPosition
 
-src/sdk/FlaunchSDK.ts:1668
+src/sdk/FlaunchSDK.ts:2357
 
 ___
 
@@ -8625,7 +9714,30 @@ Returns
 
 Transaction response for the buy operation
 
-src/sdk/FlaunchSDK.ts:3168
+src/sdk/FlaunchSDK.ts:3951
+
+___
+
+### buyCoinPairedToken
+
+▸ **buyCoinPairedToken**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Buys a paired-token coin with an exact amount of its paired token (mUSD, native ETH, flETH, a
+B20 equity) through the v1.3.1 PoolSwap. Sends the ERC20 approve first when the allowance is
+short, then the swap; returns the swap transaction. To batch both into one wallet call, run
+`planPairedTokenSwap({ ...params, direction: "buy" })` and submit its calls yourself.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `PairedTokenSwapParams` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/sdk/FlaunchSDK.ts:3799
 
 ___
 
@@ -8647,7 +9759,7 @@ Inherited from
 
 ReadFlaunchSDK.calculateAddLiquidityAmounts
 
-src/sdk/FlaunchSDK.ts:2512
+src/sdk/FlaunchSDK.ts:3207
 
 ___
 
@@ -8674,7 +9786,7 @@ Inherited from
 
 ReadFlaunchSDK.calculateAddLiquidityTicks
 
-src/sdk/FlaunchSDK.ts:2296
+src/sdk/FlaunchSDK.ts:2994
 
 ___
 
@@ -8707,7 +9819,7 @@ Final liquidity and amounts
 | `finalAmount1` | `bigint` |
 | `finalLiquidity` | `bigint` |
 
-src/sdk/FlaunchSDK.ts:4451
+src/sdk/FlaunchSDK.ts:5239
 
 ___
 
@@ -8737,7 +9849,7 @@ Inherited from
 
 ReadFlaunchSDK.calculateCurrentTickFromMarketCap
 
-src/sdk/FlaunchSDK.ts:2267
+src/sdk/FlaunchSDK.ts:2965
 
 ___
 
@@ -8759,7 +9871,7 @@ Inherited from
 
 ReadFlaunchSDK.calculatePairedTokenFlaunchFee
 
-src/sdk/FlaunchSDK.ts:714
+src/sdk/FlaunchSDK.ts:928
 
 ___
 
@@ -8781,7 +9893,7 @@ Inherited from
 
 ReadFlaunchSDK.checkSingleSidedAddLiquidity
 
-src/sdk/FlaunchSDK.ts:2413
+src/sdk/FlaunchSDK.ts:3111
 
 ___
 
@@ -8804,7 +9916,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3428
+src/sdk/FlaunchSDK.ts:4216
 
 ___
 
@@ -8826,7 +9938,7 @@ Returns
 
 Promise<bigint> - The balance of the coin
 
-src/sdk/FlaunchSDK.ts:3155
+src/sdk/FlaunchSDK.ts:3938
 
 ___
 
@@ -8851,7 +9963,7 @@ Inherited from
 
 ReadFlaunchSDK.coinMarketCapInUSD
 
-src/sdk/FlaunchSDK.ts:1352
+src/sdk/FlaunchSDK.ts:2041
 
 ___
 
@@ -8878,7 +9990,7 @@ Inherited from
 
 ReadFlaunchSDK.coinPriceInETH
 
-src/sdk/FlaunchSDK.ts:1312
+src/sdk/FlaunchSDK.ts:2001
 
 ___
 
@@ -8907,7 +10019,7 @@ Inherited from
 
 ReadFlaunchSDK.coinPriceInUSD
 
-src/sdk/FlaunchSDK.ts:1336
+src/sdk/FlaunchSDK.ts:2025
 
 ___
 
@@ -8934,7 +10046,7 @@ Inherited from
 
 ReadFlaunchSDK.convertPriceToTick
 
-src/sdk/FlaunchSDK.ts:2249
+src/sdk/FlaunchSDK.ts:2947
 
 ___
 
@@ -8962,7 +10074,7 @@ Returns
 
 CallWithDescription for adding liquidity
 
-src/sdk/FlaunchSDK.ts:4561
+src/sdk/FlaunchSDK.ts:5349
 
 ___
 
@@ -8997,7 +10109,34 @@ Inherited from
 
 ReadFlaunchSDK.createPoolKey
 
-src/sdk/FlaunchSDK.ts:2770
+src/sdk/FlaunchSDK.ts:3462
+
+___
+
+### createPoolKeyForCoin
+
+▸ **createPoolKeyForCoin**(`coinAddress`, `version?`): `Promise`\<\{ `currency0`: \`0x$\{string}\` ; `currency1`: \`0x$\{string}\` ; `fee`: `number` ; `hooks`: \`0x$\{string}\` ; `tickSpacing`: `number`  }\>
+
+`createPoolKey` resolved by coin rather than by version: on a multichain deployment the
+hook is probed per coin (see `getPositionManagerAddressForCoin`), so the key matches the
+pool the coin was actually created on. The liquidity helpers use this.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+| `version?` | `FlaunchVersion` |
+
+Returns
+
+`Promise`\<\{ `currency0`: \`0x$\{string}\` ; `currency1`: \`0x$\{string}\` ; `fee`: `number` ; `hooks`: \`0x$\{string}\` ; `tickSpacing`: `number`  }\>
+
+Inherited from
+
+ReadFlaunchSDK.createPoolKeyForCoin
+
+src/sdk/FlaunchSDK.ts:3478
 
 ___
 
@@ -9024,7 +10163,7 @@ Inherited from
 
 ReadFlaunchSDK.creatorRevenue
 
-src/sdk/FlaunchSDK.ts:1702
+src/sdk/FlaunchSDK.ts:2391
 
 ___
 
@@ -9055,7 +10194,7 @@ Inherited from
 
 ReadFlaunchSDK.creatorRevenueByToken
 
-src/sdk/FlaunchSDK.ts:1719
+src/sdk/FlaunchSDK.ts:2408
 
 ___
 
@@ -9082,7 +10221,7 @@ Inherited from
 
 ReadFlaunchSDK.currentTick
 
-src/sdk/FlaunchSDK.ts:1297
+src/sdk/FlaunchSDK.ts:1986
 
 ___
 
@@ -9104,7 +10243,7 @@ Returns
 
 Address of the deployed BuyBack manager
 
-src/sdk/FlaunchSDK.ts:3025
+src/sdk/FlaunchSDK.ts:3766
 
 ___
 
@@ -9126,7 +10265,7 @@ Returns
 
 Address of the deployed revenue manager
 
-src/sdk/FlaunchSDK.ts:2954
+src/sdk/FlaunchSDK.ts:3695
 
 ___
 
@@ -9152,7 +10291,7 @@ Returns
 
 Address of the deployed revenue manager
 
-src/sdk/FlaunchSDK.ts:2976
+src/sdk/FlaunchSDK.ts:3717
 
 ___
 
@@ -9174,7 +10313,7 @@ Returns
 
 Address of the deployed staking manager
 
-src/sdk/FlaunchSDK.ts:3000
+src/sdk/FlaunchSDK.ts:3741
 
 ___
 
@@ -9201,7 +10340,7 @@ Inherited from
 
 ReadFlaunchSDK.determineCoinVersion
 
-src/sdk/FlaunchSDK.ts:2746
+src/sdk/FlaunchSDK.ts:3438
 
 ___
 
@@ -9230,7 +10369,26 @@ Inherited from
 
 ReadFlaunchSDK.ethRequiredToFlaunch
 
-src/sdk/FlaunchSDK.ts:2005
+src/sdk/FlaunchSDK.ts:2694
+
+___
+
+### executePairedTokenSwap
+
+▸ **executePairedTokenSwap**(`params`, `direction`): `Promise`\<\`0x$\{string}\`\>
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `PairedTokenSwapParams` |
+| `direction` | `PairedSwapDirection` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/sdk/FlaunchSDK.ts:3808
 
 ___
 
@@ -9257,7 +10415,7 @@ Inherited from
 
 ReadFlaunchSDK.fairLaunchCoinOnlyPosition
 
-src/sdk/FlaunchSDK.ts:1605
+src/sdk/FlaunchSDK.ts:2294
 
 ___
 
@@ -9284,7 +10442,7 @@ Inherited from
 
 ReadFlaunchSDK.fairLaunchDuration
 
-src/sdk/FlaunchSDK.ts:1512
+src/sdk/FlaunchSDK.ts:2201
 
 ___
 
@@ -9311,7 +10469,7 @@ Inherited from
 
 ReadFlaunchSDK.fairLaunchETHOnlyPosition
 
-src/sdk/FlaunchSDK.ts:1542
+src/sdk/FlaunchSDK.ts:2231
 
 ___
 
@@ -9338,7 +10496,7 @@ Inherited from
 
 ReadFlaunchSDK.fairLaunchInfo
 
-src/sdk/FlaunchSDK.ts:1420
+src/sdk/FlaunchSDK.ts:2109
 
 ___
 
@@ -9364,7 +10522,7 @@ Inherited from
 
 ReadFlaunchSDK.flETHIsCurrencyZero
 
-src/sdk/FlaunchSDK.ts:2138
+src/sdk/FlaunchSDK.ts:2836
 
 ___
 
@@ -9386,7 +10544,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3040
+src/sdk/FlaunchSDK.ts:3781
 
 ___
 
@@ -9408,7 +10566,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3057
+src/sdk/FlaunchSDK.ts:3840
 
 ___
 
@@ -9430,7 +10588,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3132
+src/sdk/FlaunchSDK.ts:3915
 
 ___
 
@@ -9456,7 +10614,7 @@ Transaction response
 
 Error if FlaunchZap is not deployed on the current chain
 
-src/sdk/FlaunchSDK.ts:3081
+src/sdk/FlaunchSDK.ts:3864
 
 ___
 
@@ -9478,7 +10636,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3105
+src/sdk/FlaunchSDK.ts:3888
 
 ___
 
@@ -9496,7 +10654,7 @@ Returns
 
 `Promise`\<\`0x$\{string}\`\>
 
-src/sdk/FlaunchSDK.ts:3048
+src/sdk/FlaunchSDK.ts:3789
 
 ___
 
@@ -9518,7 +10676,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3114
+src/sdk/FlaunchSDK.ts:3897
 
 ___
 
@@ -9544,7 +10702,7 @@ Transaction response
 
 Error if FlaunchZap is not deployed on the current chain
 
-src/sdk/FlaunchSDK.ts:3067
+src/sdk/FlaunchSDK.ts:3850
 
 ___
 
@@ -9566,7 +10724,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3096
+src/sdk/FlaunchSDK.ts:3879
 
 ___
 
@@ -9588,7 +10746,7 @@ Returns
 
 Array of calls with descriptions
 
-src/sdk/FlaunchSDK.ts:3664
+src/sdk/FlaunchSDK.ts:4452
 
 ___
 
@@ -9612,7 +10770,7 @@ Returns
 
 `BaseReadWriteClients`[`K`]
 
-src/sdk/FlaunchSDK.ts:2827
+src/sdk/FlaunchSDK.ts:3562
 
 ___
 
@@ -9636,7 +10794,7 @@ Inherited from
 
 ReadFlaunchSDK.getBidWall
 
-src/sdk/FlaunchSDK.ts:808
+src/sdk/FlaunchSDK.ts:1491
 
 ___
 
@@ -9658,7 +10816,7 @@ Inherited from
 
 ReadFlaunchSDK.getBidWallAddress
 
-src/sdk/FlaunchSDK.ts:865
+src/sdk/FlaunchSDK.ts:1548
 
 ___
 
@@ -9690,7 +10848,7 @@ Inherited from
 
 ReadFlaunchSDK.getBuyQuoteExactInput
 
-src/sdk/FlaunchSDK.ts:2069
+src/sdk/FlaunchSDK.ts:2761
 
 ___
 
@@ -9722,7 +10880,7 @@ Inherited from
 
 ReadFlaunchSDK.getBuyQuoteExactOutput
 
-src/sdk/FlaunchSDK.ts:2106
+src/sdk/FlaunchSDK.ts:2801
 
 ___
 
@@ -9746,7 +10904,7 @@ Inherited from
 
 ReadFlaunchSDK.getCoinInfo
 
-src/sdk/FlaunchSDK.ts:2190
+src/sdk/FlaunchSDK.ts:2888
 
 ___
 
@@ -9772,7 +10930,7 @@ Inherited from
 
 ReadFlaunchSDK.getCoinMetadata
 
-src/sdk/FlaunchSDK.ts:892
+src/sdk/FlaunchSDK.ts:1575
 
 ___
 
@@ -9799,7 +10957,7 @@ Inherited from
 
 ReadFlaunchSDK.getCoinMetadataFromTokenId
 
-src/sdk/FlaunchSDK.ts:922
+src/sdk/FlaunchSDK.ts:1605
 
 ___
 
@@ -9827,7 +10985,7 @@ Inherited from
 
 ReadFlaunchSDK.getCoinMetadataFromTokenIds
 
-src/sdk/FlaunchSDK.ts:938
+src/sdk/FlaunchSDK.ts:1621
 
 ___
 
@@ -9853,7 +11011,7 @@ Inherited from
 
 ReadFlaunchSDK.getCoinVersion
 
-src/sdk/FlaunchSDK.ts:742
+src/sdk/FlaunchSDK.ts:1420
 
 ___
 
@@ -9876,7 +11034,7 @@ Returns
 
 Promise<bigint> - The allowance of the coin to Permit2
 
-src/sdk/FlaunchSDK.ts:3356
+src/sdk/FlaunchSDK.ts:4144
 
 ___
 
@@ -9902,7 +11060,7 @@ Inherited from
 
 ReadFlaunchSDK.getETHUSDCPrice
 
-src/sdk/FlaunchSDK.ts:1375
+src/sdk/FlaunchSDK.ts:2064
 
 ___
 
@@ -9926,7 +11084,7 @@ Inherited from
 
 ReadFlaunchSDK.getFairLaunch
 
-src/sdk/FlaunchSDK.ts:787
+src/sdk/FlaunchSDK.ts:1470
 
 ___
 
@@ -9948,7 +11106,7 @@ Inherited from
 
 ReadFlaunchSDK.getFairLaunchAddress
 
-src/sdk/FlaunchSDK.ts:861
+src/sdk/FlaunchSDK.ts:1544
 
 ___
 
@@ -9972,7 +11130,7 @@ Inherited from
 
 ReadFlaunchSDK.getFlaunch
 
-src/sdk/FlaunchSDK.ts:829
+src/sdk/FlaunchSDK.ts:1512
 
 ___
 
@@ -9996,7 +11154,7 @@ Inherited from
 
 ReadFlaunchSDK.getFlaunchAddress
 
-src/sdk/FlaunchSDK.ts:850
+src/sdk/FlaunchSDK.ts:1533
 
 ___
 
@@ -10022,7 +11180,7 @@ Inherited from
 
 ReadFlaunchSDK.getFlaunchTokenIdForMemecoin
 
-src/sdk/FlaunchSDK.ts:874
+src/sdk/FlaunchSDK.ts:1557
 
 ___
 
@@ -10051,7 +11209,7 @@ Inherited from
 
 ReadFlaunchSDK.getFlaunchingFee
 
-src/sdk/FlaunchSDK.ts:1973
+src/sdk/FlaunchSDK.ts:2662
 
 ___
 
@@ -10100,7 +11258,7 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:3949
+src/sdk/FlaunchSDK.ts:4737
 
 ▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -10145,7 +11303,7 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:3973
+src/sdk/FlaunchSDK.ts:4761
 
 ▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -10188,7 +11346,7 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:3996
+src/sdk/FlaunchSDK.ts:4784
 
 ___
 
@@ -10228,7 +11386,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:4283
+src/sdk/FlaunchSDK.ts:5071
 
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -10259,7 +11417,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:4304
+src/sdk/FlaunchSDK.ts:5092
 
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -10295,7 +11453,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:4326
+src/sdk/FlaunchSDK.ts:5114
 
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -10326,7 +11484,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:4347
+src/sdk/FlaunchSDK.ts:5135
 
 ___
 
@@ -10351,7 +11509,32 @@ Inherited from
 
 ReadFlaunchSDK.getMarketContext
 
-src/sdk/FlaunchSDK.ts:2209
+src/sdk/FlaunchSDK.ts:2907
+
+___
+
+### getPairedPoolQuoteExactInput
+
+▸ **getPairedPoolQuoteExactInput**(`«destructured»`): `Promise`\<`bigint`\>
+
+Expected output of an exact-input swap on a paired-token pool, via the v4 Quoter's single-hop
+quote (hook fees included). A buy spends the paired token for the coin; a sell the reverse.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `PairedPoolQuoteParams` |
+
+Returns
+
+`Promise`\<`bigint`\>
+
+Inherited from
+
+ReadFlaunchSDK.getPairedPoolQuoteExactInput
+
+src/sdk/FlaunchSDK.ts:1104
 
 ___
 
@@ -10373,7 +11556,7 @@ Returns
 
 Promise<{allowance: bigint, nonce: bigint}> - Current allowance and nonce
 
-src/sdk/FlaunchSDK.ts:3337
+src/sdk/FlaunchSDK.ts:4125
 
 ___
 
@@ -10396,7 +11579,7 @@ Returns
 
 The typed data object for signing
 
-src/sdk/FlaunchSDK.ts:3316
+src/sdk/FlaunchSDK.ts:4104
 
 ___
 
@@ -10420,7 +11603,7 @@ Inherited from
 
 ReadFlaunchSDK.getPoolCreatedFromLogs
 
-src/sdk/FlaunchSDK.ts:1097
+src/sdk/FlaunchSDK.ts:1780
 
 ___
 
@@ -10446,7 +11629,7 @@ Inherited from
 
 ReadFlaunchSDK.getPoolCreatedFromTx
 
-src/sdk/FlaunchSDK.ts:1219
+src/sdk/FlaunchSDK.ts:1908
 
 ___
 
@@ -10470,7 +11653,7 @@ Inherited from
 
 ReadFlaunchSDK.getPositionManager
 
-src/sdk/FlaunchSDK.ts:766
+src/sdk/FlaunchSDK.ts:1449
 
 ___
 
@@ -10492,7 +11675,34 @@ Inherited from
 
 ReadFlaunchSDK.getPositionManagerAddress
 
-src/sdk/FlaunchSDK.ts:854
+src/sdk/FlaunchSDK.ts:1537
+
+___
+
+### getPositionManagerAddressForCoin
+
+▸ **getPositionManagerAddressForCoin**(`coinAddress`, `version?`): `Promise`\<\`0x$\{string}\`\>
+
+The hook (PositionManager) a coin's pool lives on. On Base this is the position manager
+for the coin's version; on a multichain deployment it is probed per coin (see
+`probeMultichainCoinHook`), falling back to the chain's multichain hook for an unknown coin.
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` | The coin to resolve |
+| `version?` | `FlaunchVersion` | Optional version override (skips detection on Base; on multichain a non-v1.3 version short-circuits to the multichain hook) |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Inherited from
+
+ReadFlaunchSDK.getPositionManagerAddressForCoin
+
+src/sdk/FlaunchSDK.ts:992
 
 ___
 
@@ -10522,7 +11732,7 @@ Inherited from
 
 ReadFlaunchSDK.getSellQuoteExactInput
 
-src/sdk/FlaunchSDK.ts:2038
+src/sdk/FlaunchSDK.ts:2727
 
 ___
 
@@ -10544,7 +11754,7 @@ Returns
 
 Array of calls with descriptions
 
-src/sdk/FlaunchSDK.ts:4052
+src/sdk/FlaunchSDK.ts:4840
 
 ___
 
@@ -10566,7 +11776,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3655
+src/sdk/FlaunchSDK.ts:4443
 
 ___
 
@@ -10590,7 +11800,7 @@ Inherited from
 
 ReadFlaunchSDK.initialSqrtPriceX96
 
-src/sdk/FlaunchSDK.ts:1385
+src/sdk/FlaunchSDK.ts:2074
 
 ___
 
@@ -10617,7 +11827,7 @@ Inherited from
 
 ReadFlaunchSDK.initialTick
 
-src/sdk/FlaunchSDK.ts:1525
+src/sdk/FlaunchSDK.ts:2214
 
 ___
 
@@ -10644,7 +11854,7 @@ Inherited from
 
 ReadFlaunchSDK.isFairLaunchActive
 
-src/sdk/FlaunchSDK.ts:1433
+src/sdk/FlaunchSDK.ts:2122
 
 ___
 
@@ -10672,7 +11882,7 @@ Inherited from
 
 ReadFlaunchSDK.isFlaunchTokenApprovedForAll
 
-src/sdk/FlaunchSDK.ts:2725
+src/sdk/FlaunchSDK.ts:3417
 
 ___
 
@@ -10698,7 +11908,7 @@ Inherited from
 
 ReadFlaunchSDK.isMemecoinImported
 
-src/sdk/FlaunchSDK.ts:2701
+src/sdk/FlaunchSDK.ts:3393
 
 ___
 
@@ -10720,7 +11930,7 @@ Inherited from
 
 ReadFlaunchSDK.isPairedTokenApproved
 
-src/sdk/FlaunchSDK.ts:710
+src/sdk/FlaunchSDK.ts:924
 
 ___
 
@@ -10746,7 +11956,41 @@ Inherited from
 
 ReadFlaunchSDK.isValidCoin
 
-src/sdk/FlaunchSDK.ts:725
+src/sdk/FlaunchSDK.ts:1400
+
+___
+
+### locatePairedPool
+
+▸ **locatePairedPool**(`coinAddress`): `Promise`\<``null`` \| \{ `hook`: \`0x$\{string}\` ; `poolKey`: `PoolKey`  }\>
+
+Which v1.3 hook a coin's paired pool lives on, and its key.
+
+A chain can carry more than one v1.3 hook generation — on Robinhood the 2026-08-21 v1.3.1
+hooks were regenerated as v1.3.3 and both keep serving their pools — so the hook is probed per
+coin (`poolKey(coin)` on the current paired PositionManager, then each superseded one) rather
+than taken from the chain's current default: a key built on the wrong hook names a pool that
+does not exist, and the swap reverts. A hook that never launched the coin answers a zeroed key
+(or reverts, for the AnyPositionManager in that list); the first real key wins. Memoised per
+coin.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<``null`` \| \{ `hook`: \`0x$\{string}\` ; `poolKey`: `PoolKey`  }\>
+
+The hook and pool key, or null when no v1.3 hook on this chain knows the coin.
+
+Inherited from
+
+ReadFlaunchSDK.locatePairedPool
+
+src/sdk/FlaunchSDK.ts:1043
 
 ___
 
@@ -10772,7 +12016,31 @@ Inherited from
 
 ReadFlaunchSDK.marketCapToTokenPriceEth
 
-src/sdk/FlaunchSDK.ts:2237
+src/sdk/FlaunchSDK.ts:2935
+
+___
+
+### pairedTokenPositionManagerAt
+
+▸ **pairedTokenPositionManagerAt**(`hook`): `ReadPairedTokenPositionManagerV1_3`
+
+The paired-token PositionManager client for a given hook address, memoised per hook.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `hook` | \`0x$\{string}\` |
+
+Returns
+
+`ReadPairedTokenPositionManagerV1_3`
+
+Inherited from
+
+ReadFlaunchSDK.pairedTokenPositionManagerAt
+
+src/sdk/FlaunchSDK.ts:1021
 
 ___
 
@@ -10809,7 +12077,127 @@ Inherited from
 
 ReadFlaunchSDK.parseSwapTx
 
-src/sdk/FlaunchSDK.ts:2162
+src/sdk/FlaunchSDK.ts:2860
+
+___
+
+### planPairedTokenAcquisition
+
+▸ **planPairedTokenAcquisition**(`params`): `Promise`\<`PairedTokenAcquisitionPlan`\>
+
+The calls that buy exactly `target` of a paired token from ETH or the USD hub: an optional
+hub-token approve to the venue's router, then the exact-output router call (ETH rides as
+`value = maxIn`; the router refunds the unspent part). Exact-output so a following PoolSwap leg
+can be encoded up front — batched wallets resolve every call before the first executes.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `PairedTokenAcquisitionParams` |
+
+Returns
+
+`Promise`\<`PairedTokenAcquisitionPlan`\>
+
+Inherited from
+
+ReadFlaunchSDK.planPairedTokenAcquisition
+
+src/sdk/FlaunchSDK.ts:1203
+
+___
+
+### planPairedTokenAcquisitionForBudget
+
+▸ **planPairedTokenAcquisitionForBudget**(`params`): `Promise`\<`PairedTokenAcquisitionPlan` & \{ `quote`: `PairedTokenAcquisitionQuote`  }\>
+
+Sizes and plans a routed buy from a BUDGET: quotes the exact input, takes `slippageBps` off, and
+plans an exact-output buy of that much with the whole budget as the price protection — the
+pattern that keeps a downstream PoolSwap leg deterministic. Returns the plan and the target.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amountIn` | `bigint` |
+| `params.deadline?` | `bigint` |
+| `params.input` | `PairedTokenAcquisitionInput` |
+| `params.pairedToken` | \`0x$\{string}\` |
+| `params.recipient` | \`0x$\{string}\` |
+| `params.sender?` | \`0x$\{string}\` |
+| `params.slippageBps` | `number` |
+
+Returns
+
+`Promise`\<`PairedTokenAcquisitionPlan` & \{ `quote`: `PairedTokenAcquisitionQuote`  }\>
+
+Inherited from
+
+ReadFlaunchSDK.planPairedTokenAcquisitionForBudget
+
+src/sdk/FlaunchSDK.ts:1251
+
+___
+
+### planPairedTokenApproval
+
+▸ **planPairedTokenApproval**(`params`): `Promise`\<`undefined` \| `PairedSwapApproveCall`\>
+
+Just the ERC20 approve a paired-token BUY needs, sized to `amount` — for a host that wants the
+player ready before a round starts (approve the whole wallet cap once; every in-round buy is
+then a single swap). `undefined` when the pool is paired with native ETH (nothing to approve)
+or the standing allowance already covers `amount`.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `PairedTokenApprovalParams` |
+
+Returns
+
+`Promise`\<`undefined` \| `PairedSwapApproveCall`\>
+
+Inherited from
+
+ReadFlaunchSDK.planPairedTokenApproval
+
+src/sdk/FlaunchSDK.ts:1152
+
+___
+
+### planPairedTokenSwap
+
+▸ **planPairedTokenSwap**(`params`): `Promise`\<`PairedSwapPlan`\>
+
+Builds the calls for an exact-input swap on a paired-token pool without sending them:
+an optional ERC20 `approve(PoolSwap, amountIn)` when the standing allowance is short, then the
+PoolSwap `swap` (the `bytes` overload when `hookData` is given, else the referrer overload).
+
+Funding by pairing: a buy on a native-ETH pool sends `amountIn` as `swap.value` and needs no
+approve; flETH / ERC20 (mUSD, B20 equities) input settles by allowance pull; a sell always
+spends the coin. `amountSpecified` is negative (v4 exact-input). The sqrt-price bound comes from
+the pool's spot price and `slippageBps` — PoolSwap has no `minOut`, so this is the price
+protection. Hosts that batch calls (`wallet_sendCalls`) run `approve` then `swap`; wallets that
+cannot batch send them as two transactions.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `PairedSwapPlanParams` |
+
+Returns
+
+`Promise`\<`PairedSwapPlan`\>
+
+Inherited from
+
+ReadFlaunchSDK.planPairedTokenSwap
+
+src/sdk/FlaunchSDK.ts:1294
 
 ___
 
@@ -10835,7 +12223,7 @@ Inherited from
 
 ReadFlaunchSDK.pollPoolCreatedNow
 
-src/sdk/FlaunchSDK.ts:1082
+src/sdk/FlaunchSDK.ts:1765
 
 ___
 
@@ -10861,7 +12249,7 @@ Inherited from
 
 ReadFlaunchSDK.pollPoolSwapNow
 
-src/sdk/FlaunchSDK.ts:1268
+src/sdk/FlaunchSDK.ts:1957
 
 ___
 
@@ -10888,7 +12276,27 @@ Inherited from
 
 ReadFlaunchSDK.poolId
 
-src/sdk/FlaunchSDK.ts:1949
+src/sdk/FlaunchSDK.ts:2638
+
+___
+
+### poolSwapWriterAt
+
+▸ **poolSwapWriterAt**(`router`): `ReadWritePoolSwapV1_3`
+
+A PoolSwap writer for a specific router — the one a plan resolved for its pool's hook generation.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `router` | \`0x$\{string}\` |
+
+Returns
+
+`ReadWritePoolSwapV1_3`
+
+src/sdk/FlaunchSDK.ts:3542
 
 ___
 
@@ -10914,7 +12322,64 @@ Inherited from
 
 ReadFlaunchSDK.positionInfo
 
-src/sdk/FlaunchSDK.ts:1287
+src/sdk/FlaunchSDK.ts:1976
+
+___
+
+### probeMultichainCoinHook
+
+▸ **probeMultichainCoinHook**(`coinAddress`): `Promise`\<``null`` \| \{ `hook`: \`0x$\{string}\` ; `version`: `FlaunchVersion`  }\>
+
+On a multichain deployment a chain can serve several hook generations at once (Robinhood:
+the v1.2 multichain hook, the 2026-08-21 v1.3.1 hooks and the v1.3.3 regeneration). Every
+pool key — and so every quote and swap — derives from the hook the coin was created on, so
+it has to be probed per coin rather than taken from the chain's current default. Probes the
+current and superseded v1.3 hooks first, then the multichain (v1.2) hook.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<``null`` \| \{ `hook`: \`0x$\{string}\` ; `version`: `FlaunchVersion`  }\>
+
+The coin's hook and version, or null when no hook on this chain knows the coin.
+
+Inherited from
+
+ReadFlaunchSDK.probeMultichainCoinHook
+
+src/sdk/FlaunchSDK.ts:948
+
+___
+
+### quotePairedTokenAcquisition
+
+▸ **quotePairedTokenAcquisition**(`params`): `Promise`\<`PairedTokenAcquisitionQuote`\>
+
+Expected paired-token output (and the venue) for an exact ETH / hub-token input.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `Object` |
+| `params.amountIn` | `bigint` |
+| `params.input` | `PairedTokenAcquisitionInput` |
+| `params.pairedToken` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`PairedTokenAcquisitionQuote`\>
+
+Inherited from
+
+ReadFlaunchSDK.quotePairedTokenAcquisition
+
+src/sdk/FlaunchSDK.ts:1187
 
 ___
 
@@ -10941,7 +12406,40 @@ Inherited from
 
 ReadFlaunchSDK.referralBalance
 
-src/sdk/FlaunchSDK.ts:1735
+src/sdk/FlaunchSDK.ts:2424
+
+___
+
+### resolvePairedPool
+
+▸ **resolvePairedPool**(`coinAddress`, `pairedToken?`): `Promise`\<`ResolvedPairedPool`\>
+
+The pool a paired-token coin trades on: its full key, id and paired side, read from the hook
+the coin was launched on (see `locatePairedPool` — one `poolKey` read per hook probed, then
+memoised). `pairedToken`, when given, is checked against the pool's real paired side rather
+than trusted: building a key from a caller's belief about the pairing is how a swap ends up
+aimed at a pool that does not exist.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `coinAddress` | \`0x$\{string}\` |
+| `pairedToken?` | \`0x$\{string}\` |
+
+Returns
+
+`Promise`\<`ResolvedPairedPool`\>
+
+**`Throws`**
+
+when no v1.3 hook on this chain launched the coin, or `pairedToken` disagrees with the pool
+
+Inherited from
+
+ReadFlaunchSDK.resolvePairedPool
+
+src/sdk/FlaunchSDK.ts:1073
 
 ___
 
@@ -10970,7 +12468,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerAllTokensByCreator
 
-src/sdk/FlaunchSDK.ts:1795
+src/sdk/FlaunchSDK.ts:2484
 
 ___
 
@@ -10998,7 +12496,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerAllTokensInManager
 
-src/sdk/FlaunchSDK.ts:1818
+src/sdk/FlaunchSDK.ts:2507
 
 ___
 
@@ -11026,7 +12524,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerBalance
 
-src/sdk/FlaunchSDK.ts:1746
+src/sdk/FlaunchSDK.ts:2435
 
 ___
 
@@ -11059,7 +12557,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerBalanceV1_3
 
-src/sdk/FlaunchSDK.ts:1864
+src/sdk/FlaunchSDK.ts:2553
 
 ___
 
@@ -11082,7 +12580,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3451
+src/sdk/FlaunchSDK.ts:4239
 
 ___
 
@@ -11106,7 +12604,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3465
+src/sdk/FlaunchSDK.ts:4253
 
 ___
 
@@ -11134,7 +12632,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3509
+src/sdk/FlaunchSDK.ts:4297
 
 ___
 
@@ -11162,7 +12660,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerPayoutAssets
 
-src/sdk/FlaunchSDK.ts:1887
+src/sdk/FlaunchSDK.ts:2576
 
 ___
 
@@ -11188,7 +12686,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerProtocolBalance
 
-src/sdk/FlaunchSDK.ts:1763
+src/sdk/FlaunchSDK.ts:2452
 
 ___
 
@@ -11216,7 +12714,7 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerProtocolBalanceV1_3
 
-src/sdk/FlaunchSDK.ts:1902
+src/sdk/FlaunchSDK.ts:2591
 
 ___
 
@@ -11239,7 +12737,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3437
+src/sdk/FlaunchSDK.ts:4225
 
 ___
 
@@ -11265,7 +12763,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3485
+src/sdk/FlaunchSDK.ts:4273
 
 ___
 
@@ -11291,7 +12789,33 @@ Inherited from
 
 ReadFlaunchSDK.revenueManagerTokensCount
 
-src/sdk/FlaunchSDK.ts:1778
+src/sdk/FlaunchSDK.ts:2467
+
+___
+
+### routerForPool
+
+▸ **routerForPool**(`hook`): \`0x$\{string}\`
+
+The PoolSwap a pool on `hook` must be traded through. Router approval is per spend gate and
+each hook generation ships its own gate, so a gated buy sent through the wrong generation's
+router is refused on chain — see `PoolSwapForHookV1_3Address`.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `hook` | \`0x$\{string}\` |
+
+Returns
+
+\`0x$\{string}\`
+
+Inherited from
+
+ReadFlaunchSDK.routerForPool
+
+src/sdk/FlaunchSDK.ts:1131
 
 ___
 
@@ -11314,7 +12838,27 @@ Returns
 
 Transaction response for the sell operation
 
-src/sdk/FlaunchSDK.ts:3260
+src/sdk/FlaunchSDK.ts:4043
+
+___
+
+### sellCoinPairedToken
+
+▸ **sellCoinPairedToken**(`params`): `Promise`\<\`0x$\{string}\`\>
+
+Sells an exact amount of a paired-token coin for its paired token through PoolSwap. See `buyCoinPairedToken`.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `params` | `PairedTokenSwapParams` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/sdk/FlaunchSDK.ts:3804
 
 ___
 
@@ -11338,7 +12882,7 @@ Returns
 
 Promise<Hex> - The transaction hash
 
-src/sdk/FlaunchSDK.ts:3371
+src/sdk/FlaunchSDK.ts:4159
 
 ___
 
@@ -11362,7 +12906,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3597
+src/sdk/FlaunchSDK.ts:4385
 
 ___
 
@@ -11391,7 +12935,7 @@ Inherited from
 
 ReadFlaunchSDK.setIPFSResolver
 
-src/sdk/FlaunchSDK.ts:2148
+src/sdk/FlaunchSDK.ts:2846
 
 ___
 
@@ -11417,7 +12961,7 @@ Inherited from
 
 ReadFlaunchSDK.tokenImporterVerifyMemecoin
 
-src/sdk/FlaunchSDK.ts:2183
+src/sdk/FlaunchSDK.ts:2881
 
 ___
 
@@ -11448,7 +12992,7 @@ Inherited from
 
 ReadFlaunchSDK.treasuryManagerBalancesV1_3
 
-src/sdk/FlaunchSDK.ts:1927
+src/sdk/FlaunchSDK.ts:2616
 
 ___
 
@@ -11475,7 +13019,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3540
+src/sdk/FlaunchSDK.ts:4328
 
 ___
 
@@ -11501,7 +13045,7 @@ Inherited from
 
 ReadFlaunchSDK.treasuryManagerInfo
 
-src/sdk/FlaunchSDK.ts:1835
+src/sdk/FlaunchSDK.ts:2524
 
 ___
 
@@ -11524,7 +13068,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3559
+src/sdk/FlaunchSDK.ts:4347
 
 ___
 
@@ -11547,7 +13091,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3578
+src/sdk/FlaunchSDK.ts:4366
 
 ___
 
@@ -11570,7 +13114,7 @@ Inherited from
 
 ReadFlaunchSDK.trustedPoolKeySignerStatus
 
-src/sdk/FlaunchSDK.ts:1440
+src/sdk/FlaunchSDK.ts:2129
 
 ___
 
@@ -11597,7 +13141,7 @@ Inherited from
 
 ReadFlaunchSDK.watchPoolCreated
 
-src/sdk/FlaunchSDK.ts:1068
+src/sdk/FlaunchSDK.ts:1751
 
 ___
 
@@ -11624,7 +13168,7 @@ Inherited from
 
 ReadFlaunchSDK.watchPoolSwap
 
-src/sdk/FlaunchSDK.ts:1243
+src/sdk/FlaunchSDK.ts:1932
 
 ___
 
@@ -11648,7 +13192,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3383
+src/sdk/FlaunchSDK.ts:4171
 
 ___
 
@@ -11676,12 +13220,12 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3409
+src/sdk/FlaunchSDK.ts:4197
 
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadWriteFlaunchZapV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadWriteFlaunchZapV1\_3
 
 # Class: ReadWriteFlaunchZapV1\_3
 
@@ -11784,7 +13328,134 @@ src/clients/FlaunchZapV1_3Client.ts:84
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadWriteRevenueManagerV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadWritePoolSwapV1\_3
+
+# Class: ReadWritePoolSwapV1\_3
+
+The v1.3.1 PoolSwap router: single-pool swaps against any PoolKey on the paired-token
+PositionManager. Read side exposes `msgSender()`, the transient slot hooks read to learn who
+initiated the in-flight swap (the spend gate's approved-router buyer binding); it is zero at rest.
+
+## Hierarchy
+
+- `ReadPoolSwapV1_3`
+
+  ↳ **`ReadWritePoolSwapV1_3`**
+
+## Table of contents
+
+### Constructors
+
+- constructor
+
+### Properties
+
+- address
+- contract
+- drift
+
+### Methods
+
+- msgSender
+- swap
+
+## Constructors
+
+### constructor
+
+• **new ReadWritePoolSwapV1_3**(`address`, `drift?`): `ReadWritePoolSwapV1_3`
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `address` | \`0x$\{string}\` |
+| `drift` | `Drift`\<`ReadWriteAdapter`\> |
+
+Returns
+
+`ReadWritePoolSwapV1_3`
+
+Overrides
+
+ReadPoolSwapV1_3.constructor
+
+src/clients/PoolSwapV1_3Client.ts:68
+
+## Properties
+
+### address
+
+• `Readonly` **address**: \`0x$\{string}\`
+
+Inherited from
+
+ReadPoolSwapV1_3.address
+
+src/clients/PoolSwapV1_3Client.ts:48
+
+___
+
+### contract
+
+• **contract**: `ReadWriteContract`\<readonly [{}, {}, {}, {}], `ReadWriteAdapter`, `Store`, `Client`\<`ReadWriteAdapter`, `Store`, {}\>\>
+
+Overrides
+
+ReadPoolSwapV1_3.contract
+
+src/clients/PoolSwapV1_3Client.ts:65
+
+___
+
+### drift
+
+• `Private` `Readonly` **drift**: `Drift`\<`ReadWriteAdapter`\>
+
+src/clients/PoolSwapV1_3Client.ts:66
+
+## Methods
+
+### msgSender
+
+▸ **msgSender**(): `Promise`\<\`0x$\{string}\`\>
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+Inherited from
+
+ReadPoolSwapV1_3.msgSender
+
+src/clients/PoolSwapV1_3Client.ts:59
+
+___
+
+### swap
+
+▸ **swap**(`«destructured»`): `Promise`\<\`0x$\{string}\`\>
+
+Swaps against a paired-token pool. The overload is chosen by the payload: `hookData` → the
+`bytes` overload, else the `address` overload with `referrer ?? address(0)`. Exact-input only
+is enforced by callers (the spend gate rejects exact-output swaps).
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `«destructured»` | `PoolSwapV1_3SwapParams` |
+
+Returns
+
+`Promise`\<\`0x$\{string}\`\>
+
+src/clients/PoolSwapV1_3Client.ts:81
+
+
+---
+
+@flaunch/sdk - v0.12.0 / Exports / ReadWriteRevenueManagerV1\_3
 
 # Class: ReadWriteRevenueManagerV1\_3
 
@@ -12356,7 +14027,7 @@ src/clients/RevenueManagerV1_3Client.ts:259
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadWriteStakingManagerV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadWriteStakingManagerV1\_3
 
 # Class: ReadWriteStakingManagerV1\_3
 
@@ -13128,7 +14799,7 @@ src/clients/StakingManagerV1_3Client.ts:281
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / ReadWriteTreasuryManagerV1\_3
+@flaunch/sdk - v0.12.0 / Exports / ReadWriteTreasuryManagerV1\_3
 
 # Class: ReadWriteTreasuryManagerV1\_3
 
@@ -13601,7 +15272,7 @@ src/clients/TreasuryManagerV1_3Client.ts:147
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / FlaunchVersion
+@flaunch/sdk - v0.12.0 / Exports / FlaunchVersion
 
 # Enumeration: FlaunchVersion
 
@@ -13623,7 +15294,7 @@ Enumeration of Flaunch contract versions
 
 • **ANY** = ``"ANY"``
 
-src/types.ts:56
+src/types.ts:71
 
 ___
 
@@ -13631,7 +15302,7 @@ ___
 
 • **V1** = ``"V1"``
 
-src/types.ts:52
+src/types.ts:67
 
 ___
 
@@ -13639,7 +15310,7 @@ ___
 
 • **V1\_1** = ``"V1_1"``
 
-src/types.ts:53
+src/types.ts:68
 
 ___
 
@@ -13647,7 +15318,7 @@ ___
 
 • **V1\_2** = ``"V1_2"``
 
-src/types.ts:54
+src/types.ts:69
 
 ___
 
@@ -13655,12 +15326,12 @@ ___
 
 • **V1\_3** = ``"V1_3"``
 
-src/types.ts:55
+src/types.ts:70
 
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / LiquidityMode
+@flaunch/sdk - v0.12.0 / Exports / LiquidityMode
 
 # Enumeration: LiquidityMode
 
@@ -13677,7 +15348,7 @@ src/types.ts:55
 
 • **CONCENTRATED** = ``"concentrated"``
 
-src/types.ts:73
+src/types.ts:88
 
 ___
 
@@ -13685,12 +15356,12 @@ ___
 
 • **FULL\_RANGE** = ``"full-range"``
 
-src/types.ts:72
+src/types.ts:87
 
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / Permissions
+@flaunch/sdk - v0.12.0 / Exports / Permissions
 
 # Enumeration: Permissions
 
@@ -13710,7 +15381,7 @@ Enumeration of Permissions for TreasuryManagers. Defaults to OPEN.
 
 • **CLOSED** = ``"closed"``
 
-src/types.ts:84
+src/types.ts:99
 
 ___
 
@@ -13718,7 +15389,7 @@ ___
 
 • **OPEN** = ``"open"``
 
-src/types.ts:83
+src/types.ts:98
 
 ___
 
@@ -13726,12 +15397,12 @@ ___
 
 • **WHITELISTED** = ``"whitelisted"``
 
-src/types.ts:85
+src/types.ts:100
 
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / Verifier
+@flaunch/sdk - v0.12.0 / Exports / Verifier
 
 # Enumeration: Verifier
 
@@ -13754,7 +15425,7 @@ Enumeration of Verifiers for TokenImporter
 
 • **CLANKER** = ``"clanker"``
 
-src/types.ts:63
+src/types.ts:78
 
 ___
 
@@ -13762,7 +15433,7 @@ ___
 
 • **DOPPLER** = ``"doppler"``
 
-src/types.ts:64
+src/types.ts:79
 
 ___
 
@@ -13770,7 +15441,7 @@ ___
 
 • **SOLANA** = ``"solana"``
 
-src/types.ts:65
+src/types.ts:80
 
 ___
 
@@ -13778,7 +15449,7 @@ ___
 
 • **VIRTUALS** = ``"virtuals"``
 
-src/types.ts:66
+src/types.ts:81
 
 ___
 
@@ -13786,7 +15457,7 @@ ___
 
 • **WHITELIST** = ``"whitelist"``
 
-src/types.ts:67
+src/types.ts:82
 
 ___
 
@@ -13794,12 +15465,12 @@ ___
 
 • **ZORA** = ``"zora"``
 
-src/types.ts:68
+src/types.ts:83
 
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / Addresses
+@flaunch/sdk - v0.12.0 / Exports / Addresses
 
 # Interface: Addresses
 
@@ -13810,7 +15481,7 @@ src/types.ts:68
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / AssetBalance
+@flaunch/sdk - v0.12.0 / Exports / AssetBalance
 
 # Interface: AssetBalance
 
@@ -13844,7 +15515,7 @@ src/clients/TreasuryManagerV1_3Client.ts:19
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / BuySwapData
+@flaunch/sdk - v0.12.0 / Exports / BuySwapData
 
 # Interface: BuySwapData
 
@@ -13882,7 +15553,7 @@ src/utils/parseSwap.ts:22
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / CallData
+@flaunch/sdk - v0.12.0 / Exports / CallData
 
 # Interface: CallData
 
@@ -13921,7 +15592,7 @@ src/sdk/calldata.ts:22
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / CoinMetadata
+@flaunch/sdk - v0.12.0 / Exports / CoinMetadata
 
 # Interface: CoinMetadata
 
@@ -13944,7 +15615,7 @@ src/sdk/calldata.ts:22
 
 • **collaborators**: `string`[]
 
-src/types.ts:30
+src/types.ts:45
 
 ___
 
@@ -13952,7 +15623,7 @@ ___
 
 • **description**: `string`
 
-src/types.ts:27
+src/types.ts:42
 
 ___
 
@@ -13960,7 +15631,7 @@ ___
 
 • **discordUrl**: `string`
 
-src/types.ts:31
+src/types.ts:46
 
 ___
 
@@ -13968,7 +15639,7 @@ ___
 
 • **external\_link**: `string`
 
-src/types.ts:29
+src/types.ts:44
 
 ___
 
@@ -13976,7 +15647,7 @@ ___
 
 • **image**: `string`
 
-src/types.ts:28
+src/types.ts:43
 
 ___
 
@@ -13984,7 +15655,7 @@ ___
 
 • **name**: `string`
 
-src/types.ts:26
+src/types.ts:41
 
 ___
 
@@ -13992,7 +15663,7 @@ ___
 
 • **telegramUrl**: `string`
 
-src/types.ts:33
+src/types.ts:48
 
 ___
 
@@ -14000,12 +15671,12 @@ ___
 
 • **twitterUrl**: `string`
 
-src/types.ts:32
+src/types.ts:47
 
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / DeployManagerV1\_3Params
+@flaunch/sdk - v0.12.0 / Exports / DeployManagerV1\_3Params
 
 # Interface: DeployManagerV1\_3Params
 
@@ -14061,7 +15732,7 @@ src/clients/FlaunchManagerZapV1_3Client.ts:33
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / EscrowTokenBalance
+@flaunch/sdk - v0.12.0 / Exports / EscrowTokenBalance
 
 # Interface: EscrowTokenBalance
 
@@ -14095,7 +15766,7 @@ src/clients/FeeEscrowV1_3Client.ts:16
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
+@flaunch/sdk - v0.12.0 / Exports / FlaunchWithDynamicSplitManagerIPFSParams
 
 # Interface: FlaunchWithDynamicSplitManagerIPFSParams
 
@@ -14250,7 +15921,7 @@ Inherited from
 
 IPFSParams.metadata
 
-src/types.ts:37
+src/types.ts:52
 
 ___
 
@@ -14286,7 +15957,7 @@ Inherited from
 
 IPFSParams.pinataConfig
 
-src/types.ts:45
+src/types.ts:60
 
 ___
 
@@ -14369,7 +16040,7 @@ src/clients/FlaunchZapClient.ts:52
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / FlaunchWithDynamicSplitManagerParams
+@flaunch/sdk - v0.12.0 / Exports / FlaunchWithDynamicSplitManagerParams
 
 # Interface: FlaunchWithDynamicSplitManagerParams
 
@@ -14597,7 +16268,7 @@ src/clients/FlaunchZapClient.ts:52
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / IPFSParams
+@flaunch/sdk - v0.12.0 / Exports / IPFSParams
 
 # Interface: IPFSParams
 
@@ -14631,7 +16302,7 @@ Type declaration
 | `twitterUrl?` | `string` |
 | `websiteUrl?` | `string` |
 
-src/types.ts:37
+src/types.ts:52
 
 ___
 
@@ -14639,12 +16310,285 @@ ___
 
 • `Optional` **pinataConfig**: `PinataConfig`
 
-src/types.ts:45
+src/types.ts:60
 
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / PinataConfig
+@flaunch/sdk - v0.12.0 / Exports / PairedTokenAcquisitionDex
+
+# Interface: PairedTokenAcquisitionDex
+
+## Table of contents
+
+### Properties
+
+- flavor
+- hubSymbol
+- hubToken
+- swapRouter
+- venues
+- weth
+- wethHubPool
+- wethHubPoolKey
+
+## Properties
+
+### flavor
+
+• **flavor**: `PairedTokenAcquisitionDexFlavor`
+
+src/addresses.ts:149
+
+___
+
+### hubSymbol
+
+• **hubSymbol**: `string`
+
+src/addresses.ts:155
+
+___
+
+### hubToken
+
+• **hubToken**: \`0x$\{string}\`
+
+The USD hub every equity pool quotes in: USDC on Base, USDG on Robinhood.
+
+src/addresses.ts:154
+
+___
+
+### swapRouter
+
+• **swapRouter**: \`0x$\{string}\`
+
+The router a routed buy is written to.
+
+src/addresses.ts:151
+
+___
+
+### venues
+
+• `Optional` **venues**: `Object`
+
+Venue discovery (`uniswapV3` only): factory, fee tiers to probe, and a QuoterV2 for depth-aware quotes.
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `factory` | \`0x$\{string}\` |
+| `feeTiers` | readonly `number`[] |
+| `quoterV2?` | \`0x$\{string}\` |
+
+src/addresses.ts:161
+
+___
+
+### weth
+
+• **weth**: \`0x$\{string}\`
+
+src/addresses.ts:152
+
+___
+
+### wethHubPool
+
+• **wethHubPool**: \`0x$\{string}\`
+
+The deep WETH:hub pool on the same factory, for the ETH → hub hop.
+
+src/addresses.ts:157
+
+___
+
+### wethHubPoolKey
+
+• **wethHubPoolKey**: `number`
+
+That pool's key in the path's 3-byte slot: `tickSpacing` (slipstream) or `fee` (uniswapV3).
+
+src/addresses.ts:159
+
+
+---
+
+@flaunch/sdk - v0.12.0 / Exports / PairedTokenAcquisitionLeg
+
+# Interface: PairedTokenAcquisitionLeg
+
+## Table of contents
+
+### Properties
+
+- amountInMaximum
+- amountOut
+- deadline
+- pairedToken
+- recipient
+- route
+
+## Properties
+
+### amountInMaximum
+
+• **amountInMaximum**: `bigint`
+
+The whole input — the price protection; the leg reverts rather than spend more.
+
+src/utils/pairedTokenAcquisition.ts:293
+
+___
+
+### amountOut
+
+• **amountOut**: `bigint`
+
+The exact paired-token amount the leg must deliver.
+
+src/utils/pairedTokenAcquisition.ts:291
+
+___
+
+### deadline
+
+• **deadline**: `bigint`
+
+Unix seconds after which the router refuses to execute.
+
+src/utils/pairedTokenAcquisition.ts:289
+
+___
+
+### pairedToken
+
+• **pairedToken**: \`0x$\{string}\`
+
+src/utils/pairedTokenAcquisition.ts:285
+
+___
+
+### recipient
+
+• **recipient**: \`0x$\{string}\`
+
+src/utils/pairedTokenAcquisition.ts:287
+
+___
+
+### route
+
+• **route**: `PairedTokenAcquisitionRoute`
+
+src/utils/pairedTokenAcquisition.ts:286
+
+
+---
+
+@flaunch/sdk - v0.12.0 / Exports / PairedTokenAcquisitionQuote
+
+# Interface: PairedTokenAcquisitionQuote
+
+## Table of contents
+
+### Properties
+
+- expectedOut
+- route
+- source
+
+## Properties
+
+### expectedOut
+
+• **expectedOut**: `bigint`
+
+Expected paired-token output for the exact input, before any slippage haircut.
+
+src/clients/PairedTokenAcquisitionClient.ts:23
+
+___
+
+### route
+
+• **route**: `PairedTokenAcquisitionRoute`
+
+src/clients/PairedTokenAcquisitionClient.ts:21
+
+___
+
+### source
+
+• **source**: ``"quoter"`` \| ``"spot"``
+
+How the number was produced — a depth-aware quoter, or the calculator pool's single-tick spot.
+
+src/clients/PairedTokenAcquisitionClient.ts:25
+
+
+---
+
+@flaunch/sdk - v0.12.0 / Exports / PairedTokenAcquisitionRoute
+
+# Interface: PairedTokenAcquisitionRoute
+
+## Table of contents
+
+### Properties
+
+- direct
+- payingIsToken0
+- pool
+- poolKey
+
+## Properties
+
+### direct
+
+• `Optional` **direct**: `boolean`
+
+A WETH:token pool reached in one hop from ETH, skipping the hub. Only chosen for an ETH input.
+
+src/utils/pairedTokenAcquisition.ts:223
+
+___
+
+### payingIsToken0
+
+• **payingIsToken0**: `boolean`
+
+Whether the paying side (hub, or WETH when `direct`) is the pool's token0.
+
+src/utils/pairedTokenAcquisition.ts:221
+
+___
+
+### pool
+
+• **pool**: \`0x$\{string}\`
+
+The pool the paired-token leg trades in: hub:token, or WETH:token when `direct`.
+
+src/utils/pairedTokenAcquisition.ts:217
+
+___
+
+### poolKey
+
+• **poolKey**: `number`
+
+The pool's key for the path / router params: `tickSpacing` (slipstream) or `fee` (uniswapV3).
+
+src/utils/pairedTokenAcquisition.ts:219
+
+
+---
+
+@flaunch/sdk - v0.12.0 / Exports / PinataConfig
 
 # Interface: PinataConfig
 
@@ -14665,7 +16609,7 @@ src/helpers/ipfs.ts:27
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / PoolKey
+@flaunch/sdk - v0.12.0 / Exports / PoolKey
 
 # Interface: PoolKey
 
@@ -14728,7 +16672,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / PoolWithHookData
+@flaunch/sdk - v0.12.0 / Exports / PoolWithHookData
 
 # Interface: PoolWithHookData
 
@@ -14820,7 +16764,7 @@ src/types.ts:17
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / SellSwapData
+@flaunch/sdk - v0.12.0 / Exports / SellSwapData
 
 # Interface: SellSwapData
 
@@ -14858,7 +16802,7 @@ src/utils/parseSwap.ts:31
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / SingleSidedLiquidityInfo
+@flaunch/sdk - v0.12.0 / Exports / SingleSidedLiquidityInfo
 
 # Interface: SingleSidedLiquidityInfo
 
@@ -14876,7 +16820,7 @@ src/utils/parseSwap.ts:31
 
 • **isSingleSided**: `boolean`
 
-src/types.ts:196
+src/types.ts:211
 
 ___
 
@@ -14884,7 +16828,7 @@ ___
 
 • **shouldHideCoinInput**: `boolean`
 
-src/types.ts:197
+src/types.ts:212
 
 ___
 
@@ -14892,12 +16836,12 @@ ___
 
 • **shouldHideETHInput**: `boolean`
 
-src/types.ts:198
+src/types.ts:213
 
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / SwapFees
+@flaunch/sdk - v0.12.0 / Exports / SwapFees
 
 # Interface: SwapFees
 
@@ -14927,7 +16871,7 @@ src/utils/parseSwap.ts:17
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports / SwapLogArgs
+@flaunch/sdk - v0.12.0 / Exports / SwapLogArgs
 
 # Interface: SwapLogArgs
 
@@ -15047,9 +16991,9 @@ src/utils/parseSwap.ts:13
 
 ---
 
-@flaunch/sdk - v0.11.1 / Exports
+@flaunch/sdk - v0.12.0 / Exports
 
-# @flaunch/sdk - v0.11.1
+# @flaunch/sdk - v0.12.0
 
 ## Table of contents
 
@@ -15069,7 +17013,10 @@ src/utils/parseSwap.ts:13
 - ReadFlaunchManagerZapV1\_3
 - ReadFlaunchSDK
 - ReadFlaunchZapV1\_3
+- ReadPairedTokenAcquisition
+- ReadPairedTokenPositionManagerV1\_3
 - ReadPairedTokenRegistryV1\_3
+- ReadPoolSwapV1\_3
 - ReadRevenueManagerV1\_3
 - ReadStakingManagerV1\_3
 - ReadTreasuryManagerV1\_3
@@ -15079,6 +17026,7 @@ src/utils/parseSwap.ts:13
 - ReadWriteFlaunchManagerZapV1\_3
 - ReadWriteFlaunchSDK
 - ReadWriteFlaunchZapV1\_3
+- ReadWritePoolSwapV1\_3
 - ReadWriteRevenueManagerV1\_3
 - ReadWriteStakingManagerV1\_3
 - ReadWriteTreasuryManagerV1\_3
@@ -15095,6 +17043,10 @@ src/utils/parseSwap.ts:13
 - FlaunchWithDynamicSplitManagerIPFSParams
 - FlaunchWithDynamicSplitManagerParams
 - IPFSParams
+- PairedTokenAcquisitionDex
+- PairedTokenAcquisitionLeg
+- PairedTokenAcquisitionQuote
+- PairedTokenAcquisitionRoute
 - PinataConfig
 - PoolKey
 - PoolWithHookData
@@ -15128,15 +17080,32 @@ src/utils/parseSwap.ts:13
 - ImportAndSingleSidedCoinAddLiquidityWithMarketCap
 - ImportAndSingleSidedCoinAddLiquidityWithPrice
 - ImportMemecoinParams
+- PairedPoolQuoteParams
+- PairedSwapApproveCall
+- PairedSwapCall
+- PairedSwapDirection
+- PairedSwapPlan
+- PairedSwapPlanParams
+- PairedTokenAcquisitionDexFlavor
+- PairedTokenAcquisitionInput
+- PairedTokenAcquisitionParams
+- PairedTokenAcquisitionPlan
+- PairedTokenApprovalParams
+- PairedTokenConfig
 - PairedTokenFlaunchFee
 - PairedTokenFlaunchParams
+- PairedTokenSwapParams
+- PairedTokenType
 - ParsedSwapData
 - PermitDetails
 - PermitSingle
 - PoolCreatedEventData
 - PoolCreatedLogs
 - PoolSwapLog
+- PoolSwapParams
+- PoolSwapV1\_3SwapParams
 - RecipientShare
+- ResolvedPairedPool
 - SellSwapLog
 - StakePositionV1\_3
 - StakeRewardsV1\_3
@@ -15184,12 +17153,18 @@ src/utils/parseSwap.ts:13
 - FlaunchZapMultichainAddress
 - FlaunchZapV1\_3Address
 - GroupMapperV1\_3Address
+- MAX\_SQRT\_PRICE\_LIMIT
+- MIN\_SQRT\_PRICE\_LIMIT
+- PAIRED\_TOKEN\_TYPE
 - PERMIT\_DETAILS
 - PERMIT\_TYPES
+- PairedTokenAcquisitionDexAddress
 - PairedTokenPositionManagerV1\_3Address
 - PairedTokenRegistryV1\_3Address
 - Permit2Address
 - PoolManagerAddress
+- PoolSwapForHookV1\_3Address
+- PoolSwapV1\_3Address
 - Q192
 - Q96
 - QuoterAddress
@@ -15197,18 +17172,26 @@ src/utils/parseSwap.ts:13
 - ReferralEscrowV1\_3Address
 - RevenueManagerAddress
 - RevenueManagerV1\_3Address
+- SlipstreamPoolAbi
+- SlipstreamSwapRouterAbi
 - SolanaVerifierAddress
 - StakingManagerAddress
 - StakingManagerV1\_3Address
 - StateViewAddress
+- SupersededPositionManagerV1\_3Address
 - TICK\_SPACING
 - TickFinder
 - TokenImporterAddress
 - TokenImporterV1\_3Address
 - TreasuryManagerFactoryAddress
 - TreasuryManagerFactoryV1\_3Address
+- TwoHopPriceCalculatorAbi
 - USDCETHPoolKeys
 - UniV4PositionManagerAddress
+- UniswapV3FactoryAbi
+- UniswapV3PoolAbi
+- UniswapV3QuoterV2Abi
+- UniswapV3SwapRouter02Abi
 - UniversalRouterAddress
 - VirtualsVerifierAddress
 - WhitelistVerifierAddress
@@ -15220,20 +17203,29 @@ src/utils/parseSwap.ts:13
 
 ### Functions
 
+- acquisitionPoolAbi
 - buyMemecoin
 - bytes32ToUint256
 - calculateUnderlyingTokenBalances
+- clSpotAmountOut
 - createCallDataWalletClient
 - createDrift
 - createFlaunch
 - createFlaunchCalldata
+- decodeBalanceDelta
 - decodeCallData
 - doesChainSupportMultiAssetManagers
 - doesChainSupportMultiTokenFeeEscrow
 - doesChainSupportMultichainNativeETHSwap
+- doesChainSupportPairedTokenAcquisition
 - doesChainSupportPairedTokenLaunch
+- doesChainSupportPairedTokenSwap
 - doesChainSupportSplitManager
 - doesUniversalRouterUseV4HopPriceLimits
+- encodeAcquisitionEthBuy
+- encodeAcquisitionEthExactOutputPath
+- encodeAcquisitionExactInputPath
+- encodeAcquisitionHubBuy
 - encodeRevenueManagerClaimData
 - generateTokenUri
 - getAmountWithSlippage
@@ -15245,16 +17237,23 @@ src/utils/parseSwap.ts:13
 - getPermit2TypedData
 - getPoolId
 - getSqrtPriceX96FromTick
+- getV1\_3PositionManagers
 - getValidTick
 - isChainSupported
+- isEmptyPoolKey
+- isZeroForOne
 - maxLiquidityForAmount0Precise
 - maxLiquidityForAmount1
 - orderPoolKey
+- pairedPoolKey
+- pairedTokenOfPoolKey
 - parseCall
 - parseSwapData
+- poolSwapForHook
 - priceRatioToTick
 - resolveIPFS
 - sellMemecoinWithPermit2
+- sqrtPriceLimitFromSlippage
 - uint256ToBytes32
 - uploadFileToIPFS
 - uploadImageToFlaunchAPI
@@ -15284,7 +17283,7 @@ ___
 
 Ƭ **CalculateAddLiquidityAmountsParams**: \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `currentMarketCap?`: `string` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `currentPriceUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `version?`: `FlaunchVersion`  }
 
-src/types.ts:103
+src/types.ts:118
 
 ___
 
@@ -15347,7 +17346,7 @@ ___
 
 Ƭ **CallWithDescription**: `Call` & \{ `description?`: `string`  }
 
-src/types.ts:76
+src/types.ts:91
 
 ___
 
@@ -15355,7 +17354,7 @@ ___
 
 Ƭ **CheckSingleSidedAddLiquidityParams**: \{ `coinAddress`: `Address` ; `currentMarketCap?`: `string` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `currentPriceUSD?`: `number` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `version?`: `FlaunchVersion`  }
 
-src/types.ts:177
+src/types.ts:192
 
 ___
 
@@ -15446,7 +17445,7 @@ ___
 
 Ƭ **GetAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `slippagePercent?`: `number` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `slippagePercent?`: `number` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `slippagePercent?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number` ; `version?`: `FlaunchVersion`  }
 
-src/types.ts:125
+src/types.ts:140
 
 ___
 
@@ -15454,7 +17453,7 @@ ___
 
 Ƭ **GetSingleSidedCoinAddLiquidityCallsParams**: \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `initialMarketCapUSD?`: `number` ; `slippagePercent?`: `number` ; `tokenSupply?`: `bigint` ; `version?`: `FlaunchVersion`  } \| \{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `initialPriceUSD?`: `number` ; `slippagePercent?`: `number` ; `tokenSupply?`: `bigint` ; `version?`: `FlaunchVersion`  }
 
-src/types.ts:159
+src/types.ts:174
 
 ___
 
@@ -15462,7 +17461,7 @@ ___
 
 Ƭ **ImportAndAddLiquidityParams**: `ImportAndAddLiquidityWithMarketCap` \| `ImportAndAddLiquidityWithPrice` \| `ImportAndAddLiquidityWithExactAmounts`
 
-src/types.ts:244
+src/types.ts:259
 
 ___
 
@@ -15470,7 +17469,7 @@ ___
 
 Ƭ **ImportAndAddLiquidityWithExactAmounts**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `currentTick?`: `number` ; `flethAmount`: `bigint` ; `slippagePercent?`: `number` ; `tickLower`: `number` ; `tickUpper`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
-src/types.ts:230
+src/types.ts:245
 
 ___
 
@@ -15478,7 +17477,7 @@ ___
 
 Ƭ **ImportAndAddLiquidityWithMarketCap**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxMarketCap`: `string` ; `minMarketCap`: `string` ; `slippagePercent?`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
-src/types.ts:202
+src/types.ts:217
 
 ___
 
@@ -15486,7 +17485,7 @@ ___
 
 Ƭ **ImportAndAddLiquidityWithPrice**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinOrEthInputAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `inputToken`: ``"coin"`` \| ``"eth"`` ; `liquidityMode`: `LiquidityMode` ; `maxPriceUSD`: `string` ; `minPriceUSD`: `string` ; `slippagePercent?`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
-src/types.ts:216
+src/types.ts:231
 
 ___
 
@@ -15494,7 +17493,7 @@ ___
 
 Ƭ **ImportAndSingleSidedCoinAddLiquidityParams**: `ImportAndSingleSidedCoinAddLiquidityWithMarketCap` \| `ImportAndSingleSidedCoinAddLiquidityWithPrice`
 
-src/types.ts:271
+src/types.ts:286
 
 ___
 
@@ -15502,7 +17501,7 @@ ___
 
 Ƭ **ImportAndSingleSidedCoinAddLiquidityWithMarketCap**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
-src/types.ts:252
+src/types.ts:267
 
 ___
 
@@ -15510,7 +17509,7 @@ ___
 
 Ƭ **ImportAndSingleSidedCoinAddLiquidityWithPrice**: `Flatten`\<\{ `coinAddress`: `Address` ; `coinAmount`: `bigint` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `verifier?`: `Verifier` ; `version?`: `FlaunchVersion`  }\>
 
-src/types.ts:261
+src/types.ts:276
 
 ___
 
@@ -15518,7 +17517,188 @@ ___
 
 Ƭ **ImportMemecoinParams**: \{ `coinAddress`: `Address` ; `creatorFeeAllocationPercent`: `number` ; `initialMarketCapUSD`: `number` ; `verifier?`: `Verifier`  } \| \{ `coinAddress`: `Address` ; `creatorFeeAllocationPercent`: `number` ; `initialPriceUSD`: `number` ; `verifier?`: `Verifier`  }
 
-src/types.ts:89
+src/types.ts:104
+
+___
+
+### PairedPoolQuoteParams
+
+Ƭ **PairedPoolQuoteParams**: `Object`
+
+Type declaration
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `amountIn` | `bigint` | - |
+| `coinAddress` | `Address` | - |
+| `direction?` | `PairedSwapDirection` | - |
+| `hookData?` | `Hex` | - |
+| `pairedToken?` | `Address` | - |
+| `userWallet?` | `Address` | Simulate as this wallet — required when the hook binds `hookData` to a buyer. |
+
+src/sdk/FlaunchSDK.ts:472
+
+___
+
+### PairedSwapApproveCall
+
+Ƭ **PairedSwapApproveCall**: `PairedSwapCall` & \{ `amount`: `bigint` ; `spender`: `Address` ; `token`: `Address`  }
+
+src/sdk/FlaunchSDK.ts:490
+
+___
+
+### PairedSwapCall
+
+Ƭ **PairedSwapCall**: `Object`
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `data` | `Hex` |
+| `to` | `Address` |
+| `value` | `bigint` |
+
+src/sdk/FlaunchSDK.ts:489
+
+___
+
+### PairedSwapDirection
+
+Ƭ **PairedSwapDirection**: ``"buy"`` \| ``"sell"``
+
+src/sdk/FlaunchSDK.ts:387
+
+___
+
+### PairedSwapPlan
+
+Ƭ **PairedSwapPlan**: `ResolvedPairedPool` & \{ `amountIn`: `bigint` ; `approve?`: `PairedSwapApproveCall` ; `direction`: `PairedSwapDirection` ; `isNativeInput`: `boolean` ; `sqrtPriceLimitX96`: `bigint` ; `swap`: `PairedSwapCall` ; `tokenIn`: `Address` ; `tokenOut`: `Address` ; `zeroForOne`: `boolean`  }
+
+Everything a host needs to execute a paired-token swap itself — as one batched
+`wallet_sendCalls` or two sequential transactions: the optional ERC20 approve, then the PoolSwap
+call. `buyCoinPairedToken` / `sellCoinPairedToken` run exactly this plan.
+
+src/sdk/FlaunchSDK.ts:501
+
+___
+
+### PairedSwapPlanParams
+
+Ƭ **PairedSwapPlanParams**: `PairedTokenSwapParams` & \{ `direction`: `PairedSwapDirection`  }
+
+planPairedTokenSwap's input: the swap params plus which way the swap goes.
+
+src/sdk/FlaunchSDK.ts:436
+
+___
+
+### PairedTokenAcquisitionDexFlavor
+
+Ƭ **PairedTokenAcquisitionDexFlavor**: ``"slipstream"`` \| ``"uniswapV3"``
+
+Where a paired token that is NOT ETH-equivalent can be bought from ETH or the chain's USD hub:
+the concentrated-liquidity venue holding the only liquidity for a chain's tokenised equities.
+A buy that starts from ETH/USDC(/USDG) routes through it before the coin's own pool.
+
+- `slipstream` (Base): the B20 DEX, a Slipstream-style CL fork on a non-canonical factory; buys go
+  through its own SwapRouter. Pools are keyed by `tickSpacing`; params carry a `deadline`.
+- `uniswapV3` (Robinhood): canonical Uniswap V3 with a `SwapRouter02` whose params drop the
+  `deadline` (it rides on `multicall(deadline, …)`) and key pools by `fee`.
+
+src/addresses.ts:147
+
+___
+
+### PairedTokenAcquisitionInput
+
+Ƭ **PairedTokenAcquisitionInput**: ``"eth"`` \| ``"hub"``
+
+What a routed buy pays with: native ETH, or the chain's USD hub token (USDC / USDG).
+
+src/utils/pairedTokenAcquisition.ts:213
+
+___
+
+### PairedTokenAcquisitionParams
+
+Ƭ **PairedTokenAcquisitionParams**: `Object`
+
+Type declaration
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `deadline?` | `bigint` | Unix seconds; defaults to now + 10 minutes. |
+| `input` | `PairedTokenAcquisitionInput` | - |
+| `maxIn` | `bigint` | The most the router may spend — the price protection; native ETH travels as `value`. |
+| `pairedToken` | `Address` | - |
+| `recipient` | `Address` | - |
+| `route?` | `PairedTokenAcquisitionRoute` | The venue to execute on. Defaults to the registry calculator's route — but a caller that QUOTED first must pass the quote's route through, or the plan may execute on a different pool than the one that priced the target (a better-priced venue's target can exceed what the calculator pool delivers within `maxIn`, reverting the buy). |
+| `sender?` | `Address` | For the hub-token allowance check; defaults to the drift signer, else the approve is always planned. |
+| `target` | `bigint` | Exactly this much paired token is delivered (exact-output). |
+
+src/sdk/FlaunchSDK.ts:440
+
+___
+
+### PairedTokenAcquisitionPlan
+
+Ƭ **PairedTokenAcquisitionPlan**: `Object`
+
+Type declaration
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `approve?` | `PairedSwapApproveCall` | Present for a hub-token input whose router allowance is short of `maxIn`. |
+| `input` | `PairedTokenAcquisitionInput` | - |
+| `maxIn` | `bigint` | - |
+| `route` | `PairedTokenAcquisitionRoute` | - |
+| `swap` | `PairedSwapCall` | The router call; `value` is `maxIn` for an ETH input (the router refunds the unspent part). |
+| `target` | `bigint` | - |
+
+src/sdk/FlaunchSDK.ts:461
+
+___
+
+### PairedTokenApprovalParams
+
+Ƭ **PairedTokenApprovalParams**: `Object`
+
+Type declaration
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `amount` | `bigint` | The allowance to set when the current one is short of it. |
+| `coinAddress` | `Address` | - |
+| `pairedToken?` | `Address` | - |
+| `router?` | `Address` | - |
+| `sender?` | `Address` | - |
+
+src/sdk/FlaunchSDK.ts:425
+
+___
+
+### PairedTokenConfig
+
+Ƭ **PairedTokenConfig**: `Object`
+
+A registry row for a paired token — `IPairedTokenRegistry.PairedToken`.
+
+Type declaration
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `approved` | `boolean` | - |
+| `bidWallThreshold` | `bigint` | - |
+| `decimals` | `number` | The token's own decimals (6 for mUSD/USDC, 8 for the B20 equities, 18 for flETH). |
+| `feeEscrow` | `Address` | - |
+| `minDistribute` | `bigint` | - |
+| `priceCalculator` | `Address` | - |
+| `tokenType` | `PairedTokenType` | - |
+| `underlying` | `Address` | - |
+
+src/clients/PairedTokenRegistryV1_3Client.ts:11
 
 ___
 
@@ -15557,6 +17737,41 @@ Type declaration
 | `tokenUri` | `string` |
 
 src/clients/FlaunchZapV1_3Client.ts:14
+
+___
+
+### PairedTokenSwapParams
+
+Ƭ **PairedTokenSwapParams**: `Object`
+
+An exact-input swap on a paired-token pool (a coin launched through `flaunchPairedToken`,
+paired with mUSD, native ETH, flETH or a B20 equity). Exact-output is deliberately absent — the
+spend gate rejects it, and PoolSwap has no `minOut` — so the only price protection is the
+sqrt-price bound derived from `slippageBps`.
+
+Type declaration
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `amountIn` | `bigint` | Exact input, in the input currency's own decimals (a buy spends the paired token, a sell spends the coin). |
+| `approvalAllowance?` | `bigint` | When an approve is needed, approve this much instead of `amountIn` (must be ≥ `amountIn`). A standing allowance — a round's wallet cap, say — turns every later buy into a single swap call. |
+| `coinAddress` | `Address` | - |
+| `hookData?` | `Hex` | Bytes for the pool's hook — a spend-gated pool's signed authorisation. |
+| `pairedToken?` | `Address` | The pool's paired side; resolved on chain from the PositionManager when omitted. `zeroAddress` = native ETH. |
+| `referrer?` | `Address` | Referral attribution; ignored when `hookData` is given (the gate's payload leads with the referrer). |
+| `router?` | `Address` | The PoolSwap to route through. Defaults to the router approved on the spend gate of the hook the coin's pool lives on (`poolSwapForHook`); a host that learned the router from the gate's own `/config` passes it here. |
+| `sender?` | `Address` | The wallet that will send the swap. Used for the ERC20 allowance check; defaults to the drift signer. When neither is available the plan always includes the approve step. |
+| `slippageBps` | `number` | Tolerance in basis points, 1..9999 (50 = 0.5%), enforced against the pool's current spot price. |
+
+src/sdk/FlaunchSDK.ts:395
+
+___
+
+### PairedTokenType
+
+Ƭ **PairedTokenType**: typeof `PAIRED_TOKEN_TYPE`keyof typeof [`PAIRED_TOKEN_TYPE`]
+
+src/types.ts:37
 
 ___
 
@@ -15631,7 +17846,7 @@ Type declaration
 | `poolId` | `Hex` |
 | `tokenId` | `bigint` |
 
-src/types.ts:278
+src/types.ts:293
 
 ___
 
@@ -15651,6 +17866,42 @@ src/clients/FlaunchPositionManagerClient.ts:68
 
 ___
 
+### PoolSwapParams
+
+Ƭ **PoolSwapParams**: `Object`
+
+Uniswap v4 `SwapParams`: negative `amountSpecified` = exact input.
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `amountSpecified` | `bigint` |
+| `sqrtPriceLimitX96` | `bigint` |
+| `zeroForOne` | `boolean` |
+
+src/clients/PoolSwapV1_3Client.ts:20
+
+___
+
+### PoolSwapV1\_3SwapParams
+
+Ƭ **PoolSwapV1\_3SwapParams**: `Object`
+
+Type declaration
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `hookData?` | `HexString` | Arbitrary bytes for the pool's hook — a spend-gated launch's signed authorisation travels here. When present the `bytes` overload is used and `referrer` is ignored (the gate's payload already leads with the referrer address). |
+| `params` | `PoolSwapParams` | - |
+| `poolKey` | `PoolKey` | - |
+| `referrer?` | `Address` | Referral attribution via the `address` overload; zero (or absent) means none. |
+| `value?` | `bigint` | Native ETH input for a pool whose paired side is `address(0)`; 0 for ERC20 / flETH input. |
+
+src/clients/PoolSwapV1_3Client.ts:26
+
+___
+
 ### RecipientShare
 
 Ƭ **RecipientShare**: `Object`
@@ -15663,6 +17914,22 @@ Type declaration
 | `share` | `bigint` |
 
 src/clients/DynamicAddressFeeSplitManagerClient.ts:16
+
+___
+
+### ResolvedPairedPool
+
+Ƭ **ResolvedPairedPool**: `Object`
+
+Type declaration
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `pairedToken` | `Address` | The non-coin side of the key; `zeroAddress` is native ETH. |
+| `poolId` | `Hex` | - |
+| `poolKey` | `PoolKey` | - |
+
+src/sdk/FlaunchSDK.ts:482
 
 ___
 
@@ -15712,7 +17979,7 @@ src/clients/StakingManagerV1_3Client.ts:24
 
 • `Const` **AddressFeeSplitManagerAddress**: `Addresses`
 
-src/addresses.ts:179
+src/addresses.ts:294
 
 ___
 
@@ -15720,7 +17987,7 @@ ___
 
 • `Const` **AddressFeeSplitManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:220
+src/addresses.ts:337
 
 ___
 
@@ -15728,7 +17995,7 @@ ___
 
 • `Const` **AnyBidWallAddress**: `Addresses`
 
-src/addresses.ts:152
+src/addresses.ts:266
 
 ___
 
@@ -15736,7 +18003,7 @@ ___
 
 • `Const` **AnyBidWallV1\_3Address**: `Addresses`
 
-src/addresses.ts:158
+src/addresses.ts:272
 
 ___
 
@@ -15744,7 +18011,7 @@ ___
 
 • `Const` **AnyFlaunchAddress**: `Addresses`
 
-src/addresses.ts:113
+src/addresses.ts:225
 
 ___
 
@@ -15752,7 +18019,7 @@ ___
 
 • `Const` **AnyFlaunchV1\_3Address**: `Addresses`
 
-src/addresses.ts:119
+src/addresses.ts:231
 
 ___
 
@@ -15760,7 +18027,7 @@ ___
 
 • `Const` **AnyPositionManagerAddress**: `Addresses`
 
-src/addresses.ts:81
+src/addresses.ts:191
 
 ___
 
@@ -15768,7 +18035,7 @@ ___
 
 • `Const` **AnyPositionManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:87
+src/addresses.ts:197
 
 ___
 
@@ -15776,7 +18043,7 @@ ___
 
 • `Const` **BidWallAddress**: `Addresses`
 
-src/addresses.ts:135
+src/addresses.ts:248
 
 ___
 
@@ -15784,7 +18051,7 @@ ___
 
 • `Const` **BidWallV1\_1Address**: `Addresses`
 
-src/addresses.ts:141
+src/addresses.ts:254
 
 ___
 
@@ -15792,7 +18059,7 @@ ___
 
 • `Const` **BidWallV1\_3Address**: `Addresses`
 
-src/addresses.ts:147
+src/addresses.ts:260
 
 ___
 
@@ -15800,7 +18067,7 @@ ___
 
 • `Const` **BuyBackManagerAddress**: `Addresses`
 
-src/addresses.ts:200
+src/addresses.ts:315
 
 ___
 
@@ -15808,7 +18075,7 @@ ___
 
 • `Const` **ClankerWorldVerifierAddress**: `Addresses`
 
-src/addresses.ts:266
+src/addresses.ts:390
 
 ___
 
@@ -15818,7 +18085,7 @@ ___
 
 Permissions
 
-src/addresses.ts:299
+src/addresses.ts:423
 
 ___
 
@@ -15826,7 +18093,7 @@ ___
 
 • `Const` **DopplerVerifierAddress**: `Addresses`
 
-src/addresses.ts:271
+src/addresses.ts:395
 
 ___
 
@@ -15834,7 +18101,7 @@ ___
 
 • `Const` **DynamicAddressFeeSplitManagerAddress**: `Addresses`
 
-src/addresses.ts:187
+src/addresses.ts:302
 
 ___
 
@@ -15842,7 +18109,7 @@ ___
 
 • `Const` **DynamicAddressFeeSplitManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:225
+src/addresses.ts:343
 
 ___
 
@@ -15850,7 +18117,7 @@ ___
 
 • `Const` **ERC721OwnerFeeSplitManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:230
+src/addresses.ts:349
 
 ___
 
@@ -15858,7 +18125,7 @@ ___
 
 • `Const` **FLETHAddress**: `Addresses`
 
-src/addresses.ts:353
+src/addresses.ts:479
 
 ___
 
@@ -15866,7 +18133,7 @@ ___
 
 • `Const` **FLETHHooksAddress**: `Addresses`
 
-src/addresses.ts:422
+src/addresses.ts:548
 
 ___
 
@@ -15874,7 +18141,7 @@ ___
 
 • `Const` **FairLaunchAddress**: `Addresses`
 
-src/addresses.ts:124
+src/addresses.ts:237
 
 ___
 
@@ -15882,7 +18149,7 @@ ___
 
 • `Const` **FairLaunchV1\_1Address**: `Addresses`
 
-src/addresses.ts:130
+src/addresses.ts:243
 
 ___
 
@@ -15890,7 +18157,7 @@ ___
 
 • `Const` **FastFlaunchZapAddress**: `Addresses`
 
-src/addresses.ts:429
+src/addresses.ts:555
 
 ___
 
@@ -15900,7 +18167,7 @@ ___
 
 ===========
 
-src/addresses.ts:324
+src/addresses.ts:449
 
 ___
 
@@ -15908,7 +18175,7 @@ ___
 
 • `Const` **FeeEscrowV1\_3Address**: `Addresses`
 
-src/addresses.ts:336
+src/addresses.ts:461
 
 ___
 
@@ -15916,7 +18183,7 @@ ___
 
 • `Const` **FlaunchAddress**: `Addresses`
 
-src/addresses.ts:92
+src/addresses.ts:203
 
 ___
 
@@ -15924,7 +18191,7 @@ ___
 
 • `Const` **FlaunchManagerZapV1\_3Address**: `Addresses`
 
-src/addresses.ts:247
+src/addresses.ts:369
 
 ___
 
@@ -15932,7 +18199,7 @@ ___
 
 • `Const` **FlaunchMultichainAddress**: `Addresses`
 
-src/addresses.ts:39
+src/addresses.ts:40
 
 ___
 
@@ -15940,7 +18207,7 @@ ___
 
 • `Const` **FlaunchPositionManagerAddress**: `Addresses`
 
-src/addresses.ts:46
+src/addresses.ts:47
 
 ___
 
@@ -15948,7 +18215,7 @@ ___
 
 • `Const` **FlaunchPositionManagerMultichainAddress**: `Addresses`
 
-src/addresses.ts:33
+src/addresses.ts:34
 
 ___
 
@@ -15956,7 +18223,7 @@ ___
 
 • `Const` **FlaunchPositionManagerV1\_1Address**: `Addresses`
 
-src/addresses.ts:51
+src/addresses.ts:52
 
 ___
 
@@ -15964,7 +18231,7 @@ ___
 
 • `Const` **FlaunchPositionManagerV1\_2Address**: `Addresses`
 
-src/addresses.ts:56
+src/addresses.ts:57
 
 ___
 
@@ -15972,7 +18239,7 @@ ___
 
 • `Const` **FlaunchPositionManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:62
+src/addresses.ts:65
 
 ___
 
@@ -15987,7 +18254,7 @@ Type declaration
 | `ReadFlaunchSDK` | typeof `ReadFlaunchSDK` |
 | `ReadWriteFlaunchSDK` | typeof `ReadWriteFlaunchSDK` |
 
-src/index.ts:99
+src/index.ts:127
 
 ___
 
@@ -15995,7 +18262,7 @@ ___
 
 • `Const` **FlaunchV1\_1Address**: `Addresses`
 
-src/addresses.ts:97
+src/addresses.ts:208
 
 ___
 
@@ -16003,7 +18270,7 @@ ___
 
 • `Const` **FlaunchV1\_2Address**: `Addresses`
 
-src/addresses.ts:102
+src/addresses.ts:213
 
 ___
 
@@ -16011,7 +18278,7 @@ ___
 
 • `Const` **FlaunchV1\_3Address**: `Addresses`
 
-src/addresses.ts:108
+src/addresses.ts:219
 
 ___
 
@@ -16027,7 +18294,7 @@ ___
 
 • `Const` **FlaunchZapMultichainAddress**: `Addresses`
 
-src/addresses.ts:27
+src/addresses.ts:28
 
 ___
 
@@ -16035,7 +18302,7 @@ ___
 
 • `Const` **FlaunchZapV1\_3Address**: `Addresses`
 
-src/addresses.ts:21
+src/addresses.ts:22
 
 ___
 
@@ -16043,7 +18310,49 @@ ___
 
 • `Const` **GroupMapperV1\_3Address**: `Addresses`
 
-src/addresses.ts:240
+src/addresses.ts:361
+
+___
+
+### MAX\_SQRT\_PRICE\_LIMIT
+
+• `Const` **MAX\_SQRT\_PRICE\_LIMIT**: `bigint`
+
+src/utils/univ4.ts:449
+
+___
+
+### MIN\_SQRT\_PRICE\_LIMIT
+
+• `Const` **MIN\_SQRT\_PRICE\_LIMIT**: `bigint`
+
+TickMath sqrt-price bounds, one step inside the absolute limits. PoolSwap has no `minOut`
+parameter, so `sqrtPriceLimitX96` is the ONLY on-chain slippage control for a paired-token swap:
+the swap runs until input is consumed or price hits the limit. Passing the extreme bound
+disables price protection entirely — build the limit with sqrtPriceLimitFromSlippage.
+
+src/utils/univ4.ts:448
+
+___
+
+### PAIRED\_TOKEN\_TYPE
+
+• `Const` **PAIRED\_TOKEN\_TYPE**: `Object`
+
+`IPairedTokenRegistry.PairedTokenType`: how a paired token is funded and paid out.
+`nativeEth` pools key their paired side as `address(0)`.
+
+Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `erc20` | ``4`` |
+| `erc20Wrapper` | ``2`` |
+| `nativeEth` | ``3`` |
+| `nativeWrapper` | ``1`` |
+| `unset` | ``0`` |
+
+src/types.ts:29
 
 ___
 
@@ -16051,7 +18360,7 @@ ___
 
 • `Const` **PERMIT\_DETAILS**: \{ `name`: `string` = "token"; `type`: `string` = "address" }[]
 
-src/utils/universalRouter.ts:681
+src/utils/universalRouter.ts:684
 
 ___
 
@@ -16066,7 +18375,15 @@ Type declaration
 | `PermitDetails` | \{ `name`: `string` = "token"; `type`: `string` = "address" }[] |
 | `PermitSingle` | \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[] |
 
-src/utils/universalRouter.ts:688
+src/utils/universalRouter.ts:691
+
+___
+
+### PairedTokenAcquisitionDexAddress
+
+• `Const` **PairedTokenAcquisitionDexAddress**: `Record`\<`number`, `PairedTokenAcquisitionDex`\>
+
+src/addresses.ts:163
 
 ___
 
@@ -16074,7 +18391,7 @@ ___
 
 • `Const` **PairedTokenPositionManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:69
+src/addresses.ts:91
 
 ___
 
@@ -16082,7 +18399,7 @@ ___
 
 • `Const` **PairedTokenRegistryV1\_3Address**: `Addresses`
 
-src/addresses.ts:75
+src/addresses.ts:97
 
 ___
 
@@ -16090,7 +18407,7 @@ ___
 
 • `Const` **Permit2Address**: `Addresses`
 
-src/addresses.ts:462
+src/addresses.ts:588
 
 ___
 
@@ -16098,7 +18415,25 @@ ___
 
 • `Const` **PoolManagerAddress**: `Addresses`
 
-src/addresses.ts:434
+src/addresses.ts:560
+
+___
+
+### PoolSwapForHookV1\_3Address
+
+• `Const` **PoolSwapForHookV1\_3Address**: `Record`\<`number`, `Record`\<`string`, `Address`\>\>
+
+Hook (lowercase) → the PoolSwap approved on that hook generation's spend gate.
+
+src/addresses.ts:120
+
+___
+
+### PoolSwapV1\_3Address
+
+• `Const` **PoolSwapV1\_3Address**: `Addresses`
+
+src/addresses.ts:113
 
 ___
 
@@ -16122,7 +18457,7 @@ ___
 
 • `Const` **QuoterAddress**: `Addresses`
 
-src/addresses.ts:448
+src/addresses.ts:574
 
 ___
 
@@ -16130,7 +18465,7 @@ ___
 
 • `Const` **ReferralEscrowAddress**: `Addresses`
 
-src/addresses.ts:342
+src/addresses.ts:467
 
 ___
 
@@ -16138,7 +18473,7 @@ ___
 
 • `Const` **ReferralEscrowV1\_3Address**: `Addresses`
 
-src/addresses.ts:348
+src/addresses.ts:473
 
 ___
 
@@ -16146,7 +18481,7 @@ ___
 
 • `Const` **RevenueManagerAddress**: `Addresses`
 
-src/addresses.ts:171
+src/addresses.ts:286
 
 ___
 
@@ -16154,7 +18489,27 @@ ___
 
 • `Const` **RevenueManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:215
+src/addresses.ts:331
+
+___
+
+### SlipstreamPoolAbi
+
+• `Const` **SlipstreamPoolAbi**: readonly [\{ `inputs`: readonly [] = []; `name`: ``"slot0"`` = "slot0"; `outputs`: readonly [\{ `name`: ``"sqrtPriceX96"`` = "sqrtPriceX96"; `type`: ``"uint160"`` = "uint160" }, \{ `name`: ``"tick"`` = "tick"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"observationIndex"`` = "observationIndex"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinality"`` = "observationCardinality"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinalityNext"`` = "observationCardinalityNext"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"unlocked"`` = "unlocked"; `type`: ``"bool"`` = "bool" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"fee"`` = "fee"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"uint24"`` = "uint24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"tickSpacing"`` = "tickSpacing"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"int24"`` = "int24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"token0"`` = "token0"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }]
+
+Slipstream-shaped CL pool reads. `slot0` is six fields — V3's `feeProtocol` is dropped.
+
+src/utils/pairedTokenAcquisition.ts:126
+
+___
+
+### SlipstreamSwapRouterAbi
+
+• `Const` **SlipstreamSwapRouterAbi**: readonly [\{ `inputs`: readonly [\{ `components`: readonly [\{ `name`: ``"tokenIn"`` = "tokenIn"; `type`: ``"address"`` = "address" }, \{ `name`: ``"tokenOut"`` = "tokenOut"; `type`: ``"address"`` = "address" }, \{ `name`: ``"tickSpacing"`` = "tickSpacing"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"recipient"`` = "recipient"; `type`: ``"address"`` = "address" }, \{ `name`: ``"deadline"`` = "deadline"; `type`: ``"uint256"`` = "uint256" }, \{ `name`: ``"amountOut"`` = "amountOut"; `type`: ``"uint256"`` = "uint256" }, \{ `name`: ``"amountInMaximum"`` = "amountInMaximum"; `type`: ``"uint256"`` = "uint256" }, \{ `name`: ``"sqrtPriceLimitX96"`` = "sqrtPriceLimitX96"; `type`: ``"uint160"`` = "uint160" }] ; `name`: ``"params"`` = "params"; `type`: ``"tuple"`` = "tuple" }] ; `name`: ``"exactOutputSingle"`` = "exactOutputSingle"; `outputs`: readonly [\{ `name`: ``"amountIn"`` = "amountIn"; `type`: ``"uint256"`` = "uint256" }] ; `stateMutability`: ``"payable"`` = "payable"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [\{ `components`: readonly [\{ `name`: ``"path"`` = "path"; `type`: ``"bytes"`` = "bytes" }, \{ `name`: ``"recipient"`` = "recipient"; `type`: ``"address"`` = "address" }, \{ `name`: ``"deadline"`` = "deadline"; `type`: ``"uint256"`` = "uint256" }, \{ `name`: ``"amountOut"`` = "amountOut"; `type`: ``"uint256"`` = "uint256" }, \{ `name`: ``"amountInMaximum"`` = "amountInMaximum"; `type`: ``"uint256"`` = "uint256" }] ; `name`: ``"params"`` = "params"; `type`: ``"tuple"`` = "tuple" }] ; `name`: ``"exactOutput"`` = "exactOutput"; `outputs`: readonly [\{ `name`: ``"amountIn"`` = "amountIn"; `type`: ``"uint256"`` = "uint256" }] ; `stateMutability`: ``"payable"`` = "payable"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [\{ `name`: ``"data"`` = "data"; `type`: ``"bytes[]"`` = "bytes[]" }] ; `name`: ``"multicall"`` = "multicall"; `outputs`: readonly [\{ `name`: ``"results"`` = "results"; `type`: ``"bytes[]"`` = "bytes[]" }] ; `stateMutability`: ``"payable"`` = "payable"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"refundETH"`` = "refundETH"; `outputs`: readonly [] = []; `stateMutability`: ``"payable"`` = "payable"; `type`: ``"function"`` = "function" }]
+
+The Slipstream SwapRouter write surface — `tickSpacing`-keyed, `deadline` inside the params.
+
+src/utils/pairedTokenAcquisition.ts:16
 
 ___
 
@@ -16162,7 +18517,7 @@ ___
 
 • `Const` **SolanaVerifierAddress**: `Addresses`
 
-src/addresses.ts:276
+src/addresses.ts:400
 
 ___
 
@@ -16170,7 +18525,7 @@ ___
 
 • `Const` **StakingManagerAddress**: `Addresses`
 
-src/addresses.ts:195
+src/addresses.ts:310
 
 ___
 
@@ -16178,7 +18533,7 @@ ___
 
 • `Const` **StakingManagerV1\_3Address**: `Addresses`
 
-src/addresses.ts:235
+src/addresses.ts:355
 
 ___
 
@@ -16186,7 +18541,20 @@ ___
 
 • `Const` **StateViewAddress**: `Addresses`
 
-src/addresses.ts:454
+src/addresses.ts:580
+
+___
+
+### SupersededPositionManagerV1\_3Address
+
+• `Const` **SupersededPositionManagerV1\_3Address**: `Record`\<`number`, `Address`[]\>
+
+Hooks that a chain's v1.3 generation has moved OFF but that still serve the pools launched on
+them (coins never migrate). Consumers resolving "which hook is this coin on" must consult
+these alongside the current maps. Robinhood 2026-08-21 -> 2026-09-xx: the v1.3.1 hooks were
+regenerated onto a fixed InternalSwapPool (v1.3.3).
+
+src/addresses.ts:77
 
 ___
 
@@ -16219,7 +18587,7 @@ ___
 
 Verifiers
 
-src/addresses.ts:253
+src/addresses.ts:376
 
 ___
 
@@ -16227,7 +18595,7 @@ ___
 
 • `Const` **TokenImporterV1\_3Address**: `Addresses`
 
-src/addresses.ts:261
+src/addresses.ts:384
 
 ___
 
@@ -16235,7 +18603,7 @@ ___
 
 • `Const` **TreasuryManagerFactoryAddress**: `Addresses`
 
-src/addresses.ts:163
+src/addresses.ts:278
 
 ___
 
@@ -16243,7 +18611,17 @@ ___
 
 • `Const` **TreasuryManagerFactoryV1\_3Address**: `Addresses`
 
-src/addresses.ts:210
+src/addresses.ts:325
+
+___
+
+### TwoHopPriceCalculatorAbi
+
+• `Const` **TwoHopPriceCalculatorAbi**: readonly [\{ `inputs`: readonly [] = []; `name`: ``"hubPairedPool"`` = "hubPairedPool"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"hubToken"`` = "hubToken"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }]
+
+The two getters read off a paired token's registered two-hop price calculator.
+
+src/utils/pairedTokenAcquisition.ts:168
 
 ___
 
@@ -16255,7 +18633,7 @@ Index signature
 
 ▪ [chainId: `number`]: `PoolKey`
 
-src/addresses.ts:473
+src/addresses.ts:599
 
 ___
 
@@ -16263,7 +18641,48 @@ ___
 
 • `Const` **UniV4PositionManagerAddress**: `Addresses`
 
-src/addresses.ts:468
+src/addresses.ts:594
+
+___
+
+### UniswapV3FactoryAbi
+
+• `Const` **UniswapV3FactoryAbi**: readonly [\{ `inputs`: readonly [\{ `name`: ``"tokenA"`` = "tokenA"; `type`: ``"address"`` = "address" }, \{ `name`: ``"tokenB"`` = "tokenB"; `type`: ``"address"`` = "address" }, \{ `name`: ``"fee"`` = "fee"; `type`: ``"uint24"`` = "uint24" }] ; `name`: ``"getPool"`` = "getPool"; `outputs`: readonly [\{ `name`: ``"pool"`` = "pool"; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }]
+
+`getPool` on a canonical Uniswap V3 factory.
+
+src/utils/pairedTokenAcquisition.ts:174
+
+___
+
+### UniswapV3PoolAbi
+
+• `Const` **UniswapV3PoolAbi**: readonly [\{ `inputs`: readonly [] = []; `name`: ``"slot0"`` = "slot0"; `outputs`: readonly [\{ `name`: ``"sqrtPriceX96"`` = "sqrtPriceX96"; `type`: ``"uint160"`` = "uint160" }, \{ `name`: ``"tick"`` = "tick"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"observationIndex"`` = "observationIndex"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinality"`` = "observationCardinality"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinalityNext"`` = "observationCardinalityNext"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"feeProtocol"`` = "feeProtocol"; `type`: ``"uint8"`` = "uint8" }, \{ `name`: ``"unlocked"`` = "unlocked"; `type`: ``"bool"`` = "bool" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"fee"`` = "fee"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"uint24"`` = "uint24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"token0"`` = "token0"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }]
+
+Canonical Uniswap V3 pool reads. `slot0` carries the seventh `feeProtocol` field.
+
+src/utils/pairedTokenAcquisition.ts:147
+
+___
+
+### UniswapV3QuoterV2Abi
+
+• `Const` **UniswapV3QuoterV2Abi**: readonly [\{ `inputs`: readonly [\{ `name`: ``"path"`` = "path"; `type`: ``"bytes"`` = "bytes" }, \{ `name`: ``"amountIn"`` = "amountIn"; `type`: ``"uint256"`` = "uint256" }] ; `name`: ``"quoteExactInput"`` = "quoteExactInput"; `outputs`: readonly [\{ `name`: ``"amountOut"`` = "amountOut"; `type`: ``"uint256"`` = "uint256" }, \{ `name`: ``"sqrtPriceX96AfterList"`` = "sqrtPriceX96AfterList"; `type`: ``"uint160[]"`` = "uint160[]" }, \{ `name`: ``"initializedTicksCrossedList"`` = "initializedTicksCrossedList"; `type`: ``"uint32[]"`` = "uint32[]" }, \{ `name`: ``"gasEstimate"`` = "gasEstimate"; `type`: ``"uint256"`` = "uint256" }] ; `stateMutability`: ``"nonpayable"`` = "nonpayable"; `type`: ``"function"`` = "function" }]
+
+Uniswap `QuoterV2`'s depth-aware exact-input quote.
+
+src/utils/pairedTokenAcquisition.ts:189
+
+___
+
+### UniswapV3SwapRouter02Abi
+
+• `Const` **UniswapV3SwapRouter02Abi**: readonly [\{ `inputs`: readonly [\{ `components`: readonly [\{ `name`: ``"tokenIn"`` = "tokenIn"; `type`: ``"address"`` = "address" }, \{ `name`: ``"tokenOut"`` = "tokenOut"; `type`: ``"address"`` = "address" }, \{ `name`: ``"fee"`` = "fee"; `type`: ``"uint24"`` = "uint24" }, \{ `name`: ``"recipient"`` = "recipient"; `type`: ``"address"`` = "address" }, \{ `name`: ``"amountOut"`` = "amountOut"; `type`: ``"uint256"`` = "uint256" }, \{ `name`: ``"amountInMaximum"`` = "amountInMaximum"; `type`: ``"uint256"`` = "uint256" }, \{ `name`: ``"sqrtPriceLimitX96"`` = "sqrtPriceLimitX96"; `type`: ``"uint160"`` = "uint160" }] ; `name`: ``"params"`` = "params"; `type`: ``"tuple"`` = "tuple" }] ; `name`: ``"exactOutputSingle"`` = "exactOutputSingle"; `outputs`: readonly [\{ `name`: ``"amountIn"`` = "amountIn"; `type`: ``"uint256"`` = "uint256" }] ; `stateMutability`: ``"payable"`` = "payable"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [\{ `components`: readonly [\{ `name`: ``"path"`` = "path"; `type`: ``"bytes"`` = "bytes" }, \{ `name`: ``"recipient"`` = "recipient"; `type`: ``"address"`` = "address" }, \{ `name`: ``"amountOut"`` = "amountOut"; `type`: ``"uint256"`` = "uint256" }, \{ `name`: ``"amountInMaximum"`` = "amountInMaximum"; `type`: ``"uint256"`` = "uint256" }] ; `name`: ``"params"`` = "params"; `type`: ``"tuple"`` = "tuple" }] ; `name`: ``"exactOutput"`` = "exactOutput"; `outputs`: readonly [\{ `name`: ``"amountIn"`` = "amountIn"; `type`: ``"uint256"`` = "uint256" }] ; `stateMutability`: ``"payable"`` = "payable"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [\{ `name`: ``"deadline"`` = "deadline"; `type`: ``"uint256"`` = "uint256" }, \{ `name`: ``"data"`` = "data"; `type`: ``"bytes[]"`` = "bytes[]" }] ; `name`: ``"multicall"`` = "multicall"; `outputs`: readonly [\{ `name`: ``"results"`` = "results"; `type`: ``"bytes[]"`` = "bytes[]" }] ; `stateMutability`: ``"payable"`` = "payable"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"refundETH"`` = "refundETH"; `outputs`: readonly [] = []; `stateMutability`: ``"payable"`` = "payable"; `type`: ``"function"`` = "function" }]
+
+The Uniswap `SwapRouter02` write surface — `fee`-keyed, no `deadline` in the params. The deadline
+is enforced by the `multicall(uint256 deadline, bytes[])` overload every routed call is wrapped in.
+
+src/utils/pairedTokenAcquisition.ts:72
 
 ___
 
@@ -16271,7 +18690,7 @@ ___
 
 • `Const` **UniversalRouterAddress**: `Addresses`
 
-src/addresses.ts:442
+src/addresses.ts:568
 
 ___
 
@@ -16279,7 +18698,7 @@ ___
 
 • `Const` **VirtualsVerifierAddress**: `Addresses`
 
-src/addresses.ts:281
+src/addresses.ts:405
 
 ___
 
@@ -16287,7 +18706,7 @@ ___
 
 • `Const` **WhitelistVerifierAddress**: `Addresses`
 
-src/addresses.ts:286
+src/addresses.ts:410
 
 ___
 
@@ -16295,7 +18714,7 @@ ___
 
 • `Const` **WhitelistedPermissionsAddress**: `Addresses`
 
-src/addresses.ts:307
+src/addresses.ts:431
 
 ___
 
@@ -16303,7 +18722,7 @@ ___
 
 • `Const` **WhitelistedPermissionsV1\_3Address**: `Addresses`
 
-src/addresses.ts:318
+src/addresses.ts:442
 
 ___
 
@@ -16311,7 +18730,7 @@ ___
 
 • `Const` **ZoraVerifierAddress**: `Addresses`
 
-src/addresses.ts:291
+src/addresses.ts:415
 
 ___
 
@@ -16334,6 +18753,26 @@ ___
 src/sdk/calldata.ts:16
 
 ## Functions
+
+### acquisitionPoolAbi
+
+▸ **acquisitionPoolAbi**(`dex`): readonly [\{ `inputs`: readonly [] = []; `name`: ``"slot0"`` = "slot0"; `outputs`: readonly [\{ `name`: ``"sqrtPriceX96"`` = "sqrtPriceX96"; `type`: ``"uint160"`` = "uint160" }, \{ `name`: ``"tick"`` = "tick"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"observationIndex"`` = "observationIndex"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinality"`` = "observationCardinality"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinalityNext"`` = "observationCardinalityNext"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"unlocked"`` = "unlocked"; `type`: ``"bool"`` = "bool" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"fee"`` = "fee"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"uint24"`` = "uint24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"tickSpacing"`` = "tickSpacing"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"int24"`` = "int24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"token0"`` = "token0"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }] \| readonly [\{ `inputs`: readonly [] = []; `name`: ``"slot0"`` = "slot0"; `outputs`: readonly [\{ `name`: ``"sqrtPriceX96"`` = "sqrtPriceX96"; `type`: ``"uint160"`` = "uint160" }, \{ `name`: ``"tick"`` = "tick"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"observationIndex"`` = "observationIndex"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinality"`` = "observationCardinality"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinalityNext"`` = "observationCardinalityNext"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"feeProtocol"`` = "feeProtocol"; `type`: ``"uint8"`` = "uint8" }, \{ `name`: ``"unlocked"`` = "unlocked"; `type`: ``"bool"`` = "bool" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"fee"`` = "fee"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"uint24"`` = "uint24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"token0"`` = "token0"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }]
+
+The pool ABI a flavour's pools speak. Both expose `slot0`/`fee`/`token0`; only `slot0` differs.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `dex` | `PairedTokenAcquisitionDex` |
+
+Returns
+
+readonly [\{ `inputs`: readonly [] = []; `name`: ``"slot0"`` = "slot0"; `outputs`: readonly [\{ `name`: ``"sqrtPriceX96"`` = "sqrtPriceX96"; `type`: ``"uint160"`` = "uint160" }, \{ `name`: ``"tick"`` = "tick"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"observationIndex"`` = "observationIndex"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinality"`` = "observationCardinality"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinalityNext"`` = "observationCardinalityNext"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"unlocked"`` = "unlocked"; `type`: ``"bool"`` = "bool" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"fee"`` = "fee"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"uint24"`` = "uint24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"tickSpacing"`` = "tickSpacing"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"int24"`` = "int24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"token0"`` = "token0"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }] \| readonly [\{ `inputs`: readonly [] = []; `name`: ``"slot0"`` = "slot0"; `outputs`: readonly [\{ `name`: ``"sqrtPriceX96"`` = "sqrtPriceX96"; `type`: ``"uint160"`` = "uint160" }, \{ `name`: ``"tick"`` = "tick"; `type`: ``"int24"`` = "int24" }, \{ `name`: ``"observationIndex"`` = "observationIndex"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinality"`` = "observationCardinality"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"observationCardinalityNext"`` = "observationCardinalityNext"; `type`: ``"uint16"`` = "uint16" }, \{ `name`: ``"feeProtocol"`` = "feeProtocol"; `type`: ``"uint8"`` = "uint8" }, \{ `name`: ``"unlocked"`` = "unlocked"; `type`: ``"bool"`` = "bool" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"fee"`` = "fee"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"uint24"`` = "uint24" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }, \{ `inputs`: readonly [] = []; `name`: ``"token0"`` = "token0"; `outputs`: readonly [\{ `name`: ``""`` = ""; `type`: ``"address"`` = "address" }] ; `stateMutability`: ``"view"`` = "view"; `type`: ``"function"`` = "function" }]
+
+src/utils/pairedTokenAcquisition.ts:208
+
+___
 
 ### buyMemecoin
 
@@ -16414,6 +18853,32 @@ Returns
 | `amount1` | `bigint` |
 
 src/utils/univ4.ts:184
+
+___
+
+### clSpotAmountOut
+
+▸ **clSpotAmountOut**(`amountIn`, `sqrtPriceX96`, `feePips`, `zeroForOne`): `bigint`
+
+Spot output for an exact input against a CL pool at its current price: the fee comes off the
+input, then the price ratio (`sqrtPriceX96²/2¹⁹²`, token1 per token0) converts it. Single-tick —
+it ignores liquidity depth, so it slightly overstates output on sizes that cross ticks; the
+caller's slippage haircut absorbs that and the router's `amountInMaximum` enforces it.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `amountIn` | `bigint` |
+| `sqrtPriceX96` | `bigint` |
+| `feePips` | `bigint` |
+| `zeroForOne` | `boolean` |
+
+Returns
+
+`bigint`
+
+src/utils/pairedTokenAcquisition.ts:235
 
 ___
 
@@ -16582,6 +19047,32 @@ src/sdk/calldata.ts:138
 
 ___
 
+### decodeBalanceDelta
+
+▸ **decodeBalanceDelta**(`delta`): `Object`
+
+A Uniswap v4 `BalanceDelta` packs two int128s into one int256: amount0 in the upper 128 bits,
+amount1 in the lower. Positive = the pool owes the swapper, negative = the swapper owes the pool.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `delta` | `bigint` |
+
+Returns
+
+`Object`
+
+| Name | Type |
+| :------ | :------ |
+| `amount0` | `bigint` |
+| `amount1` | `bigint` |
+
+src/utils/univ4.ts:497
+
+___
+
 ### decodeCallData
 
 ▸ **decodeCallData**(`encodedCall`): `CallData`
@@ -16625,7 +19116,7 @@ Returns
 
 `boolean`
 
-src/helpers/supportedChains.ts:59
+src/helpers/supportedChains.ts:66
 
 ___
 
@@ -16649,7 +19140,7 @@ Returns
 
 `boolean`
 
-src/helpers/supportedChains.ts:47
+src/helpers/supportedChains.ts:54
 
 ___
 
@@ -16667,7 +19158,28 @@ Returns
 
 `boolean`
 
-src/addresses.ts:404
+src/addresses.ts:530
+
+___
+
+### doesChainSupportPairedTokenAcquisition
+
+▸ **doesChainSupportPairedTokenAcquisition**(`chainId`): `boolean`
+
+Whether a non-ETH paired token (a B20 equity) can be bought from ETH or the chain's USD hub
+through the SDK's acquisition route. Base Sepolia's mUSD has no venue — it is minted.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `chainId` | `number` |
+
+Returns
+
+`boolean`
+
+src/helpers/supportedChains.ts:127
 
 ___
 
@@ -16687,7 +19199,30 @@ Returns
 
 `boolean`
 
-src/helpers/supportedChains.ts:67
+src/helpers/supportedChains.ts:74
+
+___
+
+### doesChainSupportPairedTokenSwap
+
+▸ **doesChainSupportPairedTokenSwap**(`chainId`): `boolean`
+
+Whether a coin on the paired-token PositionManager can be swapped through the SDK: the v1.3.1
+PoolSwap router plus the v4 Quoter and StateView the plan needs for its quote and sqrt-price
+slippage bound. `buyCoinPairedToken` / `sellCoinPairedToken` / `planPairedTokenSwap` throw on
+chains without all four rather than sending a call that reverts.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `chainId` | `number` |
+
+Returns
+
+`boolean`
+
+src/helpers/supportedChains.ts:101
 
 ___
 
@@ -16709,7 +19244,7 @@ Returns
 
 `boolean`
 
-src/helpers/supportedChains.ts:36
+src/helpers/supportedChains.ts:43
 
 ___
 
@@ -16727,7 +19262,99 @@ Returns
 
 `boolean`
 
-src/addresses.ts:414
+src/addresses.ts:540
+
+___
+
+### encodeAcquisitionEthBuy
+
+▸ **encodeAcquisitionEthBuy**(`dex`, `leg`): `Hex`
+
+Router calldata for an ETH buy of `amountOut` paired token: ETH wraps inside the router (path
+input is WETH9 + msg.value), multihops WETH → hub → token exact-output, and `refundETH` returns
+whatever the leg did not need. Send with `value = amountInMaximum`.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `dex` | `PairedTokenAcquisitionDex` |
+| `leg` | `PairedTokenAcquisitionLeg` |
+
+Returns
+
+`Hex`
+
+src/utils/pairedTokenAcquisition.ts:351
+
+___
+
+### encodeAcquisitionEthExactOutputPath
+
+▸ **encodeAcquisitionEthExactOutputPath**(`dex`, `pairedToken`, `route`): `Hex`
+
+The exact-OUTPUT path for an ETH buy: output token first (`token → hub → WETH`), each hop's pool
+key packed into the 3 bytes a V3 path spends on the fee. A Slipstream tickSpacing is a small
+positive int24, so the uint24 packing is the value that router decodes too.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `dex` | `PairedTokenAcquisitionDex` |
+| `pairedToken` | \`0x$\{string}\` |
+| `route` | `PairedTokenAcquisitionRoute` |
+
+Returns
+
+`Hex`
+
+src/utils/pairedTokenAcquisition.ts:251
+
+___
+
+### encodeAcquisitionExactInputPath
+
+▸ **encodeAcquisitionExactInputPath**(`dex`, `pairedToken`, `route`, `input`): `Hex`
+
+The exact-INPUT path for a venue (input first), the mirror of the exact-output path.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `dex` | `PairedTokenAcquisitionDex` |
+| `pairedToken` | \`0x$\{string}\` |
+| `route` | `PairedTokenAcquisitionRoute` |
+| `input` | `PairedTokenAcquisitionInput` |
+
+Returns
+
+`Hex`
+
+src/utils/pairedTokenAcquisition.ts:266
+
+___
+
+### encodeAcquisitionHubBuy
+
+▸ **encodeAcquisitionHubBuy**(`dex`, `leg`): `Hex`
+
+Router calldata for a hub-token (USDC/USDG) buy of `amountOut` paired token: a single-pool
+exact-output swap, paid by allowance pull. Flavour differences are confined here.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `dex` | `PairedTokenAcquisitionDex` |
+| `leg` | `PairedTokenAcquisitionLeg` |
+
+Returns
+
+`Hex`
+
+src/utils/pairedTokenAcquisition.ts:300
 
 ___
 
@@ -16954,7 +19581,7 @@ Returns
 | `typedData.types.PermitDetails` | \{ `name`: `string` = "token"; `type`: `string` = "address" }[] |
 | `typedData.types.PermitSingle` | \{ `name`: `string` = "details"; `type`: `string` = "PermitDetails" }[] |
 
-src/utils/universalRouter.ts:697
+src/utils/universalRouter.ts:700
 
 ___
 
@@ -16994,6 +19621,28 @@ src/utils/univ4.ts:122
 
 ___
 
+### getV1\_3PositionManagers
+
+▸ **getV1_3PositionManagers**(`chainId`): `Address`[]
+
+Every v1.3 hook that has ever been the paired-token PositionManager on a chain: the current
+one plus any superseded generations that still serve their pools. Use this when deciding
+whether an arbitrary hook address (e.g. from an indexer `Pool.positionManager`) is a v1.3 hook.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `chainId` | `number` |
+
+Returns
+
+`Address`[]
+
+src/helpers/supportedChains.ts:87
+
+___
+
 ### getValidTick
 
 ▸ **getValidTick**(`«destructured»`): `number`
@@ -17029,7 +19678,48 @@ Returns
 
 `boolean`
 
-src/helpers/supportedChains.ts:27
+src/helpers/supportedChains.ts:34
+
+___
+
+### isEmptyPoolKey
+
+▸ **isEmptyPoolKey**(`poolKey`): `boolean`
+
+Whether `poolKey` names a pool at all (an unknown coin reads back as a zeroed key).
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `poolKey` | `PoolKey` |
+
+Returns
+
+`boolean`
+
+src/utils/univ4.ts:490
+
+___
+
+### isZeroForOne
+
+▸ **isZeroForOne**(`poolKey`, `tokenIn`): `boolean`
+
+Whether a swap selling `tokenIn` into this key moves currency0 → currency1.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `poolKey` | `PoolKey` |
+| `tokenIn` | \`0x$\{string}\` |
+
+Returns
+
+`boolean`
+
+src/utils/univ4.ts:477
 
 ___
 
@@ -17108,6 +19798,52 @@ src/utils/univ4.ts:28
 
 ___
 
+### pairedPoolKey
+
+▸ **pairedPoolKey**(`memecoin`, `pairedToken`, `hooks`): `PoolKey`
+
+The PoolKey of a paired-token pool, built without an RPC read: currencies sort numerically (so
+native `address(0)` always lands in `currency0`), fee/tickSpacing are fixed at launch, and the
+hook is the paired-token PositionManager. `pairedToken === zeroAddress` is a REAL value (raw
+native ETH), not a default. `poolKey(memecoin)` on the hook the coin was launched on returns the same thing on chain.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `memecoin` | \`0x$\{string}\` |
+| `pairedToken` | \`0x$\{string}\` |
+| `hooks` | \`0x$\{string}\` |
+
+Returns
+
+`PoolKey`
+
+src/utils/univ4.ts:460
+
+___
+
+### pairedTokenOfPoolKey
+
+▸ **pairedTokenOfPoolKey**(`poolKey`, `memecoin`): \`0x$\{string}\`
+
+The non-coin side of a paired pool's key; `address(0)` means native ETH.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `poolKey` | `PoolKey` |
+| `memecoin` | \`0x$\{string}\` |
+
+Returns
+
+\`0x$\{string}\`
+
+src/utils/univ4.ts:481
+
+___
+
 ### parseCall
 
 ▸ **parseCall**\<`T`\>(`sdkMethod`): `Promise`\<`CallData`\>
@@ -17156,6 +19892,30 @@ Returns
 Parsed swap data with type and delta information
 
 src/utils/parseSwap.ts:47
+
+___
+
+### poolSwapForHook
+
+▸ **poolSwapForHook**(`chainId`, `hook`): `Address` \| `undefined`
+
+The PoolSwap a swap against a pool on `hook` must go through. Ungated swaps could use any
+PoolSwap (it is hook-agnostic), but a spend-gated buy is only accepted from a router that pool's
+own spend gate has approved, and each hook generation ships its own gate — so the router follows
+the hook. Falls back to the chain's current router for a hook the table does not name.
+
+Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `chainId` | `number` |
+| `hook` | \`0x$\{string}\` |
+
+Returns
+
+`Address` \| `undefined`
+
+src/helpers/supportedChains.ts:116
 
 ___
 
@@ -17213,6 +19973,7 @@ Parameters
 | `params.amountIn` | `bigint` |
 | `params.amountOutMin` | `bigint` |
 | `params.chainId` | `number` |
+| `params.hookData?` | \`0x$\{string}\` |
 | `params.intermediatePoolKey?` | `PoolWithHookData` |
 | `params.memecoin` | \`0x$\{string}\` |
 | `params.permitSingle?` | `PermitSingle` |
@@ -17231,6 +19992,35 @@ Returns
 | `inputs` | \`0x$\{string}\`[] |
 
 src/utils/universalRouter.ts:503
+
+___
+
+### sqrtPriceLimitFromSlippage
+
+▸ **sqrtPriceLimitFromSlippage**(`currentSqrtPriceX96`, `slippageBps`, `zeroForOne`): `bigint`
+
+Converts an output-price tolerance into the v4 terminal sqrt-price bound for a PoolSwap.
+Price is `sqrtPriceX96²`: a zero-for-one swap may push price down to `P × (1 - s)`, a
+one-for-zero swap may push it up to `P / (1 - s)`, so the inverse output price falls by at most
+`s` either way.
+
+Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `currentSqrtPriceX96` | `bigint` | the pool's spot `sqrtPriceX96` (StateView `getSlot0`) |
+| `slippageBps` | `number` | tolerance in basis points, 1..9999 (50 = 0.5%) |
+| `zeroForOne` | `boolean` | - |
+
+Returns
+
+`bigint`
+
+**`Throws`**
+
+when the tolerance is out of range, or so small the bound would not move off spot
+
+src/utils/univ4.ts:526
 
 ___
 

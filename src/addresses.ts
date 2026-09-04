@@ -100,6 +100,94 @@ export const PairedTokenRegistryV1_3Address: Addresses = {
   [robinhood.id]: "0xC3F4E72DE4D37988F12C101b0766Fd8462F6Faf9",
 };
 
+// The v1.3 PoolSwap router: single-pool swaps against any PoolKey on a paired-token
+// PositionManager (mUSD-, native-ETH-, flETH- or B20-paired coins alike), with `msgSender()`
+// published for hooks (the spend gate's approved-router buyer binding). The Universal Router path
+// assumes an flETH hop and cannot reach these pools.
+//
+// One entry per chain is the CURRENT router. PoolSwap is hook-agnostic for an ungated swap, but a
+// spend-GATED swap must go through a router the pool's own spend gate has approved — and every hook
+// generation ships its own gate and router (Robinhood v1.3.1 → v1.3.3, Base Sepolia `.vpt2` →
+// v1.3.3). `PoolSwapForHookV1_3Address` maps each hook to the router its gate approves; use
+// `poolSwapForHook(chainId, hook)` from `helpers`.
+export const PoolSwapV1_3Address: Addresses = {
+  [base.id]: "0xafD627ea5D02251B13E7D6C90b468328376b61A3",
+  [baseSepolia.id]: "0xF0f388a31a1745A5E2378B812eD51525f70595be", // v1.3.3 regeneration, 2026-09-03
+  [robinhood.id]: "0x92D2dF3EC1EBD126F0708b879B1fe25c84482028", // v1.3.3 regeneration, 2026-09-03
+};
+
+/** Hook (lowercase) → the PoolSwap approved on that hook generation's spend gate. */
+export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>> = {
+  [base.id]: {
+    "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0xafD627ea5D02251B13E7D6C90b468328376b61A3",
+  },
+  [baseSepolia.id]: {
+    // Keys stay LOWERCASE — `poolSwapForHook` lowercases its lookup.
+    "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc": "0x62eb5b7B066Ff80ce5E32fF1ED42B31c485f716B", // `.vpt2` PM, gate 0x2c91…
+    "0x28118f40eca9b884beb42b0196409a73269525dc": "0x62eb5b7B066Ff80ce5E32fF1ED42B31c485f716B", // `.vpt2` AnyPM, same gate
+    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xF0f388a31a1745A5E2378B812eD51525f70595be", // v1.3.3 PM, gate 0x54cd…
+  },
+  [robinhood.id]: {
+    "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0x8476ED156f731335ECA8Cc8A8eE759330ee4A91f", // v1.3.1
+    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0x92D2dF3EC1EBD126F0708b879B1fe25c84482028", // v1.3.3
+    "0x6ea0edee449a287504990df8d87951b9436825dc": "0x8476ED156f731335ECA8Cc8A8eE759330ee4A91f", // v1.3.1 AnyPM, same gate as the v1.3.1 PM
+  },
+};
+
+/**
+ * Where a paired token that is NOT ETH-equivalent can be bought from ETH or the chain's USD hub:
+ * the concentrated-liquidity venue holding the only liquidity for a chain's tokenised equities.
+ * A buy that starts from ETH/USDC(/USDG) routes through it before the coin's own pool.
+ *
+ * - `slipstream` (Base): the B20 DEX, a Slipstream-style CL fork on a non-canonical factory; buys go
+ *   through its own SwapRouter. Pools are keyed by `tickSpacing`; params carry a `deadline`.
+ * - `uniswapV3` (Robinhood): canonical Uniswap V3 with a `SwapRouter02` whose params drop the
+ *   `deadline` (it rides on `multicall(deadline, …)`) and key pools by `fee`.
+ */
+export type PairedTokenAcquisitionDexFlavor = "slipstream" | "uniswapV3";
+export interface PairedTokenAcquisitionDex {
+  flavor: PairedTokenAcquisitionDexFlavor;
+  /** The router a routed buy is written to. */
+  swapRouter: Address;
+  weth: Address;
+  /** The USD hub every equity pool quotes in: USDC on Base, USDG on Robinhood. */
+  hubToken: Address;
+  hubSymbol: string;
+  /** The deep WETH:hub pool on the same factory, for the ETH → hub hop. */
+  wethHubPool: Address;
+  /** That pool's key in the path's 3-byte slot: `tickSpacing` (slipstream) or `fee` (uniswapV3). */
+  wethHubPoolKey: number;
+  /** Venue discovery (`uniswapV3` only): factory, fee tiers to probe, and a QuoterV2 for depth-aware quotes. */
+  venues?: { factory: Address; feeTiers: readonly number[]; quoterV2?: Address };
+}
+export const PairedTokenAcquisitionDexAddress: Record<number, PairedTokenAcquisitionDex> = {
+  [base.id]: {
+    flavor: "slipstream",
+    swapRouter: "0x698Cb2b6dd822994581fEa6eA4Fc755d1363A92F",
+    weth: "0x4200000000000000000000000000000000000006",
+    hubToken: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    hubSymbol: "USDC",
+    // tickSpacing 50 holds the depth (ts 1 and 10 exist but are shallow / dust)
+    wethHubPool: "0x3FE04A59Ebd38cF06080a6F60a98D124eb59392A",
+    wethHubPoolKey: 50,
+  },
+  [robinhood.id]: {
+    flavor: "uniswapV3",
+    swapRouter: "0xCaf681a66D020601342297493863E78C959E5cb2",
+    weth: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", // NOT an OP-stack predeploy
+    hubToken: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+    hubSymbol: "USDG",
+    // The 0.05% WETH/USDG pool — also the oracle leg of the chain's MarketCappedPriceV3
+    wethHubPool: "0x69BfaF19C9f377BB306a89aEd9F6B07e2c1a8d9a",
+    wethHubPoolKey: 500,
+    venues: {
+      factory: "0x1f7d7550B1b028f7571E69A784071F0205FD2EfA",
+      feeTiers: [100, 500, 3000, 10_000],
+      quoterV2: "0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7",
+    },
+  },
+};
+
 export const AnyPositionManagerAddress: Addresses = {
   [base.id]: "0x8DC3b85e1dc1C846ebf3971179a751896842e5dC",
   [baseSepolia.id]: "0xB4A535B9D35851972736495CC52FBfDaCF32e5dc",

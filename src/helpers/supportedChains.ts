@@ -14,6 +14,11 @@ import {
   PairedTokenPositionManagerV1_3Address,
   PairedTokenRegistryV1_3Address,
   SupersededPositionManagerV1_3Address,
+  PoolSwapV1_3Address,
+  PoolSwapForHookV1_3Address,
+  PairedTokenAcquisitionDexAddress,
+  QuoterAddress,
+  StateViewAddress,
 } from "../addresses";
 
 const multichainDeploymentChainIds = new Set<number>([
@@ -85,4 +90,43 @@ export function getV1_3PositionManagers(chainId: number): Address[] {
     ...(current ? [current] : []),
     ...(SupersededPositionManagerV1_3Address[chainId] ?? []),
   ];
+}
+
+/**
+ * Whether a coin on the paired-token PositionManager can be swapped through the SDK: the v1.3.1
+ * PoolSwap router plus the v4 Quoter and StateView the plan needs for its quote and sqrt-price
+ * slippage bound. `buyCoinPairedToken` / `sellCoinPairedToken` / `planPairedTokenSwap` throw on
+ * chains without all four rather than sending a call that reverts.
+ */
+export function doesChainSupportPairedTokenSwap(chainId: number): boolean {
+  return (
+    PairedTokenPositionManagerV1_3Address[chainId] !== undefined &&
+    PoolSwapV1_3Address[chainId] !== undefined &&
+    QuoterAddress[chainId] !== undefined &&
+    StateViewAddress[chainId] !== undefined
+  );
+}
+
+/**
+ * The PoolSwap a swap against a pool on `hook` must go through. Ungated swaps could use any
+ * PoolSwap (it is hook-agnostic), but a spend-gated buy is only accepted from a router that pool's
+ * own spend gate has approved, and each hook generation ships its own gate — so the router follows
+ * the hook. Falls back to the chain's current router for a hook the table does not name.
+ */
+export function poolSwapForHook(chainId: number, hook: Address): Address | undefined {
+  return (
+    PoolSwapForHookV1_3Address[chainId]?.[hook.toLowerCase()] ??
+    PoolSwapV1_3Address[chainId]
+  );
+}
+
+/**
+ * Whether a non-ETH paired token (a B20 equity) can be bought from ETH or the chain's USD hub
+ * through the SDK's acquisition route. Base Sepolia's mUSD has no venue — it is minted.
+ */
+export function doesChainSupportPairedTokenAcquisition(chainId: number): boolean {
+  return (
+    PairedTokenAcquisitionDexAddress[chainId] !== undefined &&
+    PairedTokenRegistryV1_3Address[chainId] !== undefined
+  );
 }

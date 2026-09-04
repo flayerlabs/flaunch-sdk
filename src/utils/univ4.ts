@@ -1,4 +1,4 @@
-import { concat, keccak256, pad, toHex } from "viem";
+import { concat, keccak256, pad, toHex, zeroAddress, type Address } from "viem";
 import { PoolKey } from "../types";
 
 // our min/max tick range that is valid for the tick spacing (60)
@@ -437,4 +437,125 @@ export const getAmountsForLiquidity = (params: {
   }
 
   return { amount0, amount1 };
+};
+
+/**
+ * TickMath sqrt-price bounds, one step inside the absolute limits. PoolSwap has no `minOut`
+ * parameter, so `sqrtPriceLimitX96` is the ONLY on-chain slippage control for a paired-token swap:
+ * the swap runs until input is consumed or price hits the limit. Passing the extreme bound
+ * disables price protection entirely — build the limit with {@link sqrtPriceLimitFromSlippage}.
+ */
+export const MIN_SQRT_PRICE_LIMIT = 4295128739n + 1n;
+export const MAX_SQRT_PRICE_LIMIT =
+  1461446703485210103287273052203988822378723970342n - 1n;
+
+const SLIPPAGE_BPS_DENOMINATOR = 10_000n;
+
+/**
+ * The PoolKey of a paired-token pool, built without an RPC read: currencies sort numerically (so
+ * native `address(0)` always lands in `currency0`), fee/tickSpacing are fixed at launch, and the
+ * hook is the paired-token PositionManager. `pairedToken === zeroAddress` is a REAL value (raw
+ * native ETH), not a default. `poolKey(memecoin)` on the hook the coin was launched on returns the same thing on chain.
+ */
+export const pairedPoolKey = (
+  memecoin: Address,
+  pairedToken: Address,
+  hooks: Address
+): PoolKey => {
+  // Numeric ordering, as v4 sorts currencies — a string compare misorders mixed-case addresses.
+  const flipped = BigInt(pairedToken) >= BigInt(memecoin);
+  return {
+    currency0: flipped ? memecoin : pairedToken,
+    currency1: flipped ? pairedToken : memecoin,
+    fee: 0,
+    tickSpacing: TICK_SPACING,
+    hooks,
+  };
+};
+
+/** Whether a swap selling `tokenIn` into this key moves currency0 → currency1. */
+export const isZeroForOne = (poolKey: PoolKey, tokenIn: Address): boolean =>
+  poolKey.currency0.toLowerCase() === tokenIn.toLowerCase();
+
+/** The non-coin side of a paired pool's key; `address(0)` means native ETH. */
+export const pairedTokenOfPoolKey = (
+  poolKey: PoolKey,
+  memecoin: Address
+): Address =>
+  poolKey.currency0.toLowerCase() === memecoin.toLowerCase()
+    ? poolKey.currency1
+    : poolKey.currency0;
+
+/** Whether `poolKey` names a pool at all (an unknown coin reads back as a zeroed key). */
+export const isEmptyPoolKey = (poolKey: PoolKey): boolean =>
+  poolKey.hooks.toLowerCase() === zeroAddress;
+
+/**
+ * A Uniswap v4 `BalanceDelta` packs two int128s into one int256: amount0 in the upper 128 bits,
+ * amount1 in the lower. Positive = the pool owes the swapper, negative = the swapper owes the pool.
+ */
+export const decodeBalanceDelta = (
+  delta: bigint
+): { amount0: bigint; amount1: bigint } => ({
+  amount0: BigInt.asIntN(128, delta >> 128n),
+  amount1: BigInt.asIntN(128, delta),
+});
+
+const floorSqrt = (value: bigint): bigint => {
+  if (value < 2n) return value;
+
+  let estimate = value;
+  let next = (estimate + value / estimate) / 2n;
+  while (next < estimate) {
+    estimate = next;
+    next = (estimate + value / estimate) / 2n;
+  }
+  return estimate;
+};
+
+/**
+ * Converts an output-price tolerance into the v4 terminal sqrt-price bound for a PoolSwap.
+ * Price is `sqrtPriceX96²`: a zero-for-one swap may push price down to `P × (1 - s)`, a
+ * one-for-zero swap may push it up to `P / (1 - s)`, so the inverse output price falls by at most
+ * `s` either way.
+ *
+ * @param currentSqrtPriceX96 - the pool's spot `sqrtPriceX96` (StateView `getSlot0`)
+ * @param slippageBps - tolerance in basis points, 1..9999 (50 = 0.5%)
+ * @throws when the tolerance is out of range, or so small the bound would not move off spot
+ */
+export const sqrtPriceLimitFromSlippage = (
+  currentSqrtPriceX96: bigint,
+  slippageBps: number,
+  zeroForOne: boolean
+): bigint => {
+  if (
+    !Number.isInteger(slippageBps) ||
+    slippageBps <= 0 ||
+    slippageBps >= 10_000
+  ) {
+    throw new Error("Slippage must be between 1 and 9,999 basis points");
+  }
+
+  const retainedBps = SLIPPAGE_BPS_DENOMINATOR - BigInt(slippageBps);
+  const currentPriceX192 = currentSqrtPriceX96 * currentSqrtPriceX96;
+
+  if (zeroForOne) {
+    const numerator = currentPriceX192 * retainedBps;
+    let limit = floorSqrt(numerator / SLIPPAGE_BPS_DENOMINATOR);
+    if (limit * limit * SLIPPAGE_BPS_DENOMINATOR < numerator) limit += 1n;
+    limit = limit < MIN_SQRT_PRICE_LIMIT ? MIN_SQRT_PRICE_LIMIT : limit;
+    if (limit >= currentSqrtPriceX96) {
+      throw new Error("Slippage is too low at the current price");
+    }
+    return limit;
+  }
+
+  const limit = floorSqrt(
+    (currentPriceX192 * SLIPPAGE_BPS_DENOMINATOR) / retainedBps
+  );
+  const boundedLimit = limit > MAX_SQRT_PRICE_LIMIT ? MAX_SQRT_PRICE_LIMIT : limit;
+  if (boundedLimit <= currentSqrtPriceX96) {
+    throw new Error("Slippage is too low at the current price");
+  }
+  return boundedLimit;
 };

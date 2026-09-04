@@ -22,6 +22,21 @@ export interface PoolWithHookData extends PoolKey {
   hookData: Hex;
 }
 
+/**
+ * `IPairedTokenRegistry.PairedTokenType`: how a paired token is funded and paid out.
+ * `nativeEth` pools key their paired side as `address(0)`.
+ */
+export const PAIRED_TOKEN_TYPE = {
+  unset: 0,
+  nativeWrapper: 1,
+  erc20Wrapper: 2,
+  nativeEth: 3,
+  erc20: 4,
+} as const;
+
+export type PairedTokenType =
+  (typeof PAIRED_TOKEN_TYPE)[keyof typeof PAIRED_TOKEN_TYPE];
+
 export interface CoinMetadata {
   name: string;
   description: string;
