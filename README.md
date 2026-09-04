@@ -158,7 +158,7 @@ const hash = await flaunchWrite.flaunchIPFS({
   symbol: "TEST",
   fairLaunchPercent: 0, // 0%
   fairLaunchDuration: 30 * 60, // 30 mins
-  initialMarketCapUSD: 10_000, // $10k
+  initialMarketCapUSD: 4_000, // $4k
   creator: address,
   creatorFeeAllocationPercent: 80, // 80% to creator, 20% to community
   metadata: {
