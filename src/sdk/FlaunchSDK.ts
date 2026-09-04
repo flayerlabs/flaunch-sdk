@@ -61,6 +61,7 @@ import {
   FlaunchPositionManagerMultichainAddress,
   FlaunchZapMultichainAddress,
   // V1.2 and AnyPositionManager addresses will be imported here when available
+  PoolSwapForHookV1_3Address,
 } from "../addresses";
 import {
   ReadFlaunchPositionManager,
@@ -216,7 +217,6 @@ import {
 import {
   getPoolId,
   orderPoolKey,
-  pairedPoolKey,
   isZeroForOne,
   pairedTokenOfPoolKey,
   isEmptyPoolKey,
@@ -432,6 +432,11 @@ export type PairedTokenApprovalParams = {
 };
 
 /** A routed buy of a non-ETH paired token (a B20 equity) from ETH or the chain's USD hub. */
+/** {@link planPairedTokenSwap}'s input: the swap params plus which way the swap goes. */
+export type PairedSwapPlanParams = PairedTokenSwapParams & {
+  direction: PairedSwapDirection;
+};
+
 export type PairedTokenAcquisitionParams = {
   pairedToken: Address;
   input: PairedTokenAcquisitionInput;
@@ -444,6 +449,13 @@ export type PairedTokenAcquisitionParams = {
   deadline?: bigint;
   /** For the hub-token allowance check; defaults to the drift signer, else the approve is always planned. */
   sender?: Address;
+  /**
+   * The venue to execute on. Defaults to the registry calculator's route — but a caller that
+   * QUOTED first must pass the quote's route through, or the plan may execute on a different
+   * pool than the one that priced the target (a better-priced venue's target can exceed what
+   * the calculator pool delivers within `maxIn`, reverting the buy).
+   */
+  route?: PairedTokenAcquisitionRoute;
 };
 
 export type PairedTokenAcquisitionPlan = {
@@ -1196,7 +1208,7 @@ export class ReadFlaunchSDK {
     if (params.maxIn <= 0n) throw new Error("maxIn must be positive");
     const acquisition = this.readPairedTokenAcquisition;
     const dex = acquisition.dex;
-    const route = await acquisition.resolveRoute(params.pairedToken);
+    const route = params.route ?? (await acquisition.resolveRoute(params.pairedToken));
     const deadline = params.deadline ?? BigInt(Math.floor(Date.now() / 1000) + 600);
     const leg = {
       pairedToken: params.pairedToken,
@@ -1259,6 +1271,10 @@ export class ReadFlaunchSDK {
       recipient: params.recipient,
       deadline: params.deadline,
       sender: params.sender,
+      // Execute on the venue that PRICED the target. Quoting on the best-discovered pool and
+      // then buying on the calculator's would size an exact-output leg off a pool it never
+      // touches — reverting when the calculator pool cannot deliver within the budget.
+      route: quote.route,
     });
     return { ...plan, quote };
   }
@@ -1276,9 +1292,9 @@ export class ReadFlaunchSDK {
    * cannot batch send them as two transactions.
    */
   async planPairedTokenSwap(
-    params: PairedTokenSwapParams,
-    direction: PairedSwapDirection
+    params: PairedSwapPlanParams
   ): Promise<PairedSwapPlan> {
+    const { direction } = params;
     this.assertPairedTokenSwapSupported("planPairedTokenSwap");
     if (params.amountIn <= 0n) {
       throw new Error("amountIn must be positive");
@@ -1299,24 +1315,36 @@ export class ReadFlaunchSDK {
     const tokenOut = direction === "buy" ? params.coinAddress : pool.pairedToken;
     const isNativeInput = direction === "buy" && tokenIn === zeroAddress;
     const zeroForOne = isZeroForOne(pool.poolKey, tokenIn);
-    const poolSwap = params.router ?? this.routerForPool(pool.poolKey.hooks);
+    // STRICT lookup, not `poolSwapForHook` — that helper falls back to the chain's current
+    // router, which is the right default for an ungated swap and exactly wrong for a gated one.
+    const mappedRouter =
+      PoolSwapForHookV1_3Address[this.chainId]?.[pool.poolKey.hooks.toLowerCase()];
+    if (params.hookData !== undefined && params.router === undefined && mappedRouter === undefined) {
+      // Router approval is per spend gate, per hook generation. Guessing the chain's current
+      // router for an unmapped hook would send a signed authorisation to a router its gate never
+      // approved — an opaque on-chain revert. The gate's /config names the right one.
+      throw new Error(
+        `No approved router is known for hook ${pool.poolKey.hooks} on chain ${this.chainId} — pass \`router\` (the gate's /config announces it)`
+      );
+    }
+    const poolSwap = params.router ?? mappedRouter ?? this.routerForPool(pool.poolKey.hooks);
 
-    // A read-only drift has no signer; the plan then assumes no standing allowance.
-    const signer = (
-      this.drift as { getSignerAddress?: () => Promise<Address> }
-    ).getSignerAddress;
-    const sender =
-      params.sender ??
-      (signer
-        ? await signer.call(this.drift).catch(() => undefined)
-        : undefined);
+    const sender = await this.senderFor(params.sender);
 
+    // Fresh reads, not drift's cache: an approve or a buy that just landed changes both numbers,
+    // and a stale allowance here plans a swap with no approve that reverts on-chain, while a
+    // stale spot price computes a slippage bound for a market that has moved.
+    const memecoin = new ReadMemecoin(tokenIn, this.drift);
+    await Promise.all([
+      this.pairedSwapStateView!.contract.cache.clear(),
+      isNativeInput || !sender ? Promise.resolve() : memecoin.contract.cache.clear(),
+    ]);
     const [slot0, allowance] = await Promise.all([
       this.pairedSwapStateView!.poolSlot0({ poolId: pool.poolId }),
       isNativeInput
         ? Promise.resolve(params.amountIn)
         : sender
-        ? new ReadMemecoin(tokenIn, this.drift).allowance(sender, poolSwap)
+        ? memecoin.allowance(sender, poolSwap)
         : Promise.resolve(0n),
     ]);
 
@@ -3766,7 +3794,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * Buys a paired-token coin with an exact amount of its paired token (mUSD, native ETH, flETH, a
    * B20 equity) through the v1.3.1 PoolSwap. Sends the ERC20 approve first when the allowance is
    * short, then the swap; returns the swap transaction. To batch both into one wallet call, run
-   * `planPairedTokenSwap(params, "buy")` and submit its calls yourself.
+   * `planPairedTokenSwap({ ...params, direction: "buy" })` and submit its calls yourself.
    */
   async buyCoinPairedToken(params: PairedTokenSwapParams) {
     return this.executePairedTokenSwap(params, "buy");
@@ -3782,7 +3810,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     direction: PairedSwapDirection
   ) {
     const sender = params.sender ?? (await this.drift.getSignerAddress());
-    const plan = await this.planPairedTokenSwap({ ...params, sender }, direction);
+    const plan = await this.planPairedTokenSwap({ ...params, sender, direction });
 
     if (plan.approve) {
       await new ReadWriteMemecoin(plan.approve.token, this.drift).approve(

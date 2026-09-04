@@ -64,6 +64,7 @@ export type {
   PairedTokenAcquisitionPlan,
   PairedSwapDirection,
   PairedTokenSwapParams,
+  PairedSwapPlanParams,
   PairedPoolQuoteParams,
   PairedSwapCall,
   PairedSwapApproveCall,

@@ -141,13 +141,19 @@ export class ReadPairedTokenAcquisition {
     return found;
   }
 
-  /** Spot output through the calculator route: ETH takes the WETH:hub hop first. */
+  /** Spot output through a HUB route: ETH takes the WETH:hub hop first. */
   async quoteSpot(
     pairedToken: Address,
     route: PairedTokenAcquisitionRoute,
     input: PairedTokenAcquisitionInput,
     amountIn: bigint
   ): Promise<bigint> {
+    if (route.direct) {
+      // A direct route pays WETH into the token pool with no hub leg; this pricing walks
+      // ETH -> hub -> token and would mis-price it. Direct routes only ever come from QuoterV2
+      // discovery, which prices them itself.
+      throw new Error("quoteSpot prices hub routes only; quote a direct route through the venue quoter");
+    }
     let hubAmount = amountIn;
     if (input === "eth") {
       const [{ sqrtPriceX96, fee }, token0] = await Promise.all([

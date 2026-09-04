@@ -165,16 +165,11 @@ test("a gated mUSD buy plans approve + PoolSwap.swap(bytes hookData) with negati
   const { drift, interactions } = recordingDrift({ allowance: 0n });
   const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
 
-  const plan = await sdk.planPairedTokenSwap(
-    {
-      coinAddress: COIN,
+  const plan = await sdk.planPairedTokenSwap({ coinAddress: COIN,
       amountIn: 5_000_000n, // 5 mUSD
       slippageBps: 500,
       hookData: HOOK_DATA,
-      sender: SENDER,
-    },
-    "buy"
-  );
+      sender: SENDER, direction: "buy" });
 
   assert.equal(plan.pairedToken.toLowerCase(), MUSD.toLowerCase());
   assert.equal(plan.tokenIn.toLowerCase(), MUSD.toLowerCase());
@@ -229,10 +224,7 @@ test("a sufficient allowance drops the approve step; referrer-only uses the addr
   const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
   const referrer = "0x2222222222222222222222222222222222222222";
 
-  const plan = await sdk.planPairedTokenSwap(
-    { coinAddress: COIN, pairedToken: MUSD, amountIn: 5_000_000n, slippageBps: 50, referrer, sender: SENDER },
-    "buy"
-  );
+  const plan = await sdk.planPairedTokenSwap({ coinAddress: COIN, pairedToken: MUSD, amountIn: 5_000_000n, slippageBps: 50, referrer, sender: SENDER, direction: "buy" });
 
   assert.equal(plan.approve, undefined);
   const swap = decodeFunctionData({ abi: PoolSwapV1_3Abi, data: plan.swap.data });
@@ -243,10 +235,7 @@ test("a native-ETH pairing funds the buy with msg.value and needs no approve", a
   const { drift, interactions } = recordingDrift({ poolKey: ethPoolKey });
   const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
 
-  const plan = await sdk.planPairedTokenSwap(
-    { coinAddress: COIN, amountIn: 10n ** 16n, slippageBps: 100, sender: SENDER },
-    "buy"
-  );
+  const plan = await sdk.planPairedTokenSwap({ coinAddress: COIN, amountIn: 10n ** 16n, slippageBps: 100, sender: SENDER, direction: "buy" });
 
   assert.equal(plan.pairedToken, zeroAddress);
   assert.equal(plan.isNativeInput, true);
@@ -259,10 +248,7 @@ test("a sell spends the coin, flips direction and approves the coin to PoolSwap"
   const { drift } = recordingDrift({ allowance: 0n });
   const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
 
-  const plan = await sdk.planPairedTokenSwap(
-    { coinAddress: COIN, pairedToken: MUSD, amountIn: 1_000n, slippageBps: 100, sender: SENDER },
-    "sell"
-  );
+  const plan = await sdk.planPairedTokenSwap({ coinAddress: COIN, pairedToken: MUSD, amountIn: 1_000n, slippageBps: 100, sender: SENDER, direction: "sell" });
 
   assert.equal(plan.tokenIn, COIN);
   assert.equal(plan.tokenOut.toLowerCase(), MUSD.toLowerCase());
@@ -309,10 +295,7 @@ test("a coin on a superseded Robinhood hook resolves to that hook and still swap
   assert.equal(probes[0], PairedTokenPositionManagerV1_3Address[robinhood.id].toLowerCase());
   assert.ok(probes.includes(superseded));
 
-  const plan = await sdk.planPairedTokenSwap(
-    { coinAddress: COIN, amountIn: 1_000_000n, slippageBps: 100, sender: SENDER },
-    "buy"
-  );
+  const plan = await sdk.planPairedTokenSwap({ coinAddress: COIN, amountIn: 1_000_000n, slippageBps: 100, sender: SENDER, direction: "buy" });
   assert.deepEqual(plan.poolKey, supersededKey);
   // Routed to the PoolSwap the SUPERSEDED generation's spend gate approves, not the current one:
   // router approval is per gate, and a gated buy through an unapproved router reverts.
@@ -388,7 +371,7 @@ test("paired-token swaps refuse chains without the deployment", async () => {
   const { drift } = recordingDrift();
   const sdk = new ReadFlaunchSDK(mainnet.id, drift);
   await assert.rejects(
-    () => sdk.planPairedTokenSwap({ coinAddress: COIN, amountIn: 1n, slippageBps: 50 }, "buy"),
+    () => sdk.planPairedTokenSwap({ coinAddress: COIN, amountIn: 1n, slippageBps: 50, direction: "buy" }),
     /not supported on chain 1/
   );
   assert.throws(() => sdk.readPoolSwapV1_3, /not supported/);
@@ -403,4 +386,179 @@ test("registry tokenConfig exposes decimals and type; clients construct", async 
   assert.ok(new ReadPoolSwapV1_3(PoolSwapV1_3Address[base.id], drift));
   assert.ok(new ReadWritePoolSwapV1_3(PoolSwapV1_3Address[base.id], drift));
   assert.ok(new ReadPairedTokenPositionManagerV1_3(hooks, drift));
+});
+
+// ── Review-driven cases: the behaviours the first cut left unasserted ─────────────────────────
+
+test("a router override wins over the per-hook map, for both the approve spender and the swap", async () => {
+  const OVERRIDE = "0x00000000000000000000000000000000000000AA";
+  const { drift } = recordingDrift();
+  const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
+
+  const plan = await sdk.planPairedTokenSwap({
+    coinAddress: COIN,
+    amountIn: 1_000_000n,
+    slippageBps: 100,
+    sender: SENDER,
+    router: OVERRIDE,
+    direction: "buy",
+  });
+  assert.equal(plan.swap.to, OVERRIDE);
+  assert.equal(plan.approve.spender, OVERRIDE);
+});
+
+test("approvalAllowance sizes the approve while the swap still spends exactly amountIn", async () => {
+  const { drift } = recordingDrift({ allowance: 0n });
+  const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
+
+  const plan = await sdk.planPairedTokenSwap({
+    coinAddress: COIN,
+    amountIn: 5_000_000n,
+    approvalAllowance: 50_000_000n, // the round's cap: approve once, buy many times
+    slippageBps: 100,
+    sender: SENDER,
+    direction: "buy",
+  });
+  assert.equal(plan.approve.amount, 50_000_000n);
+  const approve = decodeFunctionData({
+    abi: [{ type: "function", name: "approve", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }] }],
+    data: plan.approve.data,
+  });
+  assert.equal(approve.args[1], 50_000_000n);
+  const swap = decodeFunctionData({ abi: PoolSwapV1_3Abi, data: plan.swap.data });
+  assert.equal(swap.args[1].amountSpecified, -5_000_000n);
+
+  await assert.rejects(
+    () =>
+      sdk.planPairedTokenSwap({
+        coinAddress: COIN,
+        amountIn: 5_000_000n,
+        approvalAllowance: 4_999_999n,
+        slippageBps: 100,
+        sender: SENDER,
+        direction: "buy",
+      }),
+    /approvalAllowance must be at least amountIn/
+  );
+});
+
+test("a gated swap on an unmapped hook refuses rather than guessing the chain's current router", async () => {
+  // The AnyPositionManagers are mapped now; fabricate an unmapped hook by probing a coin whose
+  // pool answers on a hook no router table knows. Router approval is per spend gate — guessing
+  // would send the signed authorisation to a router its gate never approved.
+  const STRANGE_HOOK = "0x00000000000000000000000000000000000000dc";
+  const strangeKey = pairedPoolKey(COIN, MUSD, STRANGE_HOOK);
+  const { drift } = recordingDrift({ poolKey: strangeKey, answeringHook: PairedTokenPositionManagerV1_3Address[baseSepolia.id] });
+  const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
+
+  await assert.rejects(
+    () =>
+      sdk.planPairedTokenSwap({
+        coinAddress: COIN,
+        amountIn: 1_000_000n,
+        slippageBps: 100,
+        sender: SENDER,
+        hookData: HOOK_DATA,
+        direction: "buy",
+      }),
+    /No approved router is known for hook/
+  );
+  // Ungated, the chain-current fallback stands: nothing on chain refuses it.
+  const plan = await sdk.planPairedTokenSwap({
+    coinAddress: COIN,
+    amountIn: 1_000_000n,
+    slippageBps: 100,
+    sender: SENDER,
+    direction: "buy",
+  });
+  assert.equal(plan.swap.to.toLowerCase(), PoolSwapV1_3Address[baseSepolia.id].toLowerCase());
+});
+
+test("the write path submits to the plan's router, not the chain's current one", async () => {
+  // A superseded `.vpt2` coin: the plan routes to that generation's PoolSwap, and the WRITE must
+  // follow it — a writer pinned to the current router would pass every plan-level assertion and
+  // still send the transaction to a router the pool's gate never approved.
+  const superseded = "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc";
+  const supersededKey = pairedPoolKey(COIN, MUSD, superseded);
+  const { drift, interactions } = recordingDrift({ poolKey: supersededKey, answeringHook: superseded, allowance: 0n });
+  const sdk = new ReadWriteFlaunchSDK(baseSepolia.id, drift);
+
+  await sdk.buyCoinPairedToken({ coinAddress: COIN, amountIn: 1_000_000n, slippageBps: 100, sender: SENDER });
+
+  const writes = interactions.filter((i) => i.kind === "write");
+  const swapWrite = writes.find((w) => w.fn === "swap");
+  assert.ok(swapWrite, "a swap was written");
+  assert.equal(swapWrite.address.toLowerCase(), "0x62eb5b7b066ff80ce5e32ff1ed42b31c485f716b");
+  assert.notEqual(swapWrite.address.toLowerCase(), PoolSwapV1_3Address[baseSepolia.id].toLowerCase());
+  const approveWrite = writes.find((w) => w.fn === "approve");
+  assert.equal(approveWrite.args.spender.toLowerCase(), "0x62eb5b7b066ff80ce5e32ff1ed42b31c485f716b");
+});
+
+test("an unknown coin is not cached as unknown — the launch race resolves on the next ask", async () => {
+  const { drift, interactions } = recordingDrift({ answeringHook: "0x00000000000000000000000000000000000000ee" });
+  const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
+
+  await assert.rejects(() => sdk.resolvePairedPool(COIN), /not launched on a paired-token PositionManager/);
+  const probesAfterMiss = interactions.filter((i) => i.fn === "poolKey").length;
+
+  // The chain catches up: the real hook now answers. Swap the double's answering hook in place.
+  interactions.length = 0;
+  const { drift: laterDrift } = recordingDrift();
+  // Same SDK instance must re-probe (no negative cache) — emulate by asking again on the first
+  // instance, which still misses, and asserting it issued fresh reads rather than a cached throw.
+  await assert.rejects(() => sdk.resolvePairedPool(COIN));
+  assert.ok(
+    interactions.filter((i) => i.fn === "poolKey").length > 0,
+    "the second ask probed the chain again — a negative result must not be cached"
+  );
+
+  const fresh = new ReadFlaunchSDK(baseSepolia.id, laterDrift);
+  const pool = await fresh.resolvePairedPool(COIN);
+  assert.equal(pool.pairedToken.toLowerCase(), MUSD.toLowerCase());
+});
+
+test("resolvePairedPool refuses a pairedToken that disagrees with the pool", async () => {
+  const { drift } = recordingDrift();
+  const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
+  await assert.rejects(
+    () => sdk.resolvePairedPool(COIN, "0x00000000000000000000000000000000000000BB"),
+    /is paired with/
+  );
+});
+
+test("planPairedTokenApproval: sized call when short, undefined when covered or native", async () => {
+  const short = new ReadFlaunchSDK(baseSepolia.id, recordingDrift({ allowance: 0n }).drift);
+  const call = await short.planPairedTokenApproval({ coinAddress: COIN, amount: 50_000_000n, sender: SENDER });
+  assert.equal(call.amount, 50_000_000n);
+  assert.equal(call.token.toLowerCase(), MUSD.toLowerCase());
+
+  const covered = new ReadFlaunchSDK(baseSepolia.id, recordingDrift({ allowance: 50_000_000n }).drift);
+  assert.equal(await covered.planPairedTokenApproval({ coinAddress: COIN, amount: 50_000_000n, sender: SENDER }), undefined);
+
+  const native = new ReadFlaunchSDK(baseSepolia.id, recordingDrift({ poolKey: ethPoolKey }).drift);
+  assert.equal(await native.planPairedTokenApproval({ coinAddress: COIN, amount: 1n, sender: SENDER }), undefined);
+});
+
+test("hookData wins the overload and the referrer is ignored — the gate's payload already leads with it", async () => {
+  const { drift } = recordingDrift({ allowance: 10_000_000n });
+  const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
+  const plan = await sdk.planPairedTokenSwap({
+    coinAddress: COIN,
+    amountIn: 1_000_000n,
+    slippageBps: 100,
+    sender: SENDER,
+    hookData: HOOK_DATA,
+    referrer: SENDER,
+    direction: "buy",
+  });
+  const decoded = decodeFunctionData({ abi: PoolSwapV1_3Abi, data: plan.swap.data });
+  assert.equal(decoded.args.length, 3);
+  assert.equal(decoded.args[2], HOOK_DATA); // bytes overload; no referrer arg anywhere
+});
+
+test("one-for-zero slippage refuses a tolerance the price cannot express near the top of the range", () => {
+  assert.throws(
+    () => sqrtPriceLimitFromSlippage(MAX_SQRT_PRICE_LIMIT, 1, false),
+    /Slippage is too low at the current price/
+  );
 });

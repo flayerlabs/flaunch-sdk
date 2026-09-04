@@ -112,8 +112,8 @@ export const PairedTokenRegistryV1_3Address: Addresses = {
 // `poolSwapForHook(chainId, hook)` from `helpers`.
 export const PoolSwapV1_3Address: Addresses = {
   [base.id]: "0xafD627ea5D02251B13E7D6C90b468328376b61A3",
-  [baseSepolia.id]: "0xf0f388a31a1745a5e2378b812ed51525f70595be", // v1.3.3 regeneration, 2026-09-03
-  [robinhood.id]: "0x92d2df3ec1ebd126f0708b879b1fe25c84482028", // v1.3.3 regeneration, 2026-09-03
+  [baseSepolia.id]: "0xF0f388a31a1745A5E2378B812eD51525f70595be", // v1.3.3 regeneration, 2026-09-03
+  [robinhood.id]: "0x92D2dF3EC1EBD126F0708b879B1fe25c84482028", // v1.3.3 regeneration, 2026-09-03
 };
 
 /** Hook (lowercase) → the PoolSwap approved on that hook generation's spend gate. */
@@ -122,12 +122,15 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0xafD627ea5D02251B13E7D6C90b468328376b61A3",
   },
   [baseSepolia.id]: {
-    "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc": "0x62eb5b7b066ff80ce5e32ff1ed42b31c485f716b", // `.vpt2` gate 0x2c91…
-    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xf0f388a31a1745a5e2378b812ed51525f70595be", // v1.3.3 gate 0x54cd…
+    // Keys stay LOWERCASE — `poolSwapForHook` lowercases its lookup.
+    "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc": "0x62eb5b7B066Ff80ce5E32fF1ED42B31c485f716B", // `.vpt2` PM, gate 0x2c91…
+    "0x28118f40eca9b884beb42b0196409a73269525dc": "0x62eb5b7B066Ff80ce5E32fF1ED42B31c485f716B", // `.vpt2` AnyPM, same gate
+    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xF0f388a31a1745A5E2378B812eD51525f70595be", // v1.3.3 PM, gate 0x54cd…
   },
   [robinhood.id]: {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0x8476ED156f731335ECA8Cc8A8eE759330ee4A91f", // v1.3.1
-    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0x92d2df3ec1ebd126f0708b879b1fe25c84482028", // v1.3.3
+    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0x92D2dF3EC1EBD126F0708b879B1fe25c84482028", // v1.3.3
+    "0x6ea0edee449a287504990df8d87951b9436825dc": "0x8476ED156f731335ECA8Cc8A8eE759330ee4A91f", // v1.3.1 AnyPM, same gate as the v1.3.1 PM
   },
 };
 
@@ -170,7 +173,7 @@ export const PairedTokenAcquisitionDexAddress: Record<number, PairedTokenAcquisi
   },
   [robinhood.id]: {
     flavor: "uniswapV3",
-    swapRouter: "0xcaf681a66d020601342297493863e78c959e5cb2",
+    swapRouter: "0xCaf681a66D020601342297493863E78C959E5cb2",
     weth: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", // NOT an OP-stack predeploy
     hubToken: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
     hubSymbol: "USDG",
@@ -180,7 +183,7 @@ export const PairedTokenAcquisitionDexAddress: Record<number, PairedTokenAcquisi
     venues: {
       factory: "0x1f7d7550B1b028f7571E69A784071F0205FD2EfA",
       feeTiers: [100, 500, 3000, 10_000],
-      quoterV2: "0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7",
+      quoterV2: "0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7",
     },
   },
 };
