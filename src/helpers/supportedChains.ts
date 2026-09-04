@@ -15,6 +15,8 @@ import {
   PairedTokenRegistryV1_3Address,
   SupersededPositionManagerV1_3Address,
   PoolSwapV1_3Address,
+  PoolSwapForHookV1_3Address,
+  PairedTokenAcquisitionDexAddress,
   QuoterAddress,
   StateViewAddress,
 } from "../addresses";
@@ -102,5 +104,29 @@ export function doesChainSupportPairedTokenSwap(chainId: number): boolean {
     PoolSwapV1_3Address[chainId] !== undefined &&
     QuoterAddress[chainId] !== undefined &&
     StateViewAddress[chainId] !== undefined
+  );
+}
+
+/**
+ * The PoolSwap a swap against a pool on `hook` must go through. Ungated swaps could use any
+ * PoolSwap (it is hook-agnostic), but a spend-gated buy is only accepted from a router that pool's
+ * own spend gate has approved, and each hook generation ships its own gate — so the router follows
+ * the hook. Falls back to the chain's current router for a hook the table does not name.
+ */
+export function poolSwapForHook(chainId: number, hook: Address): Address | undefined {
+  return (
+    PoolSwapForHookV1_3Address[chainId]?.[hook.toLowerCase()] ??
+    PoolSwapV1_3Address[chainId]
+  );
+}
+
+/**
+ * Whether a non-ETH paired token (a B20 equity) can be bought from ETH or the chain's USD hub
+ * through the SDK's acquisition route. Base Sepolia's mUSD has no venue — it is minted.
+ */
+export function doesChainSupportPairedTokenAcquisition(chainId: number): boolean {
+  return (
+    PairedTokenAcquisitionDexAddress[chainId] !== undefined &&
+    PairedTokenRegistryV1_3Address[chainId] !== undefined
   );
 }

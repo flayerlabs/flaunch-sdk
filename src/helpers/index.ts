@@ -9,5 +9,7 @@ export {
   getV1_3PositionManagers,
   doesChainSupportPairedTokenLaunch,
   doesChainSupportPairedTokenSwap,
+  poolSwapForHook,
+  doesChainSupportPairedTokenAcquisition,
 } from "./supportedChains";
 export * from "./permissions";

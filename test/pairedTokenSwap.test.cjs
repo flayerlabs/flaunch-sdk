@@ -20,6 +20,7 @@ const {
   pairedPoolKey,
   sqrtPriceLimitFromSlippage,
   PAIRED_TOKEN_TYPE,
+  poolSwapForHook,
 } = require("../dist/index.cjs.js");
 
 const SENDER = "0x1111111111111111111111111111111111111111";
@@ -110,8 +111,14 @@ test("paired-token swap addresses and capability cover the deployed V1.3 chains"
     assert.equal(doesChainSupportPairedTokenSwap(chainId), true);
   }
   assert.equal(doesChainSupportPairedTokenSwap(mainnet.id), false);
+  // The CURRENT router per chain — Base Sepolia's hooks were regenerated as v1.3.3 on 2026-09-03
   assert.equal(
     PoolSwapV1_3Address[baseSepolia.id].toLowerCase(),
+    "0xf0f388a31a1745a5e2378b812ed51525f70595be"
+  );
+  // …and the superseded `.vpt2` hook still routes to the router ITS gate approved
+  assert.equal(
+    poolSwapForHook(baseSepolia.id, "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc").toLowerCase(),
     "0x62eb5b7b066ff80ce5e32ff1ed42b31c485f716b"
   );
 });
@@ -307,7 +314,19 @@ test("a coin on a superseded Robinhood hook resolves to that hook and still swap
     "buy"
   );
   assert.deepEqual(plan.poolKey, supersededKey);
-  assert.equal(plan.swap.to.toLowerCase(), PoolSwapV1_3Address[robinhood.id].toLowerCase());
+  // Routed to the PoolSwap the SUPERSEDED generation's spend gate approves, not the current one:
+  // router approval is per gate, and a gated buy through an unapproved router reverts.
+  assert.equal(
+    plan.swap.to.toLowerCase(),
+    "0x8476ed156f731335eca8cc8a8ee759330ee4a91f"
+  );
+  assert.notEqual(
+    plan.swap.to.toLowerCase(),
+    PoolSwapV1_3Address[robinhood.id].toLowerCase()
+  );
+  // The fixture's allowance already covers this buy, so there is no approve step to check the
+  // spender on — the routing assertion above is the point.
+  assert.equal(plan.approve, undefined);
 
   // Memoised: a second resolve reads nothing
   const before = interactions.length;

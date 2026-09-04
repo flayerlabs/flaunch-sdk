@@ -108,6 +108,16 @@ import {
 } from "../clients/PoolSwapV1_3Client";
 import { ReadPairedTokenPositionManagerV1_3 } from "../clients/PairedTokenPositionManagerV1_3Client";
 import {
+  ReadPairedTokenAcquisition,
+  type PairedTokenAcquisitionQuote,
+} from "../clients/PairedTokenAcquisitionClient";
+import {
+  encodeAcquisitionEthBuy,
+  encodeAcquisitionHubBuy,
+  type PairedTokenAcquisitionInput,
+  type PairedTokenAcquisitionRoute,
+} from "../utils/pairedTokenAcquisition";
+import {
   PoolSwapV1_3SwapWithHookDataAbi,
   PoolSwapV1_3SwapWithReferrerAbi,
 } from "../abi/PoolSwapV1_3";
@@ -243,6 +253,8 @@ import {
   doesChainSupportMultiAssetManagers,
   doesChainSupportPairedTokenLaunch,
   doesChainSupportPairedTokenSwap,
+  poolSwapForHook,
+  doesChainSupportPairedTokenAcquisition,
 } from "helpers/supportedChains";
 
 // Re-export PoolCreatedEventData so it's available as part of FlaunchSDK module
@@ -397,6 +409,52 @@ export type PairedTokenSwapParams = {
    * drift signer. When neither is available the plan always includes the approve step.
    */
   sender?: Address;
+  /**
+   * When an approve is needed, approve this much instead of `amountIn` (must be ≥ `amountIn`). A
+   * standing allowance — a round's wallet cap, say — turns every later buy into a single swap call.
+   */
+  approvalAllowance?: bigint;
+  /**
+   * The PoolSwap to route through. Defaults to the router approved on the spend gate of the hook
+   * the coin's pool lives on (`poolSwapForHook`); a host that learned the router from the gate's
+   * own `/config` passes it here.
+   */
+  router?: Address;
+};
+
+export type PairedTokenApprovalParams = {
+  coinAddress: Address;
+  pairedToken?: Address;
+  /** The allowance to set when the current one is short of it. */
+  amount: bigint;
+  sender?: Address;
+  router?: Address;
+};
+
+/** A routed buy of a non-ETH paired token (a B20 equity) from ETH or the chain's USD hub. */
+export type PairedTokenAcquisitionParams = {
+  pairedToken: Address;
+  input: PairedTokenAcquisitionInput;
+  /** Exactly this much paired token is delivered (exact-output). */
+  target: bigint;
+  /** The most the router may spend — the price protection; native ETH travels as `value`. */
+  maxIn: bigint;
+  recipient: Address;
+  /** Unix seconds; defaults to now + 10 minutes. */
+  deadline?: bigint;
+  /** For the hub-token allowance check; defaults to the drift signer, else the approve is always planned. */
+  sender?: Address;
+};
+
+export type PairedTokenAcquisitionPlan = {
+  route: PairedTokenAcquisitionRoute;
+  input: PairedTokenAcquisitionInput;
+  target: bigint;
+  maxIn: bigint;
+  /** Present for a hub-token input whose router allowance is short of `maxIn`. */
+  approve?: PairedSwapApproveCall;
+  /** The router call; `value` is `maxIn` for an ETH input (the router refunds the unspent part). */
+  swap: PairedSwapCall;
 };
 
 export type PairedPoolQuoteParams = {
@@ -445,6 +503,18 @@ export type PairedSwapPlan = ResolvedPairedPool & {
 /**
  * Base class for interacting with Flaunch protocol in read-only mode
  */
+/** An ERC20 `approve(spender, amount)` as the call object paired-token plans carry. */
+function buildApproveCall(token: Address, spender: Address, amount: bigint): PairedSwapApproveCall {
+  return {
+    token,
+    spender,
+    amount,
+    to: token,
+    value: 0n,
+    data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, amount] }),
+  };
+}
+
 export class ReadFlaunchSDK {
   public readonly drift: Drift;
   public readonly chainId: number;
@@ -460,6 +530,7 @@ export class ReadFlaunchSDK {
   private readonly pairedTokenRegistryV1_3?: ReadPairedTokenRegistryV1_3;
   private readonly poolSwapV1_3?: ReadPoolSwapV1_3;
   private readonly pairedTokenPositionManagerV1_3?: ReadPairedTokenPositionManagerV1_3;
+  private pairedTokenAcquisition?: ReadPairedTokenAcquisition;
   /** StateView for paired-pool spot prices; separate from `baseClients` so multichain chains (Robinhood) have one too. */
   private readonly pairedSwapStateView?: ReadStateView;
 
@@ -1041,6 +1112,158 @@ export class ReadFlaunchSDK {
   }
 
   /**
+   * The PoolSwap a pool on `hook` must be traded through. Router approval is per spend gate and
+   * each hook generation ships its own gate, so a gated buy sent through the wrong generation's
+   * router is refused on chain — see `PoolSwapForHookV1_3Address`.
+   */
+  protected routerForPool(hook: Address): Address {
+    const router = poolSwapForHook(this.chainId, hook);
+    if (!router) {
+      throw new Error(`No PoolSwap router is known for hook ${hook} on chain ${this.chainId}`);
+    }
+    return router;
+  }
+
+  private async senderFor(explicit?: Address): Promise<Address | undefined> {
+    if (explicit) return explicit;
+    // A read-only drift has no signer; callers then get the approve planned unconditionally.
+    const signer = (this.drift as { getSignerAddress?: () => Promise<Address> }).getSignerAddress;
+    return signer ? await signer.call(this.drift).catch(() => undefined) : undefined;
+  }
+
+  /**
+   * Just the ERC20 approve a paired-token BUY needs, sized to `amount` — for a host that wants the
+   * player ready before a round starts (approve the whole wallet cap once; every in-round buy is
+   * then a single swap). `undefined` when the pool is paired with native ETH (nothing to approve)
+   * or the standing allowance already covers `amount`.
+   */
+  async planPairedTokenApproval(
+    params: PairedTokenApprovalParams
+  ): Promise<PairedSwapApproveCall | undefined> {
+    this.assertPairedTokenSwapSupported("planPairedTokenApproval");
+    if (params.amount <= 0n) throw new Error("amount must be positive");
+    const pool = await this.resolvePairedPool(params.coinAddress, params.pairedToken);
+    if (pool.pairedToken === zeroAddress) return undefined;
+    const router = params.router ?? this.routerForPool(pool.poolKey.hooks);
+    const sender = await this.senderFor(params.sender);
+    const allowance = sender
+      ? await new ReadMemecoin(pool.pairedToken, this.drift).allowance(sender, router)
+      : 0n;
+    return allowance >= params.amount
+      ? undefined
+      : buildApproveCall(pool.pairedToken, router, params.amount);
+  }
+
+  protected assertPairedTokenAcquisitionSupported(operation: string) {
+    if (!doesChainSupportPairedTokenAcquisition(this.chainId)) {
+      throw new Error(
+        `${operation} is not supported on chain ${this.chainId}: no paired-token acquisition venue is configured there`
+      );
+    }
+  }
+
+  /** Reads for buying a non-ETH paired token from ETH / the USD hub. Gate with `doesChainSupportPairedTokenAcquisition()`. */
+  get readPairedTokenAcquisition(): ReadPairedTokenAcquisition {
+    if (!this.pairedTokenAcquisition) {
+      this.assertPairedTokenAcquisitionSupported("readPairedTokenAcquisition");
+      this.pairedTokenAcquisition = new ReadPairedTokenAcquisition(this.chainId, this.drift);
+    }
+    return this.pairedTokenAcquisition;
+  }
+
+  /** Expected paired-token output (and the venue) for an exact ETH / hub-token input. */
+  async quotePairedTokenAcquisition(params: {
+    pairedToken: Address;
+    input: PairedTokenAcquisitionInput;
+    amountIn: bigint;
+  }): Promise<PairedTokenAcquisitionQuote> {
+    this.assertPairedTokenAcquisitionSupported("quotePairedTokenAcquisition");
+    if (params.amountIn <= 0n) throw new Error("amountIn must be positive");
+    return this.readPairedTokenAcquisition.quote(params.pairedToken, params.input, params.amountIn);
+  }
+
+  /**
+   * The calls that buy exactly `target` of a paired token from ETH or the USD hub: an optional
+   * hub-token approve to the venue's router, then the exact-output router call (ETH rides as
+   * `value = maxIn`; the router refunds the unspent part). Exact-output so a following PoolSwap leg
+   * can be encoded up front — batched wallets resolve every call before the first executes.
+   */
+  async planPairedTokenAcquisition(
+    params: PairedTokenAcquisitionParams
+  ): Promise<PairedTokenAcquisitionPlan> {
+    this.assertPairedTokenAcquisitionSupported("planPairedTokenAcquisition");
+    if (params.target <= 0n) throw new Error("target must be positive");
+    if (params.maxIn <= 0n) throw new Error("maxIn must be positive");
+    const acquisition = this.readPairedTokenAcquisition;
+    const dex = acquisition.dex;
+    const route = await acquisition.resolveRoute(params.pairedToken);
+    const deadline = params.deadline ?? BigInt(Math.floor(Date.now() / 1000) + 600);
+    const leg = {
+      pairedToken: params.pairedToken,
+      route,
+      recipient: params.recipient,
+      deadline,
+      amountOut: params.target,
+      amountInMaximum: params.maxIn,
+    };
+
+    let approve: PairedSwapApproveCall | undefined;
+    if (params.input === "hub") {
+      const sender = await this.senderFor(params.sender);
+      const allowance = sender
+        ? await new ReadMemecoin(dex.hubToken, this.drift).allowance(sender, dex.swapRouter)
+        : 0n;
+      if (allowance < params.maxIn) {
+        approve = buildApproveCall(dex.hubToken, dex.swapRouter, params.maxIn);
+      }
+    }
+
+    return {
+      route,
+      input: params.input,
+      target: params.target,
+      maxIn: params.maxIn,
+      ...(approve ? { approve } : {}),
+      swap:
+        params.input === "eth"
+          ? { to: dex.swapRouter, data: encodeAcquisitionEthBuy(dex, leg), value: params.maxIn }
+          : { to: dex.swapRouter, data: encodeAcquisitionHubBuy(dex, leg), value: 0n },
+    };
+  }
+
+  /**
+   * Sizes and plans a routed buy from a BUDGET: quotes the exact input, takes `slippageBps` off, and
+   * plans an exact-output buy of that much with the whole budget as the price protection — the
+   * pattern that keeps a downstream PoolSwap leg deterministic. Returns the plan and the target.
+   */
+  async planPairedTokenAcquisitionForBudget(params: {
+    pairedToken: Address;
+    input: PairedTokenAcquisitionInput;
+    amountIn: bigint;
+    slippageBps: number;
+    recipient: Address;
+    deadline?: bigint;
+    sender?: Address;
+  }): Promise<PairedTokenAcquisitionPlan & { quote: PairedTokenAcquisitionQuote }> {
+    if (!Number.isInteger(params.slippageBps) || params.slippageBps <= 0 || params.slippageBps >= 10_000) {
+      throw new Error("Slippage must be between 1 and 9,999 basis points");
+    }
+    const quote = await this.quotePairedTokenAcquisition(params);
+    const target = (quote.expectedOut * BigInt(10_000 - params.slippageBps)) / 10_000n;
+    if (target <= 0n) throw new Error("Amount is too small to route through the paired-token pool");
+    const plan = await this.planPairedTokenAcquisition({
+      pairedToken: params.pairedToken,
+      input: params.input,
+      target,
+      maxIn: params.amountIn,
+      recipient: params.recipient,
+      deadline: params.deadline,
+      sender: params.sender,
+    });
+    return { ...plan, quote };
+  }
+
+  /**
    * Builds the calls for an exact-input swap on a paired-token pool without sending them:
    * an optional ERC20 `approve(PoolSwap, amountIn)` when the standing allowance is short, then the
    * PoolSwap `swap` (the `bytes` overload when `hookData` is given, else the referrer overload).
@@ -1060,6 +1283,13 @@ export class ReadFlaunchSDK {
     if (params.amountIn <= 0n) {
       throw new Error("amountIn must be positive");
     }
+    if (
+      params.approvalAllowance !== undefined &&
+      params.approvalAllowance < params.amountIn
+    ) {
+      throw new Error("approvalAllowance must be at least amountIn");
+    }
+    const approveAmount = params.approvalAllowance ?? params.amountIn;
 
     const pool = await this.resolvePairedPool(
       params.coinAddress,
@@ -1069,7 +1299,7 @@ export class ReadFlaunchSDK {
     const tokenOut = direction === "buy" ? params.coinAddress : pool.pairedToken;
     const isNativeInput = direction === "buy" && tokenIn === zeroAddress;
     const zeroForOne = isZeroForOne(pool.poolKey, tokenIn);
-    const poolSwap = PoolSwapV1_3Address[this.chainId];
+    const poolSwap = params.router ?? this.routerForPool(pool.poolKey.hooks);
 
     // A read-only drift has no signer; the plan then assumes no standing allowance.
     const signer = (
@@ -1124,20 +1354,7 @@ export class ReadFlaunchSDK {
       amountIn: params.amountIn,
       sqrtPriceLimitX96,
       ...(!isNativeInput && allowance < params.amountIn
-        ? {
-            approve: {
-              token: tokenIn,
-              spender: poolSwap,
-              amount: params.amountIn,
-              to: tokenIn,
-              value: 0n,
-              data: encodeFunctionData({
-                abi: erc20Abi,
-                functionName: "approve",
-                args: [poolSwap, params.amountIn],
-              }),
-            },
-          }
+        ? { approve: buildApproveCall(tokenIn, poolSwap, approveAmount) }
         : {}),
       swap: {
         to: poolSwap,
@@ -3291,7 +3508,20 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     return this.readWriteFlaunchZapV1_3Client;
   }
 
-  /** The v1.3.1 PoolSwap router with write capabilities — gate with `doesChainSupportPairedTokenSwap()`. */
+  private readonly poolSwapWriters = new Map<string, ReadWritePoolSwapV1_3>();
+
+  /** A PoolSwap writer for a specific router — the one a plan resolved for its pool's hook generation. */
+  protected poolSwapWriterAt(router: Address): ReadWritePoolSwapV1_3 {
+    const key = router.toLowerCase();
+    let writer = this.poolSwapWriters.get(key);
+    if (!writer) {
+      writer = new ReadWritePoolSwapV1_3(router, this.drift);
+      this.poolSwapWriters.set(key, writer);
+    }
+    return writer;
+  }
+
+  /** The chain's CURRENT v1.3 PoolSwap router with write capabilities — gate with `doesChainSupportPairedTokenSwap()`. */
   get readWritePoolSwapV1_3(): ReadWritePoolSwapV1_3 {
     if (!this.readWritePoolSwapV1_3Client) {
       throw new Error(
@@ -3561,7 +3791,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       );
     }
 
-    return this.readWritePoolSwapV1_3.swap({
+    return this.poolSwapWriterAt(plan.swap.to).swap({
       poolKey: plan.poolKey,
       params: {
         zeroForOne: plan.zeroForOne,
