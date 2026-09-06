@@ -5,6 +5,8 @@
 
 A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap V4.
 
+> This protected-swap branch is release-blocked. Its planner requires new router capabilities not supplied by the current legacy address maps. Follow [the coordinated release gates](./PROTECTED_SWAP_RELEASE.md); do not publish or deploy a dependency-only upgrade.
+
 ![Flaunch Header](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/.github/flaunch-header.png)
 
 _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context about using the Flaunch SDK: [llms-full.txt](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/llms-full.txt)_
@@ -22,7 +24,7 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 
 Base and Base Sepolia remain fully supported and backward compatible. Ethereum, Unichain, and Robinhood support standard direct launches, dynamic address fee split launches, `PoolCreated` receipt decoding, and creator fee claims. Robinhood also supports native ETH swaps and paired-token launches. Other manager and importer flows, watchers, and the IPFS launch helper are not supported on these newer deployments.
 
-The v1.3.1 multi-asset manager generation (the `*V1_3` manager addresses, clients and SDK methods, gated by `doesChainSupportMultiAssetManagers()`) is deployed on Base mainnet only.
+The v1.3.1 multi-asset manager generation has address mappings for Base, Base Sepolia, and Robinhood. Gate these separate `*V1_3` APIs with `doesChainSupportMultiAssetManagers()`; legacy manager helpers do not select that generation automatically.
 
 ## Table of Contents
 
