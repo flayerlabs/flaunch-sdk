@@ -20,9 +20,9 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 
 ## Network support
 
-Base and Base Sepolia remain fully supported and backward compatible. Ethereum, Unichain, and Robinhood support standard direct launches, dynamic address fee split launches, `PoolCreated` receipt decoding, and creator fee claims. Swaps, other manager and importer flows, watchers, and the IPFS launch helper are not supported on these newer deployments.
+Base and Base Sepolia remain fully supported and backward compatible. Ethereum, Unichain, and Robinhood support standard direct launches, dynamic address fee split launches, `PoolCreated` receipt decoding, and creator fee claims. Robinhood also supports native ETH swaps and paired-token launches. Other manager and importer flows, watchers, and the IPFS launch helper are not supported on these newer deployments.
 
-The planned Robinhood UI will route swaps through 0x only; the SDK does not provide a Robinhood swap fallback.
+The v1.3.1 multi-asset manager generation (the `*V1_3` manager addresses, clients and SDK methods, gated by `doesChainSupportMultiAssetManagers()`) is deployed on Base mainnet only.
 
 ## Table of Contents
 
@@ -32,14 +32,18 @@ The planned Robinhood UI will route swaps through 0x only; the SDK does not prov
   - [Read Operations (with Viem)](#read-operations-with-viem)
   - [Write Operations (with Viem + Wagmi)](#write-operations-with-viem--wagmi)
   - [Flaunching a Memecoin](#flaunching-a-memecoin)
+  - [Flaunching with a Paired Token](#flaunching-with-a-paired-token)
     - [How to generate `base64Image` from User uploaded file](#how-to-generate-base64image-from-user-uploaded-file)
   - [Flaunch with Address Fee Splits](#flaunch-with-address-fee-splits)
   - [Buying a Flaunch coin](#buying-a-flaunch-coin)
   - [Selling with Permit2](#selling-with-permit2)
   - [Swap using USDC or other tokens by passing `intermediatePoolKey`](#swap-using-usdc-or-other-tokens-by-passing-intermediatepoolkey)
+  - [Claiming creator revenue](#claiming-creator-revenue)
   - [Advanced Integration: Revenue Sharing with RevenueManager](#advanced-integration-revenue-sharing-with-revenuemanager)
+    - [v1.3.1 multi-asset RevenueManager (Base)](#v131-multi-asset-revenuemanager-base)
   - [Bot Protection during Fair Launch via TrustedSigner](#bot-protection-during-fair-launch-via-trustedsigner)
   - [Groups](#groups)
+    - [v1.3.1 multi-asset Groups (Base)](#v131-multi-asset-groups-base)
   - [Importing External Coins into Flaunch](#importing-external-coins-into-flaunch)
   - [Adding Liquidity to Imported (or flaunch) coins](#adding-liquidity-to-imported-or-flaunch-coins)
   - [Import AND Add Liquidity calls in a single batch](#import-and-add-liquidity-calls-in-a-single-batch)
@@ -154,7 +158,7 @@ const hash = await flaunchWrite.flaunchIPFS({
   symbol: "TEST",
   fairLaunchPercent: 0, // 0%
   fairLaunchDuration: 30 * 60, // 30 mins
-  initialMarketCapUSD: 10_000, // $10k
+  initialMarketCapUSD: 4_000, // $4k
   creator: address,
   creatorFeeAllocationPercent: 80, // 80% to creator, 20% to community
   metadata: {
@@ -182,6 +186,54 @@ if (poolCreatedData) {
   // ... other params
 }
 ```
+
+### Flaunching with a Paired Token
+
+Base, Base Sepolia, and Robinhood support the V1.3 paired-token launch path.
+The paired token must be approved by that chain's `PairedTokenRegistry`; use
+`zeroAddress` to select native ETH.
+
+```ts
+import { doesChainSupportPairedTokenLaunch } from "@flaunch/sdk";
+import { zeroAddress } from "viem";
+
+if (!doesChainSupportPairedTokenLaunch(publicClient.chain.id)) {
+  throw new Error("Paired-token launches are not supported on this chain");
+}
+
+const flaunchParams = {
+  name: "Paired Coin",
+  symbol: "PAIR",
+  tokenUri: "ipfs://...",
+  premineAmount: 0n,
+  creator: address,
+  creatorFeeAllocation: 8_000,
+  flaunchAt: 0n,
+  initialPriceParams,
+  feeCalculatorParams: "0x" as const,
+  pairedToken,
+};
+
+if (!(await flaunchRead.isPairedTokenApproved(pairedToken))) {
+  throw new Error("Paired token is not approved");
+}
+
+const quote = await flaunchRead.calculatePairedTokenFlaunchFee({
+  flaunchParams,
+  slippageBps: 100n,
+});
+
+const hash = await flaunchWrite.flaunchPairedToken({
+  flaunchParams,
+  trustedFeeSigner: zeroAddress,
+  value: quote.ethRequired,
+  maxPremineCost: quote.pairedPremineCost,
+});
+```
+
+The SDK does not auto-approve ERC20 spending or enforce a sponsorship policy.
+Applications that promise a gas-sponsored launch should reject unexpected
+non-zero quote values before signing, as the API service does.
 
 #### How to generate `base64Image` from User uploaded file
 
@@ -478,6 +530,34 @@ if (allowance < parseEther(coinAmount)) {
 
 3. The quote functions `getSellQuoteExactInput`, `getBuyQuoteExactInput` and `getBuyQuoteExactOutput` also support passing optional `intermediatePoolKey`.
 
+### Claiming creator revenue
+
+Creator fees accrue in a fee escrow and are claimed by the creator (the current holder of the coin's Flaunch NFT). Which escrow depends on the coin's pairing:
+
+- **flETH-paired coins** (the default) use the single-token `FeeEscrow`: `creatorRevenue()` returns the claimable ETH and `withdrawCreatorRevenue()` claims it.
+- **Coins paired with anything else** — native ETH, or a registry token such as the B20 equities on Base (AAPLc, GOOGLc, …) — use the v1.3.1 **multi-token `FeeEscrow`**: one contract per chain, balances keyed `(recipient, token)` and denominated in the paired token. The contract cannot enumerate a recipient's keys, so you name the tokens to look at. A flETH key pays out as ETH; a stock key is delivered as the stock itself.
+
+```ts
+import { zeroAddress } from "viem";
+import { doesChainSupportMultiTokenFeeEscrow } from "@flaunch/sdk";
+
+const AAPLC = "0xb200000000000000000000C2e324d24d7eEcd1fb";
+
+if (doesChainSupportMultiTokenFeeEscrow(base.id)) {
+  // One entry per token, in that token's raw units (AAPLc has 8 decimals)
+  const balances = await flaunchRead.creatorRevenueByToken({
+    creator: creatorAddress,
+    tokens: [zeroAddress, AAPLC],
+  });
+
+  const tokens = balances.filter((b) => b.amount > 0n).map((b) => b.token);
+  if (tokens.length > 0) {
+    // One transaction sweeps every key
+    await flaunchWrite.withdrawCreatorRevenueByToken({ tokens });
+  }
+}
+```
+
 ### Advanced Integration: Revenue Sharing with RevenueManager
 
 For platforms building on top of Flaunch, the `RevenueManager` contract enables sophisticated revenue-sharing models. It allows platforms to automatically take a protocol fee from the trading fees generated by memecoins launched through their integration.
@@ -548,6 +628,58 @@ await flaunchWrite.revenueManagerCreatorClaimForTokens({
 ```
 
 Refer to the [RevenueManager Docs](https://docs.flaunch.gg/manager-types/revenuemanager) for detailed implementation guides and function references.
+
+#### v1.3.1 multi-asset RevenueManager (Base)
+
+Base mainnet also runs a second manager generation (flaunch-managers release `v1.3.1-base`): its own `TreasuryManagerFactory` (`TreasuryManagerFactoryV1_3Address`), implementations (`RevenueManagerV1_3Address`, …) and a `FlaunchManagerZap` (`FlaunchManagerZapV1_3Address`) that deploys them. Managers of this generation keep a balance **per payout asset** — native ETH (`zeroAddress`) for flETH / native pools, otherwise the coin's paired token (a wrapper's underlying, or a B20 stock as itself) — so they are the ones to use for coins paired with a stock or native ETH. The two generations do not mix: a v1.3.1 coin cannot be deposited into a manager from the old factory, and `deployRevenueManager()` / `revenueManagerBalance()` / `revenueManagerCreatorClaim()` keep talking to the old one. Everything for the new generation carries a `V1_3` suffix and is gated by `doesChainSupportMultiAssetManagers()`.
+
+```ts
+import { zeroAddress } from "viem";
+import {
+  doesChainSupportMultiAssetManagers,
+  FlaunchV1_3Address,
+  FlaunchVersion,
+} from "@flaunch/sdk";
+
+if (doesChainSupportMultiAssetManagers(base.id)) {
+  // 1. deploy through the v1.3.1 FlaunchManagerZap; resolved from the v1.3.1 factory's ManagerDeployed event
+  const managerV1_3 = await flaunchWrite.deployRevenueManagerV1_3({
+    protocolRecipient: "0xabc...",
+    protocolFeePercent: 20,
+    // WHITELISTED resolves to WhitelistedPermissionsV1_3Address (the old instance is bound to the old factory)
+  });
+
+  // 2. move an existing v1.3.1 coin in (approve the Flaunch NFT first, as in the Groups section)
+  await flaunchWrite.addToTreasuryManager(managerV1_3, FlaunchVersion.V1_3, tokenId);
+
+  // 3. balances are per payout asset — find out which ones the manager has been paid in
+  const assets = await flaunchRead.revenueManagerPayoutAssets(managerV1_3); // e.g. [zeroAddress, AAPLc]
+  const aaplBalance = await flaunchRead.revenueManagerBalanceV1_3({
+    revenueManagerAddress: managerV1_3,
+    recipient: "0xabc...",
+    asset: assets[1], // omit for the native ETH bucket
+  });
+  const protocolBalances = await flaunchRead.treasuryManagerBalancesV1_3({
+    treasuryManagerAddress: managerV1_3,
+    recipient: "0xabc...", // every payout asset when `assets` is omitted
+  });
+
+  // 4. claims settle every payout asset by default …
+  await flaunchWrite.revenueManagerProtocolClaimV1_3({ revenueManagerAddress: managerV1_3 });
+  await flaunchWrite.revenueManagerCreatorClaimV1_3({
+    revenueManagerAddress: managerV1_3,
+    flaunchTokens: [{ flaunch: FlaunchV1_3Address[base.id], tokenId }], // optional
+  });
+
+  // … or a subset, so a recipient a transfer-restricted stock refuses can still collect the rest
+  await flaunchWrite.revenueManagerCreatorClaimV1_3({
+    revenueManagerAddress: managerV1_3,
+    assets: [zeroAddress],
+  });
+}
+```
+
+`treasuryManagerBalancesV1_3()` and `treasuryManagerClaimAssetsV1_3()` work on any v1.3.1 manager (the fee-split managers and the staking manager too), and the `ReadRevenueManagerV1_3` / `ReadDynamicAddressFeeSplitManagerV1_3` / `ReadStakingManagerV1_3` clients (and their `ReadWrite*` variants) expose the full per-asset surface. Launching a coin straight into a v1.3.1 manager is not yet wired through the SDK — `flaunchWithRevenueManager()` and the other launch helpers still go through the previous-generation zap.
 
 ### Bot Protection during Fair Launch via TrustedSigner
 
@@ -745,6 +877,40 @@ await flaunchWrite.addToTreasuryManager(
   tokenId
 );
 ```
+
+#### v1.3.1 multi-asset Groups (Base)
+
+The v1.3.1 manager generation on Base (see [the RevenueManager note](#v131-multi-asset-revenuemanager-base)) has its own `StakingManager` implementation, `StakingManagerV1_3Address`, deployed through the v1.3.1 `FlaunchManagerZap` rather than `deployStakingManager()`. Staking positions are in the staking token as before; rewards accrue **per payout asset** (native ETH as `zeroAddress`, or a deposited coin's paired token), and a v1.3.1 coin can only be deposited into a v1.3.1 group.
+
+```ts
+import { zeroAddress } from "viem";
+import { Permissions, ReadStakingManagerV1_3 } from "@flaunch/sdk";
+
+// 1. deploy through the v1.3.1 zap (same params as deployStakingManager), then resolve the
+//    address from the v1.3.1 factory's ManagerDeployed event
+const hash = await flaunchWrite.readWriteFlaunchManagerZapV1_3.deployStakingManager({
+  managerOwner,
+  stakingToken,
+  minEscrowDuration,
+  minStakeDuration,
+  creatorSharePercent: 10,
+  ownerSharePercent: 5,
+  permissions: Permissions.OPEN,
+});
+const groupV1_3 = await flaunchRead.readTreasuryManagerFactoryV1_3.getManagerDeployedAddressFromTx(hash);
+
+// 2. read per-asset rewards
+const staking = new ReadStakingManagerV1_3(groupV1_3, flaunchRead.drift);
+const position = await staking.userPositions(user); // { amount, timelockedUntil }
+const assets = await staking.payoutAssets();
+const ethRewards = await staking.pendingStakeRewards(user, zeroAddress);
+const stockRewards = await staking.pendingStakeRewards(user, assets[1]);
+
+// 3. claim everything, or only the assets that will not block the call
+await flaunchWrite.treasuryManagerClaimAssetsV1_3({ treasuryManagerAddress: groupV1_3, assets: [zeroAddress] });
+```
+
+Any other v1.3.1 implementation deploys the same way through `readWriteFlaunchManagerZapV1_3.deployAndInitializeManager({ managerImplementation, owner, data, permissions })`, with `data` being the implementation's ABI-encoded `InitializeParams` (see the `initialize` entry of its `*V1_3Abi`). `GroupMapperV1_3Address` and `ERC721OwnerFeeSplitManagerV1_3Address` are exported as addresses and ABIs only.
 
 ### Importing External Coins into Flaunch
 

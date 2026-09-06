@@ -14,6 +14,7 @@ import {
   FlaunchPositionManagerAddress,
   FlaunchPositionManagerV1_1Address,
   FlaunchPositionManagerV1_2Address,
+  FlaunchPositionManagerV1_3Address,
 } from "addresses";
 
 /**
@@ -130,6 +131,8 @@ export class FlaunchBackend {
         return FlaunchPositionManagerV1_1Address[this.chainId];
       case FlaunchVersion.V1_2:
         return FlaunchPositionManagerV1_2Address[this.chainId];
+      case FlaunchVersion.V1_3:
+        return FlaunchPositionManagerV1_3Address[this.chainId];
       case FlaunchVersion.ANY:
         throw Error("AnyPositionManager is not supported for TrustedSigner");
       default:

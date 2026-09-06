@@ -11,7 +11,7 @@ import {
 import { QuoterAbi } from "../abi/Quoter";
 import { formatUnits, parseEther, zeroAddress } from "viem";
 import { FLETHAddress, FLETHHooksAddress, USDCETHPoolKeys } from "addresses";
-import { PoolWithHookData } from "types";
+import { PoolKey, PoolWithHookData } from "types";
 
 export type QuoterABI = typeof QuoterAbi;
 
@@ -55,11 +55,17 @@ export class ReadQuoter {
     amountIn,
     positionManagerAddress,
     intermediatePoolKey,
+    hookData,
+    userWallet,
   }: {
     coinAddress: Address;
     amountIn: bigint;
     positionManagerAddress: Address;
     intermediatePoolKey?: PoolWithHookData;
+    /** Optional hook data for the coin <> flETH hop (a spend-gated pool's signed authorisation) */
+    hookData?: HexString;
+    /** Simulate as this wallet — required when the hook binds the authorisation to a buyer */
+    userWallet?: Address;
   }) {
     if (intermediatePoolKey) {
       // verify that ETH exists in the intermediate pool key
@@ -86,7 +92,7 @@ export class ReadQuoter {
               fee: 0,
               tickSpacing: 60,
               hooks: positionManagerAddress,
-              hookData: "0x",
+              hookData: hookData ?? "0x",
               intermediateCurrency: FLETHAddress[this.chainId],
             },
             {
@@ -105,7 +111,7 @@ export class ReadQuoter {
             },
           ],
         },
-      });
+      }, { from: userWallet });
 
       return res.amountOut;
     } else {
@@ -118,7 +124,7 @@ export class ReadQuoter {
               fee: 0,
               tickSpacing: 60,
               hooks: positionManagerAddress,
-              hookData: "0x",
+              hookData: hookData ?? "0x",
               intermediateCurrency: FLETHAddress[this.chainId],
             },
             {
@@ -130,10 +136,51 @@ export class ReadQuoter {
             },
           ],
         },
-      });
+      }, { from: userWallet });
 
       return res.amountOut;
     }
+  }
+
+  /**
+   * Quotes an exact-input swap through ONE pool, by its full key — the shape a paired-token pool
+   * needs (mUSD/coin, native ETH/coin, …), which the flETH-hop paths above cannot express. Runs the
+   * real swap through the PoolManager (hook fees included) and reverts the answer out, so no
+   * balances or approvals are involved.
+   * @param poolKey - The pool to quote against
+   * @param zeroForOne - Direction: selling currency0 for currency1
+   * @param exactAmount - Exact input amount, in the input currency's own decimals
+   * @param hookData - Optional hook data (a spend-gated pool's signed authorisation)
+   * @param userWallet - Simulate as this wallet; required when the hook binds hookData to a buyer
+   * @returns Promise<bigint> - The expected output amount
+   */
+  async getQuoteExactInputSingle({
+    poolKey,
+    zeroForOne,
+    exactAmount,
+    hookData,
+    userWallet,
+  }: {
+    poolKey: PoolKey;
+    zeroForOne: boolean;
+    exactAmount: bigint;
+    hookData?: HexString;
+    userWallet?: Address;
+  }) {
+    const res = await this.contract.simulateWrite(
+      "quoteExactInputSingle",
+      {
+        params: {
+          poolKey,
+          zeroForOne,
+          exactAmount,
+          hookData: hookData ?? "0x",
+        },
+      },
+      { from: userWallet }
+    );
+
+    return res.amountOut;
   }
 
   /**

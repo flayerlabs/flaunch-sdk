@@ -5,10 +5,15 @@ import json from "@rollup/plugin-json";
 import terser from "@rollup/plugin-terser";
 import pkg from "./package.json";
 
-const external = [
+const externalDependencies = [
   ...Object.keys(pkg.dependencies || {}),
   ...Object.keys(pkg.peerDependencies || {}),
 ];
+
+const isExternalDependency = (id) =>
+  externalDependencies.some(
+    (dependency) => id === dependency || id.startsWith(`${dependency}/`)
+  );
 
 // Custom onwarn function to ignore circular dependency warnings from viem
 const onwarn = (warning, warn) => {
@@ -36,13 +41,17 @@ const createConfig = (input, output, format, plugins = []) => ({
       tsconfig: "./tsconfig.json",
       outDir: output.dir || "./dist",
       declaration: false,
+      declarationMap: false,
+      inlineSources: true,
     }),
     resolve(),
     commonjs(),
     json(),
     ...plugins,
   ],
-  external,
+  // Keep deep imports external for module consumers. UMD keeps its historical
+  // behavior of bundling deep imports because they do not have standalone globals.
+  external: format === "umd" ? externalDependencies : isExternalDependency,
   onwarn,
 });
 
@@ -67,8 +76,8 @@ const mainConfigs = [
       format: "umd",
       globals: {
         "@delvtech/drift": "drift",
+        "@delvtech/drift-viem": "driftViem",
         viem: "viem",
-        "@uniswap/v3-sdk": "v3Sdk",
         axios: "axios",
         react: "React",
       },
@@ -79,7 +88,7 @@ const mainConfigs = [
 ];
 
 // Create configs for directory-based subpaths
-const directorySubpaths = ["abi", "helpers", "hooks"].map((subpath) => ({
+const directorySubpaths = ["abi", "helpers", "hooks", "utils"].map((subpath) => ({
   name: subpath,
   input: `src/${subpath}/index.ts`,
 }));
@@ -92,15 +101,13 @@ const subpathConfigs = [...directorySubpaths, ...fileSubpaths].flatMap(
   ({ name, input }) => [
     // ESM for subpath
     createConfig(input, {
-      dir: `dist/${name}`,
+      file: `dist/${name}/index.mjs`,
       format: "esm",
-      entryFileNames: "index.js",
     }),
     // CJS for subpath
     createConfig(input, {
-      dir: `dist/${name}`,
+      file: `dist/${name}/index.cjs`,
       format: "cjs",
-      entryFileNames: "index.cjs",
     }),
   ]
 );

@@ -11,6 +11,7 @@ const { robinhood } = require("viem/chains");
 const {
   FLETHAddress,
   FlaunchPositionManagerMultichainAddress,
+  FlaunchVersion,
   Permit2Address,
   QuoterAddress,
   ReadFlaunchSDK,
@@ -132,13 +133,18 @@ test("Robinhood native ETH buys target the deployed Universal Router", async () 
     walletAddress: SENDER,
   });
 
-  const encodedCall = await sdk.buyCoin({
-    coinAddress: COIN,
-    swapType: "EXACT_IN",
-    amountIn: 1_000_000_000_000_000n,
-    amountOutMin: 100n,
-    slippagePercent: 0.5,
-  });
+  // With amountOutMin supplied no quote is needed; passing the version skips the per-coin hook
+  // probe too (FLA2-397), so the whole build is offline — the transport must never be hit.
+  const encodedCall = await sdk.buyCoin(
+    {
+      coinAddress: COIN,
+      swapType: "EXACT_IN",
+      amountIn: 1_000_000_000_000_000n,
+      amountOutMin: 100n,
+      slippagePercent: 0.5,
+    },
+    FlaunchVersion.V1_2
+  );
   const transaction = decodeCallData(encodedCall);
   const routerCall = decodeFunctionData({
     abi: UniversalRouterAbi,

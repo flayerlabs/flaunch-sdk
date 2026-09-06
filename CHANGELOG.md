@@ -2,6 +2,98 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [0.12.0] - 2026-09-04
+
+### Added
+
+- **Paired-token swaps through PoolSwap.** Coins launched with `flaunchPairedToken` trade on the paired-token PositionManager against their own paired side — mUSD (6 decimals) on Base Sepolia, native ETH, flETH, or a B20 equity on Base — and the Universal Router path (which assumes an flETH hop) cannot reach those pools. The SDK now swaps them through the v1.3.1 `PoolSwap` router: one exact-input `swap` against the pool's key, with `hookData` for signer-gated pools (Game Mode's spend gate), so integrators no longer need their own raw-PoolSwap code
+  - Addresses: `PoolSwapV1_3Address` (Base, Base Sepolia, Robinhood)
+  - ABIs: `PoolSwapV1_3Abi` (the three `swap` overloads — no referrer, `address _referrer`, `bytes _hookData` — plus `msgSender()`), with the per-overload slices `PoolSwapV1_3SwapAbi` / `PoolSwapV1_3SwapWithReferrerAbi` / `PoolSwapV1_3SwapWithHookDataAbi`; `PairedTokenRegistryV1_3Abi` gains `tokenConfig(address)`; `FlaunchPositionManagerV1_3Abi` gains `poolKey(address)` and `pairedToken(bytes32)`
+  - Clients: `ReadPoolSwapV1_3` (`msgSender`) / `ReadWritePoolSwapV1_3` (`swap({ poolKey, params, hookData?, referrer?, value? })` — the overload follows the payload), `ReadPairedTokenPositionManagerV1_3` (`poolKey`, `pairedToken`), `ReadPairedTokenRegistryV1_3.tokenConfig()` returning the `PairedTokenConfig` row (approval, `tokenType`, `decimals`, escrow and pricing hooks), `ReadQuoter.getQuoteExactInputSingle({ poolKey, zeroForOne, exactAmount, hookData?, userWallet? })`
+  - SDK: `resolvePairedPool(coin, pairedToken?)` (the pool's key, id and paired side from one `poolKey` read, or built locally when the pairing is known), `getPairedPoolQuoteExactInput()`, `planPairedTokenSwap(params, "buy" | "sell")` → `PairedSwapPlan` (an optional ERC20 `approve(PoolSwap, amountIn)` when the allowance is short, then the `swap` call — native-ETH buys fund via `value` and skip the approve — ready for a batched `wallet_sendCalls` or two sequential transactions), `buyCoinPairedToken()` / `sellCoinPairedToken()` which run that plan; `readPoolSwapV1_3` / `readPairedTokenPositionManagerV1_3` / `readWritePoolSwapV1_3` accessors; the `PairedTokenSwapParams`, `PairedPoolQuoteParams`, `PairedSwapPlan`, `PairedSwapCall`, `PairedSwapApproveCall`, `ResolvedPairedPool`, `PairedSwapDirection` types
+  - Utils (`utils/univ4`): `pairedPoolKey(memecoin, pairedToken, hooks)`, `isZeroForOne`, `pairedTokenOfPoolKey`, `isEmptyPoolKey`, `decodeBalanceDelta`, `MIN_SQRT_PRICE_LIMIT` / `MAX_SQRT_PRICE_LIMIT`, and `sqrtPriceLimitFromSlippage(currentSqrtPriceX96, slippageBps, zeroForOne)` — PoolSwap has no `minOut`, so this sqrt-price bound is the only on-chain slippage control
+  - The pool key is read from the hook the coin was launched on, probed per coin across the chain's current and superseded v1.3 PositionManagers (`getV1_3PositionManagers`) and memoised — a coin on a superseded hook (Robinhood v1.3.1, Base Sepolia `.vpt2`) still resolves and swaps
+  - **Generation-aware routing.** Each hook generation has its own spend gate, and router approval is granted per gate — so a gated swap must go through the PoolSwap approved on the gate governing that pool's hook, and the chain's current router reverts on a superseded pool. `PoolSwapForHookV1_3Address` maps hook → router, `poolSwapForHook(chainId, hook)` (exported from `helpers`) resolves it with the current router as fallback, and `planPairedTokenSwap` uses it for both the approve spender and the swap target. `PairedTokenSwapParams.router` overrides it for callers that already know the router from their gate's `/config`. `PoolSwapV1_3Address` now holds each chain's current router (Base Sepolia `0xf0f388a3…`, Robinhood `0x92d2df3e…`)
+  - **Standing approval.** `PairedTokenSwapParams.approvalAllowance` approves a larger standing amount when an approve is needed at all (a game-mode player approves the round's cap once rather than once per buy; must be ≥ `amountIn`), and `planPairedTokenApproval({ coinAddress, pairedToken?, amount, sender?, router? })` returns just the approve call — or `undefined` for a native-ETH pairing or an allowance that already covers `amount` — for a lobby "get ready" step with no swap attached
+  - `doesChainSupportPairedTokenSwap()` (exported from `helpers`); every paired-swap method throws on chains without the deployment instead of sending a call that reverts. `PAIRED_TOKEN_TYPE` / `PairedTokenType` exported from `types`
+  - `sellCoin()` and `sellMemecoinWithPermit2()` accept an optional `hookData` for the coin ↔ flETH hop; `ReadQuoter.getSellQuoteExactInput()` accepts `hookData` / `userWallet`
+  - Not included: exact-output paired swaps (the spend gate rejects them)
+- **Paired-token acquisition.** Buying the paired token itself — ETH or the chain's USD hub into a B20 equity — moved into the SDK from app code, so a page can offer "buy the round's currency" and integrators share one route table. `PairedTokenAcquisitionDexAddress` per chain (Base: Aerodrome Slipstream router + USDC hub; Robinhood: SwapRouter02 + USDG hub, QuoterV2 venue discovery), `doesChainSupportPairedTokenAcquisition()` (exported from `helpers`), `ReadPairedTokenAcquisition` client, and on the SDK `quotePairedTokenAcquisition()`, `planPairedTokenAcquisition({ pairedToken, input: "eth" | "hub", target, maxIn, recipient, deadline? })` → `PairedTokenAcquisitionPlan` (an optional hub-token approve to the venue router, then the exact-output router call — ETH rides as `value = maxIn` and the router refunds the remainder — so a following PoolSwap leg can be encoded up front for batched wallets), and `planPairedTokenAcquisitionForBudget()` which quotes an exact-input budget, haircuts by `slippageBps`, and plans to that target. Venue is discovered through the registry's `tokenConfig` price calculator. Native ETH / flETH pairings need no acquisition; Base Sepolia mUSD has no venue (its test token mints permissionlessly)
+
+## [0.11.4] - UNRELEASED (prepared 2026-09-03)
+
+### Added
+
+- **Base Sepolia (84532) at parity.** flaunch-contracts v1.3.3 regeneration (blocks 46349133–46349202) and the v1.3.1 multi-asset manager generation (blocks 46348872–46348885) landed on Base Sepolia on 2026-09-03. Every `*V1_3Address` map gains (or updates) its `baseSepolia` row: hooks `0x8D346f24…` / `0x9AbfbDc3…` (the same CREATE3 addresses as Robinhood), zap `0x0c560537…` bound to factory `0x98dfdd0A…`, Flaunch/AnyFlaunch `0xc17a8523…` / `0x2154c604…`, BidWalls, ReferralEscrow, TokenImporter, and the full manager set — so `doesChainSupportMultiAssetManagers(84532)` is now `true`. `PairedTokenRegistryV1_3Address` and `FeeEscrowV1_3Address` are unchanged (retained on-chain).
+- `SupersededPositionManagerV1_3Address[baseSepolia.id]` = the `.vpt2` hooks `0x5558e727…` / `0x28118f40…`, which keep serving the pools launched on them.
+
+## [0.11.3] - 2026-09-03
+
+### Fixed
+
+- **Swaps and quotes on multichain deployments resolve the hook per coin (FLA2-397).** On Robinhood the SDK always built pool keys from the chain's multichain (v1.2) hook, so `buyCoin`, `sellCoin`, `getBuyQuoteExactInput`/`ExactOutput`, `getSellQuoteExactInput` and `poolId` reverted at the quoter for every v1.3.x coin. `getPositionManagerAddressForCoin(coinAddress, version?)` now probes the current and superseded v1.3 hooks (`getV1_3PositionManagers`) and then the multichain hook, caching the answer per coin; the swap and quote paths use it. `isValidCoin` and `getCoinVersion` work on multichain deployments instead of throwing. Note: on a multichain deployment these calls now read the chain (one `poolKey` per candidate hook, cached per coin) unless a `version` is passed explicitly.
+- **Add-liquidity helpers use the coin's hook too.** `checkSingleSidedAddLiquidity`, `calculateAddLiquidityAmounts`, `getAddLiquidityCalls` and `getSingleSidedCoinAddLiquidityCalls` built their pool key from the version-based getter, so on Robinhood they read and targeted the v1.2 hook's pool for v1.3.x coins. They now go through `createPoolKeyForCoin`.
+
+## [0.11.2] - 2026-09-03
+
+### Changed
+
+- **Robinhood v1.3.3 hook regeneration.** The 2026-08-21 v1.3.1 hooks on Robinhood were wired to a pre-#285 `InternalSwapPool`; the generation was regenerated onto a fresh, fixed ISP with the SAME `PairedTokenRegistry`, multi-token `FeeEscrow`, `TreasuryManagerFactory` and managers. The 4663 rows of `FlaunchPositionManagerV1_3Address`, `PairedTokenPositionManagerV1_3Address`, `AnyPositionManagerV1_3Address`, `FlaunchV1_3Address`, `AnyFlaunchV1_3Address`, `BidWallV1_3Address`, `AnyBidWallV1_3Address`, `FlaunchZapV1_3Address`, `TokenImporterV1_3Address` and `ReferralEscrowV1_3Address` now point at the v1.3.3 contracts. Registry, escrow, factory, manager, flETH and PoolSwap rows are unchanged. Confirmed against the live broadcast (Robinhood blocks 53313466–53315211, 2026-09-03).
+
+### Added
+
+- `SupersededPositionManagerV1_3Address: Record<chainId, Address[]>` — hooks a chain's v1.3 generation moved off but that still serve the pools launched on them (Robinhood: `0x588c683e…`, `0x6ea0edee…`). Coins never migrate, so anything resolving "which hook is this coin on" must consult these alongside the current maps.
+- `getV1_3PositionManagers(chainId)` (helpers) — current + superseded v1.3 hooks in one list.
+- `getPoolCreatedFromLogs()` accepts `PoolCreated` from any current or superseded v1.3 hook on the chain.
+
+## [0.11.1] - 2026-09-02
+
+### Added
+
+- **v1.3.1 multi-asset managers on Robinhood Chain (4663)** — flaunch-managers' `v1.3.1-base` generation deployed on 2026-09-02 (FLA2-388): `TreasuryManagerFactoryV1_3Address`, `RevenueManagerV1_3Address`, `AddressFeeSplitManagerV1_3Address`, `DynamicAddressFeeSplitManagerV1_3Address`, `ERC721OwnerFeeSplitManagerV1_3Address`, `StakingManagerV1_3Address`, `GroupMapperV1_3Address`, `FlaunchManagerZapV1_3Address` and `WhitelistedPermissionsV1_3Address` gain a `robinhood` row, so `doesChainSupportMultiAssetManagers(4663)` is now `true` and every `*V1_3` manager method works there
+- `TokenImporterV1_3Address` — the v1.3.1 `TokenImporter` on Base (`0xea78c266…`) and Robinhood (`0x08222EA6…`). The unsuffixed `TokenImporterAddress` keeps pointing at the previous generation's importer
+
+### Changed
+
+- `FlaunchZapV1_3Address[robinhood]` → `0xFCd1eB4BFA9A97059CaF4D160d28C871F5f3077a`, the zap redeployed on 2026-09-02 bound to the new Robinhood factory. The factory-less `0x2e744436…` it replaces routes a manager launch into the manager implementation and strands the launch NFT; `flaunchPairedToken()` and `doesChainSupportPairedTokenLaunch()` now target the bound zap
+
+## [0.11.0] - 2026-08-26
+
+### Added
+
+- **v1.3.1 multi-asset managers on Base (flaunch-managers release `v1.3.1-base`).** A new manager generation with its own `TreasuryManagerFactory`, implementations and `FlaunchManagerZap`. Managers of this generation keep a balance per payout asset — native ETH (`zeroAddress`) for flETH / native pools, otherwise the coin's paired token (a wrapper's underlying, or a B20 stock as itself) — so they are the ones to use for stock- or native-ETH-paired coins. The previous generation and its unsuffixed APIs are untouched; the two generations do not mix (a v1.3.1 coin cannot be deposited into an old manager)
+  - Addresses (Base mainnet only): `TreasuryManagerFactoryV1_3Address`, `RevenueManagerV1_3Address`, `AddressFeeSplitManagerV1_3Address`, `DynamicAddressFeeSplitManagerV1_3Address`, `ERC721OwnerFeeSplitManagerV1_3Address`, `StakingManagerV1_3Address`, `GroupMapperV1_3Address`, `FlaunchManagerZapV1_3Address`, `WhitelistedPermissionsV1_3Address` (`WhitelistedPermissions` validates a group against its factory, so the new generation needs its own; `ClosedPermissionsAddress` is reused)
+  - ABIs: `TreasuryManagerV1_3Abi` (`ITreasuryManager` + the `IMultiAssetTreasuryManager` surface), `RevenueManagerV1_3Abi`, `AddressFeeSplitManagerV1_3Abi`, `DynamicAddressFeeSplitManagerV1_3Abi`, `ERC721OwnerFeeSplitManagerV1_3Abi`, `StakingManagerV1_3Abi`, `GroupMapperV1_3Abi`, `FlaunchManagerZapV1_3Abi` — generated from the Foundry artifacts by the new `scripts/abi-from-artifact.mjs`
+  - Clients: `ReadTreasuryManagerV1_3` / `ReadWriteTreasuryManagerV1_3` (the surface every v1.3.1 manager shares: `balances(recipient, asset)`, `balancesETH`, `balancesForAssets`, `payoutAssets`, `claim`, `claimAssets(assets, data)`, `depositRevenue`, `registerEscrowToken`, ownership / permissions), `ReadRevenueManagerV1_3` / `ReadWriteRevenueManagerV1_3` (`balancesByAsset`, `creatorTotalClaimed(creator, asset)`, `protocolTotalClaimed(asset)`, `unsettledCreatorFees`, `claim`, `claimForTokens`, `claimAssets(assets, flaunchTokens?)`, `withdrawUnsettledCreatorFees`, `setProtocolRecipient`), `ReadDynamicAddressFeeSplitManagerV1_3` / `ReadWriteDynamicAddressFeeSplitManagerV1_3` (`recipientInfo(recipient, asset)`, per-asset `managerFees` / `pendingCreatorFees` / `pendingOwnerFees` / `claimableOwnerFees`, `updateRecipients`, `transferRecipientShare`, claim variants), `ReadStakingManagerV1_3` / `ReadWriteStakingManagerV1_3` (`userPositions`, `userRewards(user, asset)`, `pendingStakeRewards`, `stake`, `unstake`, `escrowWithdraw`, `extendEscrowDuration`, claim variants), `ReadFlaunchManagerZapV1_3` / `ReadWriteFlaunchManagerZapV1_3` (`deployAndInitializeManager`, `deployRevenueManager`, `deployStakingManager`); `encodeRevenueManagerClaimData()`; the `AssetBalance`, `DynamicRecipientInfoV1_3`, `StakePositionV1_3`, `StakeRewardsV1_3` and `DeployManagerV1_3Params` types
+  - SDK: `deployRevenueManagerV1_3()` (deploys through the v1.3.1 zap and resolves the address from the v1.3.1 factory's `ManagerDeployed` event only), `revenueManagerBalanceV1_3({ revenueManagerAddress, recipient, asset? })`, `revenueManagerPayoutAssets()`, `revenueManagerProtocolBalanceV1_3()`, `revenueManagerCreatorClaimV1_3({ assets?, flaunchTokens? })`, `revenueManagerProtocolClaimV1_3({ assets? })`, `treasuryManagerBalancesV1_3()` and `treasuryManagerClaimAssetsV1_3()` for any v1.3.1 manager; `readFlaunchManagerZapV1_3` / `readWriteFlaunchManagerZapV1_3` / `readTreasuryManagerFactoryV1_3` accessors. `addToTreasuryManager()` already deposits v1.3.1 coins with `FlaunchVersion.V1_3`
+  - `doesChainSupportMultiAssetManagers()` (exported from `helpers`) and `getPermissionsAddressV1_3()`; every `*V1_3` manager method throws on chains without the generation instead of sending a call that reverts
+  - Not included: launching a coin straight into a v1.3.1 manager through the SDK — `flaunchWithRevenueManager()` and the other launch helpers still go through the previous-generation zap. A `FlaunchZapV1_3` client is a follow-up
+- **v1.3.1 core deployment addresses** (#24, #25)
+  - `FlaunchVersion.V1_3` and the Base mainnet `*V1_3Address` constants for PositionManager, AnyPositionManager, Flaunch, AnyFlaunch, BidWall, AnyBidWall, FeeEscrow, ReferralEscrow and FlaunchZap; `readPositionManagerV1_3` / `readFlaunchV1_3` / `readBidWallV1_3` accessors (reusing the V1_2 / V1_1 clients, since v1.3.1 is a same-ABI release), and `getCoinVersion()` / `isValidCoin()` detect V1_3 first (#24)
+  - Robinhood (4663) entries in every `*V1_3Address` map; the CREATE3 PositionManager / AnyPositionManager share Base's addresses, everything else is chain-specific (#25)
+- **v1.3.1 multi-token FeeEscrow support.** Coins paired with anything other than flETH (native ETH, the B20 equities on Base) escrow their creator fees in one multi-token escrow per chain, keyed `(recipient, token)` and denominated in the paired token — a balance the legacy `creatorRevenue()` / `withdrawCreatorRevenue()` path cannot see or claim (its `withdrawFees(address,bool)` selector does not exist on that contract)
+  - `creatorRevenueByToken({ creator, tokens })` returns the claimable balance per escrow token
+  - `withdrawCreatorRevenueByToken({ tokens, recipient?, unwrap? })` sweeps every listed key in one transaction via `withdrawFees(address[],address,bool)`
+  - `ReadFeeEscrowV1_3` / `ReadWriteFeeEscrowV1_3` clients, the `FeeEscrowV1_3Abi`, the `EscrowTokenBalance` type, and `readFeeEscrowV1_3` / `readWriteFeeEscrowV1_3` accessors on the SDK
+  - `doesChainSupportMultiTokenFeeEscrow()` helper, exported from `helpers`
+  - `FeeEscrowV1_3Address` now covers Base Sepolia and Robinhood alongside Base
+- **Paired-token launch support** on Base, Base Sepolia, and Robinhood
+  - Added verified V1.3 Zap, PositionManager, and PairedTokenRegistry addresses and ABIs
+  - Added registry approval, two-asset fee quoting, and explicit-value launch clients
+  - Added `doesChainSupportPairedTokenLaunch()` and paired-token methods on `ReadFlaunchSDK` / `ReadWriteFlaunchSDK`
+  - Added address-filtered V1.3 `PoolCreated` decoding that preserves `pairedToken`
+
+### Fixed
+
+- Corrected the published `./addresses` export paths, added the missing `./utils` build outputs, and made ESM exports explicit `.mjs` files
+- Removed avoidable declaration-map and UMD global warnings from package builds
+
+### Changed
+
+- Raised the Axios floor to `^1.18.0` for current security fixes; this also updates Node proxy handling through `proxy-from-env` 2.x
+- Removed the unused `@uniswap/v3-sdk` runtime dependency and its build-tool transitive tree
+- `FlaunchZapV1_3Address[base.id]` now points at the redeployed core zap `0xf787d757…`, bound to the v1.3.1 `TreasuryManagerFactory`. The previous `0x29b37dfe…` had no factory, and a launch passing it a manager implementation would have parked the coin's NFT inside that implementation with no way to rescue it
+
 ## [0.10.0] - 2026-07-23
 
 ### Added
@@ -30,7 +122,7 @@ All notable changes to the @flaunch/sdk package will be documented in this file.
 
 ### Compatibility
 
-- Base and Base Sepolia remain fully supported and backward compatible. Swaps, other manager and importer flows, watchers, and the IPFS launch helper remain unsupported on the newer chains; Robinhood UI swaps will use 0x without an SDK fallback.
+- Base and Base Sepolia remain fully supported and backward compatible. Other manager and importer flows, watchers, and the IPFS launch helper remain unsupported on the newer chains; Robinhood supports the native ETH swap route described above.
 
 ## [0.9.20] - 2026-03-18
 

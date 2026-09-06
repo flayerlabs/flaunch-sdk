@@ -1,0 +1,422 @@
+// Flaunch v1.3.1 multi-token FeeEscrow (one singleton per chain; balances keyed (recipient, token)).
+// Generated from flaunch-contracts `out/FeeEscrow.sol/FeeEscrow.json`.
+export const FeeEscrowV1_3Abi = [
+  {
+    type: "constructor",
+    inputs: [
+      {
+        name: "_pairedTokenRegistry",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_indexer",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "receive",
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "allocateFees",
+    inputs: [
+      {
+        name: "_poolId",
+        type: "bytes32",
+        internalType: "PoolId"
+      },
+      {
+        name: "_token",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_recipient",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_amount",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "balances",
+    inputs: [
+      {
+        name: "_recipient",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_token",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "_amount",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "cancelOwnershipHandover",
+    inputs: [],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "completeOwnershipHandover",
+    inputs: [
+      {
+        name: "pendingOwner",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "indexer",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract IIndexerSubscriber"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "owner",
+    inputs: [],
+    outputs: [
+      {
+        name: "result",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "ownershipHandoverExpiresAt",
+    inputs: [
+      {
+        name: "pendingOwner",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "result",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "pairedTokenRegistry",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract IPairedTokenRegistry"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "renounceOwnership",
+    inputs: [],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "requestOwnershipHandover",
+    inputs: [],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "setIndexer",
+    inputs: [
+      {
+        name: "_indexer",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "totalFeesAllocated",
+    inputs: [
+      {
+        name: "_poolId",
+        type: "bytes32",
+        internalType: "PoolId"
+      },
+      {
+        name: "_token",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "_amount",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "transferOwnership",
+    inputs: [
+      {
+        name: "newOwner",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "withdrawFees",
+    inputs: [
+      {
+        name: "_token",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_recipient",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_unwrap",
+        type: "bool",
+        internalType: "bool"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "withdrawFees",
+    inputs: [
+      {
+        name: "_tokens",
+        type: "address[]",
+        internalType: "address[]"
+      },
+      {
+        name: "_recipient",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_unwrap",
+        type: "bool",
+        internalType: "bool"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "event",
+    name: "Deposit",
+    inputs: [
+      {
+        name: "_poolId",
+        type: "bytes32",
+        indexed: true,
+        internalType: "PoolId"
+      },
+      {
+        name: "_payee",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      },
+      {
+        name: "_token",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      },
+      {
+        name: "_amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "OwnershipHandoverCanceled",
+    inputs: [
+      {
+        name: "pendingOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "OwnershipHandoverRequested",
+    inputs: [
+      {
+        name: "pendingOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "OwnershipTransferred",
+    inputs: [
+      {
+        name: "oldOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "newOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "Withdrawal",
+    inputs: [
+      {
+        name: "_sender",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      },
+      {
+        name: "_recipient",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      },
+      {
+        name: "_token",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      },
+      {
+        name: "_deliveredAsset",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      },
+      {
+        name: "_amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "error",
+    name: "AlreadyInitialized",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "IncorrectNativeDeposit",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "IndexerZeroAddress",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "InsufficientNativeValue",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NewOwnerIsZeroAddress",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NoHandoverRequest",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "RecipientZeroAddress",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "RegistryZeroAddress",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "Unauthorized",
+    inputs: []
+  }
+] as const;
