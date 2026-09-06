@@ -2,20 +2,19 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const packageExports = [
+  ["@flaunch/sdk", "PairedSwapUnsupportedRouterError"],
+  ["@flaunch/sdk", "PairedSwapSlippageExceededError"],
+  ["@flaunch/sdk", "PairedSwapPartialFillError"],
+  ["@flaunch/sdk/abi", "PoolSwapExactInputAbi"],
+  ["@flaunch/sdk/abi", "PoolSwapExactInputEventAbi"],
   ["@flaunch/sdk", "FlaunchSDK"],
   ["@flaunch/sdk/abi", "FlaunchZapV1_3Abi"],
   ["@flaunch/sdk/abi", "PoolSwapV1_3Abi"],
   ["@flaunch/sdk/addresses", "PoolSwapV1_3Address"],
   ["@flaunch/sdk/helpers", "doesChainSupportPairedTokenSwap"],
   ["@flaunch/sdk/utils", "sqrtPriceLimitFromSlippage"],
-  [
-    "@flaunch/sdk/addresses",
-    "PairedTokenPositionManagerV1_3Address",
-  ],
-  [
-    "@flaunch/sdk/helpers",
-    "doesChainSupportPairedTokenLaunch",
-  ],
+  ["@flaunch/sdk/addresses", "PairedTokenPositionManagerV1_3Address"],
+  ["@flaunch/sdk/helpers", "doesChainSupportPairedTokenLaunch"],
   ["@flaunch/sdk/hooks", "usePoolCreatedEvents"],
   ["@flaunch/sdk/utils", "getPoolId"],
 ];

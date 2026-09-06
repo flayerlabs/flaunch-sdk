@@ -94,9 +94,9 @@ export function getV1_3PositionManagers(chainId: number): Address[] {
 
 /**
  * Whether a coin on the paired-token PositionManager can be swapped through the SDK: the v1.3.1
- * PoolSwap router plus the v4 Quoter and StateView the plan needs for its quote and sqrt-price
- * slippage bound. `buyCoinPairedToken` / `sellCoinPairedToken` / `planPairedTokenSwap` throw on
- * chains without all four rather than sending a call that reverts.
+ * PoolSwap address plus the v4 Quoter and StateView. This is an infrastructure check only;
+ * planPairedTokenSwap also probes the selected router for the protected exact-input API and
+ * fails closed on legacy deployments.
  */
 export function doesChainSupportPairedTokenSwap(chainId: number): boolean {
   return (

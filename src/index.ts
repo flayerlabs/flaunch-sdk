@@ -128,3 +128,6 @@ export const FlaunchSDK = {
   ReadFlaunchSDK,
   ReadWriteFlaunchSDK,
 };
+
+export * from "./sdk/errors";
+export type { PairedSwapVerification, PairedSwapFill } from "./sdk/FlaunchSDK";

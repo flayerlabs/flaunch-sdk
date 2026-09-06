@@ -9,7 +9,7 @@ import {
   createDrift,
 } from "@delvtech/drift";
 import { QuoterAbi } from "../abi/Quoter";
-import { formatUnits, parseEther, zeroAddress } from "viem";
+import { encodeFunctionData, decodeFunctionResult, formatUnits, parseEther, zeroAddress } from "viem";
 import { FLETHAddress, FLETHHooksAddress, USDCETHPoolKeys } from "addresses";
 import { PoolKey, PoolWithHookData } from "types";
 
@@ -22,6 +22,7 @@ export type QuoterABI = typeof QuoterAbi;
 export class ReadQuoter {
   chainId: number;
   public readonly contract: ReadContract<QuoterABI>;
+  private readonly quoteDrift: Drift;
 
   /**
    * Creates a new ReadQuoter instance
@@ -32,6 +33,7 @@ export class ReadQuoter {
    */
   constructor(chainId: number, address: Address, drift: Drift = createDrift()) {
     this.chainId = chainId;
+    this.quoteDrift = drift;
     if (!address) {
       throw new Error("Address is required");
     }
@@ -160,13 +162,34 @@ export class ReadQuoter {
     exactAmount,
     hookData,
     userWallet,
+    blockNumber,
   }: {
     poolKey: PoolKey;
     zeroForOne: boolean;
     exactAmount: bigint;
     hookData?: HexString;
     userWallet?: Address;
+    blockNumber?: bigint;
   }) {
+    if (blockNumber !== undefined) {
+      const data = await this.quoteDrift.call({
+        to: this.contract.address,
+        data: encodeFunctionData({
+          abi: QuoterAbi,
+          functionName: "quoteExactInputSingle",
+          args: [
+            { poolKey, zeroForOne, exactAmount, hookData: hookData ?? "0x" },
+          ],
+        }),
+        from: userWallet,
+        block: blockNumber,
+      });
+      return decodeFunctionResult({
+        abi: QuoterAbi,
+        functionName: "quoteExactInputSingle",
+        data,
+      })[0];
+    }
     const res = await this.contract.simulateWrite(
       "quoteExactInputSingle",
       {
@@ -177,7 +200,7 @@ export class ReadQuoter {
           hookData: hookData ?? "0x",
         },
       },
-      { from: userWallet }
+      { from: userWallet },
     );
 
     return res.amountOut;

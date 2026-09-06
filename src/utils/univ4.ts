@@ -440,10 +440,9 @@ export const getAmountsForLiquidity = (params: {
 };
 
 /**
- * TickMath sqrt-price bounds, one step inside the absolute limits. PoolSwap has no `minOut`
- * parameter, so `sqrtPriceLimitX96` is the ONLY on-chain slippage control for a paired-token swap:
- * the swap runs until input is consumed or price hits the limit. Passing the extreme bound
- * disables price protection entirely — build the limit with {@link sqrtPriceLimitFromSlippage}.
+ * TickMath sqrt-price bounds, one step inside the absolute limits. These allow the pool to
+ * consume input without a spot-anchored cap. They do not themselves guarantee full consumption
+ * or minimum output; protected PoolSwap execution enforces both from the final delta.
  */
 export const MIN_SQRT_PRICE_LIMIT = 4295128739n + 1n;
 export const MAX_SQRT_PRICE_LIMIT =
@@ -514,7 +513,8 @@ const floorSqrt = (value: bigint): bigint => {
 };
 
 /**
- * Converts an output-price tolerance into the v4 terminal sqrt-price bound for a PoolSwap.
+ * @deprecated A terminal spot-price limit is not quote-anchored slippage protection and may partially fill.
+ * Converts an output-price tolerance into the v4 terminal sqrt-price bound for a legacy PoolSwap.
  * Price is `sqrtPriceX96²`: a zero-for-one swap may push price down to `P × (1 - s)`, a
  * one-for-zero swap may push it up to `P / (1 - s)`, so the inverse output price falls by at most
  * `s` either way.

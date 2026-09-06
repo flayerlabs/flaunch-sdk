@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.13.0] - Unreleased
+
+### Changed (breaking)
+- Paired-token plans require a sender and a router exposing `exactInputVersion() == 1`. Legacy deployments fail closed; update per-hook router mappings after deployment and gate approval before rollout.
+- Slippage is an integer 0..9999 bps haircut below the quoted net output. `swapExactInput` calldata enforces the minimum, deadline and full input consumption on chain; default price limits are extreme bounds.
+- Plans carry the pinned quote block, timestamp, sender, effective hook bytes, expected output, minimum and expiry. `spotDeviationBps` includes fees and is not pure price impact.
+- Writer execution waits for approval confirmation and simulates the protected call. Preflight never replaces on-chain protection.
+
+### Added
+- Quote/simulation preflight results; quote mode deliberately does not claim consumed input.
+- Typed unsupported-router, slippage and partial-fill errors.
+- Attributable router-event fill decoding; multiple matching logs are rejected as ambiguous.
+
+### Deprecated
+- `sqrtPriceLimitFromSlippage`: retained for compatibility with legacy integrations, not used by protected planning.
+
+
+
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
 ## [0.12.0] - 2026-09-04
@@ -10,7 +28,7 @@ All notable changes to the @flaunch/sdk package will be documented in this file.
   - Addresses: `PoolSwapV1_3Address` (Base, Base Sepolia, Robinhood)
   - ABIs: `PoolSwapV1_3Abi` (the three `swap` overloads — no referrer, `address _referrer`, `bytes _hookData` — plus `msgSender()`), with the per-overload slices `PoolSwapV1_3SwapAbi` / `PoolSwapV1_3SwapWithReferrerAbi` / `PoolSwapV1_3SwapWithHookDataAbi`; `PairedTokenRegistryV1_3Abi` gains `tokenConfig(address)`; `FlaunchPositionManagerV1_3Abi` gains `poolKey(address)` and `pairedToken(bytes32)`
   - Clients: `ReadPoolSwapV1_3` (`msgSender`) / `ReadWritePoolSwapV1_3` (`swap({ poolKey, params, hookData?, referrer?, value? })` — the overload follows the payload), `ReadPairedTokenPositionManagerV1_3` (`poolKey`, `pairedToken`), `ReadPairedTokenRegistryV1_3.tokenConfig()` returning the `PairedTokenConfig` row (approval, `tokenType`, `decimals`, escrow and pricing hooks), `ReadQuoter.getQuoteExactInputSingle({ poolKey, zeroForOne, exactAmount, hookData?, userWallet? })`
-  - SDK: `resolvePairedPool(coin, pairedToken?)` (the pool's key, id and paired side from one `poolKey` read, or built locally when the pairing is known), `getPairedPoolQuoteExactInput()`, `planPairedTokenSwap(params, "buy" | "sell")` → `PairedSwapPlan` (an optional ERC20 `approve(PoolSwap, amountIn)` when the allowance is short, then the `swap` call — native-ETH buys fund via `value` and skip the approve — ready for a batched `wallet_sendCalls` or two sequential transactions), `buyCoinPairedToken()` / `sellCoinPairedToken()` which run that plan; `readPoolSwapV1_3` / `readPairedTokenPositionManagerV1_3` / `readWritePoolSwapV1_3` accessors; the `PairedTokenSwapParams`, `PairedPoolQuoteParams`, `PairedSwapPlan`, `PairedSwapCall`, `PairedSwapApproveCall`, `ResolvedPairedPool`, `PairedSwapDirection` types
+  - SDK: `resolvePairedPool(coin, pairedToken?)` (the pool's key, id and paired side from one `poolKey` read, or built locally when the pairing is known), `getPairedPoolQuoteExactInput()`, `planPairedTokenSwap({ ...params, direction: "buy" | "sell" })` → `PairedSwapPlan` (an optional ERC20 `approve(PoolSwap, amountIn)` when the allowance is short, then the `swap` call — native-ETH buys fund via `value` and skip the approve — ready for a batched `wallet_sendCalls` or two sequential transactions), `buyCoinPairedToken()` / `sellCoinPairedToken()` which run that plan; `readPoolSwapV1_3` / `readPairedTokenPositionManagerV1_3` / `readWritePoolSwapV1_3` accessors; the `PairedTokenSwapParams`, `PairedPoolQuoteParams`, `PairedSwapPlan`, `PairedSwapCall`, `PairedSwapApproveCall`, `ResolvedPairedPool`, `PairedSwapDirection` types
   - Utils (`utils/univ4`): `pairedPoolKey(memecoin, pairedToken, hooks)`, `isZeroForOne`, `pairedTokenOfPoolKey`, `isEmptyPoolKey`, `decodeBalanceDelta`, `MIN_SQRT_PRICE_LIMIT` / `MAX_SQRT_PRICE_LIMIT`, and `sqrtPriceLimitFromSlippage(currentSqrtPriceX96, slippageBps, zeroForOne)` — PoolSwap has no `minOut`, so this sqrt-price bound is the only on-chain slippage control
   - The pool key is read from the hook the coin was launched on, probed per coin across the chain's current and superseded v1.3 PositionManagers (`getV1_3PositionManagers`) and memoised — a coin on a superseded hook (Robinhood v1.3.1, Base Sepolia `.vpt2`) still resolves and swaps
   - **Generation-aware routing.** Each hook generation has its own spend gate, and router approval is granted per gate — so a gated swap must go through the PoolSwap approved on the gate governing that pool's hook, and the chain's current router reverts on a superseded pool. `PoolSwapForHookV1_3Address` maps hook → router, `poolSwapForHook(chainId, hook)` (exported from `helpers`) resolves it with the current router as fallback, and `planPairedTokenSwap` uses it for both the approve spender and the swap target. `PairedTokenSwapParams.router` overrides it for callers that already know the router from their gate's `/config`. `PoolSwapV1_3Address` now holds each chain's current router (Base Sepolia `0xf0f388a3…`, Robinhood `0x92d2df3e…`)
