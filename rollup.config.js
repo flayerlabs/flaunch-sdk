@@ -39,6 +39,8 @@ const createConfig = (input, output, format, plugins = []) => ({
   plugins: [
     typescript({
       tsconfig: "./tsconfig.json",
+      include: ["src/**/*.ts"],
+      filterRoot: process.cwd(),
       outDir: output.dir || "./dist",
       declaration: false,
       declarationMap: false,
@@ -83,7 +85,7 @@ const mainConfigs = [
       },
     },
     "umd",
-    [terser()]
+    [terser({ maxWorkers: 2 })]
   ),
 ];
 

@@ -20,6 +20,11 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
+## [Unreleased]
+
+- Enable legacy multichain zap launch helpers for existing revenue managers, static split managers, and IPFS metadata. This does not add v1.3 paired-token manager launch support.
+- Fix static-split encoding on Base and multichain through a shared validator. Creator and owner percentages total at most 100; recipient percentages independently total 100 and divide the remainder. Reject invalid allocations and duplicate or zero recipient addresses before RPC.
+
 ## [0.12.0] - 2026-09-04
 
 ### Added

@@ -16127,7 +16127,7 @@ Inherited from
 
 Omit.creator
 
-src/clients/FlaunchZapClient.ts:40
+src/clients/FlaunchZapClient.ts:41
 
 ___
 
@@ -16139,7 +16139,7 @@ Inherited from
 
 Omit.creatorFeeAllocationPercent
 
-src/clients/FlaunchZapClient.ts:41
+src/clients/FlaunchZapClient.ts:42
 
 ___
 
@@ -16151,7 +16151,7 @@ Inherited from
 
 Omit.creatorShare
 
-src/clients/FlaunchZapClient.ts:101
+src/clients/FlaunchZapClient.ts:103
 
 ___
 
@@ -16163,7 +16163,7 @@ Inherited from
 
 Omit.fairLaunchDuration
 
-src/clients/FlaunchZapClient.ts:38
+src/clients/FlaunchZapClient.ts:39
 
 ___
 
@@ -16179,7 +16179,7 @@ Inherited from
 
 Omit.fairLaunchPercent
 
-src/clients/FlaunchZapClient.ts:37
+src/clients/FlaunchZapClient.ts:38
 
 ___
 
@@ -16191,7 +16191,7 @@ Inherited from
 
 Omit.flaunchAt
 
-src/clients/FlaunchZapClient.ts:42
+src/clients/FlaunchZapClient.ts:43
 
 ___
 
@@ -16203,7 +16203,7 @@ Inherited from
 
 Omit.initialMarketCapUSD
 
-src/clients/FlaunchZapClient.ts:39
+src/clients/FlaunchZapClient.ts:40
 
 ___
 
@@ -16215,7 +16215,7 @@ Inherited from
 
 Omit.managerOwnerShare
 
-src/clients/FlaunchZapClient.ts:102
+src/clients/FlaunchZapClient.ts:104
 
 ___
 
@@ -16250,7 +16250,7 @@ Inherited from
 
 Omit.moderator
 
-src/clients/FlaunchZapClient.ts:103
+src/clients/FlaunchZapClient.ts:105
 
 ___
 
@@ -16262,7 +16262,7 @@ Inherited from
 
 Omit.name
 
-src/clients/FlaunchZapClient.ts:33
+src/clients/FlaunchZapClient.ts:34
 
 ___
 
@@ -16286,7 +16286,7 @@ Inherited from
 
 Omit.premineAmount
 
-src/clients/FlaunchZapClient.ts:43
+src/clients/FlaunchZapClient.ts:44
 
 ___
 
@@ -16298,7 +16298,7 @@ Inherited from
 
 Omit.splitReceivers
 
-src/clients/FlaunchZapClient.ts:104
+src/clients/FlaunchZapClient.ts:106
 
 ___
 
@@ -16310,7 +16310,7 @@ Inherited from
 
 Omit.symbol
 
-src/clients/FlaunchZapClient.ts:34
+src/clients/FlaunchZapClient.ts:35
 
 ___
 
@@ -16328,7 +16328,7 @@ Inherited from
 
 Omit.treasuryManagerParams
 
-src/clients/FlaunchZapClient.ts:108
+src/clients/FlaunchZapClient.ts:110
 
 ___
 
@@ -16352,7 +16352,7 @@ Inherited from
 
 Omit.trustedSignerSettings
 
-src/clients/FlaunchZapClient.ts:52
+src/clients/FlaunchZapClient.ts:53
 
 
 ---
@@ -16398,7 +16398,7 @@ Inherited from
 
 Omit.creator
 
-src/clients/FlaunchZapClient.ts:40
+src/clients/FlaunchZapClient.ts:41
 
 ___
 
@@ -16410,7 +16410,7 @@ Inherited from
 
 Omit.creatorFeeAllocationPercent
 
-src/clients/FlaunchZapClient.ts:41
+src/clients/FlaunchZapClient.ts:42
 
 ___
 
@@ -16418,7 +16418,7 @@ ___
 
 • **creatorShare**: `bigint`
 
-src/clients/FlaunchZapClient.ts:101
+src/clients/FlaunchZapClient.ts:103
 
 ___
 
@@ -16430,7 +16430,7 @@ Inherited from
 
 Omit.fairLaunchDuration
 
-src/clients/FlaunchZapClient.ts:38
+src/clients/FlaunchZapClient.ts:39
 
 ___
 
@@ -16446,7 +16446,7 @@ Inherited from
 
 Omit.fairLaunchPercent
 
-src/clients/FlaunchZapClient.ts:37
+src/clients/FlaunchZapClient.ts:38
 
 ___
 
@@ -16458,7 +16458,7 @@ Inherited from
 
 Omit.flaunchAt
 
-src/clients/FlaunchZapClient.ts:42
+src/clients/FlaunchZapClient.ts:43
 
 ___
 
@@ -16470,7 +16470,7 @@ Inherited from
 
 Omit.initialMarketCapUSD
 
-src/clients/FlaunchZapClient.ts:39
+src/clients/FlaunchZapClient.ts:40
 
 ___
 
@@ -16478,7 +16478,7 @@ ___
 
 • **managerOwnerShare**: `bigint`
 
-src/clients/FlaunchZapClient.ts:102
+src/clients/FlaunchZapClient.ts:104
 
 ___
 
@@ -16486,7 +16486,7 @@ ___
 
 • **moderator**: \`0x$\{string}\`
 
-src/clients/FlaunchZapClient.ts:103
+src/clients/FlaunchZapClient.ts:105
 
 ___
 
@@ -16498,7 +16498,7 @@ Inherited from
 
 Omit.name
 
-src/clients/FlaunchZapClient.ts:33
+src/clients/FlaunchZapClient.ts:34
 
 ___
 
@@ -16510,7 +16510,7 @@ Inherited from
 
 Omit.premineAmount
 
-src/clients/FlaunchZapClient.ts:43
+src/clients/FlaunchZapClient.ts:44
 
 ___
 
@@ -16518,7 +16518,7 @@ ___
 
 • **splitReceivers**: \{ `address`: \`0x$\{string}\` ; `share`: `bigint`  }[]
 
-src/clients/FlaunchZapClient.ts:104
+src/clients/FlaunchZapClient.ts:106
 
 ___
 
@@ -16530,7 +16530,7 @@ Inherited from
 
 Omit.symbol
 
-src/clients/FlaunchZapClient.ts:34
+src/clients/FlaunchZapClient.ts:35
 
 ___
 
@@ -16542,7 +16542,7 @@ Inherited from
 
 Omit.tokenUri
 
-src/clients/FlaunchZapClient.ts:35
+src/clients/FlaunchZapClient.ts:36
 
 ___
 
@@ -16556,7 +16556,7 @@ Type declaration
 | :------ | :------ |
 | `permissions?` | `Permissions` |
 
-src/clients/FlaunchZapClient.ts:108
+src/clients/FlaunchZapClient.ts:110
 
 ___
 
@@ -16580,7 +16580,7 @@ Inherited from
 
 Omit.trustedSignerSettings
 
-src/clients/FlaunchZapClient.ts:52
+src/clients/FlaunchZapClient.ts:53
 
 
 ---
@@ -20513,4 +20513,3 @@ src/helpers/ipfs.ts:288
 
 
 ---
-

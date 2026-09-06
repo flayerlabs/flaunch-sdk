@@ -22,9 +22,11 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 
 ## Network support
 
-Base and Base Sepolia remain fully supported and backward compatible. Ethereum, Unichain, and Robinhood support standard direct launches, dynamic address fee split launches, `PoolCreated` receipt decoding, and creator fee claims. Robinhood also supports native ETH swaps and paired-token launches. Other manager and importer flows, watchers, and the IPFS launch helper are not supported on these newer deployments.
+Base and Base Sepolia retain their generation-specific launch paths. Ethereum, Unichain, and Robinhood support standard direct launches, existing-manager launches, static and dynamic address fee split launches, the IPFS metadata helper, `PoolCreated` receipt decoding, and creator fee claims through the legacy multichain zap. This does not add v1.3 paired-token manager launches or general multichain liquidity support. Robinhood also supports native ETH swaps and paired-token launches through their separate capability-gated paths.
 
 The v1.3.1 multi-asset manager generation has address mappings for Base, Base Sepolia, and Robinhood. Gate these separate `*V1_3` APIs with `doesChainSupportMultiAssetManagers()`; legacy manager helpers do not select that generation automatically.
+
+Static-split recipients independently divide 100% of the pool remaining after creator/owner allocation. This corrects previous Base behavior; callers must not pre-scale recipient percentages by the residual pool size. See the unreleased changelog and static-split tests before upgrading.
 
 ## Table of Contents
 

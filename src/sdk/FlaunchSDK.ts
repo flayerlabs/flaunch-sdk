@@ -3994,7 +3994,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    */
   flaunch(params: FlaunchParams) {
     if (isMultichainDeployment(this.chainId)) {
-      return this.readWriteFlaunchZapMultichain!.flaunch(params);
+      return this.readWriteFlaunchZapMultichain!.flaunch(this.chainId, params);
     }
 
     return this.readWriteFlaunchZap.flaunch(params);
@@ -4069,6 +4069,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response
    */
   flaunchIPFS(params: FlaunchIPFSParams) {
+    if (isMultichainDeployment(this.chainId)) {
+      return this.readWriteFlaunchZapMultichain!.flaunchIPFS(
+        this.chainId,
+        params
+      );
+    }
+
     return this.readWriteFlaunchZap.flaunchIPFS(params);
   }
 
@@ -4079,6 +4086,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response
    */
   flaunchWithRevenueManager(params: FlaunchWithRevenueManagerParams) {
+    if (isMultichainDeployment(this.chainId)) {
+      return this.readWriteFlaunchZapMultichain!.flaunchWithRevenueManager(
+        this.chainId,
+        params
+      );
+    }
+
     if (this.readWriteFlaunchZap.contract.address === zeroAddress) {
       throw new Error(`FlaunchZap is not deployed at chainId: ${this.chainId}`);
     }
@@ -4095,6 +4109,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   async flaunchIPFSWithRevenueManager(
     params: FlaunchWithRevenueManagerIPFSParams
   ) {
+    if (isMultichainDeployment(this.chainId)) {
+      return this.readWriteFlaunchZapMultichain!.flaunchIPFSWithRevenueManager(
+        this.chainId,
+        params
+      );
+    }
+
     if (this.readWriteFlaunchZap.contract.address === zeroAddress) {
       throw new Error(`FlaunchZap is not deployed at chainId: ${this.chainId}`);
     }
@@ -4108,6 +4129,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response
    */
   flaunchWithSplitManager(params: FlaunchWithSplitManagerParams) {
+    if (isMultichainDeployment(this.chainId)) {
+      return this.readWriteFlaunchZapMultichain!.flaunchWithSplitManager(
+        this.chainId,
+        params
+      );
+    }
+
     return this.readWriteFlaunchZap.flaunchWithSplitManager(params);
   }
 
@@ -4117,6 +4145,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response
    */
   flaunchIPFSWithSplitManager(params: FlaunchWithSplitManagerIPFSParams) {
+    if (isMultichainDeployment(this.chainId)) {
+      return this.readWriteFlaunchZapMultichain!.flaunchIPFSWithSplitManager(
+        this.chainId,
+        params
+      );
+    }
+
     return this.readWriteFlaunchZap.flaunchIPFSWithSplitManager(params);
   }
 
@@ -4146,9 +4181,13 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   flaunchIPFSWithDynamicSplitManager(
     params: FlaunchWithDynamicSplitManagerIPFSParams
   ) {
-    // Keep this guard here (before the client call): the client uploads metadata
-    // before delegating to the direct dynamic-split method.
-    this.assertBaseOnlyOperation("flaunchIPFSWithDynamicSplitManager");
+    if (isMultichainDeployment(this.chainId)) {
+      return this.readWriteFlaunchZapMultichain!.flaunchIPFSWithDynamicSplitManager(
+        this.chainId,
+        params
+      );
+    }
+
     return this.readWriteFlaunchZap.flaunchIPFSWithDynamicSplitManager(params);
   }
 

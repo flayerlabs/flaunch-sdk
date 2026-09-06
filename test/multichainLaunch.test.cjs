@@ -9,8 +9,9 @@ const {
   toHex,
   zeroAddress,
 } = require("viem");
-const { mainnet, robinhood, unichain } = require("viem/chains");
+const { base, mainnet, robinhood, unichain } = require("viem/chains");
 const {
+  AddressFeeSplitManagerAddress,
   DynamicAddressFeeSplitManagerAddress,
   FlaunchZapAbi,
   FlaunchZapMultichainAddress,
@@ -210,7 +211,6 @@ test("unsupported multichain launch inputs fail before eth_call", async (t) => {
   const invalidCases = [
     ["fair launch percent", { fairLaunchPercent: 1 }, /Fair launches/],
     ["fair launch duration", { fairLaunchDuration: 1 }, /Fair launches/],
-    ["treasury manager", { treasuryManagerParams: {} }, /Treasury managers/],
     [
       "trusted signer",
       { trustedSignerSettings: { enabled: false } },
@@ -226,4 +226,189 @@ test("unsupported multichain launch inputs fail before eth_call", async (t) => {
       assert.equal(harness.ethCalls.length, 0);
     });
   }
+});
+
+test("multichain revenue manager launches deposit into the existing instance", async (t) => {
+  const revenueManagerInstanceAddress =
+    "0x3333333333333333333333333333333333333333";
+
+  for (const chain of multichainDeploymentChains) {
+    await t.test(`${chain.name} (${chain.id})`, async () => {
+      const harness = multichainHarness(chain);
+      const encodedCall = await harness.sdk.flaunchWithRevenueManager({
+        ...params,
+        revenueManagerInstanceAddress,
+      });
+
+      const transaction = decodeCallData(encodedCall);
+      assert.equal(
+        transaction.to.toLowerCase(),
+        FlaunchZapMultichainAddress[chain.id].toLowerCase()
+      );
+      assert.equal(transaction.value, FEE);
+
+      const flaunchCall = decodeFunctionData({
+        abi: FlaunchZapAbi,
+        data: transaction.data,
+      });
+      assert.equal(flaunchCall.functionName, "flaunch");
+      // Three arguments means the treasury-manager overload was selected. The
+      // two-argument overload would encode a valid call that silently drops
+      // the manager.
+      assert.equal(flaunchCall.args.length, 3);
+
+      const managerParams = flaunchCall.args[1];
+      assert.equal(managerParams.manager, revenueManagerInstanceAddress);
+      // An existing instance is deposited into, never re-initialized.
+      assert.equal(managerParams.initializeData, "0x");
+      assert.equal(managerParams.depositData, "0x");
+      assert.equal(managerParams.permissions, zeroAddress);
+      assert.equal(flaunchCall.args[2], zeroAddress);
+    });
+  }
+});
+
+test("multichain static split launches deploy the AddressFeeSplitManager", async (t) => {
+  const secondRecipient = "0x2222222222222222222222222222222222222222";
+
+  for (const chain of multichainDeploymentChains) {
+    await t.test(`${chain.name} (${chain.id})`, async () => {
+      const harness = multichainHarness(chain);
+      const encodedCall = await harness.sdk.flaunchWithSplitManager({
+        ...params,
+        creatorSplitPercent: 20,
+        managerOwnerSplitPercent: 0,
+        splitReceivers: [
+          { address: CREATOR, percent: 50 },
+          { address: secondRecipient, percent: 50 },
+        ],
+      });
+
+      const flaunchCall = decodeFunctionData({
+        abi: FlaunchZapAbi,
+        data: decodeCallData(encodedCall).data,
+      });
+      assert.equal(flaunchCall.args.length, 3);
+
+      const managerParams = flaunchCall.args[1];
+      assert.equal(
+        managerParams.manager.toLowerCase(),
+        AddressFeeSplitManagerAddress[chain.id].toLowerCase()
+      );
+
+      const [initializeParams] = decodeAbiParameters(
+        [
+          {
+            type: "tuple",
+            components: [
+              { type: "uint256", name: "creatorShare" },
+              { type: "uint256", name: "ownerShare" },
+              {
+                type: "tuple[]",
+                name: "recipientShares",
+                components: [
+                  { type: "address", name: "recipient" },
+                  { type: "uint256", name: "share" },
+                ],
+              },
+            ],
+          },
+        ],
+        managerParams.initializeData
+      );
+      assert.equal(initializeParams.creatorShare, 2_000_000n);
+      assert.equal(initializeParams.ownerShare, 0n);
+      assert.deepEqual(
+        initializeParams.recipientShares.map(({ share }) => share),
+        [5_000_000n, 5_000_000n]
+      );
+    });
+  }
+});
+
+test("multichain plain launches still use the two-argument overload", async () => {
+  const harness = multichainHarness(robinhood);
+  const encodedCall = await harness.sdk.flaunch(params);
+
+  const flaunchCall = decodeFunctionData({
+    abi: FlaunchZapAbi,
+    data: decodeCallData(encodedCall).data,
+  });
+  assert.equal(flaunchCall.args.length, 2);
+  assert.equal(flaunchCall.args[1], zeroAddress);
+});
+
+const staticSplit = {
+  ...params,
+  creatorSplitPercent: 20,
+  managerOwnerSplitPercent: 10,
+  splitReceivers: [{ address: CREATOR, percent: 100 }],
+};
+const splitTuple = [{ type: "tuple", components: [
+  { name: "creatorShare", type: "uint256" },
+  { name: "ownerShare", type: "uint256" },
+  { name: "recipientShares", type: "tuple[]", components: [
+    { name: "recipient", type: "address" }, { name: "share", type: "uint256" },
+  ] },
+] }];
+
+test("Base static splits preserve creator and owner allocations independently of recipients", async () => {
+  const { sdk } = multichainHarness(base);
+  sdk.readWriteFlaunchZap.flaunch = async (launch) => launch;
+  const launch = await sdk.flaunchWithSplitManager(staticSplit);
+  const [split] = decodeAbiParameters(splitTuple, launch.treasuryManagerParams.initializeData);
+  assert.equal(split.creatorShare, 2_000_000n);
+  assert.equal(split.ownerShare, 1_000_000n);
+  assert.equal(split.recipientShares[0].share, 10_000_000n);
+});
+
+test("static splits reject invalid allocations before RPC on Base and multichain", async (t) => {
+  const cases = [
+    [{ creatorSplitPercent: 95 }, /at most 100/],
+    [{ creatorSplitPercent: -1 }, /integers/],
+    [{ creatorSplitPercent: 0.5 }, /integers/],
+    [{ managerOwnerSplitPercent: NaN }, /integers/],
+    [{ splitReceivers: [] }, /total 100/],
+    [{ splitReceivers: [{ address: CREATOR, percent: 80 }] }, /total 100/],
+    [{ splitReceivers: [{ address: zeroAddress, percent: 100 }] }, /nonzero/],
+    [{ splitReceivers: [{ address: CREATOR, percent: 50 }, { address: CREATOR, percent: 50 }] }, /unique/],
+    [{ splitReceivers: [{ address: CREATOR, percent: 0 }] }, /positive/],
+  ];
+  for (const chain of [base, ...multichainDeploymentChains]) {
+    await t.test(chain.name, async () => {
+      const harness = multichainHarness(chain);
+      for (const [override, error] of cases) {
+        await assert.rejects(harness.sdk.flaunchWithSplitManager({ ...staticSplit, ...override }), error);
+      }
+      assert.equal(harness.requestCount, 0);
+    });
+  }
+});
+
+test("every multichain IPFS entry point preserves its manager and uploaded URI", async (t) => {
+  const axios = require("axios");
+  const upload = t.mock.method(axios, "post", async () => ({ data: { ipfsHash: "test-cid" } }));
+  const revenueManagerInstanceAddress = "0x3333333333333333333333333333333333333333";
+  for (const chain of multichainDeploymentChains) {
+    const cases = [
+      ["flaunchIPFS", params, undefined],
+      ["flaunchIPFSWithRevenueManager", { ...params, revenueManagerInstanceAddress }, revenueManagerInstanceAddress],
+      ["flaunchIPFSWithSplitManager", staticSplit, AddressFeeSplitManagerAddress[chain.id]],
+      ["flaunchIPFSWithDynamicSplitManager", {
+        ...params, creatorShare: 2_000_000n, managerOwnerShare: 0n,
+        moderator: CREATOR, splitReceivers: [{ address: CREATOR, share: 10_000_000n }],
+      }, DynamicAddressFeeSplitManagerAddress[chain.id]],
+    ];
+    for (const [method, input, manager] of cases) {
+      const { sdk } = multichainHarness(chain);
+      const call = decodeCallData(await sdk[method]({
+        ...input, metadata: { base64Image: "aW1hZ2U=", description: "Test" },
+      }));
+      const decoded = decodeFunctionData({ abi: FlaunchZapAbi, data: call.data });
+      assert.equal(decoded.args[0].tokenUri, "ipfs://test-cid");
+      assert.equal(decoded.args.length, manager ? 3 : 2);
+      if (manager) assert.equal(decoded.args[1].manager.toLowerCase(), manager.toLowerCase());
+    }
+  }
+  assert.equal(upload.mock.callCount(), 24);
 });
