@@ -9,7 +9,7 @@ const {
   toHex,
   zeroAddress,
 } = require("viem");
-const { mainnet, robinhood, unichain } = require("viem/chains");
+const { base, mainnet, robinhood, unichain } = require("viem/chains");
 const {
   AddressFeeSplitManagerAddress,
   DynamicAddressFeeSplitManagerAddress,
@@ -279,8 +279,8 @@ test("multichain static split launches deploy the AddressFeeSplitManager", async
         creatorSplitPercent: 20,
         managerOwnerSplitPercent: 0,
         splitReceivers: [
-          { address: CREATOR, percent: 40 },
-          { address: secondRecipient, percent: 40 },
+          { address: CREATOR, percent: 50 },
+          { address: secondRecipient, percent: 50 },
         ],
       });
 
@@ -316,15 +316,11 @@ test("multichain static split launches deploy the AddressFeeSplitManager", async
         ],
         managerParams.initializeData
       );
-      // Mirrors the base client exactly, including its quirk: the remainder is
-      // computed as total - recipients - owner, without subtracting the
-      // creator split, so a 20% creator split with 80% of recipients yields
-      // 20% + 20% remainder = 4_000_000. Preserved deliberately for parity.
-      assert.equal(initializeParams.creatorShare, 4_000_000n);
+      assert.equal(initializeParams.creatorShare, 2_000_000n);
       assert.equal(initializeParams.ownerShare, 0n);
       assert.deepEqual(
         initializeParams.recipientShares.map(({ share }) => share),
-        [4_000_000n, 4_000_000n]
+        [5_000_000n, 5_000_000n]
       );
     });
   }
@@ -340,4 +336,79 @@ test("multichain plain launches still use the two-argument overload", async () =
   });
   assert.equal(flaunchCall.args.length, 2);
   assert.equal(flaunchCall.args[1], zeroAddress);
+});
+
+const staticSplit = {
+  ...params,
+  creatorSplitPercent: 20,
+  managerOwnerSplitPercent: 10,
+  splitReceivers: [{ address: CREATOR, percent: 100 }],
+};
+const splitTuple = [{ type: "tuple", components: [
+  { name: "creatorShare", type: "uint256" },
+  { name: "ownerShare", type: "uint256" },
+  { name: "recipientShares", type: "tuple[]", components: [
+    { name: "recipient", type: "address" }, { name: "share", type: "uint256" },
+  ] },
+] }];
+
+test("Base static splits preserve creator and owner allocations independently of recipients", async () => {
+  const { sdk } = multichainHarness(base);
+  sdk.readWriteFlaunchZap.flaunch = async (launch) => launch;
+  const launch = await sdk.flaunchWithSplitManager(staticSplit);
+  const [split] = decodeAbiParameters(splitTuple, launch.treasuryManagerParams.initializeData);
+  assert.equal(split.creatorShare, 2_000_000n);
+  assert.equal(split.ownerShare, 1_000_000n);
+  assert.equal(split.recipientShares[0].share, 10_000_000n);
+});
+
+test("static splits reject invalid allocations before RPC on Base and multichain", async (t) => {
+  const cases = [
+    [{ creatorSplitPercent: 95 }, /at most 100/],
+    [{ creatorSplitPercent: -1 }, /integers/],
+    [{ creatorSplitPercent: 0.5 }, /integers/],
+    [{ managerOwnerSplitPercent: NaN }, /integers/],
+    [{ splitReceivers: [] }, /total 100/],
+    [{ splitReceivers: [{ address: CREATOR, percent: 80 }] }, /total 100/],
+    [{ splitReceivers: [{ address: zeroAddress, percent: 100 }] }, /nonzero/],
+    [{ splitReceivers: [{ address: CREATOR, percent: 50 }, { address: CREATOR, percent: 50 }] }, /unique/],
+    [{ splitReceivers: [{ address: CREATOR, percent: 0 }] }, /positive/],
+  ];
+  for (const chain of [base, ...multichainDeploymentChains]) {
+    await t.test(chain.name, async () => {
+      const harness = multichainHarness(chain);
+      for (const [override, error] of cases) {
+        await assert.rejects(harness.sdk.flaunchWithSplitManager({ ...staticSplit, ...override }), error);
+      }
+      assert.equal(harness.requestCount, 0);
+    });
+  }
+});
+
+test("every multichain IPFS entry point preserves its manager and uploaded URI", async (t) => {
+  const axios = require("axios");
+  const upload = t.mock.method(axios, "post", async () => ({ data: { ipfsHash: "test-cid" } }));
+  const revenueManagerInstanceAddress = "0x3333333333333333333333333333333333333333";
+  for (const chain of multichainDeploymentChains) {
+    const cases = [
+      ["flaunchIPFS", params, undefined],
+      ["flaunchIPFSWithRevenueManager", { ...params, revenueManagerInstanceAddress }, revenueManagerInstanceAddress],
+      ["flaunchIPFSWithSplitManager", staticSplit, AddressFeeSplitManagerAddress[chain.id]],
+      ["flaunchIPFSWithDynamicSplitManager", {
+        ...params, creatorShare: 2_000_000n, managerOwnerShare: 0n,
+        moderator: CREATOR, splitReceivers: [{ address: CREATOR, share: 10_000_000n }],
+      }, DynamicAddressFeeSplitManagerAddress[chain.id]],
+    ];
+    for (const [method, input, manager] of cases) {
+      const { sdk } = multichainHarness(chain);
+      const call = decodeCallData(await sdk[method]({
+        ...input, metadata: { base64Image: "aW1hZ2U=", description: "Test" },
+      }));
+      const decoded = decodeFunctionData({ abi: FlaunchZapAbi, data: call.data });
+      assert.equal(decoded.args[0].tokenUri, "ipfs://test-cid");
+      assert.equal(decoded.args.length, manager ? 3 : 2);
+      if (manager) assert.equal(decoded.args[1].manager.toLowerCase(), manager.toLowerCase());
+    }
+  }
+  assert.equal(upload.mock.callCount(), 24);
 });

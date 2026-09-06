@@ -1,3 +1,4 @@
+import { encodeStaticSplit } from "../helpers/staticSplit";
 import {
   type Address,
   type Drift,
@@ -225,54 +226,7 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
     chainId: number,
     params: FlaunchWithSplitManagerParams
   ) {
-    const validShareTotal = 100_00000n; // 5 decimals as BigInt
-    let creatorShare =
-      (BigInt(params.creatorSplitPercent) * validShareTotal) / 100n;
-    const managerOwnerShare =
-      (BigInt(params.managerOwnerSplitPercent) * validShareTotal) / 100n;
-
-    const recipientShares = params.splitReceivers.map((receiver) => ({
-      recipient: receiver.address,
-      share: (BigInt(receiver.percent) * validShareTotal) / 100n,
-    }));
-
-    const totalRecipientShares = recipientShares.reduce(
-      (acc, curr) => acc + curr.share,
-      0n
-    );
-
-    // if there's a remainder (due to rounding errors), add it to the creator share
-    const remainderShares =
-      validShareTotal - totalRecipientShares - managerOwnerShare;
-    creatorShare += remainderShares;
-
-    const initializeData = encodeAbiParameters(
-      [
-        {
-          type: "tuple",
-          name: "params",
-          components: [
-            { type: "uint256", name: "creatorShare" },
-            { type: "uint256", name: "ownerShare" },
-            {
-              type: "tuple[]",
-              name: "recipientShares",
-              components: [
-                { type: "address", name: "recipient" },
-                { type: "uint256", name: "share" },
-              ],
-            },
-          ],
-        },
-      ],
-      [
-        {
-          creatorShare,
-          ownerShare: managerOwnerShare,
-          recipientShares,
-        },
-      ]
-    );
+    const initializeData = encodeStaticSplit(params);
 
     return this.flaunch(chainId, {
       ...params,
