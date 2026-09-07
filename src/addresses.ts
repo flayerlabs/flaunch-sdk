@@ -102,8 +102,8 @@ export const PairedTokenRegistryV1_3Address: Addresses = {
 
 // The v1.3 PoolSwap router: single-pool swaps against any PoolKey on a paired-token
 // PositionManager (mUSD-, native-ETH-, flETH- or B20-paired coins alike), with `msgSender()`
-// published for hooks (the spend gate's approved-router buyer binding). The Universal Router path
-// assumes an flETH hop and cannot reach these pools.
+// published for hooks (the spend gate's approved-router buyer binding). This SDK's legacy
+// Universal Router path assumes an flETH hop and cannot reach these pools.
 //
 // One entry per chain is the CURRENT router. PoolSwap is hook-agnostic for an ungated swap, but a
 // spend-GATED swap must go through a router the pool's own spend gate has approved — and every hook
@@ -112,7 +112,7 @@ export const PairedTokenRegistryV1_3Address: Addresses = {
 // `poolSwapForHook(chainId, hook)` from `helpers`.
 export const PoolSwapV1_3Address: Addresses = {
   [base.id]: "0xafD627ea5D02251B13E7D6C90b468328376b61A3",
-  [baseSepolia.id]: "0xF0f388a31a1745A5E2378B812eD51525f70595be", // v1.3.3 regeneration, 2026-09-03
+  [baseSepolia.id]: "0xb32a99502f433f78454a4d20304e654cdda75c5c", // Protected API v1; verified and gate-approved 2026-09-07
   [robinhood.id]: "0x92D2dF3EC1EBD126F0708b879B1fe25c84482028", // v1.3.3 regeneration, 2026-09-03
 };
 
@@ -123,9 +123,9 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
   },
   [baseSepolia.id]: {
     // Keys stay LOWERCASE — `poolSwapForHook` lowercases its lookup.
-    "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc": "0x62eb5b7B066Ff80ce5E32fF1ED42B31c485f716B", // `.vpt2` PM, gate 0x2c91…
-    "0x28118f40eca9b884beb42b0196409a73269525dc": "0x62eb5b7B066Ff80ce5E32fF1ED42B31c485f716B", // `.vpt2` AnyPM, same gate
-    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xF0f388a31a1745A5E2378B812eD51525f70595be", // v1.3.3 PM, gate 0x54cd…
+    "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // `.vpt2` PM, gate 0x2c91…
+    "0x28118f40eca9b884beb42b0196409a73269525dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // `.vpt2` AnyPM, same gate
+    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.3.3 PM, gate 0x54cd…
   },
   [robinhood.id]: {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0x8476ED156f731335ECA8Cc8A8eE759330ee4A91f", // v1.3.1

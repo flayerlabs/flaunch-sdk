@@ -11,9 +11,44 @@
 
 Run `node scripts/check-protected-sepolia.mjs` after building. It checks chain ID, bytecode hash, router API, PoolManager, dispatcher registration and gate approvals at one block; it exits nonzero when readiness is unproven. To validate a newly deployed candidate before editing SDK maps, set `PROTECTED_ROUTER` and `PROTECTED_ROUTER_CODEHASH` to the address and runtime hash independently verified against the reviewed build. It emits approval calldata but never signs or sends transactions.
 
-Remaining external steps: authorize the companion contracts push, select a funded Sepolia deployment signer, and have the owner above approve the new router on both gates. Then verify the deployed build and approvals, update SDK/gate mappings, exercise the feature branch on Sepolia, and complete the production-chain matrix before any 0.13.0 npm release.
+## Authorized Sepolia-only deployment — 2026-09-07
 
-This branch is not ready to publish. Existing address maps still include legacy routers; the protected planner intentionally rejects routers without `exactInputVersion` support.
+Router `0xb32a99502f433f78454a4d20304e654cdda75c5c` was deployed by
+`0xB8A70b4d1547bf6193bd67A73F4F98ea9FD0A973` on chain 84532, block 46504001.
+Deployment transaction: `0x134ce59a452da68a434244b55d7dd13414538bd5b40cfcb42942d53d764e1e15`.
+The entire runtime matches the reviewed compiled artifact after resolving its sole
+PoolManager immutable. Runtime hash:
+`0xc301509b6265a17928e37b58f0ed24b42496a71a41ee909cf11c4be17f52ffb3`.
+`manager()` and `exactInputVersion() == 1` were read back successfully.
+
+Both existing Sepolia gates approved this router, preserving previous approvals:
+
+- `0x2c9127654ded3b6b2ba017e84f44b02cafdf9f55`: transaction
+  `0xf212b8673e7f2c2923d2da59a485f204caba90527e6807b827c321eae33b4ddd`, block 46504020.
+- `0x54cdcf0bcbc3a33f470e07134c10582f93058a32`: transaction
+  `0x6d4db09350a4265940e59cd4265a68fb49a8237c28faa7c01fc57a1ffe01b8cd`, block 46504023.
+
+Only Sepolia router mappings change in this candidate. Base and Robinhood mappings
+are unchanged. No production contract, approval or npm publication occurred.
+The rebuilt SDK's default mappings passed the on-chain readiness checker for all
+three hooks at block 46504128. Frontend native-ETH and flETH integration runs both
+passed against this router: launch, signed Game Mode flow, two buys, ERC20 approvals
+where required, and matching database/on-chain spend. These runs use the preview's
+existing pinned SDK artifact with an explicit router override, not a new npm release.
+Updated SDK artifacts pass all 115 tests. The local Node 24 Rollup process again
+emitted every bundle but did not exit; it was interrupted after final bundle output.
+The initial test attempt while the final bundle was still building failed its
+package export check; rerunning after all bundles existed passed all 115 tests.
+The frontend's earlier preview override `0x6aF705b1b82f0A74C19D1c468794287AdceA94Ee`
+was an earlier deployment of identical runtime; the earlier legacy-mapping checker
+did not inspect it. Today's deployment is an additional instance, not a core upgrade.
+
+Remaining external steps: authorize the companion contracts push, validate the
+feature branch and its actual preview gate configuration, and complete the
+production-chain matrix before any 0.13.0 npm release. Production deployments
+are not authorized by this Sepolia-only rollout.
+
+This branch is not ready to publish. Production address maps still include legacy routers; the protected planner intentionally rejects routers without `exactInputVersion` support.
 
 Release in this order:
 

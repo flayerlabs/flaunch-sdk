@@ -155,18 +155,18 @@ test("paired-token swap addresses and capability cover the deployed V1.3 chains"
     assert.equal(doesChainSupportPairedTokenSwap(chainId), true);
   }
   assert.equal(doesChainSupportPairedTokenSwap(mainnet.id), false);
-  // The CURRENT router per chain — Base Sepolia's hooks were regenerated as v1.3.3 on 2026-09-03
+  // Sepolia's protected router is approved by both deployed gate generations.
   assert.equal(
     PoolSwapV1_3Address[baseSepolia.id].toLowerCase(),
-    "0xf0f388a31a1745a5e2378b812ed51525f70595be",
+    "0xb32a99502f433f78454a4d20304e654cdda75c5c",
   );
-  // …and the superseded `.vpt2` hook still routes to the router ITS gate approved
+  // The superseded `.vpt2` hook's gate also approves this same protected router.
   assert.equal(
     poolSwapForHook(
       baseSepolia.id,
       "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc",
     ).toLowerCase(),
-    "0x62eb5b7b066ff80ce5e32ff1ed42b31c485f716b",
+    "0xb32a99502f433f78454a4d20304e654cdda75c5c",
   );
 });
 
@@ -600,10 +600,9 @@ test("a gated swap on an unmapped hook refuses rather than guessing the chain's 
   );
 });
 
-test("the write path submits to the plan's router, not the chain's current one", async () => {
-  // A superseded `.vpt2` coin: the plan routes to that generation's PoolSwap, and the WRITE must
-  // follow it — a writer pinned to the current router would pass every plan-level assertion and
-  // still send the transaction to a router the pool's gate never approved.
+test("superseded Sepolia hooks submit and approve the newly gate-approved protected router", async () => {
+  // Both Sepolia gate generations now approve the same protected router. Old pools must
+  // migrate both their swap target and their ERC20 approval spender together.
   const superseded = "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc";
   const supersededKey = pairedPoolKey(COIN, MUSD, superseded);
   const { drift, interactions } = recordingDrift({
@@ -625,16 +624,16 @@ test("the write path submits to the plan's router, not the chain's current one",
   assert.ok(swapWrite, "a swap was written");
   assert.equal(
     swapWrite.address.toLowerCase(),
-    "0x62eb5b7b066ff80ce5e32ff1ed42b31c485f716b",
+    "0xb32a99502f433f78454a4d20304e654cdda75c5c",
   );
-  assert.notEqual(
+  assert.equal(
     swapWrite.address.toLowerCase(),
     PoolSwapV1_3Address[baseSepolia.id].toLowerCase(),
   );
   const approveWrite = writes.find((w) => w.fn === "approve");
   assert.equal(
     approveWrite.args.spender.toLowerCase(),
-    "0x62eb5b7b066ff80ce5e32ff1ed42b31c485f716b",
+    "0xb32a99502f433f78454a4d20304e654cdda75c5c",
   );
 });
 
