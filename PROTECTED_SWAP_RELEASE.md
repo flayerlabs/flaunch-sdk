@@ -3,7 +3,7 @@
 ## Verified status — 7 September 2026
 
 - Integrated SDK #23's merged master baseline without changing production router mappings.
-- Companion contract commits `fee736b` and `c8bfd26` are prepared locally on `fix/protected-exact-input-release` in `/private/tmp/reflaunch-protected-contracts-review`. Remote push was denied by the execution approval policy; no companion PR or deployed router is claimed.
+- Companion contract commits `fee736b` and `c8bfd26` are pushed for review in draft [contracts #301](https://github.com/flayerlabs/flaunch-contracts/pull/301). The deployment script is Base-Sepolia-only; production routers remain a separate release gate.
 - Dedicated router tests: 15 passed, including 256 fuzz cases, real pool settlement, hook-adjusted output, spend-cap rollback, native refunds and atomic acquisition rollback. Another 75 spend-gate tests passed. The historical Robinhood fork test is unverified because the public RPC returned missing historical state at block 27563803.
 - The deployment script restricts the initial rollout to Base Sepolia and its pinned PoolManager. Its Sepolia simulation passed (2,111,872 estimated gas). No broadcast or gate approval occurred; the simulator's predicted address is not a real deployment.
 - `scripts/rehearse-protected-sepolia.mjs` passed on a disposable Anvil fork at `127.0.0.1:18547`: deployed the actual router artifact, patched its sole PoolManager immutable to independently verify the entire runtime, impersonated the recorded owner locally, approved both gates and passed the three-hook readiness checker. Runtime hash: `0xc301509b6265a17928e37b58f0ed24b42496a71a41ee909cf11c4be17f52ffb3`. The script rejects non-Anvil endpoints and has a fixed loopback RPC. All transactions stayed on the local fork; no testnet or production state changed.
@@ -43,8 +43,8 @@ The frontend's earlier preview override `0x6aF705b1b82f0A74C19D1c468794287AdceA9
 was an earlier deployment of identical runtime; the earlier legacy-mapping checker
 did not inspect it. Today's deployment is an additional instance, not a core upgrade.
 
-Remaining external steps: authorize the companion contracts push, validate the
-feature branch and its actual preview gate configuration, and complete the
+Remaining external steps: approve the companion contracts review, validate the
+combined wallet/browser feature journey, and complete the
 production-chain matrix before any 0.13.0 npm release. Production deployments
 are not authorized by this Sepolia-only rollout.
 
