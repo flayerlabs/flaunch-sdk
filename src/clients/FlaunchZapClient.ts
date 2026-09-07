@@ -1,3 +1,4 @@
+import { encodeStaticSplit } from "../helpers/staticSplit";
 import {
   type ReadContract,
   type Address,
@@ -83,6 +84,7 @@ export interface FlaunchWithSplitManagerParams
   extends Omit<FlaunchParams, "treasuryManagerParams"> {
   creatorSplitPercent: number;
   managerOwnerSplitPercent: number;
+  /** Percentages of the remaining recipient pool; must sum to 100. */
   splitReceivers: {
     address: Address;
     percent: number;
@@ -473,56 +475,7 @@ export class ReadWriteFlaunchZap extends ReadFlaunchZap {
    * @returns Transaction response for the flaunch creation
    */
   async flaunchWithSplitManager(params: FlaunchWithSplitManagerParams) {
-    const VALID_SHARE_TOTAL = 100_00000n; // 5 decimals as BigInt
-    let creatorShare =
-      (BigInt(params.creatorSplitPercent) * VALID_SHARE_TOTAL) / 100n;
-    const managerOwnerShare =
-      (BigInt(params.managerOwnerSplitPercent) * VALID_SHARE_TOTAL) / 100n;
-
-    const recipientShares = params.splitReceivers.map((receiver) => {
-      return {
-        recipient: receiver.address,
-        share: (BigInt(receiver.percent) * VALID_SHARE_TOTAL) / 100n,
-      };
-    });
-
-    const totalRecipientShares = recipientShares.reduce(
-      (acc, curr) => acc + curr.share,
-      0n
-    );
-
-    // if there's a remainder (due to rounding errors), add it to the creator share
-    const remainderShares =
-      VALID_SHARE_TOTAL - totalRecipientShares - managerOwnerShare;
-    creatorShare += remainderShares;
-
-    const initializeData = encodeAbiParameters(
-      [
-        {
-          type: "tuple",
-          name: "params",
-          components: [
-            { type: "uint256", name: "creatorShare" },
-            { type: "uint256", name: "ownerShare" },
-            {
-              type: "tuple[]",
-              name: "recipientShares",
-              components: [
-                { type: "address", name: "recipient" },
-                { type: "uint256", name: "share" },
-              ],
-            },
-          ],
-        },
-      ],
-      [
-        {
-          creatorShare,
-          ownerShare: managerOwnerShare,
-          recipientShares,
-        },
-      ]
-    );
+    const initializeData = encodeStaticSplit(params);
 
     return this.flaunch({
       ...params,

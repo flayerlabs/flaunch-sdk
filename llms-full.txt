@@ -9551,7 +9551,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4409
+src/sdk/FlaunchSDK.ts:4448
 
 ___
 
@@ -9573,7 +9573,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3929
+src/sdk/FlaunchSDK.ts:3968
 
 ___
 
@@ -9714,7 +9714,7 @@ Returns
 
 Transaction response for the buy operation
 
-src/sdk/FlaunchSDK.ts:3951
+src/sdk/FlaunchSDK.ts:3990
 
 ___
 
@@ -9819,7 +9819,7 @@ Final liquidity and amounts
 | `finalAmount1` | `bigint` |
 | `finalLiquidity` | `bigint` |
 
-src/sdk/FlaunchSDK.ts:5239
+src/sdk/FlaunchSDK.ts:5278
 
 ___
 
@@ -9916,7 +9916,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4216
+src/sdk/FlaunchSDK.ts:4255
 
 ___
 
@@ -9938,7 +9938,7 @@ Returns
 
 Promise<bigint> - The balance of the coin
 
-src/sdk/FlaunchSDK.ts:3938
+src/sdk/FlaunchSDK.ts:3977
 
 ___
 
@@ -10074,7 +10074,7 @@ Returns
 
 CallWithDescription for adding liquidity
 
-src/sdk/FlaunchSDK.ts:5349
+src/sdk/FlaunchSDK.ts:5388
 
 ___
 
@@ -10588,7 +10588,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3915
+src/sdk/FlaunchSDK.ts:3950
 
 ___
 
@@ -10614,7 +10614,7 @@ Transaction response
 
 Error if FlaunchZap is not deployed on the current chain
 
-src/sdk/FlaunchSDK.ts:3864
+src/sdk/FlaunchSDK.ts:3878
 
 ___
 
@@ -10636,7 +10636,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3888
+src/sdk/FlaunchSDK.ts:3916
 
 ___
 
@@ -10676,7 +10676,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3897
+src/sdk/FlaunchSDK.ts:3932
 
 ___
 
@@ -10702,7 +10702,7 @@ Transaction response
 
 Error if FlaunchZap is not deployed on the current chain
 
-src/sdk/FlaunchSDK.ts:3850
+src/sdk/FlaunchSDK.ts:3857
 
 ___
 
@@ -10724,7 +10724,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:3879
+src/sdk/FlaunchSDK.ts:3900
 
 ___
 
@@ -10746,7 +10746,7 @@ Returns
 
 Array of calls with descriptions
 
-src/sdk/FlaunchSDK.ts:4452
+src/sdk/FlaunchSDK.ts:4491
 
 ___
 
@@ -11034,7 +11034,7 @@ Returns
 
 Promise<bigint> - The allowance of the coin to Permit2
 
-src/sdk/FlaunchSDK.ts:4144
+src/sdk/FlaunchSDK.ts:4183
 
 ___
 
@@ -11258,7 +11258,7 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:4737
+src/sdk/FlaunchSDK.ts:4776
 
 ▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -11303,7 +11303,7 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:4761
+src/sdk/FlaunchSDK.ts:4800
 
 ▸ **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -11346,7 +11346,7 @@ const calls = await sdk.getImportAndAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:4784
+src/sdk/FlaunchSDK.ts:4823
 
 ___
 
@@ -11386,7 +11386,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:5071
+src/sdk/FlaunchSDK.ts:5110
 
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -11417,7 +11417,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:5092
+src/sdk/FlaunchSDK.ts:5131
 
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -11453,7 +11453,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:5114
+src/sdk/FlaunchSDK.ts:5153
 
 ▸ **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
@@ -11484,7 +11484,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 });
 ```
 
-src/sdk/FlaunchSDK.ts:5135
+src/sdk/FlaunchSDK.ts:5174
 
 ___
 
@@ -11556,7 +11556,7 @@ Returns
 
 Promise<{allowance: bigint, nonce: bigint}> - Current allowance and nonce
 
-src/sdk/FlaunchSDK.ts:4125
+src/sdk/FlaunchSDK.ts:4164
 
 ___
 
@@ -11579,7 +11579,7 @@ Returns
 
 The typed data object for signing
 
-src/sdk/FlaunchSDK.ts:4104
+src/sdk/FlaunchSDK.ts:4143
 
 ___
 
@@ -11754,7 +11754,7 @@ Returns
 
 Array of calls with descriptions
 
-src/sdk/FlaunchSDK.ts:4840
+src/sdk/FlaunchSDK.ts:4879
 
 ___
 
@@ -11776,7 +11776,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4443
+src/sdk/FlaunchSDK.ts:4482
 
 ___
 
@@ -12580,7 +12580,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4239
+src/sdk/FlaunchSDK.ts:4278
 
 ___
 
@@ -12604,7 +12604,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4253
+src/sdk/FlaunchSDK.ts:4292
 
 ___
 
@@ -12632,7 +12632,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4297
+src/sdk/FlaunchSDK.ts:4336
 
 ___
 
@@ -12737,7 +12737,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4225
+src/sdk/FlaunchSDK.ts:4264
 
 ___
 
@@ -12763,7 +12763,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4273
+src/sdk/FlaunchSDK.ts:4312
 
 ___
 
@@ -12838,7 +12838,7 @@ Returns
 
 Transaction response for the sell operation
 
-src/sdk/FlaunchSDK.ts:4043
+src/sdk/FlaunchSDK.ts:4082
 
 ___
 
@@ -12882,7 +12882,7 @@ Returns
 
 Promise<Hex> - The transaction hash
 
-src/sdk/FlaunchSDK.ts:4159
+src/sdk/FlaunchSDK.ts:4198
 
 ___
 
@@ -12906,7 +12906,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4385
+src/sdk/FlaunchSDK.ts:4424
 
 ___
 
@@ -13019,7 +13019,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4328
+src/sdk/FlaunchSDK.ts:4367
 
 ___
 
@@ -13068,7 +13068,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4347
+src/sdk/FlaunchSDK.ts:4386
 
 ___
 
@@ -13091,7 +13091,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4366
+src/sdk/FlaunchSDK.ts:4405
 
 ___
 
@@ -13192,7 +13192,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4171
+src/sdk/FlaunchSDK.ts:4210
 
 ___
 
@@ -13220,7 +13220,7 @@ Returns
 
 Transaction response
 
-src/sdk/FlaunchSDK.ts:4197
+src/sdk/FlaunchSDK.ts:4236
 
 
 ---
@@ -15810,7 +15810,7 @@ Inherited from
 
 Omit.creator
 
-src/clients/FlaunchZapClient.ts:40
+src/clients/FlaunchZapClient.ts:41
 
 ___
 
@@ -15822,7 +15822,7 @@ Inherited from
 
 Omit.creatorFeeAllocationPercent
 
-src/clients/FlaunchZapClient.ts:41
+src/clients/FlaunchZapClient.ts:42
 
 ___
 
@@ -15834,7 +15834,7 @@ Inherited from
 
 Omit.creatorShare
 
-src/clients/FlaunchZapClient.ts:101
+src/clients/FlaunchZapClient.ts:103
 
 ___
 
@@ -15846,7 +15846,7 @@ Inherited from
 
 Omit.fairLaunchDuration
 
-src/clients/FlaunchZapClient.ts:38
+src/clients/FlaunchZapClient.ts:39
 
 ___
 
@@ -15862,7 +15862,7 @@ Inherited from
 
 Omit.fairLaunchPercent
 
-src/clients/FlaunchZapClient.ts:37
+src/clients/FlaunchZapClient.ts:38
 
 ___
 
@@ -15874,7 +15874,7 @@ Inherited from
 
 Omit.flaunchAt
 
-src/clients/FlaunchZapClient.ts:42
+src/clients/FlaunchZapClient.ts:43
 
 ___
 
@@ -15886,7 +15886,7 @@ Inherited from
 
 Omit.initialMarketCapUSD
 
-src/clients/FlaunchZapClient.ts:39
+src/clients/FlaunchZapClient.ts:40
 
 ___
 
@@ -15898,7 +15898,7 @@ Inherited from
 
 Omit.managerOwnerShare
 
-src/clients/FlaunchZapClient.ts:102
+src/clients/FlaunchZapClient.ts:104
 
 ___
 
@@ -15933,7 +15933,7 @@ Inherited from
 
 Omit.moderator
 
-src/clients/FlaunchZapClient.ts:103
+src/clients/FlaunchZapClient.ts:105
 
 ___
 
@@ -15945,7 +15945,7 @@ Inherited from
 
 Omit.name
 
-src/clients/FlaunchZapClient.ts:33
+src/clients/FlaunchZapClient.ts:34
 
 ___
 
@@ -15969,7 +15969,7 @@ Inherited from
 
 Omit.premineAmount
 
-src/clients/FlaunchZapClient.ts:43
+src/clients/FlaunchZapClient.ts:44
 
 ___
 
@@ -15981,7 +15981,7 @@ Inherited from
 
 Omit.splitReceivers
 
-src/clients/FlaunchZapClient.ts:104
+src/clients/FlaunchZapClient.ts:106
 
 ___
 
@@ -15993,7 +15993,7 @@ Inherited from
 
 Omit.symbol
 
-src/clients/FlaunchZapClient.ts:34
+src/clients/FlaunchZapClient.ts:35
 
 ___
 
@@ -16011,7 +16011,7 @@ Inherited from
 
 Omit.treasuryManagerParams
 
-src/clients/FlaunchZapClient.ts:108
+src/clients/FlaunchZapClient.ts:110
 
 ___
 
@@ -16035,7 +16035,7 @@ Inherited from
 
 Omit.trustedSignerSettings
 
-src/clients/FlaunchZapClient.ts:52
+src/clients/FlaunchZapClient.ts:53
 
 
 ---
@@ -16081,7 +16081,7 @@ Inherited from
 
 Omit.creator
 
-src/clients/FlaunchZapClient.ts:40
+src/clients/FlaunchZapClient.ts:41
 
 ___
 
@@ -16093,7 +16093,7 @@ Inherited from
 
 Omit.creatorFeeAllocationPercent
 
-src/clients/FlaunchZapClient.ts:41
+src/clients/FlaunchZapClient.ts:42
 
 ___
 
@@ -16101,7 +16101,7 @@ ___
 
 • **creatorShare**: `bigint`
 
-src/clients/FlaunchZapClient.ts:101
+src/clients/FlaunchZapClient.ts:103
 
 ___
 
@@ -16113,7 +16113,7 @@ Inherited from
 
 Omit.fairLaunchDuration
 
-src/clients/FlaunchZapClient.ts:38
+src/clients/FlaunchZapClient.ts:39
 
 ___
 
@@ -16129,7 +16129,7 @@ Inherited from
 
 Omit.fairLaunchPercent
 
-src/clients/FlaunchZapClient.ts:37
+src/clients/FlaunchZapClient.ts:38
 
 ___
 
@@ -16141,7 +16141,7 @@ Inherited from
 
 Omit.flaunchAt
 
-src/clients/FlaunchZapClient.ts:42
+src/clients/FlaunchZapClient.ts:43
 
 ___
 
@@ -16153,7 +16153,7 @@ Inherited from
 
 Omit.initialMarketCapUSD
 
-src/clients/FlaunchZapClient.ts:39
+src/clients/FlaunchZapClient.ts:40
 
 ___
 
@@ -16161,7 +16161,7 @@ ___
 
 • **managerOwnerShare**: `bigint`
 
-src/clients/FlaunchZapClient.ts:102
+src/clients/FlaunchZapClient.ts:104
 
 ___
 
@@ -16169,7 +16169,7 @@ ___
 
 • **moderator**: \`0x$\{string}\`
 
-src/clients/FlaunchZapClient.ts:103
+src/clients/FlaunchZapClient.ts:105
 
 ___
 
@@ -16181,7 +16181,7 @@ Inherited from
 
 Omit.name
 
-src/clients/FlaunchZapClient.ts:33
+src/clients/FlaunchZapClient.ts:34
 
 ___
 
@@ -16193,7 +16193,7 @@ Inherited from
 
 Omit.premineAmount
 
-src/clients/FlaunchZapClient.ts:43
+src/clients/FlaunchZapClient.ts:44
 
 ___
 
@@ -16201,7 +16201,7 @@ ___
 
 • **splitReceivers**: \{ `address`: \`0x$\{string}\` ; `share`: `bigint`  }[]
 
-src/clients/FlaunchZapClient.ts:104
+src/clients/FlaunchZapClient.ts:106
 
 ___
 
@@ -16213,7 +16213,7 @@ Inherited from
 
 Omit.symbol
 
-src/clients/FlaunchZapClient.ts:34
+src/clients/FlaunchZapClient.ts:35
 
 ___
 
@@ -16225,7 +16225,7 @@ Inherited from
 
 Omit.tokenUri
 
-src/clients/FlaunchZapClient.ts:35
+src/clients/FlaunchZapClient.ts:36
 
 ___
 
@@ -16239,7 +16239,7 @@ Type declaration
 | :------ | :------ |
 | `permissions?` | `Permissions` |
 
-src/clients/FlaunchZapClient.ts:108
+src/clients/FlaunchZapClient.ts:110
 
 ___
 
@@ -16263,7 +16263,7 @@ Inherited from
 
 Omit.trustedSignerSettings
 
-src/clients/FlaunchZapClient.ts:52
+src/clients/FlaunchZapClient.ts:53
 
 
 ---

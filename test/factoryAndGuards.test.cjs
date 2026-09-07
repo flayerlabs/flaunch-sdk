@@ -157,10 +157,8 @@ test("multichain legacy-only guards run before RPC or IPFS work", () => {
     /readWriteFlaunchZap is not supported on chain 4663/
   );
 
-  assert.throws(
-    () => sdk.flaunchIPFSWithDynamicSplitManager({}),
-    /flaunchIPFSWithDynamicSplitManager is not supported on chain 4663/
-  );
+  // flaunchIPFSWithDynamicSplitManager is no longer base-only: it now routes
+  // to the multichain client like every other launch entry point.
   assert.throws(
     () =>
       sdk.revenueManagerCreatorClaim({
