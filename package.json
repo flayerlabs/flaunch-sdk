@@ -1,6 +1,6 @@
 {
   "name": "@flaunch/sdk",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Flaunch SDK to easily interact with the Flaunch protocol",
   "license": "MIT",
   "author": "Apoorv Lathey <apoorv@flayer.io>",
@@ -72,7 +72,8 @@
     "test:package": "node scripts/test-package.mjs",
     "docs:generate": "typedoc --plugin typedoc-plugin-markdown --out docs src/index.ts --excludeExternals --exclude '**/abi/**' --includeVersion",
     "docs:llms": "node scripts/generate-llms-doc.js",
-    "validate:multichain": "pnpm build && node scripts/validate-multichain-deployments.mjs"
+    "validate:multichain": "pnpm build && node scripts/validate-multichain-deployments.mjs",
+    "test:referrals:fork": "node scripts/test-referrals-fork.cjs"
   },
   "packageManager": "pnpm@10.34.3",
   "devDependencies": {

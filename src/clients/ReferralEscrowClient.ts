@@ -8,6 +8,8 @@ import {
 } from "@delvtech/drift";
 import { ReferralEscrowAbi } from "../abi/ReferralEscrow";
 
+import { assertReferralEscrow } from "./ReferralClient";
+
 export type ReferralEscrowABI = typeof ReferralEscrowAbi;
 
 /**
@@ -24,9 +26,7 @@ export class ReadReferralEscrow {
    * @throws Error if address is not provided
    */
   constructor(address: Address, drift: Drift = createDrift()) {
-    if (!address) {
-      throw new Error("Address is required");
-    }
+    assertReferralEscrow(address);
 
     this.contract = drift.contract({
       abi: ReferralEscrowAbi,
@@ -40,7 +40,8 @@ export class ReadReferralEscrow {
    * @param token - The address of the token
    * @returns Promise<bigint> - The allocated token amount
    */
-  allocations(user: Address, token: Address) {
+  async allocations(user: Address, token: Address) {
+    await this.contract.cache.clear();
     return this.contract.read("allocations", {
       _user: user,
       _token: token,

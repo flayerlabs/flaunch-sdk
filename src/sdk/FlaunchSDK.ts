@@ -1,3 +1,14 @@
+import { resolveReferralHookData } from "../utils/referrals";
+import { ReferralEscrowUnwrapAbi } from "../abi/Referral";
+import {
+  getReferralConfig as readReferralConfig,
+  getReferralEscrowCapabilities as readReferralEscrowCapabilities,
+  assertReferralEscrow,
+  type ReferralEscrowOptions,
+  type ReferralClaimOptions,
+  type ReferralBalanceKey,
+  type ReferralTokenBalance,
+} from "../clients/ReferralClient";
 import {
   PairedSwapUnsupportedRouterError,
   PairedSwapSlippageExceededError,
@@ -412,7 +423,7 @@ export type PairedTokenSwapParams = {
   deadline?: bigint;
   /** Bytes for the pool's hook — a spend-gated pool's signed authorisation. */
   hookData?: Hex;
-  /** Referral attribution; ignored when `hookData` is given (the gate's payload leads with the referrer). */
+  /** Referral attribution; must match the leading address when `hookData` is also supplied. */
   referrer?: Address;
   /**
    * The wallet that will send the swap. Used for the ERC20 allowance check; defaults to the
@@ -1392,11 +1403,7 @@ export class ReadFlaunchSDK {
     } catch (cause) {
       throw new PairedSwapUnsupportedRouterError(poolSwap, cause);
     }
-    const hookData =
-      params.hookData ??
-      (params.referrer && !isAddressEqual(params.referrer, zeroAddress)
-        ? encodeAbiParameters([{ type: "address" }], [params.referrer])
-        : "0x");
+    const hookData = resolveReferralHookData(params);
     const quoteBlockNumber = await this.drift.getBlockNumber();
     const memecoin = new ReadMemecoin(tokenIn, this.drift);
     await Promise.all([
@@ -2635,8 +2642,41 @@ export class ReadFlaunchSDK {
    * @param coinAddress - The address of the coin
    * @returns Promise<bigint> - The balance of the recipient
    */
-  referralBalance(recipient: Address, coinAddress: Address) {
-    return this.readReferralEscrow.allocations(recipient, coinAddress);
+  referralBalance(
+    recipient: Address,
+    coinAddress: Address,
+    options: ReferralEscrowOptions = {},
+  ) {
+    const client = options.escrow !== undefined
+      ? new ReadReferralEscrow(options.escrow, this.drift)
+      : this.readReferralEscrow;
+    return client.allocations(recipient, coinAddress);
+  }
+
+  /** Read the actual hook's fee rate, escrow and claim capabilities at one block. */
+  getReferralConfig(params: { poolKey: PoolKey }) {
+    if (!this.publicClient) throw new Error("Referral configuration requires a publicClient");
+    return readReferralConfig(this.publicClient, this.chainId, params.poolKey);
+  }
+
+  getReferralEscrowCapabilities(escrow: Address) {
+    if (!this.publicClient) throw new Error("Referral capabilities require a publicClient");
+    return readReferralEscrowCapabilities(this.publicClient, escrow);
+  }
+
+  /** Supply historical escrow/token keys from logs or your indexer. Never aggregate across escrows. */
+  referralBalances(params: {
+    recipient: Address;
+    balances: readonly ReferralBalanceKey[];
+  }): Promise<ReferralTokenBalance[]> {
+    return Promise.all(
+      params.balances.map(async ({ escrow, token }) => ({
+        chainId: this.chainId,
+        escrow,
+        token,
+        amount: await this.referralBalance(params.recipient, token, { escrow }),
+      })),
+    );
   }
 
   /**
@@ -2943,11 +2983,17 @@ export class ReadFlaunchSDK {
     version,
     amountIn,
     intermediatePoolKey,
+    hookData,
+    userWallet,
+    referrer,
   }: {
     coinAddress: Address;
     version?: FlaunchVersion;
     amountIn: bigint;
     intermediatePoolKey?: PoolWithHookData;
+    hookData?: Hex;
+    referrer?: Address;
+    userWallet?: Address;
   }) {
     const hookAddress = await this.getPositionManagerAddressForCoin(
       coinAddress,
@@ -2959,6 +3005,8 @@ export class ReadFlaunchSDK {
       amountIn,
       positionManagerAddress: hookAddress,
       intermediatePoolKey,
+      hookData: resolveReferralHookData({ hookData, referrer }),
+      userWallet,
     });
   }
 
@@ -2979,12 +3027,14 @@ export class ReadFlaunchSDK {
     intermediatePoolKey,
     hookData,
     userWallet,
+    referrer,
   }: {
     coinAddress: Address;
     version?: FlaunchVersion;
     amountIn: bigint;
     intermediatePoolKey?: PoolWithHookData;
     hookData?: Hex;
+    referrer?: Address;
     userWallet?: Address;
   }) {
     const hookAddress = await this.getPositionManagerAddressForCoin(
@@ -2997,7 +3047,7 @@ export class ReadFlaunchSDK {
       amountIn,
       positionManagerAddress: hookAddress,
       intermediatePoolKey,
-      hookData,
+      hookData: resolveReferralHookData({ hookData, referrer }),
       userWallet,
     });
   }
@@ -3019,12 +3069,14 @@ export class ReadFlaunchSDK {
     intermediatePoolKey,
     hookData,
     userWallet,
+    referrer,
   }: {
     coinAddress: Address;
     amountOut: bigint;
     version?: FlaunchVersion;
     intermediatePoolKey?: PoolWithHookData;
     hookData?: Hex;
+    referrer?: Address;
     userWallet?: Address;
   }) {
     const hookAddress = await this.getPositionManagerAddressForCoin(
@@ -3037,7 +3089,7 @@ export class ReadFlaunchSDK {
       coinOut: amountOut,
       positionManagerAddress: hookAddress,
       intermediatePoolKey,
-      hookData,
+      hookData: resolveReferralHookData({ hookData, referrer }),
       userWallet,
     });
   }
@@ -4219,6 +4271,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response for the buy operation
    */
   async buyCoin(params: BuyCoinParams, version?: FlaunchVersion) {
+    const hookData = resolveReferralHookData(params);
     const hookAddress = await this.getPositionManagerAddressForCoin(
       params.coinAddress,
       version
@@ -4242,7 +4295,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
             amountIn,
             positionManagerAddress: hookAddress,
             intermediatePoolKey: params.intermediatePoolKey,
-            hookData: params.hookData,
+            hookData,
             userWallet: sender,
           }),
           slippage: (params.slippagePercent / 100).toFixed(18).toString(),
@@ -4260,7 +4313,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
             coinOut: amountOut,
             positionManagerAddress: hookAddress,
             intermediatePoolKey: params.intermediatePoolKey,
-            hookData: params.hookData,
+            hookData,
             userWallet: sender,
           }),
           slippage: (params.slippagePercent / 100).toFixed(18).toString(),
@@ -4285,7 +4338,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       intermediatePoolKey: params.intermediatePoolKey,
       permitSingle: params.permitSingle,
       signature: params.signature,
-      hookData: params.hookData,
+      hookData,
     });
 
     return this.drift.adapter.write({
@@ -4311,6 +4364,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    * @returns Transaction response for the sell operation
    */
   async sellCoin(params: SellCoinParams, version?: FlaunchVersion) {
+    const hookData = resolveReferralHookData(params);
     const hookAddress = await this.getPositionManagerAddressForCoin(
       params.coinAddress,
       version
@@ -4327,8 +4381,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
           amountIn: params.amountIn,
           positionManagerAddress: hookAddress,
           intermediatePoolKey: params.intermediatePoolKey,
-          hookData: params.hookData,
-          userWallet: params.hookData
+          hookData,
+          userWallet: hookData !== "0x"
             ? await this.drift.getSignerAddress()
             : undefined,
         }),
@@ -4351,7 +4405,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       referrer: params.referrer ?? null,
       positionManagerAddress: hookAddress,
       intermediatePoolKey: params.intermediatePoolKey,
-      hookData: params.hookData,
+      hookData,
     });
 
     return this.drift.write({
@@ -4478,13 +4532,33 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   }
 
   /**
-   * Claims the referral balance for a given recipient
+   * Claims the connected wallet's referral allocation to a payout recipient.
    * @param coins - The addresses of the coins to claim
-   * @param recipient - The address of the recipient to claim the balance for
+   * @param recipient - The payout address; this does not select whose allocation is spent
+   * @param options - Explicit escrow and optional unwrap behavior; omission preserves legacy defaults
    * @returns Transaction response
    */
-  claimReferralBalance(coins: Address[], recipient: Address) {
-    return this.readWriteReferralEscrow.claimTokens(coins, recipient);
+  async claimReferralBalance(
+    coins: Address[],
+    recipient: Address,
+    options: ReferralClaimOptions = {},
+  ) {
+    const escrow = options.escrow ?? ReferralEscrowAddress[this.chainId];
+    assertReferralEscrow(escrow);
+    if (options.unwrap === false) {
+      const capabilities = await this.getReferralEscrowCapabilities(escrow);
+      if (!capabilities.supportsUnwrap) {
+        throw new Error("This referral escrow does not support unwrap=false");
+      }
+      return this.drift.write({
+        abi: ReferralEscrowUnwrapAbi,
+        address: escrow,
+        fn: "claimTokens",
+        args: { _tokens: coins, _recipient: recipient, _unwrap: false },
+      });
+    }
+    // Both generations' two-argument overload preserves their existing unwrap behavior.
+    return new ReadWriteReferralEscrow(escrow, this.drift).claimTokens(coins, recipient);
   }
 
   /**
