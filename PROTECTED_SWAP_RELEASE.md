@@ -80,7 +80,9 @@ Against the deployed routers and real v1.3 pools, the full round trip settled on
 | Robinhood 4663 (57638009) | V133C `0x411bE1f7…` on v1.3.3 PM, flETH-paired | 0.001 flETH consumed exactly; `ExactInputSwap(sender=deployer, amountIn=1e15)` emitted | tight price limit → `PartialFill` (`0x20aae256`); minimum above delivered → `InsufficientOutput` (`0x2c19b8b8`); past deadline → `Expired` (`0x203d82d8`) | all coins sold back; router holds 0 flETH / 0 coins |
 | Base 8453 (51037962) | VBVF `0xe0fe1FAA…` on v1.3.1 PM, flETH-paired | 0.0005 flETH consumed exactly; `ExactInputSwap` emitted | `InsufficientOutput`, `Expired` as above | all coins sold back; router holds 0 / 0 |
 
-Both pools were ungated (no trusted signer) so `hookData` was empty; the gated path through these
+On the same Robinhood fork, `createFlaunch({ publicClient }).planPairedTokenSwap({ coinAddress: DELTACO 0x6cC5A2eb…, direction: "buy", amountIn: 0.1 DELL, slippageBps: 100 })` resolved the v1.3.3 hook and the DELL pairing, chose router `0xD33dD3B3…`, quoted at block 57646699 (spot deviation 226 bps including fees), and returned an approve + `swapExactInput` plan; executing that plan delivered exactly the quoted `expectedAmountOut` (1,261,811,132.24 DELTACO), above the encoded `amountOutMin`. The raw-calldata round trip on the same pool also passed all three protection checks.
+
+Both flETH pools were ungated (no trusted signer) so `hookData` was empty; the gated path through these
 routers is covered by the Robinhood fork suite in flaunch-contracts (`SpendGatedRobinhoodFork.t.sol`,
 `test_ForkProtectedRouter*`). Live-chain canary transactions were deliberately not sent.
 
