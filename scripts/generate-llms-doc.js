@@ -19,7 +19,7 @@ function combineDocumentation() {
 
       if (stat.isDirectory()) {
         readDocsRecursively(fullPath);
-      } else if (file.endsWith(".md") && file !== "README.md") {
+      } else if (file.endsWith(".md") && file !== "README.md" && !file.endsWith("-validation.md")) {
         let content = fs.readFileSync(fullPath, "utf8");
 
         // Remove "Defined in" lines and GitHub URLs
@@ -54,6 +54,10 @@ function combineDocumentation() {
       }
     }
   }
+
+  // Include hand-authored integration guides alongside generated API documentation.
+  const guidesPath = path.join(__dirname, "..", "guides");
+  if (fs.existsSync(guidesPath)) readDocsRecursively(guidesPath);
 
   // Generate TypeDoc documentation first
   require("child_process").execSync("npm run docs:generate", {

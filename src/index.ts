@@ -131,3 +131,7 @@ export const FlaunchSDK = {
 
 export * from "./sdk/errors";
 export type { PairedSwapVerification, PairedSwapFill } from "./sdk/FlaunchSDK";
+
+export * from "./utils/referrals";
+export type { ReferralConfig, ReferralEscrowCapabilities, ReferralEscrowOptions, ReferralClaimOptions, ReferralBalanceKey, ReferralTokenBalance } from "./clients/ReferralClient";
+export { ReadReferralEscrow, ReadWriteReferralEscrow } from "./clients/ReferralEscrowClient";

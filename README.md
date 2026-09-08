@@ -1272,3 +1272,7 @@ const { logs: poolSwapLogs } = usePoolSwapEvents(flaunchRead, coinAddress);
 ## Flaunch Reference
 
 For detailed protocol documentation, visit our [Docs](https://docs.flaunch.gg/).
+
+### Third-party referrals
+
+Build your own referral links and attribution policy using the SDK's swap attribution, pool-specific fee configuration, escrow-aware balances and claims. See [the referral integration guide](guides/referrals.md) and [framework-neutral example](examples/referrals.mjs).

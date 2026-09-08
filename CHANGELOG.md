@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.14.0] - 2026-09-08
+
+### Added
+- Third-party referral primitives: pool-specific fee/escrow configuration, explicit escrow balance reads and claims, and batched balances retaining chain/escrow/token identity.
+- Capability-checked `unwrap: false` claims on current escrows; default claims and legacy escrow selection remain compatible.
+- Trusted-signer and spend-gate referral payload codecs, verified-emitter referral event decoding, and an app-owned link/discovery/claim example.
+- Opt-in, localhost-only fork lifecycle tests for deployed referral accrual and claims.
+
+### Fixed
+- Quote and execution paths now use identical referral hook data, including ordinary sells and exact-output buys. Conflicting explicit and embedded referrers are rejected rather than silently ignored.
+- Legacy escrow capability checks handle viem errors across ESM/CJS module boundaries.
+- Referral balance reads invalidate cached allocations so completed claims are reflected immediately.
+- Calldata factories retain their public client, enabling configuration/capability reads without transaction broadcasting.
+
 ## [0.13.0] - 2026-09-08
 
 ### Changed (breaking)

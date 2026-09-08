@@ -748,7 +748,7 @@ test("planPairedTokenApproval: sized call when short, undefined when covered or 
   );
 });
 
-test("hookData wins the overload and the referrer is ignored — the gate's payload already leads with it", async () => {
+test("matching referral hookData is preserved in the protected quote and execution", async () => {
   const { drift } = recordingDrift({ allowance: 10_000_000n });
   const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
   const plan = await sdk.planPairedTokenSwap({
@@ -940,4 +940,23 @@ test('zero slippage acquisition preserves the quoted target', async () => {
   const plan = await sdk.planPairedTokenAcquisitionForBudget({ pairedToken: MUSD, input: 'eth', amountIn: 1000n, recipient: SENDER, slippageBps: 0 });
   assert.equal(plan.target, 100n);
   assert.equal(plan.maxIn, 1000n);
+});
+
+test("paired plans reject conflicting referral attribution before producing a transaction", async () => {
+  const { drift } = recordingDrift({ allowance: 10_000_000n });
+  const sdk = new ReadFlaunchSDK(baseSepolia.id, drift);
+  await assert.rejects(() => sdk.planPairedTokenSwap({
+    coinAddress: COIN, amountIn: 1_000_000n, slippageBps: 100, sender: SENDER,
+    direction: "buy", hookData: HOOK_DATA, referrer: zeroAddress,
+  }), /Referrer conflicts/);
+});
+
+test("raw PoolSwap client rejects conflicting referral attribution", () => {
+  const { drift, interactions } = recordingDrift();
+  const client = new ReadWritePoolSwapV1_3(PoolSwapV1_3Address[baseSepolia.id], drift);
+  assert.throws(() => client.swap({
+    poolKey: musdPoolKey, params: { zeroForOne: true, amountSpecified: -100n, sqrtPriceLimitX96: MIN_SQRT_PRICE_LIMIT },
+    hookData: HOOK_DATA, referrer: zeroAddress,
+  }), /Referrer conflicts/);
+  assert.equal(interactions.filter((i) => i.kind === "write").length, 0);
 });
