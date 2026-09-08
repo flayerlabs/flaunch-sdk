@@ -61,8 +61,8 @@ before the production compile). The address maps in this candidate now point eve
 generation on Base and Robinhood at these routers; the legacy routers `0xafD627…`, `0x92D2dF…`
 and `0x8476ED…` are no longer mapped.
 
-**Publish gate.** Do not publish until each spend gate approves its chain's new router (read
-`approvedRouters(router)` back) and a canary buy and sell have settled through it:
+**Publish gate (met 2026-09-08).** Each spend gate approves its chain's new router (read back as
+`approvedRouters(router) == true`) and a buy and sell have settled through it on a fork of each chain:
 
 | Gate | Chain | Owner | Approval |
 | --- | --- | --- | --- |
@@ -71,6 +71,18 @@ and `0x8476ED…` are no longer mapped.
 | `0xB246b270bB05d9Fa76c4456408ce3e8600d916bf` (v1.3.1 PM `0x588c…` / AnyPM `0x6ea0…`) | Robinhood | `0xB8A70b4d…A973` | tx `0xb7aabb94…c88d`, block 57627582 |
 
 Legacy approvals stay in place during migration.
+
+**Canary evidence (2026-09-08, Anvil forks of the live chains, deployer impersonated, no broadcast).**
+Against the deployed routers and real v1.3 pools, the full round trip settled on both chains:
+
+| Chain (fork block) | Pool | Buy | Protection checks | Sell |
+| --- | --- | --- | --- | --- |
+| Robinhood 4663 (57638009) | V133C `0x411bE1f7…` on v1.3.3 PM, flETH-paired | 0.001 flETH consumed exactly; `ExactInputSwap(sender=deployer, amountIn=1e15)` emitted | tight price limit → `PartialFill` (`0x20aae256`); minimum above delivered → `InsufficientOutput` (`0x2c19b8b8`); past deadline → `Expired` (`0x203d82d8`) | all coins sold back; router holds 0 flETH / 0 coins |
+| Base 8453 (51037962) | VBVF `0xe0fe1FAA…` on v1.3.1 PM, flETH-paired | 0.0005 flETH consumed exactly; `ExactInputSwap` emitted | `InsufficientOutput`, `Expired` as above | all coins sold back; router holds 0 / 0 |
+
+Both pools were ungated (no trusted signer) so `hookData` was empty; the gated path through these
+routers is covered by the Robinhood fork suite in flaunch-contracts (`SpendGatedRobinhoodFork.t.sol`,
+`test_ForkProtectedRouter*`). Live-chain canary transactions were deliberately not sent.
 
 Release in this order:
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.13.0] - Unreleased
+## [0.13.0] - 2026-09-08
 
 ### Changed (breaking)
 - Paired-token plans require a sender and a router exposing `exactInputVersion() == 1`. Legacy deployments fail closed; update per-hook router mappings after deployment and gate approval before rollout.
