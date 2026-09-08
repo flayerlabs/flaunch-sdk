@@ -10,6 +10,7 @@
 
 ### Fixed
 - Quote and execution paths now use identical referral hook data, including ordinary sells and exact-output buys. Conflicting explicit and embedded referrers are rejected rather than silently ignored.
+- Legacy escrow capability checks handle viem errors across ESM/CJS module boundaries.
 - Referral balance reads invalidate cached allocations so completed claims are reflected immediately.
 - Calldata factories retain their public client, enabling configuration/capability reads without transaction broadcasting.
 

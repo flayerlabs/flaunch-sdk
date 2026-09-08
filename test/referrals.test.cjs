@@ -41,6 +41,7 @@ function makePublic({
   rpcError = false,
   code = "0x6000",
   allocation,
+  clientFactory = createPublicClient,
 } = {}) {
   const calls = [];
   function answer(call) {
@@ -110,7 +111,7 @@ function makePublic({
       ],
     );
   }
-  const client = createPublicClient({
+  const client = clientFactory({
     chain,
     transport: custom(
       {
@@ -520,4 +521,15 @@ test("standalone example uses app-owned address links and groups calldata by esc
       .args,
     [[TOKEN, zeroAddress], OTHER],
   );
+});
+
+// A common Node consumer mixes an ESM viem client with the SDK's CJS entrypoint.
+test("legacy capability detection survives viem ESM/CJS error class boundaries", async () => {
+  const { createPublicClient: esmFactory } = await import("viem");
+  const { client } = makePublic({ unwrap: false, clientFactory: esmFactory });
+  const reader = sdk.createFlaunch({ publicClient: client });
+  assert.deepEqual(await reader.getReferralEscrowCapabilities(ESCROW), {
+    escrow: ESCROW,
+    supportsUnwrap: false,
+  });
 });

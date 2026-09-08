@@ -1,11 +1,4 @@
-import {
-  BaseError,
-  ContractFunctionRevertedError,
-  isAddress,
-  zeroAddress,
-  type Address,
-  type PublicClient,
-} from "viem";
+import { isAddress, zeroAddress, type Address, type PublicClient } from "viem";
 import { ReferralEscrowUnwrapAbi, ReferralFeeAbi } from "../abi/Referral";
 import type { PoolKey } from "../types";
 import { getPoolId } from "../utils/univ4";
@@ -68,13 +61,16 @@ export async function getReferralEscrowCapabilities(
     });
     return { escrow, supportsUnwrap: true };
   } catch (error) {
-    if (
-      error instanceof BaseError &&
-      error.walk(
-        (cause) => cause instanceof ContractFunctionRevertedError,
-      ) instanceof ContractFunctionRevertedError
-    ) {
-      return { escrow, supportsUnwrap: false };
+    // Public clients may come from a different viem version or ESM/CJS module instance.
+    // Constructor identity is not stable across that boundary; viem's named cause is.
+    const seen = new Set<object>();
+    let cause: unknown = error;
+    while (typeof cause === "object" && cause !== null && !seen.has(cause)) {
+      seen.add(cause);
+      if ("name" in cause && cause.name === "ContractFunctionRevertedError") {
+        return { escrow, supportsUnwrap: false };
+      }
+      cause = "cause" in cause ? cause.cause : undefined;
     }
     // An RPC outage is not evidence that an older ABI is required.
     throw error;
