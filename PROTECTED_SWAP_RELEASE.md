@@ -66,9 +66,9 @@ and `0x8476ED…` are no longer mapped.
 
 | Gate | Chain | Owner | Approval |
 | --- | --- | --- | --- |
-| `0xBdbF379f9EdFB5993FC00b41AAEfeE8475eAC0Ac` (v1.3.1 PM `0x588c…`) | Base | `0xB8A70b4d…A973` | _pending_ |
-| `0x120a2e0f8f431136897dc78c24b069146a65d79a` (v1.3.3 PM `0x8d34…`) | Robinhood | `0xB8A70b4d…A973` | _pending_ |
-| `0xB246b270bB05d9Fa76c4456408ce3e8600d916bf` (v1.3.1 PM `0x588c…` / AnyPM `0x6ea0…`) | Robinhood | `0xB8A70b4d…A973` | _pending_ |
+| `0xBdbF379f9EdFB5993FC00b41AAEfeE8475eAC0Ac` (v1.3.1 PM `0x588c…`) | Base | `0xB8A70b4d…A973` | tx `0x0dff82d2…e7aa`, block 51037249 |
+| `0x120a2e0f8f431136897dc78c24b069146a65d79a` (v1.3.3 PM `0x8d34…`) | Robinhood | `0xB8A70b4d…A973` | tx `0x018de7d4…4b43`, block 57624911 |
+| `0xB246b270bB05d9Fa76c4456408ce3e8600d916bf` (v1.3.1 PM `0x588c…` / AnyPM `0x6ea0…`) | Robinhood | `0xB8A70b4d…A973` | tx `0xb7aabb94…c88d`, block 57627582 |
 
 Legacy approvals stay in place during migration.
 
