@@ -111,15 +111,15 @@ export const PairedTokenRegistryV1_3Address: Addresses = {
 // v1.3.3). `PoolSwapForHookV1_3Address` maps each hook to the router its gate approves; use
 // `poolSwapForHook(chainId, hook)` from `helpers`.
 export const PoolSwapV1_3Address: Addresses = {
-  [base.id]: "0xafD627ea5D02251B13E7D6C90b468328376b61A3",
+  [base.id]: "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // Protected API v1 (v1.3.4), deployed 2026-09-08 @ 51035669, Basescan-verified
   [baseSepolia.id]: "0xb32a99502f433f78454a4d20304e654cdda75c5c", // Protected API v1; verified and gate-approved 2026-09-07
-  [robinhood.id]: "0x92D2dF3EC1EBD126F0708b879B1fe25c84482028", // v1.3.3 regeneration, 2026-09-03
+  [robinhood.id]: "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // Protected API v1 (v1.3.4), deployed 2026-09-08 @ 57595126, Sourcify exact match
 };
 
 /** Hook (lowercase) → the PoolSwap approved on that hook generation's spend gate. */
 export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>> = {
   [base.id]: {
-    "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0xafD627ea5D02251B13E7D6C90b468328376b61A3",
+    "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // v1.3.1 PM, gate 0xBdbF…
   },
   [baseSepolia.id]: {
     // Keys stay LOWERCASE — `poolSwapForHook` lowercases its lookup.
@@ -128,9 +128,9 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
     "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.3.3 PM, gate 0x54cd…
   },
   [robinhood.id]: {
-    "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0x8476ED156f731335ECA8Cc8A8eE759330ee4A91f", // v1.3.1
-    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0x92D2dF3EC1EBD126F0708b879B1fe25c84482028", // v1.3.3
-    "0x6ea0edee449a287504990df8d87951b9436825dc": "0x8476ED156f731335ECA8Cc8A8eE759330ee4A91f", // v1.3.1 AnyPM, same gate as the v1.3.1 PM
+    "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 PM, gate 0xB246…
+    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.3 PM, gate 0x120a…
+    "0x6ea0edee449a287504990df8d87951b9436825dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 AnyPM, same gate as the v1.3.1 PM
   },
 };
 

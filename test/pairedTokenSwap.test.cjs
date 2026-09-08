@@ -168,6 +168,37 @@ test("paired-token swap addresses and capability cover the deployed V1.3 chains"
     ).toLowerCase(),
     "0xb32a99502f433f78454a4d20304e654cdda75c5c",
   );
+  // Production runs the v1.3.4 protected routers; the legacy routers are never mapped.
+  const legacyRouters = new Set([
+    "0xafd627ea5d02251b13e7d6c90b468328376b61a3",
+    "0x92d2df3ec1ebd126f0708b879b1fe25c84482028",
+    "0x8476ed156f731335eca8cc8a8ee759330ee4a91f",
+  ]);
+  assert.equal(
+    PoolSwapV1_3Address[base.id].toLowerCase(),
+    "0x1b8065a099adcd7aa7c5e241e3596b56ec98ba5a",
+  );
+  assert.equal(
+    PoolSwapV1_3Address[robinhood.id].toLowerCase(),
+    "0xd33dd3b3aea607f2cc38cdd154ef5d48847aa764",
+  );
+  for (const [chainId, hooks] of [
+    [base.id, ["0x588c683ecc450f8b2aadb13d7f63792b840425dc"]],
+    [
+      robinhood.id,
+      [
+        "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
+        "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc",
+        "0x6ea0edee449a287504990df8d87951b9436825dc",
+      ],
+    ],
+  ]) {
+    for (const hook of hooks) {
+      const router = poolSwapForHook(chainId, hook).toLowerCase();
+      assert.equal(router, PoolSwapV1_3Address[chainId].toLowerCase(), `${chainId} ${hook}`);
+      assert.ok(!legacyRouters.has(router), `legacy router still mapped for ${chainId} ${hook}`);
+    }
+  }
 });
 
 test("pairedPoolKey sorts currencies and keys the paired PositionManager", () => {
@@ -394,15 +425,17 @@ test("a coin on a superseded Robinhood hook resolves to that hook and still swap
     direction: "buy",
   });
   assert.deepEqual(plan.poolKey, supersededKey);
-  // Routed to the PoolSwap the SUPERSEDED generation's spend gate approves, not the current one:
-  // router approval is per gate, and a gated buy through an unapproved router reverts.
+  // Routed to the PoolSwap the SUPERSEDED generation's spend gate approves: router approval is
+  // per gate, and a gated buy through an unapproved router reverts. Since v1.3.4 both Robinhood
+  // gates approve the same protected router, so the per-hook lookup and the chain default agree —
+  // the lookup still has to go through the hook, because a future generation may split them again.
   assert.equal(
     plan.swap.to.toLowerCase(),
-    "0x8476ed156f731335eca8cc8a8ee759330ee4a91f",
+    "0xd33dd3b3aea607f2cc38cdd154ef5d48847aa764",
   );
-  assert.notEqual(
+  assert.equal(
     plan.swap.to.toLowerCase(),
-    PoolSwapV1_3Address[robinhood.id].toLowerCase(),
+    poolSwapForHook(robinhood.id, superseded).toLowerCase(),
   );
   // The fixture's allowance already covers this buy, so there is no approve step to check the
   // spender on — the routing assertion above is the point.

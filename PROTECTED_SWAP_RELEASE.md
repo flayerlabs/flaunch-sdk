@@ -28,8 +28,8 @@ Both existing Sepolia gates approved this router, preserving previous approvals:
 - `0x54cdcf0bcbc3a33f470e07134c10582f93058a32`: transaction
   `0x6d4db09350a4265940e59cd4265a68fb49a8237c28faa7c01fc57a1ffe01b8cd`, block 46504023.
 
-Only Sepolia router mappings change in this candidate. Base and Robinhood mappings
-are unchanged. No production contract, approval or npm publication occurred.
+At the time of the Sepolia rollout only Sepolia router mappings had changed; the production
+routers below were deployed on 2026-09-08. No npm publication has occurred.
 The rebuilt SDK's default mappings passed the on-chain readiness checker for all
 three hooks at block 46504128. Frontend native-ETH and flETH integration runs both
 passed against this router: launch, signed Game Mode flow, two buys, ERC20 approvals
@@ -48,7 +48,29 @@ combined wallet/browser feature journey, and complete the
 production-chain matrix before any 0.13.0 npm release. Production deployments
 are not authorized by this Sepolia-only rollout.
 
-This branch is not ready to publish. Production address maps still include legacy routers; the protected planner intentionally rejects routers without `exactInputVersion` support.
+## Production routers (2026-09-08, flaunch-contracts v1.3.4, PR #302)
+
+| Chain | Router | Deployment | Verification |
+| --- | --- | --- | --- |
+| Base (8453) | `0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a` | tx `0xf00c94da334553b4c14a7788e74f94140c51f232141ac6a66343f88fa930ba83`, block 51035669 | Basescan-verified; `exactInputVersion() == 1`; `manager()` = `0x498581fF…2b2b` |
+| Robinhood (4663) | `0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764` | tx `0xb1974d698d9b9bf1a3b3fda66b39732dacc6ed77245da6417b115f20ff542fad`, block 57595126 | Sourcify exact match; `exactInputVersion() == 1`; `manager()` = `0x8366a39C…0951` |
+
+Both runtimes are byte-identical to each other and to the Base Sepolia router outside the CBOR
+metadata trailer (the metadata hash differs because comment-only lines were added to the source
+before the production compile). The address maps in this candidate now point every hook
+generation on Base and Robinhood at these routers; the legacy routers `0xafD627…`, `0x92D2dF…`
+and `0x8476ED…` are no longer mapped.
+
+**Publish gate.** Do not publish until each spend gate approves its chain's new router (read
+`approvedRouters(router)` back) and a canary buy and sell have settled through it:
+
+| Gate | Chain | Owner | Approval |
+| --- | --- | --- | --- |
+| `0xBdbF379f9EdFB5993FC00b41AAEfeE8475eAC0Ac` (v1.3.1 PM `0x588c…`) | Base | `0xB8A70b4d…A973` | _pending_ |
+| `0x120a2e0f8f431136897dc78c24b069146a65d79a` (v1.3.3 PM `0x8d34…`) | Robinhood | `0xB8A70b4d…A973` | _pending_ |
+| `0xB246b270bB05d9Fa76c4456408ce3e8600d916bf` (v1.3.1 PM `0x588c…` / AnyPM `0x6ea0…`) | Robinhood | `0xB8A70b4d…A973` | _pending_ |
+
+Legacy approvals stay in place during migration.
 
 Release in this order:
 

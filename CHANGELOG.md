@@ -12,6 +12,11 @@
 - Quote/simulation preflight results; quote mode deliberately does not claim consumed input.
 - Typed unsupported-router, slippage and partial-fill errors.
 - Attributable router-event fill decoding; multiple matching logs are rejected as ambiguous.
+- Production protected routers (flaunch-contracts v1.3.4, 2026-09-08): Base `0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a`, Robinhood `0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764`, alongside Base Sepolia `0xb32a99502f433f78454a4d20304e654cdda75c5c`. Every hook generation on each chain maps to its chain's protected router; the legacy routers are no longer mapped.
+- Enable legacy multichain zap launch helpers for existing revenue managers, static split managers, and IPFS metadata. This does not add v1.3 paired-token manager launch support.
+
+### Fixed
+- Static-split encoding on Base and multichain goes through a shared validator. Creator and owner percentages total at most 100; recipient percentages independently total 100 and divide the remainder. Invalid allocations and duplicate or zero recipients are rejected.
 
 ### Deprecated
 - `sqrtPriceLimitFromSlippage`: retained for compatibility with legacy integrations, not used by protected planning.
@@ -20,10 +25,6 @@
 
 All notable changes to the @flaunch/sdk package will be documented in this file.
 
-## [Unreleased]
-
-- Enable legacy multichain zap launch helpers for existing revenue managers, static split managers, and IPFS metadata. This does not add v1.3 paired-token manager launch support.
-- Fix static-split encoding on Base and multichain through a shared validator. Creator and owner percentages total at most 100; recipient percentages independently total 100 and divide the remainder. Reject invalid allocations and duplicate or zero recipient addresses before RPC.
 
 ## [0.12.0] - 2026-09-04
 
