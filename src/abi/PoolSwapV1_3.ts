@@ -99,18 +99,70 @@ export const PoolSwapV1_3MsgSenderAbi = [
   },
 ] as const;
 
-/**
- * The v1.3.1 PoolSwap router (flaunch-contracts `src/contracts/zaps/PoolSwap.sol`): one
- * `swap` against any PoolKey, in three overloads, plus `msgSender()` — the transient slot hooks
- * read to learn who initiated the in-flight swap (the spend gate's approved-router buyer binding).
- *
- * PoolSwap has no `minOut`: `sqrtPriceLimitX96` is the only on-chain slippage control. Native ETH
- * input travels as `msg.value`; ERC20 input settles by allowance pull, and unused native value is
- * refunded.
- */
+/** Protected exact-input execution; unavailable on legacy router deployments. */
+export const PoolSwapExactInputAbi = [
+  {
+    ...PoolSwapV1_3SwapWithHookDataAbi[0],
+    name: "swapExactInput",
+    inputs: [
+      ...PoolSwapV1_3SwapWithHookDataAbi[0].inputs,
+      { name: "_amountOutMinimum", type: "uint256" },
+      { name: "_deadline", type: "uint256" },
+    ],
+  },
+  { type: "error", name: "Expired", inputs: [] },
+  {
+    type: "error",
+    name: "InsufficientOutput",
+    inputs: [
+      { name: "minimum", type: "uint256", internalType: "uint256" },
+      { name: "actual", type: "uint256", internalType: "uint256" },
+    ],
+  },
+  { type: "error", name: "InvalidExactInput", inputs: [] },
+  { type: "error", name: "InvalidSwapDelta", inputs: [] },
+  {
+    type: "error",
+    name: "PartialFill",
+    inputs: [
+      { name: "requested", type: "uint256", internalType: "uint256" },
+      { name: "consumed", type: "uint256", internalType: "uint256" },
+    ],
+  },
+] as const;
+
+export const PoolSwapExactInputVersionAbi = [
+  {
+    type: "function",
+    name: "exactInputVersion",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "pure",
+  },
+] as const;
+
+export const PoolSwapExactInputEventAbi = [
+  {
+    type: "event",
+    name: "ExactInputSwap",
+    anonymous: false,
+    inputs: [
+      { name: "sender", type: "address", indexed: true },
+      { name: "poolId", type: "bytes32", indexed: true },
+      { name: "zeroForOne", type: "bool", indexed: false },
+      { name: "amountIn", type: "uint256", indexed: false },
+      { name: "amountOut", type: "uint256", indexed: false },
+    ],
+  },
+] as const;
+
+/** Legacy and protected router ABIs. Probe exactInputVersion before planning protected calls. */
 export const PoolSwapV1_3Abi = [
   ...PoolSwapV1_3SwapAbi,
   ...PoolSwapV1_3SwapWithReferrerAbi,
   ...PoolSwapV1_3SwapWithHookDataAbi,
   ...PoolSwapV1_3MsgSenderAbi,
+  ...PoolSwapExactInputAbi,
+  ...PoolSwapExactInputVersionAbi,
+  ...PoolSwapExactInputEventAbi,
 ] as const;

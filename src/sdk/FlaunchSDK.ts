@@ -1,4 +1,9 @@
 import {
+  PairedSwapUnsupportedRouterError,
+  PairedSwapSlippageExceededError,
+  PairedSwapPartialFillError,
+} from "./errors";
+import {
   createDrift,
   Drift,
   HexString,
@@ -16,6 +21,7 @@ import {
   erc721Abi,
   formatUnits,
   decodeEventLog,
+  decodeFunctionData,
   isAddressEqual,
   type Log,
 } from "viem";
@@ -119,8 +125,9 @@ import {
   type PairedTokenAcquisitionRoute,
 } from "../utils/pairedTokenAcquisition";
 import {
-  PoolSwapV1_3SwapWithHookDataAbi,
-  PoolSwapV1_3SwapWithReferrerAbi,
+  PoolSwapExactInputAbi,
+  PoolSwapExactInputVersionAbi,
+  PoolSwapExactInputEventAbi,
 } from "../abi/PoolSwapV1_3";
 import { ReadFlaunch } from "../clients/FlaunchClient";
 import { ReadAnyFlaunch } from "../clients/AnyFlaunchClient";
@@ -220,7 +227,9 @@ import {
   isZeroForOne,
   pairedTokenOfPoolKey,
   isEmptyPoolKey,
-  sqrtPriceLimitFromSlippage,
+  MIN_SQRT_PRICE_LIMIT,
+  MAX_SQRT_PRICE_LIMIT,
+  decodeBalanceDelta,
   getValidTick,
   calculateUnderlyingTokenBalances,
   TickFinder,
@@ -389,8 +398,7 @@ export type PairedSwapDirection = "buy" | "sell";
 /**
  * An exact-input swap on a paired-token pool (a coin launched through `flaunchPairedToken`,
  * paired with mUSD, native ETH, flETH or a B20 equity). Exact-output is deliberately absent — the
- * spend gate rejects it, and PoolSwap has no `minOut` — so the only price protection is the
- * sqrt-price bound derived from `slippageBps`.
+ * spend gate rejects it. Requires a router with on-chain minimum output, deadline and full-fill checks.
  */
 export type PairedTokenSwapParams = {
   coinAddress: Address;
@@ -398,15 +406,17 @@ export type PairedTokenSwapParams = {
   pairedToken?: Address;
   /** Exact input, in the input currency's own decimals (a buy spends the paired token, a sell spends the coin). */
   amountIn: bigint;
-  /** Tolerance in basis points, 1..9999 (50 = 0.5%), enforced against the pool's current spot price. */
+  /** Haircut below quoted net output, 0..9999 basis points (50 = 0.5%). Enforced on chain. */
   slippageBps: number;
+  /** Unix seconds; defaults to now + 10 minutes. Preserved in calldata. */
+  deadline?: bigint;
   /** Bytes for the pool's hook — a spend-gated pool's signed authorisation. */
   hookData?: Hex;
   /** Referral attribution; ignored when `hookData` is given (the gate's payload leads with the referrer). */
   referrer?: Address;
   /**
    * The wallet that will send the swap. Used for the ERC20 allowance check; defaults to the
-   * drift signer. When neither is available the plan always includes the approve step.
+   * drift signer. A quote-backed swap requires a sender; approval-only planning can omit it.
    */
   sender?: Address;
   /**
@@ -498,6 +508,16 @@ export type PairedSwapApproveCall = PairedSwapCall & {
  * `wallet_sendCalls` or two sequential transactions: the optional ERC20 approve, then the PoolSwap
  * call. `buyCoinPairedToken` / `sellCoinPairedToken` run exactly this plan.
  */
+export type PairedSwapVerification =
+  | { mode: "quote"; amountOut: bigint }
+  | { mode: "simulate"; amountOut: bigint; consumedIn: bigint };
+export type PairedSwapFill = {
+  direction: PairedSwapDirection;
+  poolId: Hex;
+  amountIn: bigint;
+  amountOut: bigint;
+};
+
 export type PairedSwapPlan = ResolvedPairedPool & {
   direction: PairedSwapDirection;
   tokenIn: Address;
@@ -507,6 +527,17 @@ export type PairedSwapPlan = ResolvedPairedPool & {
   zeroForOne: boolean;
   amountIn: bigint;
   sqrtPriceLimitX96: bigint;
+  chainId: number;
+  sender: Address;
+  hookData: Hex;
+  expectedAmountOut: bigint;
+  amountOutMin: bigint;
+  slippageBps: number;
+  deadline: bigint;
+  quotedAtMs: number;
+  quoteBlockNumber: bigint;
+  /** Fee-inclusive output shortfall versus AMM spot, not pure price impact. */
+  spotDeviationBps: number;
   /** Present when the PoolSwap allowance is short of `amountIn` (never for native input). */
   approve?: PairedSwapApproveCall;
   swap: PairedSwapCall;
@@ -1257,8 +1288,8 @@ export class ReadFlaunchSDK {
     deadline?: bigint;
     sender?: Address;
   }): Promise<PairedTokenAcquisitionPlan & { quote: PairedTokenAcquisitionQuote }> {
-    if (!Number.isInteger(params.slippageBps) || params.slippageBps <= 0 || params.slippageBps >= 10_000) {
-      throw new Error("Slippage must be between 1 and 9,999 basis points");
+    if (!Number.isInteger(params.slippageBps) || params.slippageBps < 0 || params.slippageBps >= 10_000) {
+      throw new Error("Slippage must be between 0 and 9,999 basis points");
     }
     const quote = await this.quotePairedTokenAcquisition(params);
     const target = (quote.expectedOut * BigInt(10_000 - params.slippageBps)) / 10_000n;
@@ -1280,19 +1311,13 @@ export class ReadFlaunchSDK {
   }
 
   /**
-   * Builds the calls for an exact-input swap on a paired-token pool without sending them:
-   * an optional ERC20 `approve(PoolSwap, amountIn)` when the standing allowance is short, then the
-   * PoolSwap `swap` (the `bytes` overload when `hookData` is given, else the referrer overload).
-   *
-   * Funding by pairing: a buy on a native-ETH pool sends `amountIn` as `swap.value` and needs no
-   * approve; flETH / ERC20 (mUSD, B20 equities) input settles by allowance pull; a sell always
-   * spends the coin. `amountSpecified` is negative (v4 exact-input). The sqrt-price bound comes from
-   * the pool's spot price and `slippageBps` — PoolSwap has no `minOut`, so this is the price
-   * protection. Hosts that batch calls (`wallet_sendCalls`) run `approve` then `swap`; wallets that
-   * cannot batch send them as two transactions.
+   * Builds one quote-backed exact-input plan. Its displayed output and encoded minimum share
+   * the same quote; slot0 and quote reads use the same block. Requires a protected router.
+   * The optional approval precedes swapExactInput. The router enforces full consumption,
+   * minimum net output and expiry at inclusion; legacy deployments fail closed.
    */
   async planPairedTokenSwap(
-    params: PairedSwapPlanParams
+    params: PairedSwapPlanParams,
   ): Promise<PairedSwapPlan> {
     const { direction } = params;
     this.assertPairedTokenSwapSupported("planPairedTokenSwap");
@@ -1309,71 +1334,134 @@ export class ReadFlaunchSDK {
 
     const pool = await this.resolvePairedPool(
       params.coinAddress,
-      params.pairedToken
+      params.pairedToken,
     );
     const tokenIn = direction === "buy" ? pool.pairedToken : params.coinAddress;
-    const tokenOut = direction === "buy" ? params.coinAddress : pool.pairedToken;
+    const tokenOut =
+      direction === "buy" ? params.coinAddress : pool.pairedToken;
     const isNativeInput = direction === "buy" && tokenIn === zeroAddress;
     const zeroForOne = isZeroForOne(pool.poolKey, tokenIn);
     // STRICT lookup, not `poolSwapForHook` — that helper falls back to the chain's current
     // router, which is the right default for an ungated swap and exactly wrong for a gated one.
     const mappedRouter =
-      PoolSwapForHookV1_3Address[this.chainId]?.[pool.poolKey.hooks.toLowerCase()];
-    if (params.hookData !== undefined && params.router === undefined && mappedRouter === undefined) {
+      PoolSwapForHookV1_3Address[this.chainId]?.[
+        pool.poolKey.hooks.toLowerCase()
+      ];
+    if (
+      params.hookData !== undefined &&
+      params.router === undefined &&
+      mappedRouter === undefined
+    ) {
       // Router approval is per spend gate, per hook generation. Guessing the chain's current
       // router for an unmapped hook would send a signed authorisation to a router its gate never
       // approved — an opaque on-chain revert. The gate's /config names the right one.
       throw new Error(
-        `No approved router is known for hook ${pool.poolKey.hooks} on chain ${this.chainId} — pass \`router\` (the gate's /config announces it)`
+        `No approved router is known for hook ${pool.poolKey.hooks} on chain ${this.chainId} — pass \`router\` (the gate's /config announces it)`,
       );
     }
-    const poolSwap = params.router ?? mappedRouter ?? this.routerForPool(pool.poolKey.hooks);
+    const poolSwap =
+      params.router ?? mappedRouter ?? this.routerForPool(pool.poolKey.hooks);
 
     const sender = await this.senderFor(params.sender);
-
-    // Fresh reads, not drift's cache: an approve or a buy that just landed changes both numbers,
-    // and a stale allowance here plans a swap with no approve that reverts on-chain, while a
-    // stale spot price computes a slippage bound for a market that has moved.
+    if (!sender)
+      throw new Error("A sender is required for a quote-backed swap plan");
+    if (
+      !Number.isInteger(params.slippageBps) ||
+      params.slippageBps < 0 ||
+      params.slippageBps >= 10_000
+    ) {
+      throw new Error(
+        "Slippage must be an integer between 0 and 9,999 basis points",
+      );
+    }
+    if (params.amountIn > (1n << 127n) - 1n)
+      throw new Error("amountIn exceeds the supported delta range");
+    const quotedAtMs = Date.now();
+    const deadline =
+      params.deadline ?? BigInt(Math.floor(quotedAtMs / 1000) + 600);
+    if (deadline <= BigInt(Math.floor(quotedAtMs / 1000)))
+      throw new Error("Swap deadline has expired");
+    const capability = this.drift.contract({
+      abi: PoolSwapExactInputVersionAbi,
+      address: poolSwap,
+    });
+    try {
+      await capability.cache.clear();
+      if ((await capability.read("exactInputVersion")) !== 1n)
+        throw new Error("Unsupported API version");
+    } catch (cause) {
+      throw new PairedSwapUnsupportedRouterError(poolSwap, cause);
+    }
+    const hookData =
+      params.hookData ??
+      (params.referrer && !isAddressEqual(params.referrer, zeroAddress)
+        ? encodeAbiParameters([{ type: "address" }], [params.referrer])
+        : "0x");
+    const quoteBlockNumber = await this.drift.getBlockNumber();
     const memecoin = new ReadMemecoin(tokenIn, this.drift);
     await Promise.all([
       this.pairedSwapStateView!.contract.cache.clear(),
-      isNativeInput || !sender ? Promise.resolve() : memecoin.contract.cache.clear(),
+      this.readQuoter.contract.cache.clear(),
+      isNativeInput ? Promise.resolve() : memecoin.contract.cache.clear(),
     ]);
-    const [slot0, allowance] = await Promise.all([
-      this.pairedSwapStateView!.poolSlot0({ poolId: pool.poolId }),
+    const [slot0, allowance, expectedAmountOut] = await Promise.all([
+      this.pairedSwapStateView!.contract.read(
+        "getSlot0",
+        { poolId: pool.poolId },
+        { block: quoteBlockNumber },
+      ),
       isNativeInput
         ? Promise.resolve(params.amountIn)
-        : sender
-        ? memecoin.allowance(sender, poolSwap)
-        : Promise.resolve(0n),
+        : memecoin.allowance(sender, poolSwap),
+      this.readQuoter.getQuoteExactInputSingle({
+        poolKey: pool.poolKey,
+        zeroForOne,
+        exactAmount: params.amountIn,
+        hookData,
+        userWallet: sender,
+        blockNumber: quoteBlockNumber,
+      }),
     ]);
-
-    const sqrtPriceLimitX96 = sqrtPriceLimitFromSlippage(
-      slot0.sqrtPriceX96,
-      params.slippageBps,
-      zeroForOne
-    );
-
-    const swapParams = {
-      zeroForOne,
-      amountSpecified: -params.amountIn,
-      sqrtPriceLimitX96,
-    };
-    const data =
-      params.hookData !== undefined
-        ? encodeFunctionData({
-            abi: PoolSwapV1_3SwapWithHookDataAbi,
-            functionName: "swap",
-            args: [pool.poolKey, swapParams, params.hookData],
-          })
-        : encodeFunctionData({
-            abi: PoolSwapV1_3SwapWithReferrerAbi,
-            functionName: "swap",
-            args: [pool.poolKey, swapParams, params.referrer ?? zeroAddress],
-          });
+    const amountOutMin =
+      (expectedAmountOut * BigInt(10_000 - params.slippageBps)) / 10_000n;
+    if (amountOutMin <= 0n)
+      throw new Error("Quoted minimum output must be positive");
+    const sqrtPriceLimitX96 = zeroForOne
+      ? MIN_SQRT_PRICE_LIMIT
+      : MAX_SQRT_PRICE_LIMIT;
+    const price = slot0.sqrtPriceX96 * slot0.sqrtPriceX96;
+    if (price === 0n) throw new Error("Pool is not initialized");
+    const impliedOut = zeroForOne
+      ? (params.amountIn * price) / (1n << 192n)
+      : (params.amountIn * (1n << 192n)) / price;
+    const spotDeviationBps =
+      impliedOut > expectedAmountOut
+        ? Number(((impliedOut - expectedAmountOut) * 10_000n) / impliedOut)
+        : 0;
+    const data = encodeFunctionData({
+      abi: PoolSwapExactInputAbi,
+      functionName: "swapExactInput",
+      args: [
+        pool.poolKey,
+        { zeroForOne, amountSpecified: -params.amountIn, sqrtPriceLimitX96 },
+        hookData,
+        amountOutMin,
+        deadline,
+      ],
+    });
 
     return {
       ...pool,
+      chainId: this.chainId,
+      sender,
+      hookData,
+      expectedAmountOut,
+      amountOutMin,
+      slippageBps: params.slippageBps,
+      deadline,
+      quotedAtMs,
+      quoteBlockNumber,
+      spotDeviationBps,
       direction,
       tokenIn,
       tokenOut,
@@ -1390,6 +1478,132 @@ export class ReadFlaunchSDK {
         value: isNativeInput ? params.amountIn : 0n,
       },
     };
+  }
+
+  /** Preflight only; on-chain checks remain authoritative. Quote mode cannot measure input consumption. */
+  async verifyPairedTokenSwapPlan(
+    plan: PairedSwapPlan,
+    mode: "quote" | "simulate" = "quote",
+  ): Promise<PairedSwapVerification> {
+    if (plan.chainId !== this.chainId)
+      throw new Error("Swap plan belongs to another chain");
+    if (plan.deadline <= BigInt(Math.floor(Date.now() / 1000)))
+      throw new Error("Swap plan expired");
+    const decoded = decodeFunctionData({
+      abi: PoolSwapExactInputAbi,
+      data: plan.swap.data,
+    });
+    const [key, params, hookData, minimum, deadline] = decoded.args;
+    if (
+      getPoolId(key) !== plan.poolId ||
+      params.amountSpecified !== -plan.amountIn ||
+      params.zeroForOne !== plan.zeroForOne ||
+      minimum !== plan.amountOutMin ||
+      deadline !== plan.deadline ||
+      hookData !== plan.hookData ||
+      params.sqrtPriceLimitX96 !== plan.sqrtPriceLimitX96 ||
+      plan.swap.value !== (plan.isNativeInput ? plan.amountIn : 0n)
+    )
+      throw new Error("Swap plan and calldata disagree");
+    let result: PairedSwapVerification;
+    if (mode === "quote") {
+      await this.readQuoter.contract.cache.clear();
+      result = {
+        mode,
+        amountOut: await this.readQuoter.getQuoteExactInputSingle({
+          poolKey: key,
+          zeroForOne: params.zeroForOne,
+          exactAmount: plan.amountIn,
+          hookData,
+          userWallet: plan.sender,
+        }),
+      };
+    } else {
+      const contract = this.drift.contract({
+        abi: PoolSwapExactInputAbi,
+        address: plan.swap.to,
+      });
+      const delta = decodeBalanceDelta(
+        await contract.simulateWrite(
+          "swapExactInput",
+          {
+            _key: key,
+            _params: params,
+            _hookData: hookData,
+            _amountOutMinimum: minimum,
+            _deadline: deadline,
+          },
+          { from: plan.sender, value: plan.swap.value },
+        ),
+      );
+      const consumedIn = -(plan.zeroForOne ? delta.amount0 : delta.amount1);
+      const amountOut = plan.zeroForOne ? delta.amount1 : delta.amount0;
+      if (consumedIn !== plan.amountIn)
+        throw new PairedSwapPartialFillError(plan.amountIn, consumedIn);
+      result = { mode, amountOut, consumedIn };
+    }
+    if (result.amountOut < plan.amountOutMin)
+      throw new PairedSwapSlippageExceededError(
+        plan.amountOutMin,
+        result.amountOut,
+      );
+    return result;
+  }
+
+  /** Decode one attributable execution. Multiple matching fills are ambiguous, never silently combined. */
+  getPairedSwapFillFromLogs(
+    logs: readonly Pick<Log, "address" | "data" | "topics">[],
+    plan: PairedSwapPlan,
+  ): PairedSwapFill | null {
+    const fills: PairedSwapFill[] = [];
+    for (const log of logs) {
+      if (!isAddressEqual(log.address, plan.swap.to)) continue;
+      let event;
+      try {
+        event = decodeEventLog({
+          abi: PoolSwapExactInputEventAbi,
+          data: log.data,
+          topics: log.topics,
+        });
+      } catch {
+        continue;
+      }
+      const args = event.args;
+      if (
+        args.poolId !== plan.poolId ||
+        !isAddressEqual(args.sender, plan.sender) ||
+        args.zeroForOne !== plan.zeroForOne ||
+        args.amountIn !== plan.amountIn
+      )
+        continue;
+      fills.push({
+        direction: plan.direction,
+        poolId: args.poolId,
+        amountIn: args.amountIn,
+        amountOut: args.amountOut,
+      });
+    }
+    if (fills.length > 1)
+      throw new Error(
+        "Multiple matching swap fills; scope logs to the submitted operation",
+      );
+    return fills[0] ?? null;
+  }
+
+  async getPairedSwapFillFromTx(
+    txHash: Hex,
+    plan: PairedSwapPlan,
+  ): Promise<PairedSwapFill | null> {
+    if (plan.chainId !== this.chainId)
+      throw new Error("Swap plan belongs to another chain");
+    if (!this.publicClient)
+      throw new Error("Public client is required to fetch transaction data");
+    const receipt = await this.publicClient.getTransactionReceipt({
+      hash: txHash,
+    });
+    if (receipt.status !== "success")
+      throw new Error("Swap transaction reverted");
+    return this.getPairedSwapFillFromLogs(receipt.logs, plan);
   }
 
   /**
@@ -3807,29 +4021,46 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
 
   private async executePairedTokenSwap(
     params: PairedTokenSwapParams,
-    direction: PairedSwapDirection
+    direction: PairedSwapDirection,
   ) {
     const sender = params.sender ?? (await this.drift.getSignerAddress());
-    const plan = await this.planPairedTokenSwap({ ...params, sender, direction });
-
-    if (plan.approve) {
-      await new ReadWriteMemecoin(plan.approve.token, this.drift).approve(
-        plan.approve.spender,
-        plan.approve.amount
-      );
-    }
-
-    return this.poolSwapWriterAt(plan.swap.to).swap({
-      poolKey: plan.poolKey,
-      params: {
-        zeroForOne: plan.zeroForOne,
-        amountSpecified: -plan.amountIn,
-        sqrtPriceLimitX96: plan.sqrtPriceLimitX96,
-      },
-      hookData: params.hookData,
-      referrer: params.referrer,
-      value: plan.swap.value,
+    const plan = await this.planPairedTokenSwap({
+      ...params,
+      sender,
+      direction,
     });
+
+    if (!isAddressEqual(sender, await this.drift.getSignerAddress()))
+      throw new Error("Swap sender must match the signer");
+    if (plan.approve) {
+      const hash = await new ReadWriteMemecoin(
+        plan.approve.token,
+        this.drift,
+      ).approve(plan.approve.spender, plan.approve.amount);
+      const receipt = await this.drift.waitForTransaction({ hash });
+      if (!receipt || receipt.status !== "success")
+        throw new Error("Approval is not confirmed successful");
+    }
+    await this.verifyPairedTokenSwapPlan(plan, "simulate");
+    const contract = this.drift.contract({
+      abi: PoolSwapExactInputAbi,
+      address: plan.swap.to,
+    });
+    const [key, swapParams, hookData, minimum, deadline] = decodeFunctionData({
+      abi: PoolSwapExactInputAbi,
+      data: plan.swap.data,
+    }).args;
+    return contract.write(
+      "swapExactInput",
+      {
+        _key: key,
+        _params: swapParams,
+        _hookData: hookData,
+        _amountOutMinimum: minimum,
+        _deadline: deadline,
+      },
+      { value: plan.swap.value },
+    );
   }
 
   /**

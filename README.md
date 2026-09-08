@@ -5,6 +5,8 @@
 
 A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap V4.
 
+> This protected-swap branch is release-blocked. Its planner requires new router capabilities not supplied by the current legacy address maps. Follow [the coordinated release gates](./PROTECTED_SWAP_RELEASE.md); do not publish or deploy a dependency-only upgrade.
+
 ![Flaunch Header](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/.github/flaunch-header.png)
 
 _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context about using the Flaunch SDK: [llms-full.txt](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/llms-full.txt)_
