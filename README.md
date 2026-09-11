@@ -40,6 +40,7 @@ Static-split recipients independently divide 100% of the pool remaining after cr
   - [Flaunching with a Paired Token](#flaunching-with-a-paired-token)
     - [How to generate `base64Image` from User uploaded file](#how-to-generate-base64image-from-user-uploaded-file)
   - [Launching with a pre-buy](#launching-with-a-pre-buy)
+  - [Launching with vesting](#launching-with-vesting)
   - [Flaunch with Address Fee Splits](#flaunch-with-address-fee-splits)
   - [Buying a Flaunch coin](#buying-a-flaunch-coin)
   - [Selling with Permit2](#selling-with-permit2)
@@ -427,6 +428,64 @@ Not supported for pre-buy in this version, and reported as such rather than igno
 launches (`gasless: true`), protected Game Mode / trusted-signer launches, a paired-token
 launch into a treasury manager, and `anyFlaunch`. Launches without a pre-buy keep using the
 existing `flaunch*` methods unchanged.
+
+### Launching with vesting
+
+A vested launch locks part of the supply into linear vesting schedules and seeds the rest into
+the pool exactly like a standard launch. The methods mirror the standard family one-to-one —
+same parameters, plus `vestingSchedules` — so an integration that already calls `flaunch()`
+switches to `flaunchVested()` by adding the schedules. Base Sepolia today; gate on
+`doesChainSupportVestedLaunch(chainId)`. Rules and the quote model: [`guides/vested-launch.md`](guides/vested-launch.md).
+
+| Standard | Vested twin | Extra fields |
+| --- | --- | --- |
+| `flaunch` / `flaunchIPFS` | `flaunchVested` / `flaunchIPFSVested` | `vestingSchedules`, optional `pairedToken` (default flETH), `feeCalculatorParams`, `slippageBps`, `maxPremineCost` |
+| `flaunchWithRevenueManager` (+ IPFS) | `flaunchVestedWithRevenueManager` (+ IPFS) | same |
+| `flaunchWithSplitManager` (+ IPFS) | `flaunchVestedWithSplitManager` (+ IPFS) | same |
+| `flaunchWithDynamicSplitManager` (+ IPFS) | `flaunchVestedWithDynamicSplitManager` (+ IPFS) | same |
+| `flaunchWithPreBuy` / `planLaunchPreBuy({ route })` | `flaunchVestedWithPreBuy` / `planLaunchPreBuy({ route: "vested" })` | `params: VestedPreBuyLaunchParams` |
+| `calculatePairedTokenFlaunchFee` | `calculateVestedFlaunchFee(params, slippageBps?)` | quotes as the signer |
+| `getPoolCreatedFromTx` | `getVestedLaunchFromTx` (and `getPoolCreatedFromTx` still works) | adds `vesting: { seedAmount, totalVested, schedules… }` |
+
+```ts
+import { createFlaunch, doesChainSupportVestedLaunch } from "@flaunch/sdk";
+
+if (!doesChainSupportVestedLaunch(baseSepolia.id)) throw new Error("no vested launches here");
+
+const hash = await flaunchWrite.flaunchVested({
+  name: "Vested Coin",
+  symbol: "VEST",
+  tokenUri: "ipfs://…",
+  initialMarketCapUSD: 4_000,          // fully diluted; vesting changes the float, not the price
+  creator: creatorAddress,
+  creatorFeeAllocationPercent: 80,
+  vestingSchedules: [
+    // exactly one of `percent` (≤ 2 dp of total supply) or `amount` (wei) per schedule
+    { beneficiary: team, percent: 12.5, cliffDuration: 30 * 86_400, vestDuration: 365 * 86_400 },
+    { beneficiary: advisor, amount: 5n * 10n ** 27n, cliffDuration: 0, vestDuration: 90 * 86_400 },
+    // `start` (unix seconds) defaults to the launch block; a past start reverts on chain
+  ],
+  // pairedToken: zeroAddress,            // raw ETH instead of flETH; approved ERC20s also work
+  // premineAmount: 10n ** 27n,           // optional creator buy at launch, paid from `value`
+  // treasuryManagerParams: { manager },  // deposit the launch NFT into a manager, as usual
+});
+
+const launch = await flaunchRead.getVestedLaunchFromTx(hash);
+// launch.memecoin, launch.vesting.seedAmount, launch.vesting.totalVested, launch.vesting.schedules[]
+
+// Later, as a beneficiary:
+const position = await flaunchRead.getVestingPosition(launch.memecoin, team);
+// position.schedules[i].{ scheduleId, total, claimed, vested, claimable, cliffAt, endsAt }
+await flaunchWrite.claimVesting(launch.memecoin);            // every claimable schedule
+await flaunchWrite.claimVesting(launch.memecoin, [0n]);      // or specific ids
+```
+
+Units: `percent` is a percent of the 100-billion-coin supply with at most two decimals (converted
+exactly, never rounded), `amount` is wei, `cliffDuration` / `vestDuration` are seconds (`cliff <=
+vest`, `vest > 0`). The total vested must stay under the zap's `maxVestedBps` (50% by default —
+`getMaxVestedBps()`), and a premine must be smaller than the non-vested seed. `flaunchVested*`
+check all of this before asking for a signature. Trusted-signer and gasless launches are not
+available on this path.
 
 ### Flaunch with Address Fee Splits
 
