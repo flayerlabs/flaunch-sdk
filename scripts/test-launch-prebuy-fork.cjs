@@ -151,6 +151,7 @@ async function main() {
         assert.equal(coinBalance, plan.premineAmount, "creator must hold exactly the premine");
 
         const ethAfter = await publicClient.getBalance({ address: sender });
+        let pairedSpent;
         const gas = receipt.gasUsed * receipt.effectiveGasPrice;
         const ethSpent = ethBefore - ethAfter - gas;
         if (plan.payment.asset.address === zeroAddress) {
@@ -158,7 +159,7 @@ async function main() {
           assert(ethSpent >= plan.fee.amount, `spent ${ethSpent} < fee ${plan.fee.amount}`);
         } else {
           const pairedAfter = await balanceOf(plan.payment.asset.address, sender);
-          const pairedSpent = pairedBefore - pairedAfter;
+          pairedSpent = pairedBefore - pairedAfter;
           assert(pairedSpent <= plan.payment.max, `paired spent ${pairedSpent} > max ${plan.payment.max}`);
           assert(pairedSpent > 0n, "paired token must have been spent");
           assert.equal(ethSpent, plan.value, "an ERC20 pairing spends exactly the fee in ETH");
@@ -175,7 +176,10 @@ async function main() {
           value: plan.value,
           simulatedEthSpent: verification.ethSpent,
           ethSpent,
-          refundObserved: plan.payment.asset.address === zeroAddress ? ethSpent < plan.value : undefined,
+          refundObserved: plan.payment.asset.address === zeroAddress ? ethSpent < plan.value : pairedSpent < plan.payment.max,
+          pairedSpent,
+          pricing: plan.pricing.method,
+          protocolQuote: plan.pricing.protocolQuote,
           paymentAsset: plan.payment.asset,
           approvalsSent,
         });
@@ -189,7 +193,10 @@ async function main() {
     const scenario = `${label} underfunded launch reverts`;
     try {
       const result = await flaunch.planLaunchPreBuy({ ...input, preBuyBps: 1000, slippageBps: 0 });
-      assert(result.supported, JSON.stringify(result.reasons));
+      if (!result.supported) {
+        record({ scenario, result: "SKIP", reasons: result.reasons });
+        return;
+      }
       const { plan } = result;
       const value = plan.fee.amount + plan.payment.expected / 2n;
       let reverted = false;
@@ -252,20 +259,46 @@ async function main() {
     const erc20 = process.env.PREBUY_ERC20_PAIRED_TOKEN;
     if (erc20) {
       try {
+        // Fund the sender with the paired token on the fork. Preferred: buy it from ETH through
+        // the SDK's acquisition route. Fallback (fork only): write the ERC20 balance mapping
+        // directly, probing the first storage slots for the one `balanceOf` reads.
+        let funded = false;
         if (sdk.doesChainSupportPairedTokenAcquisition(CHAIN.id)) {
-          const acquisition = await flaunch.planPairedTokenAcquisitionForBudget({
-            pairedToken: erc20,
-            input: "eth",
-            amountIn: parseEther("2"),
-            slippageBps: 300,
-            recipient: sender,
-            sender,
-          });
-          for (const call of [acquisition.approve, acquisition.swap].filter(Boolean)) {
-            const hash = await walletClient.sendTransaction({ to: call.to, data: call.data, value: call.value });
-            const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            assert.equal(receipt.status, "success", "paired-token acquisition reverted");
+          try {
+            const acquisition = await flaunch.planPairedTokenAcquisitionForBudget({
+              pairedToken: erc20,
+              input: "eth",
+              amountIn: parseEther("2"),
+              slippageBps: 300,
+              recipient: sender,
+              sender,
+            });
+            for (const call of [acquisition.approve, acquisition.swap].filter(Boolean)) {
+              const hash = await walletClient.sendTransaction({ to: call.to, data: call.data, value: call.value });
+              const receipt = await publicClient.waitForTransactionReceipt({ hash });
+              assert.equal(receipt.status, "success", "paired-token acquisition reverted");
+            }
+            funded = (await balanceOf(erc20, sender)) > 0n;
+            record({ scenario: "paired ERC20 funding via acquisition", result: funded ? "PASS" : "FAIL" });
+          } catch (error) {
+            record({ scenario: "paired ERC20 funding via acquisition", result: "FAIL", error: error.shortMessage || error.message });
           }
+        }
+        if (!funded) {
+          const { keccak256, encodeAbiParameters: enc, pad } = require("viem");
+          const target = 10n ** 30n;
+          for (let slot = 0n; slot < 40n && !funded; slot += 1n) {
+            const key = keccak256(enc([{ type: "address" }, { type: "uint256" }], [sender, slot]));
+            const previous = await rpc("eth_getStorageAt", [erc20, key, "latest"]);
+            await rpc("anvil_setStorageAt", [erc20, key, pad(toHex(target), { size: 32 })]);
+            if ((await balanceOf(erc20, sender)) === target) {
+              funded = true;
+              record({ scenario: "paired ERC20 funding via storage", result: "PASS", slot: slot.toString() });
+            } else {
+              await rpc("anvil_setStorageAt", [erc20, key, previous]);
+            }
+          }
+          if (!funded) record({ scenario: "paired ERC20 funding via storage", result: "FAIL", note: "no balance slot found in the first 40" });
         }
         const held = await balanceOf(erc20, sender);
         record({ scenario: "paired ERC20 funding", result: held > 0n ? "PASS" : "SKIP", token: erc20, balance: held });

@@ -600,7 +600,7 @@ export async function planLaunchPreBuy(
         quoteBlockNumber,
         createdAtMs,
         expiresAtMs,
-        funding: await readFunding(deps, sender, value, undefined, quoteBlockNumber),
+        funding: await readFunding(deps, sender, value, undefined),
       };
     } else {
       if (
@@ -631,11 +631,12 @@ export async function planLaunchPreBuy(
       }
       const memecoin = new ReadMemecoin(payment.asset.address, deps.drift);
       await clearCache(memecoin);
-      const allowance = await memecoin.contract.read(
-        "allowance",
-        { owner: sender, spender: to },
-        { block: quoteBlockNumber }
-      );
+      // Read at latest, not the pinned block: viem caches `eth_blockNumber` for a few seconds, so a
+      // just-mined approval (or top-up) must not be missed by a stale pin.
+      const allowance = await memecoin.contract.read("allowance", {
+        owner: sender,
+        spender: to,
+      });
       const data = encodePairedFlaunch(flaunchParams, zeroAddress, maxPremineCost);
       plan = {
         version: LAUNCH_PRE_BUY_PLAN_VERSION,
@@ -661,13 +662,10 @@ export async function planLaunchPreBuy(
         quoteBlockNumber,
         createdAtMs,
         expiresAtMs,
-        funding: await readFunding(
-          deps,
-          sender,
-          value,
-          { token: payment.asset.address, required: maxPremineCost },
-          quoteBlockNumber
-        ),
+        funding: await readFunding(deps, sender, value, {
+          token: payment.asset.address,
+          required: maxPremineCost,
+        }),
       };
     }
   } else {
@@ -715,7 +713,7 @@ export async function planLaunchPreBuy(
       quoteBlockNumber,
       createdAtMs,
       expiresAtMs,
-      funding: await readFunding(deps, sender, value, undefined, quoteBlockNumber),
+      funding: await readFunding(deps, sender, value, undefined),
     };
   }
 

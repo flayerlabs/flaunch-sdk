@@ -253,8 +253,9 @@ test("ETH route (Robinhood standard): three pinned fee reads, probe-priced expec
     native: { required: plan.value, available: 10n ** 18n },
     sufficient: true,
   });
+  // balances are read at latest (viem caches eth_blockNumber; a pinned read could miss a top-up)
   const balanceRead = drift.interactions.find((i) => i.kind === "getBalance");
-  assert.deepEqual(balanceRead, { kind: "getBalance", address: SENDER, block: BLOCK });
+  assert.deepEqual(balanceRead, { kind: "getBalance", address: SENDER });
 
   // the probe ran as the sender, at the quote block, with an ample cap and the plan's calldata
   assert.equal(publicClient.calls.length, 1);
@@ -397,7 +398,7 @@ test("route C ERC20 pairing (6 dp): payment asset, zap approval, value is the fe
   assert.deepEqual(config.options, { block: BLOCK });
   const [allowance] = reads(drift, "allowance");
   assert.deepEqual(allowance.args, { owner: SENDER, spender: zap });
-  assert.deepEqual(allowance.options, { block: BLOCK });
+  assert.equal(allowance.options, undefined, "allowance is read at latest, not the pinned block");
 
   assert.equal(plan.approvals.length, 1);
   const [approve] = plan.approvals;

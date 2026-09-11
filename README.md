@@ -279,11 +279,19 @@ const handleImageChange = useCallback(
 ### Launching with a pre-buy
 
 A creator can buy an exact percentage of the coin's supply as part of the launch transaction.
-The SDK quotes it from the protocol (the zap's own `calculateFee`), binds the quote to the
-chain, sender and launch parameters, and executes it through the same launch route the coin
-would use anyway — one transaction, with the maximum payment enforced on chain (`msg.value`
-for ETH-funded routes, `maxPremineCost` for ERC20 pairings). The capability matrix, quote
-model and revalidation rules are in [guides/launch-pre-buy.md](guides/launch-pre-buy.md).
+The SDK prices it by executing the launch in an `eth_call` (a state-override probe measures the
+ETH the launch really consumes — the zaps' `calculateFee` is a linear estimate that under-quotes
+larger premines), binds the quote to the chain, sender and launch parameters, and executes it
+through the same launch route the coin would use anyway — one transaction, with the maximum
+payment enforced on chain (`msg.value` for ETH-funded routes, `maxPremineCost` for ERC20
+pairings). The capability matrix, quote model and revalidation rules are in
+[guides/launch-pre-buy.md](guides/launch-pre-buy.md).
+
+Where it works: on Robinhood, Ethereum and Unichain every route (`standard`, `revenueManager`,
+`splitManager`, `dynamicSplitManager`, `pairedToken`); on Base and Base Sepolia only
+`pairedToken` — the legacy Base zap cannot premine with fair launches deprecated
+(`ROUTE_PREMINE_UNAVAILABLE`), so an ordinary Base coin with a pre-buy launches through
+`pairedToken` with flETH or native ETH on the current v1.3 PositionManager.
 
 Percentages are integer basis points (`100 = 1%`, `percentToBps("2.5") === 250`), slippage is
 integer basis points the caller chooses, and the default route limit is 10% of supply.
@@ -298,6 +306,7 @@ if (!capabilities.routes.standard.supported) {
 }
 
 // 2. Quote. `params` is exactly what you would pass to `flaunch()` today (premineAmount unset).
+// (`standard` is a multichain-zap route — Robinhood, Ethereum, Unichain. On Base use `pairedToken`.)
 const result = await flaunchRead.planLaunchPreBuy({
   route: "standard",
   params: {
@@ -323,7 +332,8 @@ if (!result.supported) {
 const { plan } = result;
 plan.premineAmount; // exact coins bought: TOTAL_SUPPLY * 250 / 10_000
 plan.fee; // { asset: { chainId, address: zeroAddress, decimals: 18 }, amount } — the flaunching fee, always native ETH
-plan.payment; // { asset, expected, max } — the purchase in its real payment asset
+plan.payment; // { asset, expected, max } — the purchase in its real payment asset; expected is the simulated real cost
+plan.pricing; // { method: "simulation" | "protocolQuoteWithSimulatedImpact" | "protocolQuote", protocolQuote }
 plan.value; // ETH sent with the launch (fee + max purchase on ETH routes); unspent ETH is refunded
 plan.approvals; // ERC20 approve calls to send first (empty on ETH routes)
 plan.expiresAtMs; // default 30 s after the quote block was read

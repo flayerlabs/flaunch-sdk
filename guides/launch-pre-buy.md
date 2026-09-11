@@ -13,11 +13,20 @@ This guide is the capability matrix and the rules behind `planLaunchPreBuy` /
 
 | Route (`LaunchPreBuyInput.route`) | Base (8453) | Base Sepolia (84532) | Robinhood (4663) | Ethereum (1) | Unichain (130) | Payment asset | Approval | Limit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `standard` | legacy zap | legacy zap | multichain zap | multichain zap | multichain zap | native ETH via `msg.value` | never | 1000 bps |
-| `revenueManager` | legacy zap | legacy zap | multichain zap | multichain zap | multichain zap | native ETH | never | 1000 bps |
-| `splitManager` (static) | legacy zap | legacy zap | multichain zap | multichain zap | multichain zap | native ETH | never | 1000 bps |
-| `dynamicSplitManager` | legacy zap | legacy zap | multichain zap | multichain zap | multichain zap | native ETH | never | 1000 bps |
-| `pairedToken` | v1.3 zap | v1.3 zap | v1.3 zap | — | — | follows the pairing (below) | ERC20 pairings only | 1000 bps |
+| `standard` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✓ multichain zap | ✓ multichain zap | native ETH via `msg.value` | never | 1000 bps |
+| `revenueManager` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✓ multichain zap | ✓ multichain zap | native ETH | never | 1000 bps |
+| `splitManager` (static) | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✓ multichain zap | ✓ multichain zap | native ETH | never | 1000 bps |
+| `dynamicSplitManager` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✓ multichain zap | ✓ multichain zap | native ETH | never | 1000 bps |
+| `pairedToken` | ✓ v1.3 zap | ✓ v1.3 zap | ✓ v1.3 zap | — | — | follows the pairing (below) | ERC20 pairings only | 1000 bps |
+
+**On Base and Base Sepolia the only pre-buy route is `pairedToken`.** The legacy Base zap
+(v1.1 PositionManager) fills a premine out of the fair-launch allocation, which the SDK pins to
+0 because fair launches are deprecated, so any premine there reverts with
+`PremineExceedsInitialAmount`. An "ordinary" coin with a pre-buy on Base therefore launches
+through `pairedToken` with `pairedToken = FLETHAddress[chainId]` (or `zeroAddress` for raw
+ETH) on the current v1.3 PositionManager — the same generation custom-paired coins already
+use. Earnings splits cannot be combined with that route in this version
+(`PAIRED_MANAGER_LAUNCH_UNSUPPORTED`).
 
 `getLaunchPreBuyCapabilities(chainId)` returns this table for one chain from the SDK's address
 maps (no RPC), including the reason code for each unsupported cell.
@@ -62,19 +71,33 @@ pairing `plan.value` is exactly that fee; the purchase never travels as ETH.
 
 ## Quote model
 
-Every plan comes from three reads of the route's zap `calculateFee`, all pinned to
-`plan.quoteBlockNumber`:
+A premine is an exact-output swap against the whole just-seeded position, so its cost grows
+faster than linearly with size. The zaps' `calculateFee` is a *linear* estimate (market cap ×
+share, plus a 1% buffer): measured on forks of Base, Base Sepolia and Robinhood it under-quotes
+by about 0.15% at 1% of supply, 2.2% at 3%, 4.4% at 5% and 10.2% at 10%. The multichain zap's
+`ethSpent_` return value repeats that estimate rather than the real spend. Neither is good
+enough to size a spending cap, so the planner prices the launch by running it:
 
-| Field | Read | Meaning |
+| `plan.pricing.method` | How `payment.expected` is derived | When |
 | --- | --- | --- |
-| `fee.amount` | premine 0, slippage 0 | The flaunching fee (native ETH). |
-| `payment.expected` | premine, slippage 0 | The protocol's own cost estimate for the purchase, including its 1% buffer. Actual spend is at or below this and the difference is refunded. |
-| `payment.max` | premine, `slippageBps` | The cap the chain enforces. On ETH routes it is `value - fee`; on ERC20 pairings it is `maxPremineCost`. |
+| `simulation` | The launch is executed in an `eth_call` with the sender's code replaced by a tiny probe and its balance overridden (`createLaunchCostProbe`); the probe reports the ETH the launch really consumed, at `plan.quoteBlockNumber`. Exact. | ETH-funded routes and native / flETH pairings, when the node honours `eth_call` state overrides (geth, op-geth, Arbitrum Nitro, Anvil all do). |
+| `protocolQuoteWithSimulatedImpact` | The zap's linear quote in the paired token, scaled by the price impact measured on the native-equivalent launch (same pool curve, same premine). Measured within rounding on the Base Sepolia mUSD fork. | ERC20 pairings (the paired token cannot be conjured for a probe). |
+| `protocolQuote` | The zap's `calculateFee` alone. | No `publicClient` on the SDK instance (no state-override call available). Choose slippage generously — roughly the premine's share in percent. |
+
+In every case, all pinned to `plan.quoteBlockNumber`:
+
+| Field | Meaning |
+| --- | --- |
+| `fee.amount` | The flaunching fee (native ETH): `calculateFee` with premine 0. Zero below the protocol's market-cap threshold. |
+| `payment.expected` | The purchase alone, priced as above. |
+| `payment.max` | `expected × (1 + slippageBps)`, rounded up — the cap the chain enforces. On ETH routes `value = fee + max`; on ERC20 pairings `maxPremineCost = max` and `value = fee`. |
+| `pricing.protocolQuote` | The zap's own linear view at 0 bps and at `slippageBps`, for comparison. |
 
 On-chain enforcement: ETH-funded routes revert with `InsufficientPreminePayment` when the
 premine would cost more than `msg.value - fee`; ERC20 pairings revert with
 `PremineCostExceedsMaximum` when it would cost more than `_maxPremineCost`. Both are the
-quoted `payment.max`; the SDK never represents an estimate as the limit.
+quoted `payment.max`; the SDK never represents an estimate as the limit. Whatever the premine
+actually costs below the cap is all that is taken — the zap refunds the rest.
 
 `plan.funding` reports the sender's ETH (and paired-token) balance against `value` (and
 `maxPremineCost`) at the quote block. A shortfall does not make the plan unsupported — the UI
@@ -99,8 +122,8 @@ Before requesting the first signature, `executeLaunchPreBuy` checks, in order:
 | Recomputed binding equals `plan.binding` | `BINDING_MISMATCH` |
 | `launch.data` decodes to the plan's premine, creator, `maxPremineCost`, pairing, zero trusted signer and empty fee-calculator params, and targets this chain's zap with `launch.value === value` | `CALLDATA_MISMATCH` |
 | Fresh balances cover `value` / `maxPremineCost` | `LaunchPreBuyInsufficientBalanceError` |
-| Fresh `calculateFee` at 0 bps still fits under `value` / `maxPremineCost` | `PRICE_MOVED` or `FEE_CHANGED` |
-| (default `revalidate: "simulate"`) `eth_call` of the launch as the sender succeeds | `PRICE_MOVED` with the revert as `cause` |
+| Fresh pricing (same method as planning, latest block) still fits under `value` / `maxPremineCost` | `PRICE_MOVED` or `FEE_CHANGED` |
+| (default `revalidate: "simulate"`) `eth_call` of the launch as the sender, with the sender's real balance and allowance, succeeds | `PRICE_MOVED` with the revert as `cause` |
 
 All of these throw with `code: "REQUOTE_REQUIRED"` and nothing is sent. Approvals are sent
 first and awaited; the simulation runs after them (it needs the allowance), and the expiry is
@@ -121,9 +144,14 @@ routes sweep them back to the original creator after the manager takes the launc
 
 `LAUNCH_PRE_BUY_REASON_CODES`: `CHAIN_UNSUPPORTED`, `ROUTE_UNSUPPORTED`, `GASLESS_UNSUPPORTED`,
 `PROTECTED_LAUNCH_UNSUPPORTED`, `PAIRED_MANAGER_LAUNCH_UNSUPPORTED`, `ANY_FLAUNCH_UNSUPPORTED`,
-`PAIRED_TOKEN_NOT_APPROVED`, `INVALID_PERCENTAGE`, `EXCEEDS_ROUTE_LIMIT`, `INVALID_LIMIT`,
+`PAIRED_TOKEN_NOT_APPROVED`, `ROUTE_PREMINE_UNAVAILABLE`, `PREMINE_NOT_FILLABLE`,
+`INVALID_PERCENTAGE`, `EXCEEDS_ROUTE_LIMIT`, `INVALID_LIMIT`,
 `INVALID_SLIPPAGE`, `INVALID_CREATOR`, `PREMINE_ALREADY_SET`, `FAIR_LAUNCH_UNSUPPORTED`,
 `SENDER_REQUIRED`, `QUOTE_INCONSISTENT`.
+
+`ROUTE_PREMINE_UNAVAILABLE` is the legacy Base zap (see the matrix). `PREMINE_NOT_FILLABLE`
+means the pricing simulation reverted: the pool cannot deliver that many coins within three
+times the linear quote — reduce the size.
 
 `classifyLaunchPreBuyInput(chainId, input)` returns every static reason without RPC;
 `planLaunchPreBuy` returns them all in `reasons` and stops before quoting. `PREMINE_ALREADY_SET`
