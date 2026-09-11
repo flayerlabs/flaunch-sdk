@@ -208,7 +208,7 @@ test("capability matrix per chain", () => {
       const cap = caps.routes[route];
       assert.equal(cap.supported, supportedRoutes.includes(route), `${chainId} ${route}`);
       assert.equal(cap.maxPreBuyBps, 1000);
-      if (route === "pairedToken") {
+      if (route === "pairedToken" || route === "vested") {
         assert.deepEqual(cap.paymentAssets, ["native", "pairedErc20"]);
         assert.equal(cap.requiresApproval, "erc20Only");
       } else {
@@ -229,8 +229,9 @@ test("capability matrix per chain", () => {
   };
   const ethRoutes = ["standard", "revenueManager", "splitManager", "dynamicSplitManager"];
   expect(base.id, ["pairedToken"]);
-  expect(baseSepolia.id, ["pairedToken"]);
-  expect(robinhood.id, [...LAUNCH_PRE_BUY_ROUTES]);
+  // the AnyFlaunchZap (vested launches) is deployed on Base Sepolia only
+  expect(baseSepolia.id, ["pairedToken", "vested"]);
+  expect(robinhood.id, LAUNCH_PRE_BUY_ROUTES.filter((route) => route !== "vested"));
   expect(mainnet.id, ethRoutes);
   expect(unichain.id, ethRoutes);
   const unknown = expect(999_999, []);

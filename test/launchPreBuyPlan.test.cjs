@@ -28,6 +28,10 @@ const {
   PairedTokenRegistryV1_3Address,
   PairedTokenPositionManagerV1_3Address,
   DynamicAddressFeeSplitManagerAddress,
+  AnyFlaunchZapAbi,
+  AnyFlaunchZapAddress,
+  FLETHAddress,
+  hashVestingSchedules,
   createFlaunchCalldata,
   decodeCallData,
   preBuyAmountFromBps,
@@ -80,7 +84,18 @@ function premineCost(premine, slippage) {
 const IMPACT_BPS = 200n;
 const withImpact = (linear) => (linear * (10_000n + IMPACT_BPS)) / 10_000n;
 const ceilSlippage = (amount, bps) => (amount * (10_000n + bps) + 9_999n) / 10_000n;
-const ZAP_ABIS = [FlaunchZapAbi, FlaunchZapV1_3Abi, FlaunchZapV1_1_6Abi];
+const ZAP_ABIS = [FlaunchZapAbi, FlaunchZapV1_3Abi, FlaunchZapV1_1_6Abi, AnyFlaunchZapAbi];
+const vestedParams = {
+  name: "Coin",
+  symbol: "COIN",
+  tokenUri: "ipfs://coin",
+  initialMarketCapUSD: 4000,
+  creator: SENDER,
+  creatorFeeAllocationPercent: 100,
+  vestingSchedules: [
+    { beneficiary: OTHER, percent: 20, cliffDuration: 0, vestDuration: 86_400 },
+  ],
+};
 const premineFromCalldata = (data) => {
   for (const abi of ZAP_ABIS) {
     try {
@@ -147,6 +162,7 @@ function fakeDrift({
             if (struct.pairedToken === undefined) return state.fee + cost;
             const native =
               struct.pairedToken === zeroAddress ||
+              struct.pairedToken.toLowerCase() === FLETHAddress[baseSepolia.id].toLowerCase() ||
               tokenConfig.tokenType === 1 ||
               tokenConfig.tokenType === 3;
             return native
@@ -165,6 +181,7 @@ function fakeDrift({
               bidWallThreshold: 0n,
             };
           }
+          if (fn === "maxVestedBps") return state.maxVestedBps ?? 5000n;
           if (fn === "isApproved") return tokenConfig.approved;
           if (fn === "allowance") return state.allowance;
           if (fn === "balanceOf") return state.erc20Balance;
@@ -737,6 +754,139 @@ test("route C ERC20 execute: approval first and awaited, then flaunch with maxPr
   });
   await assert.rejects(failedSdk.executeLaunchPreBuy(planned.plan), /approval is not confirmed/);
   assert.equal(writes(failed).filter((w) => w.fn === "flaunch").length, 0);
+});
+
+test("vested route (Base Sepolia, flETH default): cap read, three pinned fee reads on the AnyFlaunchZap, maxPremineCost overload, schedules bound", async () => {
+  const drift = fakeDrift({ tokenConfig: { approved: true, tokenType: 1, decimals: 18 } });
+  const publicClient = fakePublicClient(drift);
+  const sdk = new ReadFlaunchSDK(baseSepolia.id, drift, publicClient);
+  const result = await sdk.planLaunchPreBuy({
+    route: "vested",
+    params: vestedParams,
+    preBuyBps: 100,
+    slippageBps: 50,
+  });
+  assert.equal(result.supported, true, JSON.stringify(result.reasons));
+  const { plan } = result;
+  const zap = AnyFlaunchZapAddress[baseSepolia.id];
+  assert.equal(plan.route, "vested");
+  assert.equal(plan.zapFamily, "anyVested");
+  assert.equal(lower(plan.launch.to), lower(zap));
+  assert.equal(lower(plan.pairedToken), lower(FLETHAddress[baseSepolia.id]), "defaults to flETH");
+  const [cap] = reads(drift, "maxVestedBps");
+  assert.equal(lower(cap.address), lower(zap));
+  assert.deepEqual(cap.options, { block: BLOCK });
+  const feeReads = reads(drift, "calculateFee");
+  assert.equal(feeReads.length, 3);
+  for (const read of feeReads) {
+    assert.equal(lower(read.address), lower(zap));
+    assert.deepEqual(read.options, { block: BLOCK });
+    assert.equal(read.args._flaunchParams.vestingSchedules.length, 1);
+    assert.equal(read.args._flaunchParams.vestingSchedules[0].amount, 20n * 10n ** 27n);
+  }
+  const premine = preBuyAmountFromBps(100);
+  assert.deepEqual(
+    feeReads.map(({ args }) => [args._flaunchParams.premineAmount, args._slippage]),
+    [[0n, 0n], [premine, 0n], [premine, 50n]]
+  );
+  // flETH pairing → ETH-funded like the paired route: probe-priced, fee + max as value
+  assert.deepEqual(plan.payment.asset, { chainId: baseSepolia.id, address: zeroAddress, decimals: 18 });
+  assert.equal(plan.pricing.method, "simulation");
+  assert.equal(plan.payment.expected, 1020n);
+  assert.equal(plan.payment.max, 1026n);
+  assert.equal(plan.maxPremineCost, 1026n);
+  assert.equal(plan.value, FEE + 1026n);
+  assert.deepEqual(plan.approvals, []);
+  const decoded = decodeFunctionData({ abi: AnyFlaunchZapAbi, data: plan.launch.data });
+  assert.equal(decoded.args.length, 3, "the _maxPremineCost overload, no manager");
+  assert.equal(decoded.args[0].premineAmount, premine);
+  assert.equal(decoded.args[1], zeroAddress);
+  assert.equal(decoded.args[2], 1026n);
+  assert.equal(plan.vestingSchedulesHash, hashVestingSchedules(decoded.args[0].vestingSchedules));
+  assert.equal(computeLaunchPreBuyBinding(plan), plan.binding);
+  // editing the schedules hash invalidates the binding
+  assert.notEqual(
+    computeLaunchPreBuyBinding({ ...plan, vestingSchedulesHash: `0x${"00".repeat(32)}` }),
+    plan.binding
+  );
+
+  // over the zap's cap → VESTED_SUPPLY_EXCEEDS_CAP, before any pricing
+  const capped = fakeDrift({ tokenConfig: { approved: true, tokenType: 1, decimals: 18 } });
+  capped.state.maxVestedBps = 1000n;
+  const cappedSdk = new ReadFlaunchSDK(baseSepolia.id, capped, fakePublicClient(capped));
+  const rejected = await cappedSdk.planLaunchPreBuy({ route: "vested", params: vestedParams, preBuyBps: 100, slippageBps: 50 });
+  assert.deepEqual(rejected, { supported: false, chainId: baseSepolia.id, route: "vested", reasons: ["VESTED_SUPPLY_EXCEEDS_CAP"] });
+  assert.equal(reads(capped, "calculateFee").length, 0);
+
+  // static rejections: bad schedule, protected launch, wrong chain — no RPC
+  const bad = fakeDrift();
+  const badSdk = new ReadFlaunchSDK(baseSepolia.id, bad);
+  const badSchedule = await badSdk.planLaunchPreBuy({
+    route: "vested",
+    params: { ...vestedParams, vestingSchedules: [{ beneficiary: OTHER, percent: 5, cliffDuration: 10, vestDuration: 5 }] },
+    preBuyBps: 100,
+    slippageBps: 50,
+  });
+  assert.deepEqual(badSchedule.reasons, ["INVALID_VESTING_SCHEDULE"]);
+  const gated = await badSdk.planLaunchPreBuy({
+    route: "vested",
+    params: { ...vestedParams, trustedSignerSettings: { enabled: true } },
+    preBuyBps: 100,
+    slippageBps: 50,
+  });
+  assert.deepEqual(gated.reasons, ["PROTECTED_LAUNCH_UNSUPPORTED"]);
+  assert.equal(bad.interactions.length, 0);
+  const elsewhere = await new ReadFlaunchSDK(base.id, bad).planLaunchPreBuy({ route: "vested", params: vestedParams, preBuyBps: 100, slippageBps: 50 });
+  assert.deepEqual(elsewhere.reasons, ["ROUTE_UNSUPPORTED"]);
+});
+
+test("vested route with a manager and an ERC20 pairing: manager + maxPremineCost overload, approval, fee-only value; execute writes it once", async () => {
+  const drift = fakeDrift({ tokenConfig: { approved: true, tokenType: 4, decimals: 6 } });
+  const sdk = new ReadWriteFlaunchSDK(baseSepolia.id, drift, fakePublicClient(drift));
+  const result = await sdk.planLaunchPreBuy({
+    route: "vested",
+    params: {
+      ...vestedParams,
+      pairedToken: PAIRED,
+      treasuryManagerParams: { manager: OTHER, initializeData: "0x1234" },
+    },
+    preBuyBps: 100,
+    slippageBps: 50,
+  });
+  assert.equal(result.supported, true, JSON.stringify(result.reasons));
+  const { plan } = result;
+  const zap = AnyFlaunchZapAddress[baseSepolia.id];
+  assert.deepEqual(plan.payment.asset, { chainId: baseSepolia.id, address: PAIRED, decimals: 6 });
+  assert.equal(plan.pricing.method, "protocolQuoteWithSimulatedImpact");
+  assert.equal(plan.maxPremineCost, 1026n);
+  assert.equal(plan.value, FEE, "ERC20 premine never leaks into msg.value");
+  assert.equal(plan.approvals.length, 1);
+  assert.equal(plan.approvals[0].spender, zap);
+  assert.equal(plan.approvals[0].amount, 1026n);
+  const decoded = decodeFunctionData({ abi: AnyFlaunchZapAbi, data: plan.launch.data });
+  assert.equal(decoded.args.length, 4, "manager + _maxPremineCost overload");
+  assert.equal(decoded.args[1].manager, OTHER);
+  assert.equal(decoded.args[1].initializeData, "0x1234");
+  assert.equal(decoded.args[2], zeroAddress);
+  assert.equal(decoded.args[3], 1026n);
+
+  drift.interactions.length = 0;
+  const { hash } = await sdk.executeLaunchPreBuy(plan);
+  assert.equal(hash, TX_HASH);
+  const all = writes(drift);
+  assert.equal(all.length, 2);
+  assert.equal(all[0].fn, "approve");
+  assert.deepEqual(all[0].args, { spender: zap, amount: 1026n });
+  assert.equal(all[1].fn, "flaunch");
+  assert.equal(lower(all[1].address), lower(zap));
+  assert.deepEqual(Object.keys(all[1].args), ["_flaunchParams", "_treasuryManagerParams", "_trustedFeeSigner", "_maxPremineCost"]);
+  assert.equal(all[1].args._maxPremineCost, 1026n);
+  assert.equal(all[1].args._flaunchParams.premineAmount, plan.premineAmount);
+  assert.deepEqual(all[1].options, { value: FEE });
+  const simulations = drift.interactions.filter((i) => i.kind === "simulate");
+  assert.equal(simulations.length, 1);
+  assert.equal(lower(simulations[0].address), lower(zap));
+  assert.deepEqual(simulations[0].options, { from: SENDER, value: FEE });
 });
 
 test("flaunchWithPreBuy throws a typed error for unsupported launches", async () => {
