@@ -7,6 +7,7 @@ import {
 import { chainIdToChain } from "./chainIdToChain";
 import {
   DynamicAddressFeeSplitManagerAddress,
+  AnyPositionManagerV1_3Address,
   FeeEscrowV1_3Address,
   FlaunchManagerZapV1_3Address,
   TreasuryManagerFactoryV1_3Address,
@@ -86,8 +87,10 @@ export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
  */
 export function getV1_3PositionManagers(chainId: number): Address[] {
   const current = PairedTokenPositionManagerV1_3Address[chainId];
+  const any = AnyPositionManagerV1_3Address[chainId];
   return [
     ...(current ? [current] : []),
+    ...(any ? [any] : []),
     ...(SupersededPositionManagerV1_3Address[chainId] ?? []),
   ];
 }

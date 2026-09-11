@@ -42,6 +42,7 @@ import {
   StateViewAddress,
   PoolManagerAddress,
   FLETHAddress,
+  DefaultPairedTokenAddress,
   FairLaunchAddress,
   FlaunchZapAddress,
   FlaunchAddress,
@@ -55,6 +56,8 @@ import {
   FairLaunchV1_1Address,
   TreasuryManagerFactoryAddress,
   AnyPositionManagerAddress,
+  AnyPositionManagerV1_3Address,
+  AnyFlaunchV1_3Address,
   AnyBidWallAddress,
   AnyFlaunchAddress,
   FeeEscrowAddress,
@@ -68,7 +71,6 @@ import {
   FlaunchV1_2Address,
   // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663)
   FlaunchPositionManagerV1_3Address,
-  SupersededPositionManagerV1_3Address,
   FlaunchZapV1_3Address,
   PairedTokenPositionManagerV1_3Address,
   PairedTokenRegistryV1_3Address,
@@ -76,6 +78,7 @@ import {
   FlaunchV1_3Address,
   BidWallV1_3Address,
   FlaunchPositionManagerMultichainAddress,
+  FlaunchMultichainAddress,
   FlaunchZapMultichainAddress,
   // V1.2 and AnyPositionManager addresses will be imported here when available
   PoolSwapForHookV1_3Address,
@@ -208,6 +211,7 @@ import {
 import { UniversalRouterAbi } from "abi/UniversalRouter";
 import { FlaunchPositionManagerV1_2Abi } from "abi/FlaunchPositionManagerV1_2";
 import { FlaunchPositionManagerV1_3Abi } from "abi/FlaunchPositionManagerV1_3";
+import { AnyPositionManagerV1_3Abi } from "abi/AnyPositionManagerV1_3";
 import { FlaunchPositionManagerAbi } from "abi/FlaunchPositionManager";
 import {
   CallWithDescription,
@@ -733,6 +737,9 @@ export class ReadFlaunchSDK {
     return this.getBaseClient("readPoolManager");
   }
   get readStateView() {
+    if (DefaultPairedTokenAddress[this.chainId] === zeroAddress && this.pairedSwapStateView) {
+      return this.pairedSwapStateView;
+    }
     return this.getBaseClient("readStateView");
   }
   get readFairLaunch() {
@@ -1005,13 +1012,10 @@ export class ReadFlaunchSDK {
       }
     };
 
-    let result: { hook: Address; version: FlaunchVersion } | null = null;
-    for (const hook of getV1_3PositionManagers(this.chainId)) {
-      if (await isValidOn(hook)) {
-        result = { hook, version: FlaunchVersion.V1_3 };
-        break;
-      }
-    }
+    const pairedPool = await this.locatePairedPool(coinAddress);
+    let result: { hook: Address; version: FlaunchVersion } | null = pairedPool
+      ? { hook: pairedPool.hook, version: FlaunchVersion.V1_3 }
+      : null;
     if (!result) {
       const multichainHook = FlaunchPositionManagerMultichainAddress[this.chainId];
       if (multichainHook && (await isValidOn(multichainHook))) {
@@ -1059,6 +1063,17 @@ export class ReadFlaunchSDK {
     }
   }
 
+  protected assertLegacyETHSwapHook(hook: Address) {
+    if (
+      DefaultPairedTokenAddress[this.chainId] === zeroAddress &&
+      getV1_3PositionManagers(this.chainId).some((current) => isAddressEqual(current, hook))
+    ) {
+      throw new Error(
+        "This pool requires the protected paired-token swap API: use quotePairedPool or planPairedTokenSwap"
+      );
+    }
+  }
+
   /** The paired-token PositionManager client for a given hook address, memoised per hook. */
   protected pairedTokenPositionManagerAt(hook: Address): ReadPairedTokenPositionManagerV1_3 {
     const key = hook.toLowerCase();
@@ -1096,7 +1111,7 @@ export class ReadFlaunchSDK {
       } catch {
         continue;
       }
-      if (isEmptyPoolKey(poolKey)) continue;
+      if (poolKey.tickSpacing === 0 || isEmptyPoolKey(poolKey)) continue;
       const located = { hook, poolKey };
       this.pairedPoolsByCoin.set(key, located);
       return located;
@@ -1731,6 +1746,16 @@ export class ReadFlaunchSDK {
    * @param version - The version to get the flaunch contract instance for
    */
   getFlaunch(version: FlaunchVersion) {
+    if (isMultichainDeployment(this.chainId)) {
+      if (version === FlaunchVersion.V1_3 && FlaunchV1_3Address[this.chainId]) {
+        return new ReadFlaunchV1_2(FlaunchV1_3Address[this.chainId], this.drift);
+      }
+      if (version === FlaunchVersion.ANY && AnyFlaunchV1_3Address[this.chainId]) {
+        return new ReadAnyFlaunch(AnyFlaunchV1_3Address[this.chainId], this.drift);
+      }
+      return new ReadFlaunchV1_2(FlaunchMultichainAddress[this.chainId], this.drift);
+    }
+
     switch (version) {
       case FlaunchVersion.V1:
         return this.readFlaunch;
@@ -1757,6 +1782,12 @@ export class ReadFlaunchSDK {
 
   getPositionManagerAddress(version: FlaunchVersion) {
     if (isMultichainDeployment(this.chainId)) {
+      if (version === FlaunchVersion.V1_3 && FlaunchPositionManagerV1_3Address[this.chainId]) {
+        return FlaunchPositionManagerV1_3Address[this.chainId];
+      }
+      if (version === FlaunchVersion.ANY && AnyPositionManagerV1_3Address[this.chainId]) {
+        return AnyPositionManagerV1_3Address[this.chainId];
+      }
       return FlaunchPositionManagerMultichainAddress[this.chainId];
     }
     return this.getPositionManager(version).contract.address;
@@ -1778,6 +1809,14 @@ export class ReadFlaunchSDK {
   async getFlaunchTokenIdForMemecoin(
     coinAddress: Address
   ): Promise<{ flaunchAddress: Address; tokenId: bigint }> {
+    const pairedPool = await this.locatePairedPool(coinAddress);
+    if (pairedPool) {
+      const flaunchAddress = await this.pairedTokenPositionManagerAt(pairedPool.hook)
+        .contract.read("flaunchContract");
+      const tokenId = await new ReadFlaunchV1_2(flaunchAddress, this.drift).tokenId(coinAddress);
+      return { flaunchAddress, tokenId };
+    }
+
     const version = await this.getCoinVersion(coinAddress);
     const flaunch = this.getFlaunch(version);
     const tokenId = await flaunch.tokenId(coinAddress);
@@ -1999,14 +2038,9 @@ export class ReadFlaunchSDK {
 
   /** Parses PoolCreated from logs emitted by a PositionManager on this chain. */
   getPoolCreatedFromLogs(logs: readonly Log[]): PoolCreatedEventData | null {
-    const positionManagerV1_3 =
-      PairedTokenPositionManagerV1_3Address[this.chainId];
     // A chain can carry more than one v1.3 hook generation (Robinhood: the v1.3.1 hooks were
     // regenerated as v1.3.3); a receipt from either is a v1.3 PoolCreated.
-    const v1_3Hooks = [
-      ...(positionManagerV1_3 ? [positionManagerV1_3] : []),
-      ...(SupersededPositionManagerV1_3Address[this.chainId] ?? []),
-    ];
+    const v1_3Hooks = getV1_3PositionManagers(this.chainId);
 
     if (v1_3Hooks.length > 0) {
       for (const log of logs) {
@@ -2039,7 +2073,33 @@ export class ReadFlaunchSDK {
             };
           }
         } catch {
-          continue;
+          // Imported pools emit a smaller tuple, with no launch metadata or flaunch fee.
+          try {
+            const { args } = decodeEventLog({
+              abi: AnyPositionManagerV1_3Abi,
+              data: log.data,
+              topics: log.topics,
+            });
+            return {
+              poolId: args._poolId,
+              memecoin: args._memecoin,
+              memecoinTreasury: args._memecoinTreasury,
+              tokenId: args._tokenId,
+              currencyFlipped: args._currencyFlipped,
+              flaunchFee: 0n,
+              params: {
+                name: "", symbol: "", tokenUri: "",
+                initialTokenFairLaunch: 0n, premineAmount: 0n, flaunchAt: 0n,
+                creator: args._params.creator,
+                creatorFeeAllocation: Number(args._params.creatorFeeAllocation),
+                initialPriceParams: args._params.initialPriceParams,
+                feeCalculatorParams: args._params.feeCalculatorParams,
+                pairedToken: args._params.pairedToken,
+              },
+            };
+          } catch {
+            continue;
+          }
         }
       }
     }
@@ -2222,7 +2282,15 @@ export class ReadFlaunchSDK {
   async coinPriceInETH(coinAddress: Address, version?: FlaunchVersion) {
     const coinVersion = await this.determineCoinVersion(coinAddress, version);
 
-    const isFLETHZero = this.flETHIsCurrencyZero(coinAddress);
+    const pairedPool = DefaultPairedTokenAddress[this.chainId] === zeroAddress
+      ? await this.locatePairedPool(coinAddress) : null;
+    const pairedToken = pairedPool ? pairedTokenOfPoolKey(pairedPool.poolKey, coinAddress) : undefined;
+    if (pairedToken !== undefined && pairedToken !== zeroAddress) {
+      throw new Error("ERC20-paired coin prices require conversion from the paired token; use quotePairedPool");
+    }
+    const isFLETHZero = pairedPool
+      ? isAddressEqual(pairedPool.poolKey.currency0, zeroAddress)
+      : this.flETHIsCurrencyZero(coinAddress);
     const currentTick = await this.currentTick(coinAddress, coinVersion);
 
     const price = Math.pow(1.0001, currentTick);
@@ -2890,20 +2958,7 @@ export class ReadFlaunchSDK {
    * @returns Promise<string> - The pool ID
    */
   async poolId(coinAddress: Address, version?: FlaunchVersion) {
-    const hookAddress = await this.getPositionManagerAddressForCoin(
-      coinAddress,
-      version
-    );
-
-    return getPoolId(
-      orderPoolKey({
-        currency0: FLETHAddress[this.chainId],
-        currency1: coinAddress,
-        fee: 0,
-        tickSpacing: 60,
-        hooks: hookAddress,
-      })
-    );
+    return getPoolId(await this.createPoolKeyForCoin(coinAddress, version));
   }
 
   /**
@@ -2913,7 +2968,7 @@ export class ReadFlaunchSDK {
    * @param params.slippagePercent - The slippage percent
    * @returns Promise<bigint> - The flaunching fee
    */
-  getFlaunchingFee(params: {
+  async getFlaunchingFee(params: {
     sender: Address;
     initialMarketCapUSD: number;
     slippagePercent?: number;
@@ -2930,6 +2985,21 @@ export class ReadFlaunchSDK {
       ],
       [initialMCapInUSDCWei]
     );
+
+    if (DefaultPairedTokenAddress[this.chainId] === zeroAddress) {
+      const positionManager = new ReadFlaunchPositionManagerV1_2(
+        FlaunchPositionManagerV1_3Address[this.chainId], this.drift
+      );
+      const initialPrice = new ReadInitialPrice(
+        await positionManager.contract.read("initialPrice"), this.drift
+      );
+      const fee = await initialPrice.getFlaunchingFee({ sender: params.sender, initialPriceParams });
+      return getAmountWithSlippage({
+        amount: fee,
+        slippage: ((params.slippagePercent ?? 0) / 100).toFixed(18),
+        swapType: "EXACT_OUT",
+      });
+    }
 
     return this.readPositionManagerV1_1.getFlaunchingFee({
       sender: params.sender,
@@ -2962,6 +3032,18 @@ export class ReadFlaunchSDK {
       ],
       [initialMCapInUSDCWei]
     );
+
+    if (DefaultPairedTokenAddress[this.chainId] === zeroAddress) {
+      return this.calculatePairedTokenFlaunchFee({
+        flaunchParams: {
+          name: "", symbol: "", tokenUri: "",
+          premineAmount: params.premineAmount,
+          creator: zeroAddress, creatorFeeAllocation: 0, flaunchAt: 0n,
+          initialPriceParams, feeCalculatorParams: "0x", pairedToken: zeroAddress,
+        },
+        slippageBps: BigInt(Math.round((params.slippagePercent ?? 5) * 100)),
+      }).then((fee) => fee.ethRequired);
+    }
 
     return this.readFlaunchZap.ethRequiredToFlaunch({
       premineAmount: params.premineAmount,
@@ -3000,6 +3082,7 @@ export class ReadFlaunchSDK {
       version
     );
 
+    this.assertLegacyETHSwapHook(hookAddress);
     return this.readQuoter.getSellQuoteExactInput({
       coinAddress,
       amountIn,
@@ -3042,6 +3125,7 @@ export class ReadFlaunchSDK {
       version
     );
 
+    this.assertLegacyETHSwapHook(hookAddress);
     return this.readQuoter.getBuyQuoteExactInput({
       coinAddress,
       amountIn,
@@ -3084,6 +3168,7 @@ export class ReadFlaunchSDK {
       version
     );
 
+    this.assertLegacyETHSwapHook(hookAddress);
     return this.readQuoter.getBuyQuoteExactOutput({
       coinAddress,
       coinOut: amountOut,
@@ -3745,13 +3830,19 @@ export class ReadFlaunchSDK {
     coinAddress: Address,
     version?: FlaunchVersion
   ) {
+    const hook = await this.getPositionManagerAddressForCoin(coinAddress, version);
+    if (getV1_3PositionManagers(this.chainId).some((current) => isAddressEqual(current, hook))) {
+      const cached = this.pairedPoolsByCoin.get(coinAddress.toLowerCase());
+      if (cached && isAddressEqual(cached.hook, hook)) return cached.poolKey;
+      return this.pairedTokenPositionManagerAt(hook).poolKey(coinAddress);
+    }
     const flethAddress = FLETHAddress[this.chainId];
     return orderPoolKey({
       currency0: coinAddress,
       currency1: flethAddress,
       fee: 0,
       tickSpacing: this.TICK_SPACING,
-      hooks: await this.getPositionManagerAddressForCoin(coinAddress, version),
+      hooks: hook,
     });
   }
 }
@@ -4276,6 +4367,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       params.coinAddress,
       version
     );
+    this.assertLegacyETHSwapHook(hookAddress);
 
     const sender = await this.drift.getSignerAddress();
 
@@ -4369,6 +4461,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       params.coinAddress,
       version
     );
+    this.assertLegacyETHSwapHook(hookAddress);
 
     let amountOutMin: bigint;
 

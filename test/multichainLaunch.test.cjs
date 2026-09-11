@@ -12,9 +12,13 @@ const {
 const { base, mainnet, robinhood, unichain } = require("viem/chains");
 const {
   AddressFeeSplitManagerAddress,
+  AddressFeeSplitManagerV1_3Address,
   DynamicAddressFeeSplitManagerAddress,
+  DynamicAddressFeeSplitManagerV1_3Address,
   FlaunchZapAbi,
   FlaunchZapMultichainAddress,
+  FlaunchZapV1_3Abi,
+  FlaunchZapV1_3Address,
   createFlaunchCalldata,
   decodeCallData,
 } = require("../dist/index.cjs.js");
@@ -36,6 +40,9 @@ const params = {
 };
 
 function multichainHarness(chain) {
+  const nativeDefault = chain.id === mainnet.id;
+  const abi = nativeDefault ? FlaunchZapV1_3Abi : FlaunchZapAbi;
+  const zapAddress = nativeDefault ? FlaunchZapV1_3Address[chain.id] : FlaunchZapMultichainAddress[chain.id];
   const ethCalls = [];
   let requestCount = 0;
   const publicClient = createPublicClient({
@@ -49,11 +56,13 @@ function multichainHarness(chain) {
           ethCalls.push({
             transaction,
             decoded: decodeFunctionData({
-              abi: FlaunchZapAbi,
+              abi,
               data: transaction.data,
             }),
           });
-          return encodeAbiParameters([{ type: "uint256" }], [FEE]);
+          return nativeDefault
+            ? encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [FEE, 0n])
+            : encodeAbiParameters([{ type: "uint256" }], [FEE]);
         }
         throw new Error(`Unexpected RPC request: ${method}`);
       },
@@ -61,6 +70,9 @@ function multichainHarness(chain) {
   });
 
   return {
+    abi,
+    zapAddress,
+    nativeDefault,
     ethCalls,
     get requestCount() {
       return requestCount;
@@ -82,7 +94,7 @@ test("multichain launches encode the canonical tuple on all three chains", async
       const feeCall = harness.ethCalls[0];
       assert.equal(
         feeCall.transaction.to.toLowerCase(),
-        FlaunchZapMultichainAddress[chain.id].toLowerCase()
+        harness.zapAddress.toLowerCase()
       );
       assert.equal(feeCall.decoded.functionName, "calculateFee");
       assert.equal(feeCall.decoded.args[1], 500n);
@@ -98,11 +110,13 @@ test("multichain launches encode the canonical tuple on all three chains", async
         "flaunchAt",
         "initialPriceParams",
         "feeCalculatorParams",
+        ...(harness.nativeDefault ? ["pairedToken"] : []),
       ]);
       assert.equal(feeParams.premineAmount, 42n);
       assert.equal(feeParams.flaunchAt, 123n);
       assert.equal(feeParams.creatorFeeAllocation, 110);
       assert.equal(feeParams.feeCalculatorParams, "0x");
+      if (harness.nativeDefault) assert.equal(feeParams.pairedToken, zeroAddress);
       assert.equal(
         decodeAbiParameters(
           [{ type: "uint256" }],
@@ -114,21 +128,22 @@ test("multichain launches encode the canonical tuple on all three chains", async
       const transaction = decodeCallData(encodedCall);
       assert.equal(
         transaction.to.toLowerCase(),
-        FlaunchZapMultichainAddress[chain.id].toLowerCase()
+        harness.zapAddress.toLowerCase()
       );
       assert.equal(transaction.value, FEE);
       const flaunchCall = decodeFunctionData({
-        abi: FlaunchZapAbi,
+        abi: harness.abi,
         data: transaction.data,
       });
       assert.equal(flaunchCall.functionName, "flaunch");
       assert.deepEqual(flaunchCall.args[0], feeParams);
       assert.equal(flaunchCall.args[1], zeroAddress);
+      if (harness.nativeDefault) assert.equal(flaunchCall.args[2], 0n);
     });
   }
 });
 
-test("multichain dynamic split launches encode the v1.2.2 manager overload", async (t) => {
+test("multichain dynamic split launches select the chain's current manager generation", async (t) => {
   const secondRecipient = "0x2222222222222222222222222222222222222222";
 
   for (const chain of multichainDeploymentChains) {
@@ -150,12 +165,12 @@ test("multichain dynamic split launches encode the v1.2.2 manager overload", asy
       const transaction = decodeCallData(encodedCall);
       assert.equal(
         transaction.to.toLowerCase(),
-        FlaunchZapMultichainAddress[chain.id].toLowerCase()
+        harness.zapAddress.toLowerCase()
       );
       assert.equal(transaction.value, FEE);
 
       const flaunchCall = decodeFunctionData({
-        abi: FlaunchZapAbi,
+        abi: harness.abi,
         data: transaction.data,
       });
       assert.equal(flaunchCall.functionName, "flaunch");
@@ -163,11 +178,13 @@ test("multichain dynamic split launches encode the v1.2.2 manager overload", asy
       const managerParams = flaunchCall.args[1];
       assert.equal(
         managerParams.manager.toLowerCase(),
-        DynamicAddressFeeSplitManagerAddress[chain.id].toLowerCase()
+        (harness.nativeDefault ? DynamicAddressFeeSplitManagerV1_3Address : DynamicAddressFeeSplitManagerAddress)[chain.id].toLowerCase()
       );
       assert.equal(managerParams.permissions, zeroAddress);
       assert.equal(managerParams.depositData, "0x");
       assert.equal(flaunchCall.args[2], zeroAddress);
+      assert.equal(flaunchCall.args.length, harness.nativeDefault ? 4 : 3);
+      if (harness.nativeDefault) assert.equal(flaunchCall.args[3], 0n);
 
       const [initializeParams] = decodeAbiParameters(
         [
@@ -243,19 +260,17 @@ test("multichain revenue manager launches deposit into the existing instance", a
       const transaction = decodeCallData(encodedCall);
       assert.equal(
         transaction.to.toLowerCase(),
-        FlaunchZapMultichainAddress[chain.id].toLowerCase()
+        harness.zapAddress.toLowerCase()
       );
       assert.equal(transaction.value, FEE);
 
       const flaunchCall = decodeFunctionData({
-        abi: FlaunchZapAbi,
+        abi: harness.abi,
         data: transaction.data,
       });
       assert.equal(flaunchCall.functionName, "flaunch");
-      // Three arguments means the treasury-manager overload was selected. The
-      // two-argument overload would encode a valid call that silently drops
-      // the manager.
-      assert.equal(flaunchCall.args.length, 3);
+      // The current Ethereum overload also carries the explicit premine cost cap.
+      assert.equal(flaunchCall.args.length, harness.nativeDefault ? 4 : 3);
 
       const managerParams = flaunchCall.args[1];
       assert.equal(managerParams.manager, revenueManagerInstanceAddress);
@@ -285,15 +300,15 @@ test("multichain static split launches deploy the AddressFeeSplitManager", async
       });
 
       const flaunchCall = decodeFunctionData({
-        abi: FlaunchZapAbi,
+        abi: harness.abi,
         data: decodeCallData(encodedCall).data,
       });
-      assert.equal(flaunchCall.args.length, 3);
+      assert.equal(flaunchCall.args.length, harness.nativeDefault ? 4 : 3);
 
       const managerParams = flaunchCall.args[1];
       assert.equal(
         managerParams.manager.toLowerCase(),
-        AddressFeeSplitManagerAddress[chain.id].toLowerCase()
+        (harness.nativeDefault ? AddressFeeSplitManagerV1_3Address : AddressFeeSplitManagerAddress)[chain.id].toLowerCase()
       );
 
       const [initializeParams] = decodeAbiParameters(
@@ -393,20 +408,20 @@ test("every multichain IPFS entry point preserves its manager and uploaded URI",
     const cases = [
       ["flaunchIPFS", params, undefined],
       ["flaunchIPFSWithRevenueManager", { ...params, revenueManagerInstanceAddress }, revenueManagerInstanceAddress],
-      ["flaunchIPFSWithSplitManager", staticSplit, AddressFeeSplitManagerAddress[chain.id]],
+      ["flaunchIPFSWithSplitManager", staticSplit, (chain.id === mainnet.id ? AddressFeeSplitManagerV1_3Address : AddressFeeSplitManagerAddress)[chain.id]],
       ["flaunchIPFSWithDynamicSplitManager", {
         ...params, creatorShare: 2_000_000n, managerOwnerShare: 0n,
         moderator: CREATOR, splitReceivers: [{ address: CREATOR, share: 10_000_000n }],
-      }, DynamicAddressFeeSplitManagerAddress[chain.id]],
+      }, (chain.id === mainnet.id ? DynamicAddressFeeSplitManagerV1_3Address : DynamicAddressFeeSplitManagerAddress)[chain.id]],
     ];
     for (const [method, input, manager] of cases) {
-      const { sdk } = multichainHarness(chain);
+      const { sdk, abi, nativeDefault } = multichainHarness(chain);
       const call = decodeCallData(await sdk[method]({
         ...input, metadata: { base64Image: "aW1hZ2U=", description: "Test" },
       }));
-      const decoded = decodeFunctionData({ abi: FlaunchZapAbi, data: call.data });
+      const decoded = decodeFunctionData({ abi, data: call.data });
       assert.equal(decoded.args[0].tokenUri, "ipfs://test-cid");
-      assert.equal(decoded.args.length, manager ? 3 : 2);
+      assert.equal(decoded.args.length, (manager ? 3 : 2) + (nativeDefault ? 1 : 0));
       if (manager) assert.equal(decoded.args[1].manager.toLowerCase(), manager.toLowerCase());
     }
   }

@@ -5,7 +5,7 @@
 
 A TypeScript SDK for seamless interaction with the Flaunch protocol and Uniswap V4.
 
-> This protected-swap branch is release-blocked. Its planner requires new router capabilities not supplied by the current legacy address maps. Follow [the coordinated release gates](./PROTECTED_SWAP_RELEASE.md); do not publish or deploy a dependency-only upgrade.
+> Protected paired-token swaps require a router exposing `exactInputVersion() == 1`. The current Base, Base Sepolia, Robinhood and Ethereum router maps target this generation; unsupported routers fail closed. See the [protected-swap release record](./PROTECTED_SWAP_RELEASE.md).
 
 ![Flaunch Header](https://raw.githubusercontent.com/flayerlabs/flaunch-sdk/refs/heads/master/.github/flaunch-header.png)
 
@@ -22,9 +22,13 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 
 ## Network support
 
-Base and Base Sepolia retain their generation-specific launch paths. Ethereum, Unichain, and Robinhood support standard direct launches, existing-manager launches, static and dynamic address fee split launches, the IPFS metadata helper, `PoolCreated` receipt decoding, and creator fee claims through the legacy multichain zap. This does not add v1.3 paired-token manager launches or general multichain liquidity support. Robinhood also supports native ETH swaps and paired-token launches through their separate capability-gated paths.
+Base and Base Sepolia retain their generation-specific launch paths. Unichain and Robinhood retain their legacy multichain launch helpers. Robinhood also supports native ETH swaps and paired-token launches through their separate capability-gated paths.
 
-The v1.3.1 multi-asset manager generation has address mappings for Base, Base Sepolia, and Robinhood. Gate these separate `*V1_3` APIs with `doesChainSupportMultiAssetManagers()`; legacy manager helpers do not select that generation automatically.
+Ethereum uses the verified [v1.4.0 deployment](https://github.com/flayerlabs/flaunch-contracts/releases/tag/v1.4.0), through the compatible `*V1_3` API family. `flaunch()` and its IPFS and manager-launch helpers default to native ETH and the current manager generation. `DefaultPairedTokenAddress[1]` is `zeroAddress`; `FLETHAddress[1]` and the old multichain maps remain available for legacy pools.
+
+Ethereum supports native ETH, MILADY (`0x8b3bc6942d6823a8022605648b671a2feb954800`) and LIL (`0x370e49749b9ff90004f3186aa7135487acc2a8fc`) through `flaunchPairedToken()`, `quotePairedPool()` and protected `planPairedTokenSwap()` / `buyCoinPairedToken()` / `sellCoinPairedToken()`. ERC20 premines require the caller to hold and approve the paired token to `FlaunchZapV1_3Address[1]`. ETH-to-NFTX-token acquisition and Game Mode are not included. Legacy flETH swap helpers reject current Ethereum pools. ETH/USD reads use the deployed launch oracle's 30-minute WETH/USDC V3 TWAP.
+
+The multi-asset manager generation has address mappings for Base, Base Sepolia, Robinhood and Ethereum. Gate these separate `*V1_3` APIs with `doesChainSupportMultiAssetManagers()`. Use `creatorRevenueByToken()` and `withdrawCreatorRevenueByToken()` for current Ethereum fees, passing native ETH as `zeroAddress`; the unsuffixed revenue methods continue to use the legacy escrow. Current imported-token receipts preserve the pairing but have empty launch-metadata strings because the event does not emit that metadata.
 
 Static-split recipients independently divide 100% of the pool remaining after creator/owner allocation. This corrects previous Base behavior; callers must not pre-scale recipient percentages by the residual pool size. See the unreleased changelog and static-split tests before upgrading.
 
@@ -193,7 +197,7 @@ if (poolCreatedData) {
 
 ### Flaunching with a Paired Token
 
-Base, Base Sepolia, and Robinhood support the V1.3 paired-token launch path.
+Base, Base Sepolia, Robinhood and Ethereum support the V1.3-compatible paired-token launch path.
 The paired token must be approved by that chain's `PairedTokenRegistry`; use
 `zeroAddress` to select native ETH.
 
@@ -238,6 +242,11 @@ const hash = await flaunchWrite.flaunchPairedToken({
 The SDK does not auto-approve ERC20 spending or enforce a sponsorship policy.
 Applications that promise a gas-sponsored launch should reject unexpected
 non-zero quote values before signing, as the API service does.
+
+To attach a multi-asset manager, pass `treasuryManagerParams` to `flaunchPairedToken()`:
+`{ manager, permissions, initializeData, depositData }`. These are the on-chain address/bytes
+fields; use `getPermissionsAddressV1_3()` for the permissions address. An approved current
+implementation deploys a new manager; an existing current manager instance receives the launch NFT.
 
 #### How to generate `base64Image` from User uploaded file
 

@@ -15,6 +15,7 @@ export * from "./FlaunchPositionManager";
 export * from "./FlaunchPositionManagerV1_0";
 export * from "./FlaunchPositionManagerV1_1";
 export * from "./FlaunchPositionManagerV1_3";
+export * from "./AnyPositionManagerV1_3";
 export * from "./FlaunchV1_1";
 export * from "./FlaunchZap";
 export * from "./FlaunchManagerZapV1_3";
