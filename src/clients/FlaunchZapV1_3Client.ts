@@ -52,16 +52,17 @@ export class ReadFlaunchZapV1_3 {
     this.contract = drift.contract({ abi: FlaunchZapV1_3Abi, address });
   }
 
-  async calculateFee({
-    flaunchParams,
-    slippageBps,
-  }: CalculatePairedTokenFlaunchFeeParams): Promise<PairedTokenFlaunchFee> {
+  async calculateFee(
+    { flaunchParams, slippageBps }: CalculatePairedTokenFlaunchFeeParams,
+    options?: { block?: bigint }
+  ): Promise<PairedTokenFlaunchFee> {
     const { ethRequired_, pairedPremineCost_ } = await this.contract.read(
       "calculateFee",
       {
         _flaunchParams: flaunchParams,
         _slippage: slippageBps,
-      }
+      },
+      options
     );
 
     return {
@@ -96,5 +97,29 @@ export class ReadWriteFlaunchZapV1_3 extends ReadFlaunchZapV1_3 {
       },
       { value }
     );
+  }
+
+  /**
+   * `eth_call`s the launch as `from` with `value`: the coin address and the ETH the zap would
+   * spend, or a revert (e.g. `PremineCostExceedsMaximum`) before anything is signed. Requires
+   * `from` to hold `value` and, for an ERC20-paired premine, the zap allowance already set.
+   */
+  async simulateFlaunch({
+    flaunchParams,
+    trustedFeeSigner,
+    maxPremineCost,
+    value,
+    from,
+  }: FlaunchPairedTokenParams & { from: Address }) {
+    const { memecoin_, ethSpent_ } = await this.contract.simulateWrite(
+      "flaunch",
+      {
+        _flaunchParams: flaunchParams,
+        _trustedFeeSigner: trustedFeeSigner,
+        _maxPremineCost: maxPremineCost,
+      },
+      { from, value }
+    );
+    return { memecoin: memecoin_, ethSpent: ethSpent_ };
   }
 }
