@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **GameDeveloperFeeSplitManager** (Game Mode's 5% developer royalty). A v1.3.1 `DynamicAddressFeeSplitManager` whose game developer holds a recipient slot fixed at 5% of every fee that the manager owner and moderator cannot edit, remove, transfer or dilute; the developer can redirect the payout wallet, hand over the role, and is the only account that can withdraw the coin's ERC721 (always back to the creator recorded at deposit).
+  - Addresses: `GameDeveloperFeeSplitManagerAddress` (empty until deployed and approved per chain) and `doesChainSupportGameDeveloperSplit(chainId)`
+  - ABI: `GameDeveloperFeeSplitManagerAbi`
+  - Clients: `ReadGameDeveloperFeeSplitManager` / `ReadWriteGameDeveloperFeeSplitManager`, extending the v1.3.1 dynamic split clients with `gameDeveloper()`, `gameDeveloperPayout()`, `originalCreator()`, `setGameDeveloperPayout()`, `transferGameDeveloper()`, `withdrawToCreator()`
+  - `ReadWriteFlaunchSDK.flaunchPairedTokenWithGameDeveloperSplit({ flaunchParams, gameDeveloper, moderator?, splitReceivers, ... })`: a paired-token (Game Mode) launch escrowed into the manager in one transaction; shares are 5 dp weights (`percentToGameDeveloperShare`) and must total `100_00000` with the developer's `5_00000` added by the SDK
+  - `encodeGameDeveloperSplitInitializeData()` for integrators calling the zap themselves
+
 ## [0.15.0] - 2026-09-11
 
 ### Added

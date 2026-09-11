@@ -8,8 +8,10 @@ export {
   doesChainSupportMultiAssetManagers,
   getV1_3PositionManagers,
   doesChainSupportPairedTokenLaunch,
+  doesChainSupportGameDeveloperSplit,
   doesChainSupportPairedTokenSwap,
   poolSwapForHook,
   doesChainSupportPairedTokenAcquisition,
 } from "./supportedChains";
+export * from "./gameDeveloperSplit";
 export * from "./permissions";

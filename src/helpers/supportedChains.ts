@@ -7,6 +7,7 @@ import {
 import { chainIdToChain } from "./chainIdToChain";
 import {
   DynamicAddressFeeSplitManagerAddress,
+  GameDeveloperFeeSplitManagerAddress,
   AnyPositionManagerV1_3Address,
   FeeEscrowV1_3Address,
   FlaunchManagerZapV1_3Address,
@@ -72,6 +73,17 @@ export function doesChainSupportMultiAssetManagers(chainId: number): boolean {
 }
 
 /** Whether all contracts required for paired-token launches are deployed. */
+/**
+ * Whether a Game Mode coin can launch into a GameDeveloperFeeSplitManager on the given chain:
+ * the manager is deployed and approved there AND the paired-token zap that installs it exists.
+ */
+export function doesChainSupportGameDeveloperSplit(chainId: number): boolean {
+  return (
+    GameDeveloperFeeSplitManagerAddress[chainId] !== undefined &&
+    doesChainSupportPairedTokenLaunch(chainId)
+  );
+}
+
 export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
   return (
     FlaunchZapV1_3Address[chainId] !== undefined &&
