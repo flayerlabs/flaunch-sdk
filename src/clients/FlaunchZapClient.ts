@@ -157,7 +157,7 @@ export function encodeInitialPriceParams(initialMarketCapUSD: number): HexString
 
 /** The `_treasuryManagerParams` tuple of the legacy Base zap, permissions resolved to their contract address. */
 export function resolveFlaunchTreasuryManagerParams(
-  params: FlaunchParams,
+  params: Pick<FlaunchParams, "treasuryManagerParams">,
   chainId: number
 ): {
   manager: Address;
@@ -332,10 +332,29 @@ export function buildBaseFlaunchArgs(
   };
 }
 
-/** Revenue-manager launch → plain `FlaunchParams` depositing into the existing manager instance. */
-export function toFlaunchParamsWithRevenueManager(
-  params: FlaunchWithRevenueManagerParams
-): FlaunchParams {
+/** The `treasuryManagerParams` the manager adapters below produce: every field present, permissions still symbolic. */
+export type ResolvedTreasuryManagerInput = {
+  manager: Address;
+  permissions: Permissions;
+  initializeData: HexString;
+  depositData: HexString;
+};
+
+/** A launch (vested or not) with a manager adapter's fields swapped for `treasuryManagerParams`. */
+export type WithTreasuryManagerParams<T> = Omit<T, "treasuryManagerParams"> & {
+  treasuryManagerParams: ResolvedTreasuryManagerInput;
+};
+
+/**
+ * Revenue-manager launch → plain launch params depositing into the existing manager instance.
+ * Generic over the launch shape so the vested variants keep their extra fields.
+ */
+export function toFlaunchParamsWithRevenueManager<
+  T extends Pick<
+    FlaunchWithRevenueManagerParams,
+    "revenueManagerInstanceAddress" | "treasuryManagerParams"
+  >,
+>(params: T): WithTreasuryManagerParams<T> {
   return {
     ...params,
     treasuryManagerParams: {
@@ -347,11 +366,16 @@ export function toFlaunchParamsWithRevenueManager(
   };
 }
 
-/** Static split launch → plain `FlaunchParams` deploying an AddressFeeSplitManager. */
-export function toFlaunchParamsWithSplitManager(
-  params: FlaunchWithSplitManagerParams,
-  chainId: number
-): FlaunchParams {
+/** Static split launch → plain launch params deploying an AddressFeeSplitManager. */
+export function toFlaunchParamsWithSplitManager<
+  T extends Pick<
+    FlaunchWithSplitManagerParams,
+    | "creatorSplitPercent"
+    | "managerOwnerSplitPercent"
+    | "splitReceivers"
+    | "treasuryManagerParams"
+  >,
+>(params: T, chainId: number): WithTreasuryManagerParams<T> {
   return {
     ...params,
     treasuryManagerParams: {
@@ -365,7 +389,10 @@ export function toFlaunchParamsWithSplitManager(
 
 /** The `initializeData` of a DynamicAddressFeeSplitManager; validates shares and recipients. */
 export function encodeDynamicSplitInitializeData(
-  params: FlaunchWithDynamicSplitManagerParams
+  params: Pick<
+    FlaunchWithDynamicSplitManagerParams,
+    "creatorShare" | "managerOwnerShare" | "moderator" | "splitReceivers"
+  >
 ): HexString {
   const VALID_SHARE_TOTAL = 100_00000n;
 
@@ -437,11 +464,17 @@ export function encodeDynamicSplitInitializeData(
   );
 }
 
-/** Dynamic split launch → plain `FlaunchParams` deploying a DynamicAddressFeeSplitManager. */
-export function toFlaunchParamsWithDynamicSplitManager(
-  params: FlaunchWithDynamicSplitManagerParams,
-  chainId: number
-): FlaunchParams {
+/** Dynamic split launch → plain launch params deploying a DynamicAddressFeeSplitManager. */
+export function toFlaunchParamsWithDynamicSplitManager<
+  T extends Pick<
+    FlaunchWithDynamicSplitManagerParams,
+    | "creatorShare"
+    | "managerOwnerShare"
+    | "moderator"
+    | "splitReceivers"
+    | "treasuryManagerParams"
+  >,
+>(params: T, chainId: number): WithTreasuryManagerParams<T> {
   return {
     ...params,
     treasuryManagerParams: {

@@ -8,6 +8,10 @@ import { chainIdToChain } from "./chainIdToChain";
 import {
   FlaunchZapAddress,
   FlaunchZapMultichainAddress,
+  AnyFlaunchZapAddress,
+  AnyFlaunchZapFlaunchAddress,
+  AnyFlaunchZapPositionManagerAddress,
+  MemecoinVestingAddress,
   DynamicAddressFeeSplitManagerAddress,
   FeeEscrowV1_3Address,
   FlaunchManagerZapV1_3Address,
@@ -134,6 +138,23 @@ export function doesChainSupportPairedTokenAcquisition(chainId: number): boolean
 }
 
 /**
+ * Whether vested launches (AnyFlaunchZap + MemecoinVesting, the hook it launches through and
+ * its ERC721, plus the v1.3.1 TreasuryManagerFactory and PairedTokenRegistry it is bound to)
+ * are deployed on the given chain — Base Sepolia today. Gate `flaunchVested*`, the `vested`
+ * pre-buy route and the vesting reads/claims on this.
+ */
+export function doesChainSupportVestedLaunch(chainId: number): boolean {
+  return (
+    AnyFlaunchZapAddress[chainId] !== undefined &&
+    MemecoinVestingAddress[chainId] !== undefined &&
+    AnyFlaunchZapPositionManagerAddress[chainId] !== undefined &&
+    AnyFlaunchZapFlaunchAddress[chainId] !== undefined &&
+    TreasuryManagerFactoryV1_3Address[chainId] !== undefined &&
+    PairedTokenRegistryV1_3Address[chainId] !== undefined
+  );
+}
+
+/**
  * Whether any launch route on this chain can include a pre-buy (a creator premine planned and
  * executed through the SDK). Per-route detail lives in `getLaunchPreBuyCapabilities()`.
  */
@@ -142,5 +163,9 @@ export function doesChainSupportLaunchPreBuy(chainId: number): boolean {
   const zap = isMultichainDeployment(chainId)
     ? FlaunchZapMultichainAddress[chainId]
     : FlaunchZapAddress[chainId];
-  return zap !== undefined || doesChainSupportPairedTokenLaunch(chainId);
+  return (
+    zap !== undefined ||
+    doesChainSupportPairedTokenLaunch(chainId) ||
+    doesChainSupportVestedLaunch(chainId)
+  );
 }
