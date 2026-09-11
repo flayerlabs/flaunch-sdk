@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.14.0] - 2026-09-11
+
+### Added
+
+- **Launch pre-buy** — a creator buys an exact share of supply atomically with the launch, quoted from the protocol and executed through the launch route the coin already uses
+  - `planLaunchPreBuy(input)` on `ReadFlaunchSDK`: `preBuyBps` (integer basis points, `100 = 1%`) and caller-chosen `slippageBps` → a typed `LaunchPreBuyPlan` with the exact `premineAmount` (`TOTAL_SUPPLY * bps / 10_000`), the native flaunching `fee` reported separately from the purchase, `payment.expected` / `payment.max` in the real payment asset (`{ chainId, address, decimals }`), `maxPremineCost` for paired-token routes, `approvals` (exact spender and amount), `launch` calldata, `quoteBlockNumber` / `createdAtMs` / `expiresAtMs` (default 30 s), `funding`, and a `binding` hash — or `{ supported: false, reasons }` with machine-readable `LaunchPreBuyReasonCode`s
+  - `executeLaunchPreBuy(plan)` / `flaunchWithPreBuy(input)` on `ReadWriteFlaunchSDK`: revalidates chain, signer, expiry, binding, calldata and balances, re-quotes and simulates, sends approvals (awaited), then the launch with the plan's exact calldata and `value`; throws `LaunchPreBuyRequoteRequiredError` (`code: "REQUOTE_REQUIRED"`, `reason`) before any signature, `LaunchPreBuyInsufficientBalanceError`, `LaunchPreBuyUnsupportedError`. No retry, one launch transaction at most
+  - `verifyLaunchPreBuyPlan(plan, "quote" | "simulate")`, `getLaunchPreBuyResultFromLogs/FromTx(…, plan)` (the existing `PoolCreated` decoding, checked against the plan)
+  - `getLaunchPreBuyCapabilities(chainId)` / `doesChainSupportLaunchPreBuy(chainId)`: per-route support, payment assets, approval requirement and limit (default `DEFAULT_MAX_PRE_BUY_BPS = 1000`, overridable via `maxPreBuyBps`), plus the always-unsupported kinds
+  - Routes: `standard`, `revenueManager`, `splitManager`, `dynamicSplitManager` (legacy Base zap and multichain zap, ETH-funded) and `pairedToken` (v1.3 zap; native ETH / flETH paid from `msg.value`, ERC20 pairings paid in the paired token with an approval to the zap). Gasless, protected (trusted-signer / spend-gated) and paired-token-into-manager launches return `GASLESS_UNSUPPORTED`, `PROTECTED_LAUNCH_UNSUPPORTED`, `PAIRED_MANAGER_LAUNCH_UNSUPPORTED`
+  - Pure helpers: `preBuyAmountFromBps`, `preBuyBpsFromAmount`, `percentToBps` (≤ 2 decimals, never rounds), `classifyLaunchPreBuyInput`, `computeLaunchPreBuyBinding`, `decodeLaunchPreBuyCalldata`, `encodeLegacyFlaunch` / `encodeMultichainFlaunch` / `encodePairedFlaunch`
+  - Zap clients expose pure builders and bps-native reads: `buildBaseFlaunchArgs`, `buildMultichainFlaunchArgs`, `toFlaunchParamsWith{RevenueManager,SplitManager,DynamicSplitManager}`, `encodeInitialPriceParams`, `ReadFlaunchZap.calculateFeeBps`, `ReadFlaunchZapMultichain.calculateFeeBps`, `ReadFlaunchZapV1_3.calculateFee(…, { block })` / `simulateFlaunch`, `flaunchPrepared(args, value)`; `ReadFlaunchZapMultichain` is constructed on the read SDK for multichain chains
+  - Exports: `FlaunchParams`, `FlaunchIPFSParams`, `FlaunchWithRevenueManagerParams`, `FlaunchWithSplitManagerParams` (and IPFS variants), `ReadFlaunchZap`, `ReadWriteFlaunchZap`, `ReadFlaunchZapMultichain`, `ReadWriteFlaunchZapMultichain`, `FLAUNCH_TOTAL_SUPPLY`
+  - `guides/launch-pre-buy.md` (capability matrix, quote model, revalidation rules) and `scripts/test-launch-prebuy-fork.cjs` (`pnpm test:prebuy:fork`, opt-in Anvil fork run asserting creator balance deltas, `PoolCreated`, refunds and an underfunded revert)
+
+### Changed
+
+- Legacy Base, multichain and v1.3 zap `flaunch*` methods now route through the shared builders. Their calldata, fee quote and `value` are unchanged — `test/launchByteIdentity.test.cjs` replays every entry point against fixtures generated from the 0.13.0 build.
+- `PairedTokenRegistryV1_3.tokenConfig(token, { block })` accepts a pinned block.
+
+### Unchanged
+
+- Launches without a pre-buy: same methods, same bytes. Existing callers need no changes.
+
 ## [0.13.0] - 2026-09-08
 
 ### Changed (breaking)

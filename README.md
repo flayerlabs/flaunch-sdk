@@ -14,6 +14,7 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 ## Features
 
 - 🚀 Flaunch new memecoins
+- 🛒 Launch pre-buy: the creator buys an exact share of supply atomically with the launch
 - 💱 Buy and sell memecoins via Uniswap V4 hooks
 - 🏗️ Build your own token launchpads on top of the flaunch protocol
 - 📊 Read functions for token and pool data
@@ -38,6 +39,7 @@ Static-split recipients independently divide 100% of the pool remaining after cr
   - [Flaunching a Memecoin](#flaunching-a-memecoin)
   - [Flaunching with a Paired Token](#flaunching-with-a-paired-token)
     - [How to generate `base64Image` from User uploaded file](#how-to-generate-base64image-from-user-uploaded-file)
+  - [Launching with a pre-buy](#launching-with-a-pre-buy)
   - [Flaunch with Address Fee Splits](#flaunch-with-address-fee-splits)
   - [Buying a Flaunch coin](#buying-a-flaunch-coin)
   - [Selling with Permit2](#selling-with-permit2)
@@ -273,6 +275,148 @@ const handleImageChange = useCallback(
   id="image-upload"
 />;
 ```
+
+### Launching with a pre-buy
+
+A creator can buy an exact percentage of the coin's supply as part of the launch transaction.
+The SDK quotes it from the protocol (the zap's own `calculateFee`), binds the quote to the
+chain, sender and launch parameters, and executes it through the same launch route the coin
+would use anyway — one transaction, with the maximum payment enforced on chain (`msg.value`
+for ETH-funded routes, `maxPremineCost` for ERC20 pairings). The capability matrix, quote
+model and revalidation rules are in [guides/launch-pre-buy.md](guides/launch-pre-buy.md).
+
+Percentages are integer basis points (`100 = 1%`, `percentToBps("2.5") === 250`), slippage is
+integer basis points the caller chooses, and the default route limit is 10% of supply.
+
+```ts
+import { getLaunchPreBuyCapabilities, percentToBps } from "@flaunch/sdk";
+
+// 1. Which routes can pre-buy here, and in what asset? Pure — no RPC.
+const capabilities = getLaunchPreBuyCapabilities(publicClient.chain.id);
+if (!capabilities.routes.standard.supported) {
+  console.log(capabilities.routes.standard.reasons); // e.g. ["CHAIN_UNSUPPORTED"]
+}
+
+// 2. Quote. `params` is exactly what you would pass to `flaunch()` today (premineAmount unset).
+const result = await flaunchRead.planLaunchPreBuy({
+  route: "standard",
+  params: {
+    name: "Test",
+    symbol: "TEST",
+    tokenUri: "ipfs://...",
+    fairLaunchPercent: 0,
+    fairLaunchDuration: 0,
+    initialMarketCapUSD: 4_000,
+    creator: address,
+    creatorFeeAllocationPercent: 80,
+  },
+  preBuyBps: percentToBps("2.5"), // 2.5% of supply
+  slippageBps: 50, // 0.5% headroom over the protocol quote, enforced on chain
+  sender: address,
+});
+
+if (!result.supported) {
+  // machine-readable: GASLESS_UNSUPPORTED, PROTECTED_LAUNCH_UNSUPPORTED, EXCEEDS_ROUTE_LIMIT, …
+  throw new Error(result.reasons.join(", "));
+}
+
+const { plan } = result;
+plan.premineAmount; // exact coins bought: TOTAL_SUPPLY * 250 / 10_000
+plan.fee; // { asset: { chainId, address: zeroAddress, decimals: 18 }, amount } — the flaunching fee, always native ETH
+plan.payment; // { asset, expected, max } — the purchase in its real payment asset
+plan.value; // ETH sent with the launch (fee + max purchase on ETH routes); unspent ETH is refunded
+plan.approvals; // ERC20 approve calls to send first (empty on ETH routes)
+plan.expiresAtMs; // default 30 s after the quote block was read
+plan.funding.sufficient; // sender balance versus value / maxPremineCost at the quote block
+
+// 3. Execute. Revalidates chain, signer, expiry, binding, calldata and balances, re-quotes and
+// simulates, then sends the plan's exact calldata. Throws LaunchPreBuyRequoteRequiredError
+// (code "REQUOTE_REQUIRED") before any signature when a fresh plan is needed — re-plan and
+// show the new numbers. Never retries.
+const { hash } = await flaunchWrite.executeLaunchPreBuy(plan);
+const created = await flaunchRead.getLaunchPreBuyResultFromTx(hash, plan);
+console.log(created?.memecoin, created?.params.premineAmount === plan.premineAmount);
+```
+
+Handling a stale quote:
+
+```ts
+import { LaunchPreBuyRequoteRequiredError, LaunchPreBuyInsufficientBalanceError } from "@flaunch/sdk";
+
+try {
+  await flaunchWrite.executeLaunchPreBuy(plan);
+} catch (error) {
+  if (error instanceof LaunchPreBuyRequoteRequiredError) {
+    // error.reason: EXPIRED | CHAIN_MISMATCH | SENDER_MISMATCH | BINDING_MISMATCH | CALLDATA_MISMATCH | PRICE_MOVED | FEE_CHANGED
+    const fresh = await flaunchRead.planLaunchPreBuy(input); // then show fresh.plan and ask again
+  } else if (error instanceof LaunchPreBuyInsufficientBalanceError) {
+    // error.asset, error.required, error.available — nothing was sent
+  } else throw error;
+}
+```
+
+Split-manager launch (earnings shared with recipients; the premined coins still go to the
+creator — the manager only takes the launch NFT):
+
+```ts
+const result = await flaunchRead.planLaunchPreBuy({
+  route: "dynamicSplitManager",
+  params: {
+    ...baseParams, // the same FlaunchParams fields as above
+    creatorShare: 0n,
+    managerOwnerShare: 0n,
+    moderator: address,
+    splitReceivers: [
+      { address: "0xRecipientA", share: 70_00000n },
+      { address: "0xRecipientB", share: 30_00000n },
+    ],
+  },
+  preBuyBps: 100,
+  slippageBps: 50,
+  sender: address,
+});
+```
+
+Custom-paired launch (Base, Base Sepolia, Robinhood). The payment asset follows the pairing:
+native ETH and flETH pools are paid from `msg.value`; an ERC20 pairing (a B20 equity at 8
+decimals, mUSD/USDC at 6) is paid in that token and needs an approval to the v1.3 zap, which
+the plan carries. The flaunching fee is native ETH either way and stays separate:
+
+```ts
+const result = await flaunchRead.planLaunchPreBuy({
+  route: "pairedToken",
+  params: {
+    name: "Paired Coin",
+    symbol: "PAIR",
+    tokenUri: "ipfs://...",
+    creator: address,
+    creatorFeeAllocation: 8_000,
+    flaunchAt: 0n,
+    initialPriceParams,
+    feeCalculatorParams: "0x", // a spend-gated (Game Mode) launch is PROTECTED_LAUNCH_UNSUPPORTED
+    pairedToken, // registry-approved; zeroAddress = native ETH
+  },
+  preBuyBps: 100,
+  slippageBps: 50,
+  sender: address,
+});
+if (result.supported) {
+  const { plan } = result;
+  plan.payment.asset; // { chainId, address: pairedToken, decimals: 6 } for mUSD — or ETH for native/flETH pairings
+  plan.maxPremineCost; // the zap's on-chain cap in the paired token
+  plan.value; // exactly the flaunching fee for an ERC20 pairing
+  plan.approvals; // [{ to: pairedToken, data: approve(FlaunchZapV1_3, maxPremineCost), … }]
+}
+```
+
+With `createFlaunchCalldata`, `executeLaunchPreBuy` returns the encoded launch call instead of
+broadcasting; a wallet that supports batching (ERC-5792) can send
+`[...plan.approvals, plan.launch]` as one bundle — each is a `{ to, data, value }`.
+
+Not supported for pre-buy in this version, and reported as such rather than ignored: gasless
+launches (`gasless: true`), protected Game Mode / trusted-signer launches, a paired-token
+launch into a treasury manager, and `anyFlaunch`. Launches without a pre-buy keep using the
+existing `flaunch*` methods unchanged.
 
 ### Flaunch with Address Fee Splits
 
