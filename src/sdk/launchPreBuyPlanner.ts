@@ -38,6 +38,7 @@ import {
 import { ReadMemecoin, ReadWriteMemecoin } from "../clients/MemecoinClient";
 import type { ReadPairedTokenRegistryV1_3 } from "../clients/PairedTokenRegistryV1_3Client";
 import { PAIRED_TOKEN_TYPE } from "../types";
+import type { LaunchCostProbe } from "./launchCostProbe";
 import {
   LaunchPreBuyInsufficientBalanceError,
   LaunchPreBuyRequoteRequiredError,
@@ -55,6 +56,7 @@ import {
   type LaunchPreBuyFunding,
   type LaunchPreBuyInput,
   type LaunchPreBuyPlan,
+  type LaunchPreBuyPricingMethod,
   type LaunchPreBuyReasonCode,
   type LaunchPreBuyRequoteReason,
   type LaunchPreBuyResult,
@@ -77,6 +79,12 @@ export type LaunchPreBuyPlannerDeps = {
   pairedRegistry?: ReadPairedTokenRegistryV1_3;
   /** Resolves the explicit sender or the drift signer; undefined when neither exists. */
   senderFor: (explicit?: Address) => Promise<Address | undefined>;
+  /**
+   * Executes a launch in an `eth_call` with the sender's code and balance overridden and
+   * returns the ETH it really consumed (see ./launchCostProbe.ts). Without it the planner falls
+   * back to the zap's linear quote and says so in `pricing.method`.
+   */
+  probeLaunchCost?: LaunchCostProbe;
 };
 
 export type LaunchPreBuyExecutorDeps = LaunchPreBuyPlannerDeps & {
@@ -308,6 +316,104 @@ async function quotePairedRoute(
   return { fee, expected, max };
 }
 
+/** `amount * (10_000 + bps) / 10_000`, rounded up so the cap never sits below the quote. */
+function withSlippage(amount: bigint, slippageBps: bigint): bigint {
+  return (amount * (10_000n + slippageBps) + 9_999n) / 10_000n;
+}
+
+const maxBigint = (a: bigint, b: bigint) => (a > b ? a : b);
+
+/** Thrown inside the planner when the pricing probe reverts: the premine cannot be filled. */
+class PremineNotFillableError extends Error {
+  constructor(public readonly cause: unknown) {
+    super("The premine cannot be filled at this size");
+  }
+}
+
+type PremineCostPricing = {
+  method: LaunchPreBuyPricingMethod;
+  /** The purchase alone (fee excluded), in the payment asset. */
+  expected: bigint;
+};
+
+/**
+ * Prices an ETH-funded launch. With a probe: the exact ETH the launch consumes at `block`,
+ * measured on the sender with an ample cap (the zaps refund the rest, and neither
+ * `calculateFee` nor the multichain zap's `ethSpent_` reflects the real fill). Without one: the
+ * zap's linear quote.
+ */
+async function priceEthLaunch(
+  deps: LaunchPreBuyPlannerDeps,
+  params: {
+    sender: Address;
+    to: Address;
+    data: Hex;
+    fee: bigint;
+    linearExpected: bigint;
+    linearMax: bigint;
+    block?: bigint;
+  }
+): Promise<PremineCostPricing> {
+  if (!deps.probeLaunchCost) {
+    return { method: "protocolQuote", expected: params.linearExpected };
+  }
+  const cap = params.fee + maxBigint(params.linearMax, params.linearExpected * 3n) + 1n;
+  let spent: bigint;
+  try {
+    ({ spent } = await deps.probeLaunchCost({
+      sender: params.sender,
+      to: params.to,
+      data: params.data,
+      value: cap,
+      blockNumber: params.block,
+    }));
+  } catch (cause) {
+    throw new PremineNotFillableError(cause);
+  }
+  if (spent < params.fee) throw new Error("Launch probe spent less than the flaunching fee");
+  return { method: "simulation", expected: spent - params.fee };
+}
+
+/**
+ * Prices an ERC20-paired premine. The paired token cannot be conjured for a probe, but the
+ * pool the premine fills is the same curve whatever the pairing, so the zap's linear quote in
+ * the paired token is scaled by the price impact measured on the native-equivalent launch.
+ */
+async function priceErc20Premine(
+  deps: LaunchPreBuyPlannerDeps,
+  params: {
+    sender: Address;
+    to: Address;
+    flaunchParams: PairedTokenFlaunchParams;
+    linearExpected: bigint;
+    block?: bigint;
+  }
+): Promise<PremineCostPricing> {
+  if (!deps.probeLaunchCost) {
+    return { method: "protocolQuote", expected: params.linearExpected };
+  }
+  const nativeParams = { ...params.flaunchParams, pairedToken: zeroAddress };
+  const native = await quotePairedRoute(deps, nativeParams, 0n, params.block);
+  const nativeFee = native.fee.ethRequired;
+  const linearNative = native.expected.ethRequired - nativeFee;
+  if (linearNative <= 0n) {
+    return { method: "protocolQuote", expected: params.linearExpected };
+  }
+  const priced = await priceEthLaunch(deps, {
+    sender: params.sender,
+    to: params.to,
+    data: encodePairedFlaunch(nativeParams, zeroAddress, 0n),
+    fee: nativeFee,
+    linearExpected: linearNative,
+    linearMax: linearNative,
+    block: params.block,
+  });
+  return {
+    method: "protocolQuoteWithSimulatedImpact",
+    expected: (params.linearExpected * priced.expected + linearNative - 1n) / linearNative,
+  };
+}
+
 type PaymentResolution =
   | { kind: "native" }
   | { kind: "erc20"; asset: PreBuyAsset }
@@ -452,9 +558,27 @@ export async function planLaunchPreBuy(
       if (quotes.max.ethRequired < quotes.expected.ethRequired || quotes.expected.ethRequired < feeAmount) {
         return unsupported(["QUOTE_INCONSISTENT"]);
       }
-      const value = quotes.max.ethRequired;
-      const maxPremineCost = quotes.max.pairedPremineCost;
-      const data = encodePairedFlaunch(flaunchParams, zeroAddress, maxPremineCost);
+      const linearExpected = quotes.expected.ethRequired - feeAmount;
+      const linearMax = quotes.max.ethRequired - feeAmount;
+      let priced: PremineCostPricing;
+      try {
+        priced = await priceEthLaunch(deps, {
+          sender,
+          to,
+          // `_maxPremineCost` is ignored for a native pairing; price with the linear cap.
+          data: encodePairedFlaunch(flaunchParams, zeroAddress, linearMax),
+          fee: feeAmount,
+          linearExpected,
+          linearMax,
+          block: quoteBlockNumber,
+        });
+      } catch (error) {
+        if (error instanceof PremineNotFillableError) return unsupported(["PREMINE_NOT_FILLABLE"]);
+        throw error;
+      }
+      const max = withSlippage(priced.expected, slippageBps);
+      const value = feeAmount + max;
+      const data = encodePairedFlaunch(flaunchParams, zeroAddress, max);
       plan = {
         version: LAUNCH_PRE_BUY_PLAN_VERSION,
         chainId,
@@ -466,12 +590,9 @@ export async function planLaunchPreBuy(
         premineAmount,
         slippageBps: input.slippageBps,
         fee: { asset: fee, amount: feeAmount },
-        payment: {
-          asset: fee,
-          expected: quotes.expected.ethRequired - feeAmount,
-          max: value - feeAmount,
-        },
-        maxPremineCost,
+        payment: { asset: fee, expected: priced.expected, max },
+        pricing: { method: priced.method, protocolQuote: { expected: linearExpected, max: linearMax } },
+        maxPremineCost: max,
         value,
         approvals: [],
         launch: { to, data, value },
@@ -489,7 +610,22 @@ export async function planLaunchPreBuy(
         return unsupported(["QUOTE_INCONSISTENT"]);
       }
       const value = quotes.max.ethRequired;
-      const maxPremineCost = quotes.max.pairedPremineCost;
+      const linearExpected = quotes.expected.pairedPremineCost;
+      const linearMax = quotes.max.pairedPremineCost;
+      let priced: PremineCostPricing;
+      try {
+        priced = await priceErc20Premine(deps, {
+          sender,
+          to,
+          flaunchParams,
+          linearExpected,
+          block: quoteBlockNumber,
+        });
+      } catch (error) {
+        if (error instanceof PremineNotFillableError) return unsupported(["PREMINE_NOT_FILLABLE"]);
+        throw error;
+      }
+      const maxPremineCost = withSlippage(priced.expected, slippageBps);
       if (input.approvalAllowance !== undefined && input.approvalAllowance < maxPremineCost) {
         throw new Error("approvalAllowance must be at least the maximum premine cost");
       }
@@ -512,11 +648,8 @@ export async function planLaunchPreBuy(
         premineAmount,
         slippageBps: input.slippageBps,
         fee: { asset: fee, amount: feeAmount },
-        payment: {
-          asset: payment.asset,
-          expected: quotes.expected.pairedPremineCost,
-          max: maxPremineCost,
-        },
+        payment: { asset: payment.asset, expected: priced.expected, max: maxPremineCost },
+        pricing: { method: priced.method, protocolQuote: { expected: linearExpected, max: linearMax } },
         maxPremineCost,
         value,
         approvals:
@@ -544,7 +677,25 @@ export async function planLaunchPreBuy(
     if (quotes.max < quotes.expected || quotes.expected < quotes.fee) {
       return unsupported(["QUOTE_INCONSISTENT"]);
     }
-    const value = quotes.max;
+    const linearExpected = quotes.expected - quotes.fee;
+    const linearMax = quotes.max - quotes.fee;
+    let priced: PremineCostPricing;
+    try {
+      priced = await priceEthLaunch(deps, {
+        sender,
+        to,
+        data: prepared.data,
+        fee: quotes.fee,
+        linearExpected,
+        linearMax,
+        block: quoteBlockNumber,
+      });
+    } catch (error) {
+      if (error instanceof PremineNotFillableError) return unsupported(["PREMINE_NOT_FILLABLE"]);
+      throw error;
+    }
+    const max = withSlippage(priced.expected, slippageBps);
+    const value = quotes.fee + max;
     plan = {
       version: LAUNCH_PRE_BUY_PLAN_VERSION,
       chainId,
@@ -556,7 +707,8 @@ export async function planLaunchPreBuy(
       premineAmount,
       slippageBps: input.slippageBps,
       fee: { asset: fee, amount: quotes.fee },
-      payment: { asset: fee, expected: quotes.expected - quotes.fee, max: value - quotes.fee },
+      payment: { asset: fee, expected: priced.expected, max },
+      pricing: { method: priced.method, protocolQuote: { expected: linearExpected, max: linearMax } },
       value,
       approvals: [],
       launch: { to, data: prepared.data, value },
@@ -731,20 +883,33 @@ export async function verifyLaunchPreBuyPlan(
 
   let fee: bigint;
   let expectedTotal: bigint;
+  const erc20 = plan.payment.asset.address !== zeroAddress;
   if (decoded.zapFamily === "pairedToken") {
     const quotes = await quotePairedRoute(deps, decoded.flaunchParams, 0n);
     fee = quotes.fee.ethRequired;
-    const erc20 = plan.payment.asset.address !== zeroAddress;
     if (erc20) {
-      expectedTotal = quotes.expected.pairedPremineCost;
-      if (quotes.expected.ethRequired > plan.value) {
-        requote("FEE_CHANGED", "The flaunching fee now exceeds the plan's ETH");
-      }
-      if (quotes.expected.pairedPremineCost > (plan.maxPremineCost ?? 0n)) {
+      if (fee > plan.value) requote("FEE_CHANGED", "The flaunching fee now exceeds the plan's ETH");
+      const priced = await priceErc20Premine(deps, {
+        sender: plan.sender,
+        to: plan.launch.to,
+        flaunchParams: decoded.flaunchParams,
+        linearExpected: quotes.expected.pairedPremineCost,
+      }).catch((cause) => requote("PRICE_MOVED", "The premine can no longer be filled", cause));
+      expectedTotal = priced.expected;
+      if (priced.expected > (plan.maxPremineCost ?? 0n)) {
         requote("PRICE_MOVED", "The premine now costs more than the approved maximum");
       }
     } else {
-      expectedTotal = quotes.expected.ethRequired;
+      const linearExpected = quotes.expected.ethRequired - fee;
+      const priced = await priceEthLaunch(deps, {
+        sender: plan.sender,
+        to: plan.launch.to,
+        data: plan.launch.data,
+        fee,
+        linearExpected,
+        linearMax: linearExpected,
+      }).catch((cause) => requote("PRICE_MOVED", "The premine can no longer be filled", cause));
+      expectedTotal = fee + priced.expected;
       if (expectedTotal > plan.value) {
         requote(
           fee > plan.fee.amount ? "FEE_CHANGED" : "PRICE_MOVED",
@@ -770,7 +935,16 @@ export async function verifyLaunchPreBuyPlan(
           };
     const quotes = await quoteEthRoute(deps, prepared, 0n);
     fee = quotes.fee;
-    expectedTotal = quotes.expected;
+    const linearExpected = quotes.expected - fee;
+    const priced = await priceEthLaunch(deps, {
+      sender: plan.sender,
+      to: plan.launch.to,
+      data: plan.launch.data,
+      fee,
+      linearExpected,
+      linearMax: linearExpected,
+    }).catch((cause) => requote("PRICE_MOVED", "The premine can no longer be filled", cause));
+    expectedTotal = fee + priced.expected;
     if (expectedTotal > plan.value) {
       requote(
         fee > plan.fee.amount ? "FEE_CHANGED" : "PRICE_MOVED",

@@ -49,6 +49,19 @@ export type LaunchPreBuyRoute = (typeof LAUNCH_PRE_BUY_ROUTES)[number];
 /** Which zap ABI a route's launch calldata is encoded against on a given chain. */
 export type LaunchPreBuyZapFamily = "legacy" | "multichain" | "pairedToken";
 
+/**
+ * How `payment.expected` was priced. `simulation`: the launch was executed in an `eth_call`
+ * with the sender's code/balance overridden and the real ETH delta measured (exact at the quote
+ * block). `protocolQuoteWithSimulatedImpact`: an ERC20-paired premine — the zap's linear quote
+ * in the paired token, scaled by the price impact measured on the native-equivalent launch.
+ * `protocolQuote`: the zap's `calculateFee` alone (no state-override support); it under-quotes
+ * larger premines, so choose slippage accordingly.
+ */
+export type LaunchPreBuyPricingMethod =
+  | "simulation"
+  | "protocolQuoteWithSimulatedImpact"
+  | "protocolQuote";
+
 export const LAUNCH_PRE_BUY_REASON_CODES = [
   "CHAIN_UNSUPPORTED",
   "ROUTE_UNSUPPORTED",
@@ -57,6 +70,8 @@ export const LAUNCH_PRE_BUY_REASON_CODES = [
   "PAIRED_MANAGER_LAUNCH_UNSUPPORTED",
   "ANY_FLAUNCH_UNSUPPORTED",
   "PAIRED_TOKEN_NOT_APPROVED",
+  "ROUTE_PREMINE_UNAVAILABLE",
+  "PREMINE_NOT_FILLABLE",
   "INVALID_PERCENTAGE",
   "EXCEEDS_ROUTE_LIMIT",
   "INVALID_LIMIT",
@@ -161,7 +176,13 @@ export type LaunchPreBuyPlan = {
    * zap's 1% price-impact buffer); `max` adds `slippageBps` and is what the chain enforces.
    */
   payment: { asset: PreBuyAsset; expected: bigint; max: bigint };
-  /** Paired-token routes only: the zap's `_maxPremineCost`. */
+  /** How `payment.expected` was derived, with the zap's own linear quote for comparison. */
+  pricing: {
+    method: LaunchPreBuyPricingMethod;
+    /** The zap's `calculateFee` view of the purchase at 0 bps and at `slippageBps`. */
+    protocolQuote: { expected: bigint; max: bigint };
+  };
+  /** Paired-token routes only: the zap's `_maxPremineCost` (equals `payment.max`). */
   maxPremineCost?: bigint;
   /** ETH sent with the launch — fee plus the maximum ETH-funded purchase; unspent ETH is refunded. */
   value: bigint;
@@ -286,6 +307,12 @@ function routeReasons(chainId: number, route: LaunchPreBuyRoute): LaunchPreBuyRe
     return reasons;
   }
   if (!zapAddressForRoute(chainId, route)) reasons.push("ROUTE_UNSUPPORTED");
+  // The legacy Base zap (v1.1 PositionManager) fills a premine out of the fair-launch
+  // allocation, which is deprecated and always 0 here — so it can never premine
+  // (`PremineExceedsInitialAmount`). Launch through `pairedToken` with flETH / native ETH instead.
+  if (zapFamilyForRoute(chainId, route) === "legacy") {
+    reasons.push("ROUTE_PREMINE_UNAVAILABLE");
+  }
   if (route === "splitManager" && !AddressFeeSplitManagerAddress[chainId]) {
     reasons.push("ROUTE_UNSUPPORTED");
   }

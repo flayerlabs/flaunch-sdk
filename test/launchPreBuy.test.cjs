@@ -54,6 +54,8 @@ const okInput = (overrides = {}) => ({
   slippageBps: 50,
   ...overrides,
 });
+// the ETH-funded routes can only premine through the multichain zap; Base's legacy zap cannot
+const ETH_CHAIN = robinhood.id;
 
 test("supply constant and bps → amount conversion are exact", () => {
   assert.equal(TOTAL_SUPPLY, 100n * 10n ** 27n);
@@ -83,76 +85,72 @@ test("percent → bps accepts up to two decimals and rejects finer or malformed 
 
 test("route limit defaults to 10% and honours a valid override", () => {
   assert.equal(DEFAULT_MAX_PRE_BUY_BPS, 1000);
-  assert.deepEqual(classifyLaunchPreBuyInput(base.id, okInput({ preBuyBps: 1000 })), []);
-  assert.deepEqual(classifyLaunchPreBuyInput(base.id, okInput({ preBuyBps: 1001 })), [
+  assert.deepEqual(classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ preBuyBps: 1000 })), []);
+  assert.deepEqual(classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ preBuyBps: 1001 })), [
     "EXCEEDS_ROUTE_LIMIT",
   ]);
   assert.deepEqual(
-    classifyLaunchPreBuyInput(base.id, okInput({ preBuyBps: 2500, maxPreBuyBps: 2500 })),
+    classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ preBuyBps: 2500, maxPreBuyBps: 2500 })),
     []
   );
   assert.deepEqual(
-    classifyLaunchPreBuyInput(base.id, okInput({ preBuyBps: 2501, maxPreBuyBps: 2500 })),
+    classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ preBuyBps: 2501, maxPreBuyBps: 2500 })),
     ["EXCEEDS_ROUTE_LIMIT"]
   );
   for (const limit of [0, 10_000, 1.5, -5]) {
     assert.ok(
-      classifyLaunchPreBuyInput(base.id, okInput({ maxPreBuyBps: limit })).includes("INVALID_LIMIT"),
+      classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ maxPreBuyBps: limit })).includes("INVALID_LIMIT"),
       `limit ${limit}`
     );
   }
-  assert.equal(getLaunchPreBuyCapabilities(base.id, { maxPreBuyBps: 500 }).routes.standard.maxPreBuyBps, 500);
-  assert.throws(() => getLaunchPreBuyCapabilities(base.id, { maxPreBuyBps: 0 }));
+  assert.equal(getLaunchPreBuyCapabilities(ETH_CHAIN, { maxPreBuyBps: 500 }).routes.standard.maxPreBuyBps, 500);
+  assert.throws(() => getLaunchPreBuyCapabilities(ETH_CHAIN, { maxPreBuyBps: 0 }));
 });
 
 test("percentage and slippage validation", () => {
   for (const bps of [0, -1, 0.5, 10_000, "100"]) {
-    assert.ok(classifyLaunchPreBuyInput(base.id, okInput({ preBuyBps: bps })).includes("INVALID_PERCENTAGE"));
+    assert.ok(classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ preBuyBps: bps })).includes("INVALID_PERCENTAGE"));
   }
-  assert.deepEqual(classifyLaunchPreBuyInput(base.id, okInput({ slippageBps: 0 })), []);
-  assert.deepEqual(classifyLaunchPreBuyInput(base.id, okInput({ slippageBps: 9_999 })), []);
+  assert.deepEqual(classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ slippageBps: 0 })), []);
+  assert.deepEqual(classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ slippageBps: 9_999 })), []);
   for (const bps of [-1, 10_000, 1.5, "50"]) {
-    assert.deepEqual(classifyLaunchPreBuyInput(base.id, okInput({ slippageBps: bps })), ["INVALID_SLIPPAGE"]);
+    assert.deepEqual(classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ slippageBps: bps })), ["INVALID_SLIPPAGE"]);
   }
 });
 
 test("static classification: premine ownership, creator, protected, fair launch, gasless", () => {
   assert.deepEqual(
-    classifyLaunchPreBuyInput(base.id, okInput({ params: { ...standardParams, premineAmount: 0n } })),
+    classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ params: { ...standardParams, premineAmount: 0n } })),
     []
   );
   assert.deepEqual(
-    classifyLaunchPreBuyInput(base.id, okInput({ params: { ...standardParams, premineAmount: 5n } })),
+    classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ params: { ...standardParams, premineAmount: 5n } })),
     ["PREMINE_ALREADY_SET"]
   );
   assert.deepEqual(
-    classifyLaunchPreBuyInput(base.id, okInput({ params: { ...standardParams, creator: zeroAddress } })),
+    classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ params: { ...standardParams, creator: zeroAddress } })),
     ["INVALID_CREATOR"]
   );
   assert.deepEqual(
     classifyLaunchPreBuyInput(
-      base.id,
+      ETH_CHAIN,
       okInput({ params: { ...standardParams, trustedSignerSettings: { enabled: false } } })
     ),
     ["PROTECTED_LAUNCH_UNSUPPORTED"]
   );
   assert.deepEqual(
-    classifyLaunchPreBuyInput(base.id, okInput({ params: { ...standardParams, fairLaunchPercent: 10 } })),
+    classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ params: { ...standardParams, fairLaunchPercent: 10 } })),
     ["FAIR_LAUNCH_UNSUPPORTED"]
   );
-  // fairLaunchDuration is only rejected where the zap has no fair-launch field (multichain)
-  assert.deepEqual(
-    classifyLaunchPreBuyInput(base.id, okInput({ params: { ...standardParams, fairLaunchDuration: 60 } })),
-    []
-  );
+  // fairLaunchDuration is rejected where the zap has no fair-launch field (multichain)
   assert.deepEqual(
     classifyLaunchPreBuyInput(robinhood.id, okInput({ params: { ...standardParams, fairLaunchDuration: 60 } })),
     ["FAIR_LAUNCH_UNSUPPORTED"]
   );
-  assert.deepEqual(classifyLaunchPreBuyInput(base.id, okInput({ gasless: true })), ["GASLESS_UNSUPPORTED"]);
+  assert.deepEqual(classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ gasless: true })), ["GASLESS_UNSUPPORTED"]);
   // reasons accumulate rather than short-circuit
   assert.deepEqual(
-    classifyLaunchPreBuyInput(base.id, okInput({ gasless: true, preBuyBps: 5000, slippageBps: -1 })).sort(),
+    classifyLaunchPreBuyInput(ETH_CHAIN, okInput({ gasless: true, preBuyBps: 5000, slippageBps: -1 })).sort(),
     ["EXCEEDS_ROUTE_LIMIT", "GASLESS_UNSUPPORTED", "INVALID_SLIPPAGE"]
   );
 });
@@ -174,6 +172,20 @@ test("paired-token classification: gate params, trusted signer, manager", () => 
     ["PAIRED_MANAGER_LAUNCH_UNSUPPORTED"]
   );
   assert.deepEqual(classifyLaunchPreBuyInput(mainnet.id, paired({})), ["ROUTE_UNSUPPORTED"]);
+});
+
+test("legacy Base zap routes cannot premine; the paired-token route is the way on Base", () => {
+  for (const chainId of [base.id, baseSepolia.id]) {
+    for (const route of ["standard", "revenueManager", "splitManager", "dynamicSplitManager"]) {
+      const reasons = classifyLaunchPreBuyInput(chainId, okInput({ route }));
+      assert.deepEqual(reasons, ["ROUTE_PREMINE_UNAVAILABLE"], `${chainId} ${route}`);
+      assert.equal(getLaunchPreBuyCapabilities(chainId).routes[route].supported, false);
+    }
+    assert.deepEqual(
+      classifyLaunchPreBuyInput(chainId, okInput({ route: "pairedToken", params: pairedParams })),
+      []
+    );
+  }
 });
 
 test("route availability follows the deployed zaps and managers", () => {
@@ -215,12 +227,12 @@ test("capability matrix per chain", () => {
     });
     return caps;
   };
-  const all = [...LAUNCH_PRE_BUY_ROUTES];
-  expect(base.id, all);
-  expect(baseSepolia.id, all);
-  expect(robinhood.id, all);
-  expect(mainnet.id, ["standard", "revenueManager", "splitManager", "dynamicSplitManager"]);
-  expect(unichain.id, ["standard", "revenueManager", "splitManager", "dynamicSplitManager"]);
+  const ethRoutes = ["standard", "revenueManager", "splitManager", "dynamicSplitManager"];
+  expect(base.id, ["pairedToken"]);
+  expect(baseSepolia.id, ["pairedToken"]);
+  expect(robinhood.id, [...LAUNCH_PRE_BUY_ROUTES]);
+  expect(mainnet.id, ethRoutes);
+  expect(unichain.id, ethRoutes);
   const unknown = expect(999_999, []);
   assert.deepEqual(unknown.routes.standard.reasons, ["CHAIN_UNSUPPORTED"]);
   for (const code of Object.values(unknown.unsupported)) {

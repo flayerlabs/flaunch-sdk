@@ -125,6 +125,7 @@ import {
   type LaunchPreBuyResult,
 } from "./launchPreBuy";
 import { LaunchPreBuyUnsupportedError } from "./errors";
+import { createLaunchCostProbe, type LaunchCostProbe } from "./launchCostProbe";
 import {
   type CalculatePairedTokenFlaunchFeeParams,
   type FlaunchPairedTokenParams,
@@ -991,11 +992,17 @@ export class ReadFlaunchSDK {
     return this.flaunchZapMultichain;
   }
 
+  private launchCostProbe?: LaunchCostProbe;
+
   /** The dependency bag the pre-buy planner runs on — the same clients the launch methods use. */
   protected launchPreBuyPlannerDeps(): LaunchPreBuyPlannerDeps {
+    if (!this.launchCostProbe && this.publicClient) {
+      this.launchCostProbe = createLaunchCostProbe(this.publicClient);
+    }
     return {
       chainId: this.chainId,
       drift: this.drift,
+      probeLaunchCost: this.launchCostProbe,
       legacyZap: this.baseClients?.readFlaunchZap,
       multichainZap: this.flaunchZapMultichain,
       pairedZap: this.flaunchZapV1_3,

@@ -58,6 +58,15 @@ export type {
 // Launch pre-buy: a creator buys an exact share of supply atomically with the launch
 export * from "./sdk/launchPreBuy";
 export {
+  createLaunchCostProbe,
+  LAUNCH_COST_PROBE_BYTECODE,
+} from "./sdk/launchCostProbe";
+export type {
+  LaunchCostProbe,
+  LaunchCostProbeParams,
+  LaunchCostProbeResult,
+} from "./sdk/launchCostProbe";
+export {
   decodeLaunchPreBuyCalldata,
   encodeLegacyFlaunch,
   encodeMultichainFlaunch,
