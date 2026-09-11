@@ -17,10 +17,15 @@ import {
 import { FlaunchZapAbi } from "../abi/FlaunchZap";
 import {
   AddressFeeSplitManagerAddress,
+  AddressFeeSplitManagerV1_3Address,
+  DefaultPairedTokenAddress,
   DynamicAddressFeeSplitManagerAddress,
+  DynamicAddressFeeSplitManagerV1_3Address,
+  FlaunchZapV1_3Address,
 } from "../addresses";
 import { generateTokenUri } from "../helpers/ipfs";
-import { getPermissionsAddress } from "../helpers/permissions";
+import { getPermissionsAddress, getPermissionsAddressV1_3 } from "../helpers/permissions";
+import { ReadWriteFlaunchZapV1_3 } from "./FlaunchZapV1_3Client";
 import { Permissions } from "../types";
 import type {
   FlaunchIPFSParams,
@@ -114,7 +119,7 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
 
   constructor(
     address: Address,
-    drift: Drift<ReadWriteAdapter> = createDrift()
+    private readonly drift: Drift<ReadWriteAdapter> = createDrift()
   ) {
     super(address, drift);
   }
@@ -130,8 +135,32 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
    */
   async flaunch(chainId: number, params: FlaunchParams) {
     const flaunchParams = this.prepareFlaunch(params);
-    const ethRequired = await this.calculateFee(flaunchParams);
     const manager = params.treasuryManagerParams?.manager;
+
+    // Ethereum's current generation defaults to native ETH. Keep the legacy client and
+    // address maps intact for existing pools while new launches use the paired-token ABI.
+    if (DefaultPairedTokenAddress[chainId] === zeroAddress) {
+      const zap = new ReadWriteFlaunchZapV1_3(FlaunchZapV1_3Address[chainId], this.drift);
+      const pairedParams = { ...flaunchParams, pairedToken: zeroAddress };
+      const fee = await zap.calculateFee({ flaunchParams: pairedParams, slippageBps: 500n });
+      return zap.flaunch({
+        flaunchParams: pairedParams,
+        trustedFeeSigner: zeroAddress,
+        maxPremineCost: fee.pairedPremineCost,
+        value: fee.ethRequired,
+        treasuryManagerParams: manager ? {
+          manager,
+          permissions: getPermissionsAddressV1_3(
+            params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+            chainId
+          ),
+          initializeData: params.treasuryManagerParams?.initializeData ?? "0x",
+          depositData: params.treasuryManagerParams?.depositData ?? "0x",
+        } : undefined,
+      });
+    }
+
+    const ethRequired = await this.calculateFee(flaunchParams);
 
     if (!manager) {
       return this.contract.write(
@@ -231,7 +260,9 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
     return this.flaunch(chainId, {
       ...params,
       treasuryManagerParams: {
-        manager: AddressFeeSplitManagerAddress[chainId],
+        manager: DefaultPairedTokenAddress[chainId] === zeroAddress
+          ? AddressFeeSplitManagerV1_3Address[chainId]
+          : AddressFeeSplitManagerAddress[chainId],
         permissions:
           params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
         initializeData,
@@ -344,25 +375,16 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
       ]
     );
 
-    const flaunchParams = this.prepareFlaunch(params);
-    const ethRequired = await this.calculateFee(flaunchParams);
-
-    return this.contract.write(
-      "flaunch",
-      {
-        _flaunchParams: flaunchParams,
-        _treasuryManagerParams: {
-          manager: DynamicAddressFeeSplitManagerAddress[chainId],
-          permissions: getPermissionsAddress(
-            params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
-            chainId
-          ),
-          initializeData,
-          depositData: "0x",
-        },
-        _trustedFeeSigner: zeroAddress,
+    return this.flaunch(chainId, {
+      ...params,
+      treasuryManagerParams: {
+        manager: DefaultPairedTokenAddress[chainId] === zeroAddress
+          ? DynamicAddressFeeSplitManagerV1_3Address[chainId]
+          : DynamicAddressFeeSplitManagerAddress[chainId],
+        permissions: params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+        initializeData,
+        depositData: "0x",
       },
-      { value: ethRequired }
-    );
+    });
   }
 }

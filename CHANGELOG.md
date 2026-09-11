@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0] - 2026-09-11
+
+### Added
+- Verified Ethereum mainnet v1.4.0 core and multi-asset manager addresses through the compatible `*V1_3` API family, including the protected PoolSwap router.
+- Native ETH as Ethereum's default pairing, with direct MILADY and LIL paired launches and swaps. Historical flETH address maps remain available for legacy pools.
+- Ethereum plain, IPFS and managed launch dispatch, current multi-token creator fee claims, and AnyPositionManager pool/NFT discovery.
+
+### Fixed
+- Plain and managed launch ABI overload selection retains the correct tuple shape for each call.
+- Ethereum pool reads and protected swap planning use the deployed pool's actual currencies and hook. Legacy flETH swap helpers reject current pools.
+- Native launch pricing reads the deployed ETH/USD oracle. NFTX pairings do not imply ETH acquisition routing or Game Mode support.
+
 ## [0.14.0] - 2026-09-08
 
 ### Added

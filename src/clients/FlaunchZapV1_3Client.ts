@@ -36,6 +36,13 @@ export type CalculatePairedTokenFlaunchFeeParams = {
 
 export type FlaunchPairedTokenParams = {
   flaunchParams: PairedTokenFlaunchParams;
+  /** An approved implementation deploys a manager; an instance receives the launch NFT. */
+  treasuryManagerParams?: {
+    manager: Address;
+    permissions: Address;
+    initializeData: HexString;
+    depositData: HexString;
+  };
   trustedFeeSigner: Address;
   maxPremineCost: bigint;
   value: bigint;
@@ -83,10 +90,24 @@ export class ReadWriteFlaunchZapV1_3 extends ReadFlaunchZapV1_3 {
 
   flaunch({
     flaunchParams,
+    treasuryManagerParams,
     trustedFeeSigner,
     maxPremineCost,
     value,
   }: FlaunchPairedTokenParams) {
+    if (treasuryManagerParams) {
+      return this.contract.write(
+        "flaunch",
+        {
+          _flaunchParams: flaunchParams,
+          _treasuryManagerParams: treasuryManagerParams,
+          _trustedFeeSigner: trustedFeeSigner,
+          _maxPremineCost: maxPremineCost,
+        },
+        { value }
+      );
+    }
+
     return this.contract.write(
       "flaunch",
       {

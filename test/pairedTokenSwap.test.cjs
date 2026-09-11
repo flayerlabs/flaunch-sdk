@@ -6,11 +6,12 @@ const {
   encodeAbiParameters,
   zeroAddress,
 } = require("viem");
-const { base, baseSepolia, mainnet, robinhood } = require("viem/chains");
+const { base, baseSepolia, mainnet, robinhood, unichain } = require("viem/chains");
 const {
   MAX_SQRT_PRICE_LIMIT,
   MIN_SQRT_PRICE_LIMIT,
   PairedTokenPositionManagerV1_3Address,
+  AnyPositionManagerV1_3Address,
   PoolSwapV1_3Abi,
   QuoterAbi,
   PoolSwapV1_3Address,
@@ -150,11 +151,11 @@ function recordingDrift({
 }
 
 test("paired-token swap addresses and capability cover the deployed V1.3 chains", () => {
-  for (const chainId of [base.id, baseSepolia.id, robinhood.id]) {
+  for (const chainId of [base.id, baseSepolia.id, robinhood.id, mainnet.id]) {
     assert.ok(PoolSwapV1_3Address[chainId], `PoolSwap on ${chainId}`);
     assert.equal(doesChainSupportPairedTokenSwap(chainId), true);
   }
-  assert.equal(doesChainSupportPairedTokenSwap(mainnet.id), false);
+  assert.equal(doesChainSupportPairedTokenSwap(unichain.id), false);
   // Sepolia's protected router is approved by both deployed gate generations.
   assert.equal(
     PoolSwapV1_3Address[baseSepolia.id].toLowerCase(),
@@ -505,7 +506,7 @@ test("buyCoinPairedToken sends approve then swap through the write clients", asy
 
 test("paired-token swaps refuse chains without the deployment", async () => {
   const { drift } = recordingDrift();
-  const sdk = new ReadFlaunchSDK(mainnet.id, drift);
+  const sdk = new ReadFlaunchSDK(unichain.id, drift);
   await assert.rejects(
     () =>
       sdk.planPairedTokenSwap({
@@ -514,9 +515,39 @@ test("paired-token swaps refuse chains without the deployment", async () => {
         slippageBps: 50,
         direction: "buy",
       }),
-    /not supported on chain 1/,
+    /not supported on chain 130/,
   );
   assert.throws(() => sdk.readPoolSwapV1_3, /not supported/);
+});
+
+test("Ethereum ETH, MILADY and LIL plans use the protected router for both current hooks", async (t) => {
+  const router = PoolSwapV1_3Address[mainnet.id];
+  const tokens = [zeroAddress, "0x8b3bc6942d6823a8022605648b671a2feb954800", "0x370e49749b9ff90004f3186aa7135487acc2a8fc"];
+  for (const hook of [PairedTokenPositionManagerV1_3Address[mainnet.id], AnyPositionManagerV1_3Address[mainnet.id]]) {
+    for (const token of tokens) {
+      await t.test(`${hook} / ${token}`, async () => {
+        const poolKey = pairedPoolKey(COIN, token, hook);
+        const { drift } = recordingDrift({ poolKey, answeringHook: hook });
+        const sdk = new ReadFlaunchSDK(mainnet.id, drift);
+        for (const direction of ["buy", "sell"]) {
+          const plan = await sdk.planPairedTokenSwap({
+            coinAddress: COIN, amountIn: 10_000n, slippageBps: 100,
+            sender: SENDER, direction,
+          });
+          assert.deepEqual(plan.poolKey, poolKey);
+          assert.equal(plan.swap.to.toLowerCase(), router.toLowerCase());
+          assert.equal(plan.amountOutMin, 9_801n);
+          assert.equal(plan.swap.value, direction === "buy" && token === zeroAddress ? 10_000n : 0n);
+          if (direction === "buy" && token === zeroAddress) {
+            assert.equal(plan.approve, undefined);
+          } else {
+            assert.equal(plan.approve.spender.toLowerCase(), router.toLowerCase());
+            assert.equal(plan.approve.token.toLowerCase(), (direction === "buy" ? token : COIN).toLowerCase());
+          }
+        }
+      });
+    }
+  }
 });
 
 test("registry tokenConfig exposes decimals and type; clients construct", async () => {

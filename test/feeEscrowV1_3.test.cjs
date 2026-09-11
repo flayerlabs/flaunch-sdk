@@ -9,7 +9,7 @@ const {
   toHex,
   zeroAddress,
 } = require("viem");
-const { base, mainnet } = require("viem/chains");
+const { base, mainnet, unichain } = require("viem/chains");
 const {
   createFlaunchCalldata,
   decodeCallData,
@@ -123,14 +123,38 @@ test("creatorRevenueByToken reads balances(recipient, token) per escrow token", 
 
 test("chains without the multi-token escrow say so before anything is sent", async () => {
   assert.equal(doesChainSupportMultiTokenFeeEscrow(base.id), true);
-  assert.equal(doesChainSupportMultiTokenFeeEscrow(mainnet.id), false);
+  assert.equal(doesChainSupportMultiTokenFeeEscrow(unichain.id), false);
 
   const sdk = createFlaunchCalldata({
-    publicClient: publicClientFor(mainnet, () => "0x"),
+    publicClient: publicClientFor(unichain, () => "0x"),
     walletAddress: CREATOR,
   });
   await assert.rejects(
     () => sdk.withdrawCreatorRevenueByToken({ tokens: [zeroAddress] }),
-    /Multi-token FeeEscrow is not supported on chain 1/
+    /Multi-token FeeEscrow is not supported on chain 130/
   );
+});
+
+test("Ethereum reads and claims native ETH and NFTX token fees from the current escrow", async () => {
+  const tokens = [zeroAddress, "0x8b3bc6942d6823a8022605648b671a2feb954800", "0x370e49749b9ff90004f3186aa7135487acc2a8fc"];
+  const calls = [];
+  const sdk = createFlaunchCalldata({
+    publicClient: publicClientFor(mainnet, (call) =>
+      answerReads(call, calls, encodeAbiParameters([{ type: "uint256" }], [123n]))
+    ),
+    walletAddress: CREATOR,
+  });
+  assert.equal(doesChainSupportMultiTokenFeeEscrow(mainnet.id), true);
+  assert.deepEqual(
+    await sdk.creatorRevenueByToken({ creator: CREATOR, tokens }),
+    tokens.map((token) => ({ token, amount: 123n }))
+  );
+  assert.equal(calls.length, 3);
+  assert.ok(calls.every((call) => call.to.toLowerCase() === FeeEscrowV1_3Address[mainnet.id].toLowerCase()));
+  const transaction = decodeCallData(await sdk.withdrawCreatorRevenueByToken({ tokens }));
+  assert.equal(transaction.to.toLowerCase(), FeeEscrowV1_3Address[mainnet.id].toLowerCase());
+  const decoded = decodeFunctionData({ abi: FeeEscrowV1_3Abi, data: transaction.data });
+  assert.deepEqual(decoded.args[0].map((token) => token.toLowerCase()), tokens);
+  assert.equal(decoded.args[1], CREATOR);
+  assert.equal(decoded.args[2], true);
 });
