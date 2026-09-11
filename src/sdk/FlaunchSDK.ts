@@ -101,7 +101,30 @@ import {
   DeployStakingManagerParams,
   DeployBuyBackManagerParams,
 } from "../clients/FlaunchZapClient";
-import { ReadWriteFlaunchZapMultichain } from "../clients/FlaunchZapMultichainClient";
+import {
+  ReadFlaunchZapMultichain,
+  ReadWriteFlaunchZapMultichain,
+} from "../clients/FlaunchZapMultichainClient";
+import {
+  assertLaunchPreBuyFunded,
+  assertLaunchPreBuyPlanCurrent,
+  executeLaunchPreBuy,
+  planLaunchPreBuy,
+  verifyLaunchPreBuyPlan,
+  type LaunchPreBuyExecuteOptions,
+  type LaunchPreBuyExecution,
+  type LaunchPreBuyExecutorDeps,
+  type LaunchPreBuyPlannerDeps,
+  type LaunchPreBuyVerification,
+} from "./launchPreBuyPlanner";
+import {
+  getLaunchPreBuyCapabilities,
+  type LaunchPreBuyCapabilities,
+  type LaunchPreBuyInput,
+  type LaunchPreBuyPlan,
+  type LaunchPreBuyResult,
+} from "./launchPreBuy";
+import { LaunchPreBuyUnsupportedError } from "./errors";
 import {
   type CalculatePairedTokenFlaunchFeeParams,
   type FlaunchPairedTokenParams,
@@ -570,6 +593,8 @@ export class ReadFlaunchSDK {
   private readonly flaunchManagerZapV1_3?: ReadFlaunchManagerZapV1_3;
   private readonly treasuryManagerFactoryV1_3?: ReadTreasuryManagerFactory;
   private readonly flaunchZapV1_3?: ReadFlaunchZapV1_3;
+  /** Read side of the multichain zap (Robinhood, mainnet, unichain) — for quoting launches there. */
+  private readonly flaunchZapMultichain?: ReadFlaunchZapMultichain;
   private readonly pairedTokenRegistryV1_3?: ReadPairedTokenRegistryV1_3;
   private readonly poolSwapV1_3?: ReadPoolSwapV1_3;
   private readonly pairedTokenPositionManagerV1_3?: ReadPairedTokenPositionManagerV1_3;
@@ -844,6 +869,10 @@ export class ReadFlaunchSDK {
     }
 
     if (isMultichainDeployment(this.chainId)) {
+      this.flaunchZapMultichain = new ReadFlaunchZapMultichain(
+        FlaunchZapMultichainAddress[this.chainId],
+        drift
+      );
       return;
     }
 
@@ -950,6 +979,95 @@ export class ReadFlaunchSDK {
         drift
       ),
     };
+  }
+
+  /** The multichain zap's read client. Throws on Base-family chains — gate with `isMultichainDeployment()`. */
+  get readFlaunchZapMultichain(): ReadFlaunchZapMultichain {
+    if (!this.flaunchZapMultichain) {
+      throw new Error(
+        `The multichain FlaunchZap is not deployed on chain ${this.chainId}`
+      );
+    }
+    return this.flaunchZapMultichain;
+  }
+
+  /** The dependency bag the pre-buy planner runs on — the same clients the launch methods use. */
+  protected launchPreBuyPlannerDeps(): LaunchPreBuyPlannerDeps {
+    return {
+      chainId: this.chainId,
+      drift: this.drift,
+      legacyZap: this.baseClients?.readFlaunchZap,
+      multichainZap: this.flaunchZapMultichain,
+      pairedZap: this.flaunchZapV1_3,
+      pairedRegistry: this.pairedTokenRegistryV1_3,
+      senderFor: (explicit) => this.senderFor(explicit),
+    };
+  }
+
+  /**
+   * Which launch routes can include a pre-buy on this chain, in what payment asset, with what
+   * limit, and which launch kinds never can. Pure — no RPC — so a UI can disable options early.
+   * @param options.maxPreBuyBps - Route limit override (default 1000 = 10% of supply)
+   */
+  getLaunchPreBuyCapabilities(options?: {
+    maxPreBuyBps?: number;
+  }): LaunchPreBuyCapabilities {
+    return getLaunchPreBuyCapabilities(this.chainId, options);
+  }
+
+  /**
+   * Quotes a launch that buys `preBuyBps` of the supply for the creator, at one pinned block:
+   * the exact coin amount, the native flaunching fee, the expected and maximum purchase cost in
+   * the actual payment asset, any ERC20 approval, funding, and the launch calldata bound to
+   * this chain, sender and quote. Returns `{ supported: false, reasons }` instead of throwing
+   * for anything the SDK will not plan (gasless, protected launches, over-limit, …). Never
+   * sends a transaction. Plans expire after `quoteTtlMs` (default 30 s).
+   */
+  planLaunchPreBuy(input: LaunchPreBuyInput): Promise<LaunchPreBuyResult> {
+    return planLaunchPreBuy(this.launchPreBuyPlannerDeps(), input);
+  }
+
+  /**
+   * Preflight of an existing plan against live state. Throws `LaunchPreBuyRequoteRequiredError`
+   * (`code: "REQUOTE_REQUIRED"`) when the plan must be re-planned; see `LaunchPreBuyVerification`.
+   * On-chain caps (`value`, `maxPremineCost`) remain the real protection.
+   */
+  verifyLaunchPreBuyPlan(
+    plan: LaunchPreBuyPlan,
+    mode: "quote" | "simulate" = "quote"
+  ): Promise<LaunchPreBuyVerification> {
+    return verifyLaunchPreBuyPlan(this.launchPreBuyPlannerDeps(), plan, mode);
+  }
+
+  /**
+   * The launch result for a pre-buy plan from a receipt's logs: the decoded `PoolCreated`
+   * event, or null when the receipt holds none. Throws when the event's premine differs from
+   * the plan (the receipt is not this plan's launch).
+   */
+  getLaunchPreBuyResultFromLogs(
+    logs: readonly Log[],
+    plan: LaunchPreBuyPlan
+  ): PoolCreatedEventData | null {
+    const created = this.getPoolCreatedFromLogs(logs);
+    if (created && created.params.premineAmount !== plan.premineAmount) {
+      throw new Error(
+        `PoolCreated premine ${created.params.premineAmount} does not match the plan's ${plan.premineAmount}`
+      );
+    }
+    return created;
+  }
+
+  /** `getLaunchPreBuyResultFromLogs` for a transaction hash (needs a public client). */
+  async getLaunchPreBuyResultFromTx(
+    hash: Hex,
+    plan: LaunchPreBuyPlan
+  ): Promise<PoolCreatedEventData | null> {
+    if (!this.publicClient) {
+      throw new Error("Public client is required to fetch transaction data");
+    }
+    const receipt = await this.publicClient.getTransactionReceipt({ hash });
+    if (!receipt) throw new Error(`Transaction not found: ${hash}`);
+    return this.getLaunchPreBuyResultFromLogs(receipt.logs, plan);
   }
 
   isPairedTokenApproved(token: Address) {
@@ -3998,6 +4116,48 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     }
 
     return this.readWriteFlaunchZap.flaunch(params);
+  }
+
+  /** The pre-buy executor's dependency bag: planner clients plus the zap writers. */
+  protected launchPreBuyExecutorDeps(): LaunchPreBuyExecutorDeps {
+    return {
+      ...this.launchPreBuyPlannerDeps(),
+      drift: this.drift,
+      legacyZapWriter: this.baseReadWriteClients?.readWriteFlaunchZap,
+      multichainZapWriter: this.readWriteFlaunchZapMultichain,
+      pairedZapWriter: this.readWriteFlaunchZapV1_3Client,
+    };
+  }
+
+  /**
+   * Executes a pre-buy plan: revalidates chain, signer, expiry, binding, calldata and balances,
+   * re-quotes (and by default simulates) against live state, sends any ERC20 approval and waits
+   * for it, then sends the launch with the plan's exact calldata and `value`. Throws
+   * `LaunchPreBuyRequoteRequiredError` before the first signature when a fresh plan is needed,
+   * `LaunchPreBuyInsufficientBalanceError` when the sender cannot fund it. No retry, no
+   * internal re-quote: one launch transaction at most.
+   * @returns The launch transaction hash and the executed plan; decode the outcome with
+   *   `getLaunchPreBuyResultFromTx`.
+   */
+  executeLaunchPreBuy(
+    plan: LaunchPreBuyPlan,
+    options?: LaunchPreBuyExecuteOptions
+  ): Promise<LaunchPreBuyExecution> {
+    return executeLaunchPreBuy(this.launchPreBuyExecutorDeps(), plan, options);
+  }
+
+  /**
+   * Plan and execute in one call. Throws `LaunchPreBuyUnsupportedError` (`code: "UNSUPPORTED"`,
+   * `reasons`) when the planner reports the launch unsupported. Prefer the two-step flow when a
+   * UI shows the quote first.
+   */
+  async flaunchWithPreBuy(
+    input: LaunchPreBuyInput,
+    options?: LaunchPreBuyExecuteOptions
+  ): Promise<LaunchPreBuyExecution> {
+    const result = await this.planLaunchPreBuy(input);
+    if (!result.supported) throw new LaunchPreBuyUnsupportedError(result.reasons);
+    return this.executeLaunchPreBuy(result.plan, options);
   }
 
   flaunchPairedToken(params: FlaunchPairedTokenParams) {

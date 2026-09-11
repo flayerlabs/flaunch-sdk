@@ -6,6 +6,8 @@ import {
 } from "viem/chains";
 import { chainIdToChain } from "./chainIdToChain";
 import {
+  FlaunchZapAddress,
+  FlaunchZapMultichainAddress,
   DynamicAddressFeeSplitManagerAddress,
   FeeEscrowV1_3Address,
   FlaunchManagerZapV1_3Address,
@@ -129,4 +131,16 @@ export function doesChainSupportPairedTokenAcquisition(chainId: number): boolean
     PairedTokenAcquisitionDexAddress[chainId] !== undefined &&
     PairedTokenRegistryV1_3Address[chainId] !== undefined
   );
+}
+
+/**
+ * Whether any launch route on this chain can include a pre-buy (a creator premine planned and
+ * executed through the SDK). Per-route detail lives in `getLaunchPreBuyCapabilities()`.
+ */
+export function doesChainSupportLaunchPreBuy(chainId: number): boolean {
+  if (!isChainSupported(chainId)) return false;
+  const zap = isMultichainDeployment(chainId)
+    ? FlaunchZapMultichainAddress[chainId]
+    : FlaunchZapAddress[chainId];
+  return zap !== undefined || doesChainSupportPairedTokenLaunch(chainId);
 }

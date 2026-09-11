@@ -24,9 +24,51 @@ export type {
   RecipientShare,
 } from "./clients/DynamicAddressFeeSplitManagerClient";
 export type {
+  FlaunchParams,
+  FlaunchIPFSParams,
+  FlaunchWithRevenueManagerParams,
+  FlaunchWithRevenueManagerIPFSParams,
+  FlaunchWithSplitManagerParams,
+  FlaunchWithSplitManagerIPFSParams,
   FlaunchWithDynamicSplitManagerParams,
   FlaunchWithDynamicSplitManagerIPFSParams,
+  BaseFlaunchArgs,
 } from "./clients/FlaunchZapClient";
+export {
+  ReadFlaunchZap,
+  ReadWriteFlaunchZap,
+  FLAUNCH_TOTAL_SUPPLY,
+  buildBaseFlaunchArgs,
+  encodeInitialPriceParams,
+  toFlaunchParamsWithRevenueManager,
+  toFlaunchParamsWithSplitManager,
+  toFlaunchParamsWithDynamicSplitManager,
+} from "./clients/FlaunchZapClient";
+export {
+  ReadFlaunchZapMultichain,
+  ReadWriteFlaunchZapMultichain,
+  buildMultichainFlaunchArgs,
+  toFlaunchParamsMultichain,
+} from "./clients/FlaunchZapMultichainClient";
+export type {
+  FlaunchParamsMultichain,
+  MultichainFlaunchArgs,
+} from "./clients/FlaunchZapMultichainClient";
+
+// Launch pre-buy: a creator buys an exact share of supply atomically with the launch
+export * from "./sdk/launchPreBuy";
+export {
+  decodeLaunchPreBuyCalldata,
+  encodeLegacyFlaunch,
+  encodeMultichainFlaunch,
+  encodePairedFlaunch,
+} from "./sdk/launchPreBuyPlanner";
+export type {
+  LaunchPreBuyExecuteOptions,
+  LaunchPreBuyExecution,
+  LaunchPreBuyVerification,
+  DecodedLaunchPreBuyCalldata,
+} from "./sdk/launchPreBuyPlanner";
 export {
   ReadFeeEscrowV1_3,
   ReadWriteFeeEscrowV1_3,

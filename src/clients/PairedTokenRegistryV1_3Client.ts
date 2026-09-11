@@ -42,8 +42,15 @@ export class ReadPairedTokenRegistryV1_3 {
   }
 
   /** The full registry row: approval, type, decimals, escrow and pricing hooks. */
-  async tokenConfig(token: Address): Promise<PairedTokenConfig> {
-    const row = await this.contract.read("tokenConfig", { _token: token });
+  async tokenConfig(
+    token: Address,
+    options?: { block?: bigint }
+  ): Promise<PairedTokenConfig> {
+    const row = await this.contract.read(
+      "tokenConfig",
+      { _token: token },
+      options
+    );
     const tokenType = Number(row.tokenType);
     return {
       approved: row.approved,

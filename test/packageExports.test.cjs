@@ -17,6 +17,21 @@ const packageExports = [
   ["@flaunch/sdk/helpers", "doesChainSupportPairedTokenLaunch"],
   ["@flaunch/sdk/hooks", "usePoolCreatedEvents"],
   ["@flaunch/sdk/utils", "getPoolId"],
+  ["@flaunch/sdk", "getLaunchPreBuyCapabilities"],
+  ["@flaunch/sdk", "preBuyAmountFromBps"],
+  ["@flaunch/sdk", "percentToBps"],
+  ["@flaunch/sdk", "classifyLaunchPreBuyInput"],
+  ["@flaunch/sdk", "computeLaunchPreBuyBinding"],
+  ["@flaunch/sdk", "decodeLaunchPreBuyCalldata"],
+  ["@flaunch/sdk", "DEFAULT_MAX_PRE_BUY_BPS"],
+  ["@flaunch/sdk", "LAUNCH_PRE_BUY_REASON_CODES"],
+  ["@flaunch/sdk", "LaunchPreBuyRequoteRequiredError"],
+  ["@flaunch/sdk", "LaunchPreBuyUnsupportedError"],
+  ["@flaunch/sdk", "LaunchPreBuyInsufficientBalanceError"],
+  ["@flaunch/sdk", "buildBaseFlaunchArgs"],
+  ["@flaunch/sdk", "buildMultichainFlaunchArgs"],
+  ["@flaunch/sdk", "ReadFlaunchZapMultichain"],
+  ["@flaunch/sdk/helpers", "doesChainSupportLaunchPreBuy"],
 ];
 
 test("published package exports resolve through CommonJS and ESM", async () => {
