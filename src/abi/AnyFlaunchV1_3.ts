@@ -1,0 +1,1096 @@
+// AnyFlaunch ERC721, v1.3.x generation (the six-field FlaunchParams with pairedToken). Adds deployMemecoin / approveDeployer / memecoinImplementation and the MemecoinDeployed event used by AnyFlaunchZap launches. The legacy AnyFlaunchAbi stays for the original AnyFlaunchAddress generation.
+// Generated from flaunch-contracts PR #289 (any-flaunch-vested-zap, commit 7b44600) out/AnyFlaunch.sol/AnyFlaunch.json. Base Sepolia vested generation 0xE9ec22D7c245743DC5dC958e5cCd664732Ae04b9 (2026-09-11).
+export const AnyFlaunchV1_3Abi = [
+  {
+    type: "constructor",
+    inputs: [
+      {
+        name: "_baseURI",
+        type: "string",
+        internalType: "string"
+      }
+    ],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "MAX_CREATOR_ALLOCATION",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "approve",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "id",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "approveDeployer",
+    inputs: [
+      {
+        name: "_deployer",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_isApproved",
+        type: "bool",
+        internalType: "bool"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "approvedDeployer",
+    inputs: [
+      {
+        name: "_deployer",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "_isApproved",
+        type: "bool",
+        internalType: "bool"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "balanceOf",
+    inputs: [
+      {
+        name: "owner",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "result",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "baseURI",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "string",
+        internalType: "string"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "burn",
+    inputs: [
+      {
+        name: "_tokenId",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "cancelOwnershipHandover",
+    inputs: [],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "completeOwnershipHandover",
+    inputs: [
+      {
+        name: "pendingOwner",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "creator",
+    inputs: [
+      {
+        name: "_memecoin",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "creator_",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "deployMemecoin",
+    inputs: [
+      {
+        name: "name_",
+        type: "string",
+        internalType: "string"
+      },
+      {
+        name: "symbol_",
+        type: "string",
+        internalType: "string"
+      },
+      {
+        name: "tokenUri_",
+        type: "string",
+        internalType: "string"
+      },
+      {
+        name: "_supplyRecipient",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "memecoin_",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "flaunch",
+    inputs: [
+      {
+        name: "_params",
+        type: "tuple",
+        internalType: "struct IAnyPositionManager.FlaunchParams",
+        components: [
+          {
+            name: "memecoin",
+            type: "address",
+            internalType: "address"
+          },
+          {
+            name: "creator",
+            type: "address",
+            internalType: "address"
+          },
+          {
+            name: "creatorFeeAllocation",
+            type: "uint24",
+            internalType: "uint24"
+          },
+          {
+            name: "initialPriceParams",
+            type: "bytes",
+            internalType: "bytes"
+          },
+          {
+            name: "feeCalculatorParams",
+            type: "bytes",
+            internalType: "bytes"
+          },
+          {
+            name: "pairedToken",
+            type: "address",
+            internalType: "address"
+          }
+        ]
+      }
+    ],
+    outputs: [
+      {
+        name: "memecoinTreasury_",
+        type: "address",
+        internalType: "address payable"
+      },
+      {
+        name: "tokenId_",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "getApproved",
+    inputs: [
+      {
+        name: "id",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [
+      {
+        name: "result",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "initialize",
+    inputs: [
+      {
+        name: "_positionManager",
+        type: "address",
+        internalType: "contract IAnyPositionManager"
+      },
+      {
+        name: "_memecoinTreasuryImplementation",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "isApprovedForAll",
+    inputs: [
+      {
+        name: "owner",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "operator",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "result",
+        type: "bool",
+        internalType: "bool"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "memecoin",
+    inputs: [
+      {
+        name: "_tokenId",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "memecoinImplementation",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "memecoinTreasury",
+    inputs: [
+      {
+        name: "_memecoin",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address payable"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "memecoinTreasury",
+    inputs: [
+      {
+        name: "_tokenId",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address payable"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "memecoinTreasuryImplementation",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "name",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "string",
+        internalType: "string"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "nextMemecoinNonce",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "nextTokenId",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "owner",
+    inputs: [],
+    outputs: [
+      {
+        name: "result",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "ownerOf",
+    inputs: [
+      {
+        name: "id",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [
+      {
+        name: "result",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "ownershipHandoverExpiresAt",
+    inputs: [
+      {
+        name: "pendingOwner",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "result",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "poolId",
+    inputs: [
+      {
+        name: "_tokenId",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "PoolId"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "positionManager",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract IAnyPositionManager"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "renounceOwnership",
+    inputs: [],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "requestOwnershipHandover",
+    inputs: [],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "safeTransferFrom",
+    inputs: [
+      {
+        name: "from",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "to",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "id",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "safeTransferFrom",
+    inputs: [
+      {
+        name: "from",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "to",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "id",
+        type: "uint256",
+        internalType: "uint256"
+      },
+      {
+        name: "data",
+        type: "bytes",
+        internalType: "bytes"
+      }
+    ],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "setApprovalForAll",
+    inputs: [
+      {
+        name: "operator",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "isApproved",
+        type: "bool",
+        internalType: "bool"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "setBaseURI",
+    inputs: [
+      {
+        name: "_baseURI",
+        type: "string",
+        internalType: "string"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "setMemecoinImplementation",
+    inputs: [
+      {
+        name: "_memecoinImplementation",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "setMemecoinMetadata",
+    inputs: [
+      {
+        name: "_memecoin",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "name_",
+        type: "string",
+        internalType: "string"
+      },
+      {
+        name: "symbol_",
+        type: "string",
+        internalType: "string"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "setMemecoinTreasuryImplementation",
+    inputs: [
+      {
+        name: "_memecoinTreasuryImplementation",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "supportsInterface",
+    inputs: [
+      {
+        name: "interfaceId",
+        type: "bytes4",
+        internalType: "bytes4"
+      }
+    ],
+    outputs: [
+      {
+        name: "result",
+        type: "bool",
+        internalType: "bool"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "symbol",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "string",
+        internalType: "string"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "tokenId",
+    inputs: [
+      {
+        name: "_memecoin",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "_tokenId",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "tokenURI",
+    inputs: [
+      {
+        name: "_tokenId",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "string",
+        internalType: "string"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "transferFrom",
+    inputs: [
+      {
+        name: "from",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "to",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "id",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "function",
+    name: "transferOwnership",
+    inputs: [
+      {
+        name: "newOwner",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [],
+    stateMutability: "payable"
+  },
+  {
+    type: "event",
+    name: "Approval",
+    inputs: [
+      {
+        name: "owner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "account",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "id",
+        type: "uint256",
+        indexed: true,
+        internalType: "uint256"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "ApprovalForAll",
+    inputs: [
+      {
+        name: "owner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "operator",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "isApproved",
+        type: "bool",
+        indexed: false,
+        internalType: "bool"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "BaseURIUpdated",
+    inputs: [
+      {
+        name: "_newBaseURI",
+        type: "string",
+        indexed: false,
+        internalType: "string"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "DeployerApproved",
+    inputs: [
+      {
+        name: "_deployer",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      },
+      {
+        name: "_isApproved",
+        type: "bool",
+        indexed: false,
+        internalType: "bool"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "Initialized",
+    inputs: [
+      {
+        name: "version",
+        type: "uint64",
+        indexed: false,
+        internalType: "uint64"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "MemecoinDeployed",
+    inputs: [
+      {
+        name: "_memecoin",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "_deployer",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      },
+      {
+        name: "_supplyRecipient",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "MemecoinImplementationUpdated",
+    inputs: [
+      {
+        name: "_newImplementation",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "MemecoinTreasuryImplementationUpdated",
+    inputs: [
+      {
+        name: "_newImplementation",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "OwnershipHandoverCanceled",
+    inputs: [
+      {
+        name: "pendingOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "OwnershipHandoverRequested",
+    inputs: [
+      {
+        name: "pendingOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "OwnershipTransferred",
+    inputs: [
+      {
+        name: "oldOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "newOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "Transfer",
+    inputs: [
+      {
+        name: "from",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "to",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "id",
+        type: "uint256",
+        indexed: true,
+        internalType: "uint256"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "error",
+    name: "AccountBalanceOverflow",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "AlreadyInitialized",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "BalanceQueryForZeroAddress",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "BaseURICannotBeEmpty",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "CallerIsNotApprovedDeployer",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "CallerIsNotPositionManager",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "CreatorFeeAllocationInvalid",
+    inputs: [
+      {
+        name: "_allocation",
+        type: "uint24",
+        internalType: "uint24"
+      },
+      {
+        name: "_maxAllocation",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "InvalidInitialization",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "MemecoinImplementationNotSet",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NewOwnerIsZeroAddress",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NoHandoverRequest",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NotInitializing",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NotOwnerNorApproved",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "TokenAlreadyExists",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "TokenDoesNotExist",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "TransferFromIncorrectOwner",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "TransferToNonERC721ReceiverImplementer",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "TransferToZeroAddress",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "Unauthorized",
+    inputs: []
+  }
+] as const;
