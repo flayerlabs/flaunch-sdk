@@ -33,6 +33,8 @@ export type {
   FlaunchWithDynamicSplitManagerParams,
   FlaunchWithDynamicSplitManagerIPFSParams,
   BaseFlaunchArgs,
+  ResolvedTreasuryManagerInput,
+  WithTreasuryManagerParams,
 } from "./clients/FlaunchZapClient";
 export {
   ReadFlaunchZap,
@@ -68,6 +70,7 @@ export type {
 } from "./sdk/launchCostProbe";
 export {
   decodeLaunchPreBuyCalldata,
+  encodeAnyVestedFlaunch,
   encodeLegacyFlaunch,
   encodeMultichainFlaunch,
   encodePairedFlaunch,
@@ -93,6 +96,60 @@ export type {
   PairedTokenFlaunchFee,
   PairedTokenFlaunchParams,
 } from "./clients/FlaunchZapV1_3Client";
+// Vested launches: the AnyFlaunchZap (Base Sepolia) escrows vesting schedules in MemecoinVesting at launch
+export {
+  ReadAnyFlaunchZap,
+  ReadWriteAnyFlaunchZap,
+  buildAnyFlaunchZapFlaunchArgs,
+  encodeAnyFlaunchZapFlaunch,
+} from "./clients/AnyFlaunchZapClient";
+export type {
+  AnyFlaunchZapFee,
+  AnyFlaunchZapFlaunchArgs,
+  AnyFlaunchZapFlaunchCall,
+  AnyFlaunchZapFlaunchParams,
+  AnyFlaunchZapTreasuryManagerArgs,
+  BuildAnyFlaunchZapFlaunchArgsParams,
+  CalculateAnyFlaunchZapFeeParams,
+  VestingScheduleArgs,
+} from "./clients/AnyFlaunchZapClient";
+export {
+  ReadMemecoinVesting,
+  ReadWriteMemecoinVesting,
+} from "./clients/MemecoinVestingClient";
+export type {
+  VestingPosition,
+  VestingPositionSchedule,
+  VestingSchedule,
+} from "./clients/MemecoinVestingClient";
+export {
+  assertVestedSupplyWithinCap,
+  hashVestingSchedules,
+  maxVestedSupply,
+  toAnyFlaunchZapFlaunchParams,
+  toAnyFlaunchZapTreasuryManagerArgs,
+  toFlaunchVestedParamsWithDynamicSplitManager,
+  toFlaunchVestedParamsWithRevenueManager,
+  toFlaunchVestedParamsWithSplitManager,
+  toVestingScheduleArgs,
+  vestedAmountFromBps,
+  vestedSupplyOf,
+} from "./clients/VestedLaunchParams";
+export type {
+  FlaunchVestedIPFSParams,
+  FlaunchVestedParams,
+  FlaunchVestedWithDynamicSplitManagerIPFSParams,
+  FlaunchVestedWithDynamicSplitManagerParams,
+  FlaunchVestedWithRevenueManagerIPFSParams,
+  FlaunchVestedWithRevenueManagerParams,
+  FlaunchVestedWithSplitManagerIPFSParams,
+  FlaunchVestedWithSplitManagerParams,
+  VestingScheduleParams,
+} from "./clients/VestedLaunchParams";
+export type {
+  VestedLaunchEventData,
+  VestedLaunchSchedule,
+} from "./sdk/FlaunchSDK";
 export { ReadPairedTokenRegistryV1_3 } from "./clients/PairedTokenRegistryV1_3Client";
 export type { PairedTokenConfig } from "./clients/PairedTokenRegistryV1_3Client";
 // v1.3.1 paired-token swaps through PoolSwap (mUSD-, native-ETH-, flETH- or B20-paired pools)
