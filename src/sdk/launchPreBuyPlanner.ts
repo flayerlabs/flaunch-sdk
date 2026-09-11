@@ -11,6 +11,7 @@ import {
   isAddressEqual,
   zeroAddress,
 } from "viem";
+import { AnyFlaunchZapAbi } from "../abi/AnyFlaunchZap";
 import { FlaunchZapAbi } from "../abi/FlaunchZap";
 import { FlaunchZapV1_1_6Abi } from "../abi/FlaunchZapV1_1_6";
 import { FlaunchZapV1_3Abi } from "../abi/FlaunchZapV1_3";
@@ -35,6 +36,24 @@ import {
   type ReadFlaunchZapV1_3,
   type ReadWriteFlaunchZapV1_3,
 } from "../clients/FlaunchZapV1_3Client";
+import {
+  buildAnyFlaunchZapFlaunchArgs,
+  encodeAnyFlaunchZapFlaunch,
+  type AnyFlaunchZapFlaunchArgs,
+  type AnyFlaunchZapFlaunchParams,
+  type AnyFlaunchZapTreasuryManagerArgs,
+  type ReadAnyFlaunchZap,
+  type ReadWriteAnyFlaunchZap,
+} from "../clients/AnyFlaunchZapClient";
+import {
+  assertVestedSupplyWithinCap,
+  hashVestingSchedules,
+  toAnyFlaunchZapFlaunchParams,
+  toAnyFlaunchZapTreasuryManagerArgs,
+  toVestingScheduleArgs,
+  vestedSupplyOf,
+} from "../clients/VestedLaunchParams";
+import { FLAUNCH_TOTAL_SUPPLY } from "../clients/FlaunchZapClient";
 import { ReadMemecoin, ReadWriteMemecoin } from "../clients/MemecoinClient";
 import type { ReadPairedTokenRegistryV1_3 } from "../clients/PairedTokenRegistryV1_3Client";
 import { PAIRED_TOKEN_TYPE } from "../types";
@@ -76,6 +95,8 @@ export type LaunchPreBuyPlannerDeps = {
   legacyZap?: ReadFlaunchZap;
   multichainZap?: ReadFlaunchZapMultichain;
   pairedZap?: ReadFlaunchZapV1_3;
+  /** The AnyFlaunchZap (vested launches); the `vested` route quotes and encodes against it. */
+  vestedZap?: ReadAnyFlaunchZap;
   pairedRegistry?: ReadPairedTokenRegistryV1_3;
   /** Resolves the explicit sender or the drift signer; undefined when neither exists. */
   senderFor: (explicit?: Address) => Promise<Address | undefined>;
@@ -92,6 +113,7 @@ export type LaunchPreBuyExecutorDeps = LaunchPreBuyPlannerDeps & {
   legacyZapWriter?: ReadWriteFlaunchZap;
   multichainZapWriter?: ReadWriteFlaunchZapMultichain;
   pairedZapWriter?: ReadWriteFlaunchZapV1_3;
+  vestedZapWriter?: ReadWriteAnyFlaunchZap;
 };
 
 export type LaunchPreBuyVerification =
@@ -128,6 +150,12 @@ type PreparedLaunch =
       flaunchParams: PairedTokenFlaunchParams;
       premineAmount: bigint;
       data: Hex;
+    }
+  | {
+      zapFamily: "anyVested";
+      prepared: AnyFlaunchZapFlaunchArgs;
+      premineAmount: bigint;
+      data: Hex;
     };
 
 function flaunchParamsForRoute(input: LaunchPreBuyInput, chainId: number): FlaunchParams {
@@ -142,6 +170,8 @@ function flaunchParamsForRoute(input: LaunchPreBuyInput, chainId: number): Flaun
       return toFlaunchParamsWithDynamicSplitManager(input.params, chainId);
     case "pairedToken":
       throw new Error("pairedToken launches do not use FlaunchParams");
+    case "vested":
+      throw new Error("vested launches do not use FlaunchParams");
   }
 }
 
@@ -191,6 +221,11 @@ export function encodePairedFlaunch(
   });
 }
 
+/** Encodes prepared AnyFlaunchZap `flaunch` arguments (any of the four overloads). */
+export function encodeAnyVestedFlaunch(prepared: AnyFlaunchZapFlaunchArgs): Hex {
+  return encodeAnyFlaunchZapFlaunch(prepared);
+}
+
 /** Strips planner-only fields and pins the premine; the shape the v1.3 zap struct expects. */
 function toPairedFlaunchParams(
   params: LaunchPreBuyInput extends infer T
@@ -221,6 +256,7 @@ function prepareLaunch(
   maxPremineCost: bigint
 ): PreparedLaunch {
   const zapFamily = zapFamilyForRoute(chainId, input.route);
+  if (input.route === "vested") throw new Error("vested launches are prepared by the planner");
   if (input.route === "pairedToken") {
     const flaunchParams = toPairedFlaunchParams(input.params, premineAmount);
     return {
@@ -262,7 +298,7 @@ type EthQuotes = { fee: bigint; expected: bigint; max: bigint };
 /** Three pinned `calculateFee` reads for an ETH-funded route: fee only, premine at 0 bps, premine at `slippageBps`. */
 async function quoteEthRoute(
   deps: LaunchPreBuyPlannerDeps,
-  prepared: Exclude<PreparedLaunch, { zapFamily: "pairedToken" }>,
+  prepared: Exclude<PreparedLaunch, { zapFamily: "pairedToken" | "anyVested" }>,
   slippageBps: bigint,
   block?: bigint
 ): Promise<EthQuotes> {
@@ -314,6 +350,59 @@ async function quotePairedRoute(
     zap.calculateFee({ flaunchParams, slippageBps }, options),
   ]);
   return { fee, expected, max };
+}
+
+/** `quotePairedRoute` for the AnyFlaunchZap: same three reads, same two-legged quote shape. */
+async function quoteVestedRoute(
+  deps: LaunchPreBuyPlannerDeps,
+  flaunchParams: AnyFlaunchZapFlaunchParams,
+  slippageBps: bigint,
+  block?: bigint
+): Promise<PairedQuotes> {
+  const zap = deps.vestedZap;
+  if (!zap) throw new Error(`AnyFlaunchZap is not available on chain ${deps.chainId}`);
+  const options = block === undefined ? undefined : { block };
+  const [fee, expected, max] = await Promise.all([
+    zap.calculateFee({ flaunchParams: { ...flaunchParams, premineAmount: 0n }, slippageBps: 0n }, options),
+    zap.calculateFee({ flaunchParams, slippageBps: 0n }, options),
+    zap.calculateFee({ flaunchParams, slippageBps }, options),
+  ]);
+  return { fee, expected, max };
+}
+
+/**
+ * The native-ETH twin of a two-legged launch: the same launch with `pairedToken = zeroAddress`,
+ * quoted and encoded so an ERC20 premine's price impact can be measured on it.
+ */
+type NativeTwin = {
+  quote: (block?: bigint) => Promise<PairedQuotes>;
+  data: Hex;
+};
+
+function pairedNativeTwin(deps: LaunchPreBuyPlannerDeps, flaunchParams: PairedTokenFlaunchParams): NativeTwin {
+  const nativeParams = { ...flaunchParams, pairedToken: zeroAddress };
+  return {
+    quote: (block) => quotePairedRoute(deps, nativeParams, 0n, block),
+    data: encodePairedFlaunch(nativeParams, zeroAddress, 0n),
+  };
+}
+
+function withNativePairing(prepared: AnyFlaunchZapFlaunchArgs): AnyFlaunchZapFlaunchArgs {
+  return {
+    ...prepared,
+    args: {
+      ...prepared.args,
+      _flaunchParams: { ...prepared.args._flaunchParams, pairedToken: zeroAddress },
+    },
+  } as AnyFlaunchZapFlaunchArgs;
+}
+
+function vestedNativeTwin(deps: LaunchPreBuyPlannerDeps, prepared: AnyFlaunchZapFlaunchArgs): NativeTwin {
+  const native = withNativePairing(prepared);
+  return {
+    quote: (block) => quoteVestedRoute(deps, native.args._flaunchParams, 0n, block),
+    data: encodeAnyFlaunchZapFlaunch(native),
+  };
 }
 
 /** `amount * (10_000 + bps) / 10_000`, rounded up so the cap never sits below the quote. */
@@ -384,7 +473,7 @@ async function priceErc20Premine(
   params: {
     sender: Address;
     to: Address;
-    flaunchParams: PairedTokenFlaunchParams;
+    native: NativeTwin;
     linearExpected: bigint;
     block?: bigint;
   }
@@ -392,8 +481,7 @@ async function priceErc20Premine(
   if (!deps.probeLaunchCost) {
     return { method: "protocolQuote", expected: params.linearExpected };
   }
-  const nativeParams = { ...params.flaunchParams, pairedToken: zeroAddress };
-  const native = await quotePairedRoute(deps, nativeParams, 0n, params.block);
+  const native = await params.native.quote(params.block);
   const nativeFee = native.fee.ethRequired;
   const linearNative = native.expected.ethRequired - nativeFee;
   if (linearNative <= 0n) {
@@ -402,7 +490,7 @@ async function priceErc20Premine(
   const priced = await priceEthLaunch(deps, {
     sender: params.sender,
     to: params.to,
-    data: encodePairedFlaunch(nativeParams, zeroAddress, 0n),
+    data: params.native.data,
     fee: nativeFee,
     linearExpected: linearNative,
     linearMax: linearNative,
@@ -503,6 +591,154 @@ async function readFunding(
   };
 }
 
+type TwoLeggedLaunchInput = {
+  sender: Address;
+  to: Address;
+  zapFamily: LaunchPreBuyZapFamily;
+  premineAmount: bigint;
+  slippageBps: bigint;
+  quoteBlockNumber: bigint;
+  createdAtMs: number;
+  expiresAtMs: number;
+  creator: Address;
+  pairedToken: Address;
+  quotes: PairedQuotes;
+  payment: Exclude<PaymentResolution, { kind: "unapproved" }>;
+  /** Re-encodes the launch with the real cap once it is priced. */
+  encode: (maxPremineCost: bigint) => Hex;
+  native: NativeTwin;
+  vestingSchedulesHash?: Hex;
+};
+
+/**
+ * The plan for a launch whose quote has two legs — ETH for the fee (plus the premine when the
+ * pairing is native) and the paired token otherwise: the v1.3 zap's `pairedToken` route and the
+ * AnyFlaunchZap's `vested` route share it.
+ */
+async function planTwoLeggedLaunch(
+  deps: LaunchPreBuyPlannerDeps,
+  input: LaunchPreBuyInput,
+  launch: TwoLeggedLaunchInput
+): Promise<
+  | { ok: true; plan: Omit<LaunchPreBuyPlan, "binding"> }
+  | { ok: false; reasons: LaunchPreBuyReasonCode[] }
+> {
+  const { chainId } = deps;
+  const { quotes, payment, sender, to, slippageBps, quoteBlockNumber } = launch;
+  const fee = nativeAsset(chainId);
+  const feeAmount = quotes.fee.ethRequired;
+  const common = {
+    version: LAUNCH_PRE_BUY_PLAN_VERSION,
+    chainId,
+    route: input.route,
+    zapFamily: launch.zapFamily,
+    sender,
+    creator: launch.creator,
+    preBuyBps: input.preBuyBps,
+    premineAmount: launch.premineAmount,
+    slippageBps: input.slippageBps,
+    fee: { asset: fee, amount: feeAmount },
+    pairedToken: launch.pairedToken,
+    ...(launch.vestingSchedulesHash ? { vestingSchedulesHash: launch.vestingSchedulesHash } : {}),
+    quoteBlockNumber,
+    createdAtMs: launch.createdAtMs,
+    expiresAtMs: launch.expiresAtMs,
+  };
+
+  if (payment.kind === "native") {
+    if (quotes.max.ethRequired < quotes.expected.ethRequired || quotes.expected.ethRequired < feeAmount) {
+      return { ok: false, reasons: ["QUOTE_INCONSISTENT"] };
+    }
+    const linearExpected = quotes.expected.ethRequired - feeAmount;
+    const linearMax = quotes.max.ethRequired - feeAmount;
+    let priced: PremineCostPricing;
+    try {
+      priced = await priceEthLaunch(deps, {
+        sender,
+        to,
+        // `_maxPremineCost` is ignored for a native pairing; price with the linear cap.
+        data: launch.encode(linearMax),
+        fee: feeAmount,
+        linearExpected,
+        linearMax,
+        block: quoteBlockNumber,
+      });
+    } catch (error) {
+      if (error instanceof PremineNotFillableError) return { ok: false, reasons: ["PREMINE_NOT_FILLABLE"] };
+      throw error;
+    }
+    const max = withSlippage(priced.expected, slippageBps);
+    const value = feeAmount + max;
+    return {
+      ok: true,
+      plan: {
+        ...common,
+        payment: { asset: fee, expected: priced.expected, max },
+        pricing: { method: priced.method, protocolQuote: { expected: linearExpected, max: linearMax } },
+        maxPremineCost: max,
+        value,
+        approvals: [],
+        launch: { to, data: launch.encode(max), value },
+        funding: await readFunding(deps, sender, value, undefined),
+      },
+    };
+  }
+
+  if (
+    quotes.max.ethRequired !== feeAmount ||
+    quotes.max.pairedPremineCost < quotes.expected.pairedPremineCost
+  ) {
+    return { ok: false, reasons: ["QUOTE_INCONSISTENT"] };
+  }
+  const value = quotes.max.ethRequired;
+  const linearExpected = quotes.expected.pairedPremineCost;
+  const linearMax = quotes.max.pairedPremineCost;
+  let priced: PremineCostPricing;
+  try {
+    priced = await priceErc20Premine(deps, {
+      sender,
+      to,
+      native: launch.native,
+      linearExpected,
+      block: quoteBlockNumber,
+    });
+  } catch (error) {
+    if (error instanceof PremineNotFillableError) return { ok: false, reasons: ["PREMINE_NOT_FILLABLE"] };
+    throw error;
+  }
+  const maxPremineCost = withSlippage(priced.expected, slippageBps);
+  if (input.approvalAllowance !== undefined && input.approvalAllowance < maxPremineCost) {
+    throw new Error("approvalAllowance must be at least the maximum premine cost");
+  }
+  const memecoin = new ReadMemecoin(payment.asset.address, deps.drift);
+  await clearCache(memecoin);
+  // Read at latest, not the pinned block: viem caches `eth_blockNumber` for a few seconds, so a
+  // just-mined approval (or top-up) must not be missed by a stale pin.
+  const allowance = await memecoin.contract.read("allowance", {
+    owner: sender,
+    spender: to,
+  });
+  return {
+    ok: true,
+    plan: {
+      ...common,
+      payment: { asset: payment.asset, expected: priced.expected, max: maxPremineCost },
+      pricing: { method: priced.method, protocolQuote: { expected: linearExpected, max: linearMax } },
+      maxPremineCost,
+      value,
+      approvals:
+        allowance < maxPremineCost
+          ? [buildApprove(payment.asset.address, to, input.approvalAllowance ?? maxPremineCost)]
+          : [],
+      launch: { to, data: launch.encode(maxPremineCost), value },
+      funding: await readFunding(deps, sender, value, {
+        token: payment.asset.address,
+        required: maxPremineCost,
+      }),
+    },
+  };
+}
+
 /**
  * Quotes a launch-with-pre-buy at one pinned block and returns an executable plan, or the
  * reasons it cannot be planned. Never sends anything.
@@ -535,6 +771,7 @@ export async function planLaunchPreBuy(
     clearCache(deps.legacyZap),
     clearCache(deps.multichainZap),
     clearCache(deps.pairedZap),
+    clearCache(deps.vestedZap),
     clearCache(deps.pairedRegistry),
   ]);
   const quoteBlockNumber = await deps.drift.getBlockNumber();
@@ -553,124 +790,76 @@ export async function planLaunchPreBuy(
       resolvePairedPayment(deps, flaunchParams.pairedToken, quoteBlockNumber),
     ]);
     if (payment.kind === "unapproved") return unsupported(["PAIRED_TOKEN_NOT_APPROVED"]);
-    const feeAmount = quotes.fee.ethRequired;
-    if (payment.kind === "native") {
-      if (quotes.max.ethRequired < quotes.expected.ethRequired || quotes.expected.ethRequired < feeAmount) {
-        return unsupported(["QUOTE_INCONSISTENT"]);
-      }
-      const linearExpected = quotes.expected.ethRequired - feeAmount;
-      const linearMax = quotes.max.ethRequired - feeAmount;
-      let priced: PremineCostPricing;
-      try {
-        priced = await priceEthLaunch(deps, {
-          sender,
-          to,
-          // `_maxPremineCost` is ignored for a native pairing; price with the linear cap.
-          data: encodePairedFlaunch(flaunchParams, zeroAddress, linearMax),
-          fee: feeAmount,
-          linearExpected,
-          linearMax,
-          block: quoteBlockNumber,
-        });
-      } catch (error) {
-        if (error instanceof PremineNotFillableError) return unsupported(["PREMINE_NOT_FILLABLE"]);
-        throw error;
-      }
-      const max = withSlippage(priced.expected, slippageBps);
-      const value = feeAmount + max;
-      const data = encodePairedFlaunch(flaunchParams, zeroAddress, max);
-      plan = {
-        version: LAUNCH_PRE_BUY_PLAN_VERSION,
-        chainId,
-        route: input.route,
-        zapFamily,
-        sender,
-        creator: flaunchParams.creator,
-        preBuyBps: input.preBuyBps,
-        premineAmount,
-        slippageBps: input.slippageBps,
-        fee: { asset: fee, amount: feeAmount },
-        payment: { asset: fee, expected: priced.expected, max },
-        pricing: { method: priced.method, protocolQuote: { expected: linearExpected, max: linearMax } },
-        maxPremineCost: max,
-        value,
-        approvals: [],
-        launch: { to, data, value },
-        pairedToken: flaunchParams.pairedToken,
-        quoteBlockNumber,
-        createdAtMs,
-        expiresAtMs,
-        funding: await readFunding(deps, sender, value, undefined),
-      };
-    } else {
-      if (
-        quotes.max.ethRequired !== feeAmount ||
-        quotes.max.pairedPremineCost < quotes.expected.pairedPremineCost
-      ) {
-        return unsupported(["QUOTE_INCONSISTENT"]);
-      }
-      const value = quotes.max.ethRequired;
-      const linearExpected = quotes.expected.pairedPremineCost;
-      const linearMax = quotes.max.pairedPremineCost;
-      let priced: PremineCostPricing;
-      try {
-        priced = await priceErc20Premine(deps, {
-          sender,
-          to,
-          flaunchParams,
-          linearExpected,
-          block: quoteBlockNumber,
-        });
-      } catch (error) {
-        if (error instanceof PremineNotFillableError) return unsupported(["PREMINE_NOT_FILLABLE"]);
-        throw error;
-      }
-      const maxPremineCost = withSlippage(priced.expected, slippageBps);
-      if (input.approvalAllowance !== undefined && input.approvalAllowance < maxPremineCost) {
-        throw new Error("approvalAllowance must be at least the maximum premine cost");
-      }
-      const memecoin = new ReadMemecoin(payment.asset.address, deps.drift);
-      await clearCache(memecoin);
-      // Read at latest, not the pinned block: viem caches `eth_blockNumber` for a few seconds, so a
-      // just-mined approval (or top-up) must not be missed by a stale pin.
-      const allowance = await memecoin.contract.read("allowance", {
-        owner: sender,
-        spender: to,
-      });
-      const data = encodePairedFlaunch(flaunchParams, zeroAddress, maxPremineCost);
-      plan = {
-        version: LAUNCH_PRE_BUY_PLAN_VERSION,
-        chainId,
-        route: input.route,
-        zapFamily,
-        sender,
-        creator: flaunchParams.creator,
-        preBuyBps: input.preBuyBps,
-        premineAmount,
-        slippageBps: input.slippageBps,
-        fee: { asset: fee, amount: feeAmount },
-        payment: { asset: payment.asset, expected: priced.expected, max: maxPremineCost },
-        pricing: { method: priced.method, protocolQuote: { expected: linearExpected, max: linearMax } },
-        maxPremineCost,
-        value,
-        approvals:
-          allowance < maxPremineCost
-            ? [buildApprove(payment.asset.address, to, input.approvalAllowance ?? maxPremineCost)]
-            : [],
-        launch: { to, data, value },
-        pairedToken: flaunchParams.pairedToken,
-        quoteBlockNumber,
-        createdAtMs,
-        expiresAtMs,
-        funding: await readFunding(deps, sender, value, {
-          token: payment.asset.address,
-          required: maxPremineCost,
-        }),
-      };
+    const planned = await planTwoLeggedLaunch(deps, input, {
+      sender,
+      to,
+      zapFamily,
+      premineAmount,
+      slippageBps,
+      quoteBlockNumber,
+      createdAtMs,
+      expiresAtMs,
+      creator: flaunchParams.creator,
+      pairedToken: flaunchParams.pairedToken,
+      quotes,
+      payment,
+      encode: (maxPremineCost) => encodePairedFlaunch(flaunchParams, zeroAddress, maxPremineCost),
+      native: pairedNativeTwin(deps, flaunchParams),
+    });
+    if (!planned.ok) return unsupported(planned.reasons);
+    plan = planned.plan;
+  } else if (input.route === "vested") {
+    const zap = deps.vestedZap;
+    if (!zap) return unsupported(["ROUTE_UNSUPPORTED"]);
+    // The cap is read from the zap and enforced before any pricing (`VestedSupplyExceedsCap`).
+    const schedules = toVestingScheduleArgs(input.params.vestingSchedules);
+    const maxVestedBps = await zap.maxVestedBps({ block: quoteBlockNumber });
+    try {
+      assertVestedSupplyWithinCap(schedules, maxVestedBps);
+    } catch {
+      return unsupported(["VESTED_SUPPLY_EXCEEDS_CAP"]);
     }
+    // The premine is filled from the non-vested seed; at or above it nothing can be bought.
+    if (premineAmount >= FLAUNCH_TOTAL_SUPPLY - vestedSupplyOf(schedules)) {
+      return unsupported(["PREMINE_NOT_FILLABLE"]);
+    }
+    const flaunchParams = toAnyFlaunchZapFlaunchParams(chainId, {
+      ...input.params,
+      premineAmount,
+    });
+    const treasuryManagerParams = toAnyFlaunchZapTreasuryManagerArgs(chainId, input.params);
+    // Always the `_maxPremineCost` overloads: required for an ERC20 pairing, ignored for native.
+    const prepare = (maxPremineCost: bigint) =>
+      buildAnyFlaunchZapFlaunchArgs({ flaunchParams, maxPremineCost, treasuryManagerParams });
+    const [quotes, payment] = await Promise.all([
+      quoteVestedRoute(deps, flaunchParams, slippageBps, quoteBlockNumber),
+      resolvePairedPayment(deps, flaunchParams.pairedToken, quoteBlockNumber),
+    ]);
+    if (payment.kind === "unapproved") return unsupported(["PAIRED_TOKEN_NOT_APPROVED"]);
+    const planned = await planTwoLeggedLaunch(deps, input, {
+      sender,
+      to,
+      zapFamily,
+      premineAmount,
+      slippageBps,
+      quoteBlockNumber,
+      createdAtMs,
+      expiresAtMs,
+      creator: flaunchParams.creator,
+      pairedToken: flaunchParams.pairedToken,
+      quotes,
+      payment,
+      encode: (maxPremineCost) => encodeAnyFlaunchZapFlaunch(prepare(maxPremineCost)),
+      native: vestedNativeTwin(deps, prepare(0n)),
+      vestingSchedulesHash: hashVestingSchedules(flaunchParams.vestingSchedules),
+    });
+    if (!planned.ok) return unsupported(planned.reasons);
+    plan = planned.plan;
   } else {
     const prepared = prepareLaunch(chainId, input, premineAmount, 0n);
-    if (prepared.zapFamily === "pairedToken") throw new Error("unreachable");
+    if (prepared.zapFamily === "pairedToken" || prepared.zapFamily === "anyVested") {
+      throw new Error("unreachable");
+    }
     const quotes = await quoteEthRoute(deps, prepared, slippageBps, quoteBlockNumber);
     if (quotes.max < quotes.expected || quotes.expected < quotes.fee) {
       return unsupported(["QUOTE_INCONSISTENT"]);
@@ -729,7 +918,8 @@ export type DecodedLaunchPreBuyCalldata =
       flaunchParams: PairedTokenFlaunchParams;
       trustedFeeSigner: Address;
       maxPremineCost: bigint;
-    };
+    }
+  | { zapFamily: "anyVested"; prepared: AnyFlaunchZapFlaunchArgs };
 
 export function decodeLaunchPreBuyCalldata(
   zapFamily: LaunchPreBuyZapFamily,
@@ -777,6 +967,65 @@ export function decodeLaunchPreBuyCalldata(
           _treasuryManagerParams: { ...manager },
           _trustedFeeSigner: trustedFeeSigner,
         },
+      },
+    };
+  }
+  if (zapFamily === "anyVested") {
+    const decoded = decodeFunctionData({ abi: AnyFlaunchZapAbi, data });
+    if (decoded.functionName !== "flaunch") throw new Error("Not an AnyFlaunchZap flaunch call");
+    const args = decoded.args as readonly unknown[];
+    const struct = { ...(args[0] as AnyFlaunchZapFlaunchArgs["args"]["_flaunchParams"]) };
+    const flaunchParams = { ...struct, vestingSchedules: struct.vestingSchedules.map((s) => ({ ...s })) };
+    // Two overloads take three arguments; the manager one has a tuple where the other has an address.
+    const withManager = args.length >= 3 && typeof args[1] === "object" && args[1] !== null;
+    if (withManager) {
+      const manager = { ...(args[1] as AnyFlaunchZapTreasuryManagerArgs) };
+      const trustedFeeSigner = args[2] as Address;
+      if (args.length === 4) {
+        return {
+          zapFamily,
+          prepared: {
+            overload: "managerMaxPremineCost",
+            args: {
+              _flaunchParams: flaunchParams,
+              _treasuryManagerParams: manager,
+              _trustedFeeSigner: trustedFeeSigner,
+              _maxPremineCost: args[3] as bigint,
+            },
+          },
+        };
+      }
+      return {
+        zapFamily,
+        prepared: {
+          overload: "manager",
+          args: {
+            _flaunchParams: flaunchParams,
+            _treasuryManagerParams: manager,
+            _trustedFeeSigner: trustedFeeSigner,
+          },
+        },
+      };
+    }
+    const trustedFeeSigner = args[1] as Address;
+    if (args.length === 3) {
+      return {
+        zapFamily,
+        prepared: {
+          overload: "maxPremineCost",
+          args: {
+            _flaunchParams: flaunchParams,
+            _trustedFeeSigner: trustedFeeSigner,
+            _maxPremineCost: args[2] as bigint,
+          },
+        },
+      };
+    }
+    return {
+      zapFamily,
+      prepared: {
+        overload: "plain",
+        args: { _flaunchParams: flaunchParams, _trustedFeeSigner: trustedFeeSigner },
       },
     };
   }
@@ -839,24 +1088,38 @@ export async function assertLaunchPreBuyPlanCurrent(
   const struct =
     decoded.zapFamily === "legacy"
       ? decoded.args._flaunchParams
-      : decoded.zapFamily === "multichain"
+      : decoded.zapFamily === "multichain" || decoded.zapFamily === "anyVested"
         ? decoded.prepared.args._flaunchParams
         : decoded.flaunchParams;
   const trustedFeeSigner =
     decoded.zapFamily === "legacy"
       ? decoded.args._trustedFeeSigner
-      : decoded.zapFamily === "multichain"
+      : decoded.zapFamily === "multichain" || decoded.zapFamily === "anyVested"
         ? decoded.prepared.args._trustedFeeSigner
         : decoded.trustedFeeSigner;
+  let familyAgrees = true;
+  if (decoded.zapFamily === "pairedToken") {
+    familyAgrees =
+      decoded.maxPremineCost === plan.maxPremineCost &&
+      plan.pairedToken !== undefined &&
+      isAddressEqual(decoded.flaunchParams.pairedToken, plan.pairedToken);
+  } else if (decoded.zapFamily === "anyVested") {
+    const args = decoded.prepared.args;
+    const vested = decoded.prepared.args._flaunchParams;
+    familyAgrees =
+      "_maxPremineCost" in args &&
+      args._maxPremineCost === plan.maxPremineCost &&
+      plan.pairedToken !== undefined &&
+      isAddressEqual(vested.pairedToken, plan.pairedToken) &&
+      plan.vestingSchedulesHash !== undefined &&
+      hashVestingSchedules(vested.vestingSchedules) === plan.vestingSchedulesHash;
+  }
   const agrees =
     struct.premineAmount === plan.premineAmount &&
     isAddressEqual(struct.creator, plan.creator) &&
     trustedFeeSigner === zeroAddress &&
     struct.feeCalculatorParams === "0x" &&
-    (decoded.zapFamily !== "pairedToken" ||
-      (decoded.maxPremineCost === plan.maxPremineCost &&
-        plan.pairedToken !== undefined &&
-        isAddressEqual(decoded.flaunchParams.pairedToken, plan.pairedToken)));
+    familyAgrees;
   if (!agrees) requote("CALLDATA_MISMATCH", "Pre-buy plan and calldata disagree");
   return decoded;
 }
@@ -877,20 +1140,30 @@ export async function verifyLaunchPreBuyPlan(
     clearCache(deps.legacyZap),
     clearCache(deps.multichainZap),
     clearCache(deps.pairedZap),
+    clearCache(deps.vestedZap),
   ]);
 
   let fee: bigint;
   let expectedTotal: bigint;
   const erc20 = plan.payment.asset.address !== zeroAddress;
-  if (decoded.zapFamily === "pairedToken") {
-    const quotes = await quotePairedRoute(deps, decoded.flaunchParams, 0n);
+  if (decoded.zapFamily === "pairedToken" || decoded.zapFamily === "anyVested") {
+    const [quotes, native] =
+      decoded.zapFamily === "pairedToken"
+        ? [
+            await quotePairedRoute(deps, decoded.flaunchParams, 0n),
+            pairedNativeTwin(deps, decoded.flaunchParams),
+          ]
+        : [
+            await quoteVestedRoute(deps, decoded.prepared.args._flaunchParams, 0n),
+            vestedNativeTwin(deps, decoded.prepared),
+          ];
     fee = quotes.fee.ethRequired;
     if (erc20) {
       if (fee > plan.value) requote("FEE_CHANGED", "The flaunching fee now exceeds the plan's ETH");
       const priced = await priceErc20Premine(deps, {
         sender: plan.sender,
         to: plan.launch.to,
-        flaunchParams: decoded.flaunchParams,
+        native,
         linearExpected: quotes.expected.pairedPremineCost,
       }).catch((cause) => requote("PRICE_MOVED", "The premine can no longer be filled", cause));
       expectedTotal = priced.expected;
@@ -916,7 +1189,7 @@ export async function verifyLaunchPreBuyPlan(
       }
     }
   } else {
-    const prepared: Exclude<PreparedLaunch, { zapFamily: "pairedToken" }> =
+    const prepared: Exclude<PreparedLaunch, { zapFamily: "pairedToken" | "anyVested" }> =
       decoded.zapFamily === "legacy"
         ? {
             zapFamily: "legacy",
@@ -962,6 +1235,15 @@ export async function verifyLaunchPreBuyPlan(
         maxPremineCost: decoded.maxPremineCost,
         value: plan.value,
         from: plan.sender,
+      });
+      return { mode, fee, expectedTotal, ethSpent, memecoin };
+    }
+    if (decoded.zapFamily === "anyVested") {
+      const zap = deps.vestedZap;
+      if (!zap) throw new Error(`AnyFlaunchZap is not available on chain ${deps.chainId}`);
+      const { memecoin, ethSpent } = await zap.simulateFlaunch(decoded.prepared, {
+        from: plan.sender,
+        value: plan.value,
       });
       return { mode, fee, expectedTotal, ethSpent, memecoin };
     }
@@ -1058,6 +1340,10 @@ export async function executeLaunchPreBuy(
   } else if (decoded.zapFamily === "multichain") {
     const writer = deps.multichainZapWriter;
     if (!writer) throw new Error(`Multichain FlaunchZap writer is not available on chain ${deps.chainId}`);
+    hash = await writer.flaunchPrepared(decoded.prepared, plan.value);
+  } else if (decoded.zapFamily === "anyVested") {
+    const writer = deps.vestedZapWriter;
+    if (!writer) throw new Error(`AnyFlaunchZap writer is not available on chain ${deps.chainId}`);
     hash = await writer.flaunchPrepared(decoded.prepared, plan.value);
   } else {
     const writer = deps.pairedZapWriter;

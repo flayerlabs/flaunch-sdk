@@ -33,6 +33,23 @@ const chainsByFamily = {
   legacy: [base, baseSepolia],
   multichain: [mainnet, unichain, robinhood],
   paired: [base, baseSepolia, robinhood],
+  // AnyFlaunchZap (vested launches): Base Sepolia only, 2026-09-11
+  vested: [baseSepolia],
+};
+
+const vestingSchedules = [
+  { beneficiary: RECEIVER_A, percent: "12.5", cliffDuration: 86_400, vestDuration: 31_536_000 },
+  { beneficiary: RECEIVER_B, amount: 5n * 10n ** 27n, cliffDuration: 0, vestDuration: 7_776_000, start: 1_800_000_000 },
+];
+const vestedBase = {
+  name: baseParams.name,
+  symbol: baseParams.symbol,
+  tokenUri: baseParams.tokenUri,
+  initialMarketCapUSD: baseParams.initialMarketCapUSD,
+  creator: CREATOR,
+  creatorFeeAllocationPercent: baseParams.creatorFeeAllocationPercent,
+  flaunchAt: baseParams.flaunchAt,
+  vestingSchedules,
 };
 
 const entryPoints = {
@@ -84,14 +101,66 @@ const entryPoints = {
       maxPremineCost: 77n,
       value: FEE,
     }),
+  // vested launches: flETH-paired by default (ETH-funded); the ERC20 pairing carries the spend cap
+  vested: (sdk, premineAmount) => sdk.flaunchVested({ ...vestedBase, premineAmount, slippageBps: 50 }),
+  vestedRevenueManager: (sdk, premineAmount) =>
+    sdk.flaunchVestedWithRevenueManager({
+      ...vestedBase,
+      premineAmount,
+      revenueManagerInstanceAddress: REVENUE_MANAGER,
+    }),
+  vestedSplitManager: (sdk, premineAmount) =>
+    sdk.flaunchVestedWithSplitManager({
+      ...vestedBase,
+      premineAmount,
+      creatorSplitPercent: 60,
+      managerOwnerSplitPercent: 10,
+      splitReceivers: [
+        { address: RECEIVER_A, percent: 75 },
+        { address: RECEIVER_B, percent: 25 },
+      ],
+    }),
+  vestedDynamicSplitManager: (sdk, premineAmount) =>
+    sdk.flaunchVestedWithDynamicSplitManager({
+      ...vestedBase,
+      premineAmount,
+      creatorShare: 60_00000n,
+      managerOwnerShare: 10_00000n,
+      moderator: CREATOR,
+      splitReceivers: [
+        { address: RECEIVER_A, share: 20_00000n },
+        { address: RECEIVER_B, share: 10_00000n },
+      ],
+    }),
+  vestedErc20: (sdk, premineAmount) =>
+    sdk.flaunchVested({ ...vestedBase, premineAmount, pairedToken: PAIRED_TOKEN, maxPremineCost: 77n }),
+  vestedErc20RevenueManager: (sdk, premineAmount) =>
+    sdk.flaunchVestedWithRevenueManager({
+      ...vestedBase,
+      premineAmount,
+      pairedToken: PAIRED_TOKEN,
+      maxPremineCost: 77n,
+      revenueManagerInstanceAddress: REVENUE_MANAGER,
+    }),
+};
+
+const methodsByFamily = {
+  legacy: ["standard", "revenueManager", "splitManager", "dynamicSplitManager"],
+  multichain: ["standard", "revenueManager", "splitManager", "dynamicSplitManager"],
+  paired: ["pairedToken"],
+  vested: [
+    "vested",
+    "vestedRevenueManager",
+    "vestedSplitManager",
+    "vestedDynamicSplitManager",
+    "vestedErc20",
+    "vestedErc20RevenueManager",
+  ],
 };
 
 const launchGoldenScenarios = [];
 for (const [family, chains] of Object.entries(chainsByFamily)) {
-  const methods =
-    family === "paired"
-      ? ["pairedToken"]
-      : ["standard", "revenueManager", "splitManager", "dynamicSplitManager"];
+  const methods = methodsByFamily[family];
   for (const chain of chains) {
     for (const method of methods) {
       for (const premineAmount of [0n, 42n]) {
@@ -118,6 +187,11 @@ function harness(chain) {
         if (method === "eth_call") {
           const tx = params[0];
           ethCalls.push({ to: tx.to.toLowerCase(), data: tx.data });
+          // AnyFlaunchZap.calculateFee returns (ethRequired_, pairedPremineCost_)
+          const vestedZap = sdkModule.AnyFlaunchZapAddress[chain.id];
+          if (vestedZap && tx.to.toLowerCase() === vestedZap.toLowerCase()) {
+            return encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [FEE, 0n]);
+          }
           return encodeAbiParameters([{ type: "uint256" }], [FEE]);
         }
         throw new Error(`Unexpected RPC request: ${method}`);

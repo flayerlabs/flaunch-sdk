@@ -234,6 +234,30 @@ export const AnyFlaunchV1_3Address: Addresses = {
   [robinhood.id]: "0x1bbbD15A6D5176edc7B42f2cc6cA800D9d74015D",
 };
 
+// Vested launches (AnyFlaunchZap + MemecoinVesting), Base Sepolia only so far: deployed
+// 2026-09-11 (blocks 46682862–46682881). The zap launches through its own AnyPositionManager
+// generation (`AnyFlaunchZapPositionManagerAddress`, ERC721 `AnyFlaunchZapFlaunchAddress`) — a
+// SEPARATE hook from the v1.3.3 import-generation `AnyPositionManagerV1_3Address` /
+// `AnyFlaunchV1_3Address`, which keep serving `anyFlaunch()`. Bound to the chain's v1.3.1
+// TreasuryManagerFactory (`TreasuryManagerFactoryV1_3Address`) and PairedTokenRegistry.
+export const AnyFlaunchZapAddress: Addresses = {
+  [baseSepolia.id]: "0xaA0872BcA9c6eCB0Cda78528cd89149822bc124D",
+};
+
+export const MemecoinVestingAddress: Addresses = {
+  [baseSepolia.id]: "0x3F8004335C113Fac0873c061a28670F0AaD6A87b",
+};
+
+/** The AnyPositionManager hook `AnyFlaunchZapAddress` launches through; emits the vested coins' `PoolCreated`. */
+export const AnyFlaunchZapPositionManagerAddress: Addresses = {
+  [baseSepolia.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
+};
+
+/** The AnyFlaunch ERC721 of `AnyFlaunchZapPositionManagerAddress` (launch NFTs of vested coins). */
+export const AnyFlaunchZapFlaunchAddress: Addresses = {
+  [baseSepolia.id]: "0xE9ec22D7c245743DC5dC958e5cCd664732Ae04b9",
+};
+
 export const FairLaunchAddress: Addresses = {
   [base.id]: "0xCc7A4A00072ccbeEEbd999edc812C0ce498Fb63B",
   [baseSepolia.id]: "0x227Fc288aC56E169f2BfEA82e07F8635054d4136",

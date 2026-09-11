@@ -1,6 +1,7 @@
 import { type Address, type Hex, keccak256, stringToHex, zeroAddress } from "viem";
 import {
   AddressFeeSplitManagerAddress,
+  AnyFlaunchZapAddress,
   DynamicAddressFeeSplitManagerAddress,
   FlaunchZapAddress,
   FlaunchZapMultichainAddress,
@@ -15,7 +16,13 @@ import {
 } from "../clients/FlaunchZapClient";
 import type { PairedTokenFlaunchParams } from "../clients/FlaunchZapV1_3Client";
 import {
+  toVestingScheduleArgs,
+  type FlaunchVestedParams,
+} from "../clients/VestedLaunchParams";
+import { percentToBps } from "../helpers/bps";
+import {
   doesChainSupportPairedTokenLaunch,
+  doesChainSupportVestedLaunch,
   isChainSupported,
   isMultichainDeployment,
 } from "../helpers/supportedChains";
@@ -43,11 +50,12 @@ export const LAUNCH_PRE_BUY_ROUTES = [
   "splitManager",
   "dynamicSplitManager",
   "pairedToken",
+  "vested",
 ] as const;
 export type LaunchPreBuyRoute = (typeof LAUNCH_PRE_BUY_ROUTES)[number];
 
-/** Which zap ABI a route's launch calldata is encoded against on a given chain. */
-export type LaunchPreBuyZapFamily = "legacy" | "multichain" | "pairedToken";
+/** Which zap ABI a route's launch calldata is encoded against on a given chain. `anyVested` = AnyFlaunchZap. */
+export type LaunchPreBuyZapFamily = "legacy" | "multichain" | "pairedToken" | "anyVested";
 
 /**
  * How `payment.expected` was priced. `simulation`: the launch was executed in an `eth_call`
@@ -81,6 +89,8 @@ export const LAUNCH_PRE_BUY_REASON_CODES = [
   "FAIR_LAUNCH_UNSUPPORTED",
   "SENDER_REQUIRED",
   "QUOTE_INCONSISTENT",
+  "INVALID_VESTING_SCHEDULE",
+  "VESTED_SUPPLY_EXCEEDS_CAP",
 ] as const;
 export type LaunchPreBuyReasonCode = (typeof LAUNCH_PRE_BUY_REASON_CODES)[number];
 
@@ -105,6 +115,20 @@ export type PairedTokenPreBuyLaunchParams = Omit<
   trustedFeeSigner?: Address;
   /** Not supported for a paired-token pre-buy in this version; presence is rejected. */
   treasuryManagerParams?: unknown;
+};
+
+/**
+ * A vested launch as the planner takes it: the same `FlaunchVestedParams` the `flaunchVested*`
+ * methods take, minus the premine (the planner's to set) and its spend cap (the planner's to
+ * quote). Manager launches are allowed — the AnyFlaunchZap has the manager + `maxPremineCost`
+ * overload.
+ */
+export type VestedPreBuyLaunchParams = Omit<
+  FlaunchVestedParams,
+  "premineAmount" | "maxPremineCost" | "slippageBps"
+> & {
+  /** Must be absent or 0 — the planner derives the premine from `preBuyBps`. */
+  premineAmount?: bigint;
 };
 
 type LaunchPreBuyCommon = {
@@ -134,6 +158,7 @@ export type LaunchPreBuyInput = LaunchPreBuyCommon &
         params: FlaunchWithDynamicSplitManagerParams;
       }
     | { route: "pairedToken"; params: PairedTokenPreBuyLaunchParams }
+    | { route: "vested"; params: VestedPreBuyLaunchParams }
   );
 
 /** An asset identified precisely enough to display and to check balances: chain, address, decimals. `zeroAddress` = native ETH. */
@@ -189,8 +214,10 @@ export type LaunchPreBuyPlan = {
   /** Route C ERC20 payment: the zap allowance to set before the launch. Empty otherwise. */
   approvals: LaunchPreBuyApproveCall[];
   launch: LaunchPreBuyCall;
-  /** Paired-token routes only. */
+  /** Paired-token and vested routes. */
   pairedToken?: Address;
+  /** Vested route only: keccak256 of the ABI-encoded `VestingSchedule[]` the launch creates. */
+  vestingSchedulesHash?: Hex;
   quoteBlockNumber: bigint;
   createdAtMs: number;
   expiresAtMs: number;
@@ -247,22 +274,7 @@ export function preBuyBpsFromAmount(amount: bigint): number {
   return Number((amount * BPS_DENOMINATOR) / TOTAL_SUPPLY);
 }
 
-/**
- * A percentage string or number ("2.5", 0.01) to integer basis points. At most two decimals —
- * finer than 0.01% cannot be represented and is rejected rather than rounded.
- */
-export function percentToBps(percent: string | number): number {
-  const text = typeof percent === "number" ? String(percent) : percent.trim();
-  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(text);
-  if (!match) {
-    throw new Error(
-      "Percentage must be a non-negative decimal with at most two decimal places"
-    );
-  }
-  const whole = Number(match[1]);
-  const fraction = Number((match[2] ?? "").padEnd(2, "0"));
-  return whole * 100 + fraction;
-}
+export { percentToBps };
 
 export function isValidPreBuyBps(bps: unknown): bps is number {
   return (
@@ -281,6 +293,7 @@ export function zapFamilyForRoute(
   route: LaunchPreBuyRoute
 ): LaunchPreBuyZapFamily {
   if (route === "pairedToken") return "pairedToken";
+  if (route === "vested") return "anyVested";
   return isMultichainDeployment(chainId) ? "multichain" : "legacy";
 }
 
@@ -292,6 +305,8 @@ export function zapAddressForRoute(
   switch (zapFamilyForRoute(chainId, route)) {
     case "pairedToken":
       return FlaunchZapV1_3Address[chainId];
+    case "anyVested":
+      return AnyFlaunchZapAddress[chainId];
     case "multichain":
       return FlaunchZapMultichainAddress[chainId];
     case "legacy":
@@ -304,6 +319,10 @@ function routeReasons(chainId: number, route: LaunchPreBuyRoute): LaunchPreBuyRe
   const reasons: LaunchPreBuyReasonCode[] = [];
   if (route === "pairedToken") {
     if (!doesChainSupportPairedTokenLaunch(chainId)) reasons.push("ROUTE_UNSUPPORTED");
+    return reasons;
+  }
+  if (route === "vested") {
+    if (!doesChainSupportVestedLaunch(chainId)) reasons.push("ROUTE_UNSUPPORTED");
     return reasons;
   }
   if (!zapAddressForRoute(chainId, route)) reasons.push("ROUTE_UNSUPPORTED");
@@ -345,7 +364,8 @@ export function getLaunchPreBuyCapabilities(
   const routes = Object.fromEntries(
     LAUNCH_PRE_BUY_ROUTES.map((route) => {
       const reasons = routeReasons(chainId, route);
-      const paired = route === "pairedToken";
+      // Both follow the pairing: native / flETH from msg.value, ERC20 pairings with an approval.
+      const paired = route === "pairedToken" || route === "vested";
       const capability: LaunchPreBuyRouteCapability = {
         route,
         supported: reasons.length === 0,
@@ -412,6 +432,16 @@ export function classifyLaunchPreBuyInput(
     if (paired.treasuryManagerParams !== undefined) {
       reasons.add("PAIRED_MANAGER_LAUNCH_UNSUPPORTED");
     }
+  } else if (input.route === "vested") {
+    const vested = input.params;
+    if (!isEmptyBytes(vested.feeCalculatorParams)) reasons.add("PROTECTED_LAUNCH_UNSUPPORTED");
+    if (vested.trustedSignerSettings !== undefined) reasons.add("PROTECTED_LAUNCH_UNSUPPORTED");
+    try {
+      if (vested.vestingSchedules.length === 0) throw new Error("no schedules");
+      toVestingScheduleArgs(vested.vestingSchedules);
+    } catch {
+      reasons.add("INVALID_VESTING_SCHEDULE");
+    }
   } else {
     const flaunch = input.params;
     if (flaunch.trustedSignerSettings !== undefined) reasons.add("PROTECTED_LAUNCH_UNSUPPORTED");
@@ -439,6 +469,7 @@ export type LaunchPreBuyBindingFields = Pick<
   | "value"
   | "maxPremineCost"
   | "pairedToken"
+  | "vestingSchedulesHash"
   | "quoteBlockNumber"
   | "expiresAtMs"
 > & { launch: LaunchPreBuyCall; payment: { asset: PreBuyAsset; max: bigint }; fee: PreBuyAmount };
@@ -469,6 +500,10 @@ export function computeLaunchPreBuyBinding(plan: LaunchPreBuyBindingFields): Hex
     slippageBps: plan.slippageBps,
     value: plan.value.toString(),
     version: plan.version,
+    // Only present on the vested route so existing routes' bindings are unchanged.
+    ...(plan.vestingSchedulesHash
+      ? { vestingSchedulesHash: plan.vestingSchedulesHash.toLowerCase() }
+      : {}),
     zapFamily: plan.zapFamily,
   };
   return keccak256(stringToHex(JSON.stringify(canonical)));

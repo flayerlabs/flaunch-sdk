@@ -1,0 +1,334 @@
+// MemecoinVesting: permissionless, ownerless linear-vesting singleton (per-beneficiary schedules, cliff releases the accrued amount).
+// Generated from flaunch-contracts PR #289 (any-flaunch-vested-zap, commit 7b44600) out/MemecoinVesting.sol/MemecoinVesting.json. Base Sepolia 0x3F8004335C113Fac0873c061a28670F0AaD6A87b (2026-09-11).
+export const MemecoinVestingAbi = [
+  {
+    type: "function",
+    name: "claim",
+    inputs: [
+      {
+        name: "_token",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_scheduleIds",
+        type: "uint256[]",
+        internalType: "uint256[]"
+      }
+    ],
+    outputs: [
+      {
+        name: "claimed_",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "claimable",
+    inputs: [
+      {
+        name: "_token",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_beneficiary",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_scheduleId",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "createSchedules",
+    inputs: [
+      {
+        name: "_token",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_vestingSchedules",
+        type: "tuple[]",
+        internalType: "struct IMemecoinVesting.VestingSchedule[]",
+        components: [
+          {
+            name: "beneficiary",
+            type: "address",
+            internalType: "address"
+          },
+          {
+            name: "amount",
+            type: "uint256",
+            internalType: "uint256"
+          },
+          {
+            name: "start",
+            type: "uint40",
+            internalType: "uint40"
+          },
+          {
+            name: "cliffDuration",
+            type: "uint32",
+            internalType: "uint32"
+          },
+          {
+            name: "vestDuration",
+            type: "uint32",
+            internalType: "uint32"
+          }
+        ]
+      }
+    ],
+    outputs: [
+      {
+        name: "totalAmount_",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "schedules",
+    inputs: [
+      {
+        name: "_token",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_beneficiary",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "tuple[]",
+        internalType: "struct IMemecoinVesting.Schedule[]",
+        components: [
+          {
+            name: "total",
+            type: "uint128",
+            internalType: "uint128"
+          },
+          {
+            name: "claimed",
+            type: "uint128",
+            internalType: "uint128"
+          },
+          {
+            name: "start",
+            type: "uint40",
+            internalType: "uint40"
+          },
+          {
+            name: "cliffDuration",
+            type: "uint32",
+            internalType: "uint32"
+          },
+          {
+            name: "vestDuration",
+            type: "uint32",
+            internalType: "uint32"
+          },
+          {
+            name: "kind",
+            type: "uint8",
+            internalType: "enum IMemecoinVesting.ScheduleKind"
+          }
+        ]
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "vestedAmount",
+    inputs: [
+      {
+        name: "_token",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_beneficiary",
+        type: "address",
+        internalType: "address"
+      },
+      {
+        name: "_scheduleId",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "event",
+    name: "ScheduleClaimed",
+    inputs: [
+      {
+        name: "_token",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "_beneficiary",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "_scheduleId",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256"
+      },
+      {
+        name: "_amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "ScheduleCreated",
+    inputs: [
+      {
+        name: "_token",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "_beneficiary",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "_scheduleId",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256"
+      },
+      {
+        name: "_amount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256"
+      },
+      {
+        name: "_start",
+        type: "uint40",
+        indexed: false,
+        internalType: "uint40"
+      },
+      {
+        name: "_cliffDuration",
+        type: "uint32",
+        indexed: false,
+        internalType: "uint32"
+      },
+      {
+        name: "_vestDuration",
+        type: "uint32",
+        indexed: false,
+        internalType: "uint32"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "event",
+    name: "SchedulesCreated",
+    inputs: [
+      {
+        name: "_token",
+        type: "address",
+        indexed: true,
+        internalType: "address"
+      },
+      {
+        name: "_funder",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      },
+      {
+        name: "_totalAmount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256"
+      },
+      {
+        name: "_scheduleCount",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256"
+      }
+    ],
+    anonymous: false
+  },
+  {
+    type: "error",
+    name: "BeneficiaryCannotBeZero",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NothingToClaim",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "ScheduleAmountInvalid",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "ScheduleDoesNotExist",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "ScheduleStartInvalid",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "VestDurationInvalid",
+    inputs: []
+  }
+] as const;

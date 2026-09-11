@@ -12,5 +12,6 @@ export {
   poolSwapForHook,
   doesChainSupportPairedTokenAcquisition,
   doesChainSupportLaunchPreBuy,
+  doesChainSupportVestedLaunch,
 } from "./supportedChains";
 export * from "./permissions";

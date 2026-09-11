@@ -7,3 +7,4 @@ docs
 .rollup.cache
 dist
 .prebuy-fork-results-*.json
+.local-pack/

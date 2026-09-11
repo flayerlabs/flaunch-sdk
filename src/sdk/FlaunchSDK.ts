@@ -68,6 +68,10 @@ import {
   FlaunchZapMultichainAddress,
   // V1.2 and AnyPositionManager addresses will be imported here when available
   PoolSwapForHookV1_3Address,
+  // Vested launches (AnyFlaunchZap generation, Base Sepolia)
+  AnyFlaunchZapAddress,
+  AnyFlaunchZapPositionManagerAddress,
+  MemecoinVestingAddress,
 } from "../addresses";
 import {
   ReadFlaunchPositionManager,
@@ -133,6 +137,38 @@ import {
   ReadWriteFlaunchZapV1_3,
 } from "../clients/FlaunchZapV1_3Client";
 import { ReadPairedTokenRegistryV1_3 } from "../clients/PairedTokenRegistryV1_3Client";
+import {
+  ReadAnyFlaunchZap,
+  ReadWriteAnyFlaunchZap,
+  type AnyFlaunchZapFee,
+  type AnyFlaunchZapFlaunchParams,
+  type AnyFlaunchZapTreasuryManagerArgs,
+} from "../clients/AnyFlaunchZapClient";
+import {
+  ReadMemecoinVesting,
+  ReadWriteMemecoinVesting,
+  type VestingPosition,
+  type VestingSchedule,
+} from "../clients/MemecoinVestingClient";
+import {
+  toAnyFlaunchZapFlaunchParams,
+  toAnyFlaunchZapTreasuryManagerArgs,
+  toFlaunchVestedParamsWithDynamicSplitManager,
+  toFlaunchVestedParamsWithRevenueManager,
+  toFlaunchVestedParamsWithSplitManager,
+  type FlaunchVestedIPFSParams,
+  type FlaunchVestedParams,
+  type FlaunchVestedWithDynamicSplitManagerIPFSParams,
+  type FlaunchVestedWithDynamicSplitManagerParams,
+  type FlaunchVestedWithRevenueManagerIPFSParams,
+  type FlaunchVestedWithRevenueManagerParams,
+  type FlaunchVestedWithSplitManagerIPFSParams,
+  type FlaunchVestedWithSplitManagerParams,
+} from "../clients/VestedLaunchParams";
+import { AnyFlaunchZapAbi } from "../abi/AnyFlaunchZap";
+import { AnyPositionManagerV1_3Abi } from "../abi/AnyPositionManagerV1_3";
+import { MemecoinVestingAbi } from "../abi/MemecoinVesting";
+import { generateTokenUri } from "../helpers/ipfs";
 import {
   ReadPoolSwapV1_3,
   ReadWritePoolSwapV1_3,
@@ -244,6 +280,7 @@ import {
   ImportAndAddLiquidityWithPrice,
   ImportAndAddLiquidityWithExactAmounts,
   PoolCreatedEventData,
+  PAIRED_TOKEN_TYPE,
 } from "types";
 import {
   getPoolId,
@@ -288,10 +325,42 @@ import {
   doesChainSupportPairedTokenSwap,
   poolSwapForHook,
   doesChainSupportPairedTokenAcquisition,
+  doesChainSupportVestedLaunch,
 } from "helpers/supportedChains";
 
 // Re-export PoolCreatedEventData so it's available as part of FlaunchSDK module
 export type { PoolCreatedEventData } from "types";
+
+/** One `MemecoinVesting.ScheduleCreated` of a vested launch. */
+export type VestedLaunchSchedule = {
+  beneficiary: Address;
+  scheduleId: bigint;
+  amount: bigint;
+  start: number;
+  cliffDuration: number;
+  vestDuration: number;
+};
+
+/**
+ * A vested launch decoded from a receipt: the hook's `PoolCreated` (as `getPoolCreatedFromLogs`
+ * returns it — the AnyPositionManager event carries only the six-field params, so name /
+ * symbol / tokenUri / premine / flaunchAt are not in it), the zap's `MemecoinFlaunched` and the
+ * vesting escrow's `ScheduleCreated`s.
+ */
+export type VestedLaunchEventData = PoolCreatedEventData & {
+  /** From `AnyFlaunchZap.MemecoinFlaunched`; `creator` is the END creator (the hook names the zap when a manager / signer is wired). */
+  vesting: {
+    seedAmount: bigint;
+    totalVested: bigint;
+    scheduleCount: bigint;
+    /** `zeroAddress` when the launch NFT went straight to the creator. */
+    treasuryManager: Address;
+    creator: Address;
+    schedules: VestedLaunchSchedule[];
+  };
+  /** Present when the hook emitted `PoolScheduled` (a `flaunchAt` in the future). */
+  flaunchesAt?: bigint;
+};
 
 type WatchPoolSwapParams = Omit<
   WatchPoolSwapParamsPositionManager<boolean>,
@@ -602,8 +671,34 @@ export class ReadFlaunchSDK {
   private pairedTokenAcquisition?: ReadPairedTokenAcquisition;
   /** StateView for paired-pool spot prices; separate from `baseClients` so multichain chains (Robinhood) have one too. */
   private readonly pairedSwapStateView?: ReadStateView;
+  /** Vested launches: the AnyFlaunchZap and the MemecoinVesting escrow behind it. */
+  private readonly anyFlaunchZap?: ReadAnyFlaunchZap;
+  private readonly memecoinVesting?: ReadMemecoinVesting;
 
   public resolveIPFS: (value: string) => string;
+
+  /**
+   * The AnyFlaunchZap (vested launches). Throws on chains without one — gate with
+   * `doesChainSupportVestedLaunch()`.
+   */
+  get readAnyFlaunchZap(): ReadAnyFlaunchZap {
+    if (!this.anyFlaunchZap) {
+      throw new Error(
+        `Vested launches are not supported on chain ${this.chainId}`
+      );
+    }
+    return this.anyFlaunchZap;
+  }
+
+  /** The MemecoinVesting escrow holding vested launches' schedules. Throws on chains without one. */
+  get readMemecoinVesting(): ReadMemecoinVesting {
+    if (!this.memecoinVesting) {
+      throw new Error(
+        `Vested launches are not supported on chain ${this.chainId}`
+      );
+    }
+    return this.memecoinVesting;
+  }
 
   /**
    * The v1.3.1 multi-token FeeEscrow. Throws on chains without one — gate with
@@ -844,6 +939,17 @@ export class ReadFlaunchSDK {
       );
     }
 
+    if (doesChainSupportVestedLaunch(this.chainId)) {
+      this.anyFlaunchZap = new ReadAnyFlaunchZap(
+        AnyFlaunchZapAddress[this.chainId],
+        drift
+      );
+      this.memecoinVesting = new ReadMemecoinVesting(
+        MemecoinVestingAddress[this.chainId],
+        drift
+      );
+    }
+
     if (doesChainSupportPairedTokenSwap(this.chainId)) {
       this.poolSwapV1_3 = new ReadPoolSwapV1_3(
         PoolSwapV1_3Address[this.chainId],
@@ -1006,6 +1112,7 @@ export class ReadFlaunchSDK {
       legacyZap: this.baseClients?.readFlaunchZap,
       multichainZap: this.flaunchZapMultichain,
       pairedZap: this.flaunchZapV1_3,
+      vestedZap: this.anyFlaunchZap,
       pairedRegistry: this.pairedTokenRegistryV1_3,
       senderFor: (explicit) => this.senderFor(explicit),
     };
@@ -1056,7 +1163,13 @@ export class ReadFlaunchSDK {
     plan: LaunchPreBuyPlan
   ): PoolCreatedEventData | null {
     const created = this.getPoolCreatedFromLogs(logs);
-    if (created && created.params.premineAmount !== plan.premineAmount) {
+    // The AnyPositionManager `PoolCreated` (vested route) carries no premine; check the coin's
+    // balance or `getVestedLaunchFromLogs` there instead.
+    if (
+      created &&
+      plan.route !== "vested" &&
+      created.params.premineAmount !== plan.premineAmount
+    ) {
       throw new Error(
         `PoolCreated premine ${created.params.premineAmount} does not match the plan's ${plan.premineAmount}`
       );
@@ -1085,6 +1198,125 @@ export class ReadFlaunchSDK {
     params: CalculatePairedTokenFlaunchFeeParams
   ) {
     return this.readFlaunchZapV1_3.calculateFee(params);
+  }
+
+  /**
+   * The ETH a vested launch must send (flaunching fee plus the ETH-funded premine cost at
+   * `slippageBps` headroom) and the premine's paired-token cost. Quote as the launching wallet
+   * (`from`) — the fee exemption is checked against the caller; `flaunchVested*` do this for
+   * the signer. Throws on chains without vested launches.
+   * @param slippageBps - Integer bps over the premine quote; defaults to `params.slippageBps ?? 0`
+   */
+  calculateVestedFlaunchFee(
+    params: FlaunchVestedParams,
+    slippageBps?: number,
+    options?: { block?: bigint; from?: Address }
+  ): Promise<AnyFlaunchZapFee> {
+    const flaunchParams = toAnyFlaunchZapFlaunchParams(this.chainId, params);
+    return this.readAnyFlaunchZap.calculateFee(
+      { flaunchParams, slippageBps: BigInt(slippageBps ?? params.slippageBps ?? 0) },
+      options
+    );
+  }
+
+  /** The zap's cap on vested supply in bps of total supply (5000 = 50% by default). */
+  getMaxVestedBps(): Promise<bigint> {
+    return this.readAnyFlaunchZap.maxVestedBps();
+  }
+
+  /** Every vesting schedule `beneficiary` holds on `coin`, in id order. */
+  getVestingSchedules(coin: Address, beneficiary: Address): Promise<VestingSchedule[]> {
+    return this.readMemecoinVesting.schedules(coin, beneficiary);
+  }
+
+  /** `beneficiary`'s schedules on `coin` with ids, cliff / end times and live vested / claimable figures. */
+  getVestingPosition(coin: Address, beneficiary: Address): Promise<VestingPosition> {
+    return this.readMemecoinVesting.getVestingPosition(coin, beneficiary);
+  }
+
+  /**
+   * Decodes a vested launch from a receipt's logs: the hook's `PoolCreated`, the zap's
+   * `MemecoinFlaunched` (seed, total vested, schedule count, manager, end creator) and the
+   * escrow's `ScheduleCreated`s. Null when the logs hold no `PoolCreated` from the vested hook.
+   */
+  getVestedLaunchFromLogs(logs: readonly Log[]): VestedLaunchEventData | null {
+    const hook = AnyFlaunchZapPositionManagerAddress[this.chainId];
+    const zap = AnyFlaunchZapAddress[this.chainId];
+    const vesting = MemecoinVestingAddress[this.chainId];
+    if (!hook || !zap || !vesting) return null;
+
+    const created = this.getPoolCreatedFromLogs(
+      logs.filter((log) => isAddressEqual(log.address, hook))
+    );
+    if (!created) return null;
+
+    let flaunched: VestedLaunchEventData["vesting"] | undefined;
+    let flaunchesAt: bigint | undefined;
+    const schedules: VestedLaunchSchedule[] = [];
+    for (const log of logs) {
+      try {
+        if (isAddressEqual(log.address, zap)) {
+          const decoded = decodeEventLog({ abi: AnyFlaunchZapAbi, data: log.data, topics: log.topics });
+          if (
+            decoded.eventName === "MemecoinFlaunched" &&
+            isAddressEqual(decoded.args._memecoin, created.memecoin)
+          ) {
+            flaunched = {
+              seedAmount: decoded.args._seedAmount,
+              totalVested: decoded.args._totalVested,
+              scheduleCount: decoded.args._scheduleCount,
+              treasuryManager: decoded.args._treasuryManager,
+              creator: decoded.args._creator,
+              schedules,
+            };
+          }
+        } else if (isAddressEqual(log.address, vesting)) {
+          const decoded = decodeEventLog({ abi: MemecoinVestingAbi, data: log.data, topics: log.topics });
+          if (
+            decoded.eventName === "ScheduleCreated" &&
+            isAddressEqual(decoded.args._token, created.memecoin)
+          ) {
+            schedules.push({
+              beneficiary: decoded.args._beneficiary,
+              scheduleId: decoded.args._scheduleId,
+              amount: decoded.args._amount,
+              start: decoded.args._start,
+              cliffDuration: decoded.args._cliffDuration,
+              vestDuration: decoded.args._vestDuration,
+            });
+          }
+        } else if (isAddressEqual(log.address, hook)) {
+          const decoded = decodeEventLog({ abi: AnyPositionManagerV1_3Abi, data: log.data, topics: log.topics });
+          if (decoded.eventName === "PoolScheduled" && decoded.args._poolId === created.poolId) {
+            flaunchesAt = decoded.args._flaunchesAt;
+          }
+        }
+      } catch {
+        continue;
+      }
+    }
+    if (!flaunched) return null;
+
+    return {
+      ...created,
+      params: {
+        ...created.params,
+        creator: flaunched.creator,
+        ...(flaunchesAt !== undefined ? { flaunchAt: flaunchesAt } : {}),
+      },
+      vesting: flaunched,
+      ...(flaunchesAt !== undefined ? { flaunchesAt } : {}),
+    };
+  }
+
+  /** `getVestedLaunchFromLogs` for a transaction hash (needs a public client). */
+  async getVestedLaunchFromTx(hash: Hex): Promise<VestedLaunchEventData | null> {
+    if (!this.publicClient) {
+      throw new Error("Public client is required to fetch transaction data");
+    }
+    const receipt = await this.publicClient.getTransactionReceipt({ hash });
+    if (!receipt) throw new Error(`Transaction not found: ${hash}`);
+    return this.getVestedLaunchFromLogs(receipt.logs);
   }
 
   /** Per-coin hook resolution results on multichain deployments (a coin never changes hook). */
@@ -2115,8 +2347,58 @@ export class ReadFlaunchSDK {
     return poll();
   }
 
-  /** Parses PoolCreated from logs emitted by a PositionManager on this chain. */
+  /**
+   * Parses PoolCreated from logs emitted by a PositionManager on this chain. A receipt from the
+   * vested-launch hook (AnyPositionManager behind the AnyFlaunchZap) decodes too: its event
+   * carries only `{ memecoin, creator, creatorFeeAllocation, initialPriceParams,
+   * feeCalculatorParams, pairedToken }`, so name / symbol / tokenUri come back empty and
+   * premine / flaunchAt / flaunchFee as 0 — use `getVestedLaunchFromLogs` for the launch's
+   * vesting data.
+   */
   getPoolCreatedFromLogs(logs: readonly Log[]): PoolCreatedEventData | null {
+    const vestedHook = AnyFlaunchZapPositionManagerAddress[this.chainId];
+    if (vestedHook) {
+      for (const log of logs) {
+        if (!isAddressEqual(log.address, vestedHook)) continue;
+        try {
+          const decodedLog = decodeEventLog({
+            abi: AnyPositionManagerV1_3Abi,
+            data: log.data,
+            topics: log.topics,
+          });
+          if (decodedLog.eventName !== "PoolCreated") continue;
+          // The hook names the zap as creator when a manager / signer is wired; the zap's own
+          // event in the same receipt names the end creator.
+          const endCreator = this.vestedEndCreator(logs, decodedLog.args._memecoin);
+          return {
+            poolId: decodedLog.args._poolId,
+            memecoin: decodedLog.args._memecoin,
+            memecoinTreasury: decodedLog.args._memecoinTreasury,
+            tokenId: decodedLog.args._tokenId,
+            currencyFlipped: decodedLog.args._currencyFlipped,
+            flaunchFee: 0n,
+            params: {
+              name: "",
+              symbol: "",
+              tokenUri: "",
+              initialTokenFairLaunch: 0n,
+              premineAmount: 0n,
+              creator: endCreator ?? decodedLog.args._params.creator,
+              creatorFeeAllocation: Number(
+                decodedLog.args._params.creatorFeeAllocation
+              ),
+              flaunchAt: 0n,
+              initialPriceParams: decodedLog.args._params.initialPriceParams,
+              feeCalculatorParams: decodedLog.args._params.feeCalculatorParams,
+              pairedToken: decodedLog.args._params.pairedToken,
+            },
+          };
+        } catch {
+          continue;
+        }
+      }
+    }
+
     const positionManagerV1_3 =
       PairedTokenPositionManagerV1_3Address[this.chainId];
     // A chain can carry more than one v1.3 hook generation (Robinhood: the v1.3.1 hooks were
@@ -2237,6 +2519,24 @@ export class ReadFlaunchSDK {
     }
 
     return null;
+  }
+
+  /** The `_creator` of the AnyFlaunchZap's `MemecoinFlaunched` for `memecoin` in `logs`, if present. */
+  private vestedEndCreator(logs: readonly Log[], memecoin: Address): Address | undefined {
+    const zap = AnyFlaunchZapAddress[this.chainId];
+    if (!zap) return undefined;
+    for (const log of logs) {
+      if (!isAddressEqual(log.address, zap)) continue;
+      try {
+        const decoded = decodeEventLog({ abi: AnyFlaunchZapAbi, data: log.data, topics: log.topics });
+        if (decoded.eventName === "MemecoinFlaunched" && isAddressEqual(decoded.args._memecoin, memecoin)) {
+          return decoded.args._creator;
+        }
+      } catch {
+        continue;
+      }
+    }
+    return undefined;
   }
 
   /**
@@ -3834,6 +4134,8 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   private readonly baseReadWriteClients?: BaseReadWriteClients;
   private readonly readWriteFlaunchZapMultichain?: ReadWriteFlaunchZapMultichain;
   private readonly readWriteFlaunchZapV1_3Client?: ReadWriteFlaunchZapV1_3;
+  private readonly readWriteAnyFlaunchZapClient?: ReadWriteAnyFlaunchZap;
+  private readonly readWriteMemecoinVestingClient?: ReadWriteMemecoinVesting;
   private readonly readWritePoolSwapV1_3Client?: ReadWritePoolSwapV1_3;
   public readonly readWriteFeeEscrow: ReadWriteFeeEscrow;
   private readonly readWriteFeeEscrowV1_3Client?: ReadWriteFeeEscrowV1_3;
@@ -3873,6 +4175,26 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       );
     }
     return this.readWriteFlaunchZapV1_3Client;
+  }
+
+  /** The AnyFlaunchZap with write capabilities. Throws on chains without one — gate with `doesChainSupportVestedLaunch()`. */
+  get readWriteAnyFlaunchZap(): ReadWriteAnyFlaunchZap {
+    if (!this.readWriteAnyFlaunchZapClient) {
+      throw new Error(
+        `Vested launches are not supported on chain ${this.chainId}`
+      );
+    }
+    return this.readWriteAnyFlaunchZapClient;
+  }
+
+  /** The MemecoinVesting escrow with write capabilities (claims). Throws on chains without one. */
+  get readWriteMemecoinVesting(): ReadWriteMemecoinVesting {
+    if (!this.readWriteMemecoinVestingClient) {
+      throw new Error(
+        `Vested launches are not supported on chain ${this.chainId}`
+      );
+    }
+    return this.readWriteMemecoinVestingClient;
   }
 
   private readonly poolSwapWriters = new Map<string, ReadWritePoolSwapV1_3>();
@@ -3964,6 +4286,16 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     if (doesChainSupportPairedTokenLaunch(this.chainId)) {
       this.readWriteFlaunchZapV1_3Client = new ReadWriteFlaunchZapV1_3(
         FlaunchZapV1_3Address[this.chainId],
+        drift
+      );
+    }
+    if (doesChainSupportVestedLaunch(this.chainId)) {
+      this.readWriteAnyFlaunchZapClient = new ReadWriteAnyFlaunchZap(
+        AnyFlaunchZapAddress[this.chainId],
+        drift
+      );
+      this.readWriteMemecoinVestingClient = new ReadWriteMemecoinVesting(
+        MemecoinVestingAddress[this.chainId],
         drift
       );
     }
@@ -4133,6 +4465,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
       legacyZapWriter: this.baseReadWriteClients?.readWriteFlaunchZap,
       multichainZapWriter: this.readWriteFlaunchZapMultichain,
       pairedZapWriter: this.readWriteFlaunchZapV1_3Client,
+      vestedZapWriter: this.readWriteAnyFlaunchZapClient,
     };
   }
 
@@ -4365,6 +4698,152 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
    */
   anyFlaunch(params: AnyFlaunchParams) {
     return this.readWriteAnyPositionManager.flaunch(params);
+  }
+
+  /**
+   * Whether a premine on `pairedToken` is pull-funded (paid in the ERC20 via an allowance to the
+   * zap) rather than from `msg.value`. Native ETH and flETH need no registry read.
+   */
+  private async isPullFundedPairing(pairedToken: Address): Promise<boolean> {
+    if (pairedToken === zeroAddress) return false;
+    const fleth = FLETHAddress[this.chainId];
+    if (fleth && isAddressEqual(pairedToken, fleth)) return false;
+    const config = await this.readPairedTokenRegistryV1_3.tokenConfig(pairedToken);
+    return (
+      config.tokenType !== PAIRED_TOKEN_TYPE.nativeEth &&
+      config.tokenType !== PAIRED_TOKEN_TYPE.nativeWrapper
+    );
+  }
+
+  /**
+   * Resolves a vested launch: params → the zap struct and manager tuple, the fee quoted as the
+   * signer (with `slippageBps` headroom) as `value`, and the spend cap when one applies.
+   */
+  private async prepareVestedLaunch(params: FlaunchVestedParams): Promise<{
+    flaunchParams: AnyFlaunchZapFlaunchParams;
+    treasuryManagerParams?: AnyFlaunchZapTreasuryManagerArgs;
+    maxPremineCost?: bigint;
+    value: bigint;
+  }> {
+    const zap = this.readWriteAnyFlaunchZap;
+    const flaunchParams = toAnyFlaunchZapFlaunchParams(this.chainId, params);
+    const treasuryManagerParams = toAnyFlaunchZapTreasuryManagerArgs(this.chainId, params);
+    const sender = await this.drift.getSignerAddress();
+    if (
+      params.maxPremineCost === undefined &&
+      flaunchParams.premineAmount > 0n &&
+      (await this.isPullFundedPairing(flaunchParams.pairedToken))
+    ) {
+      throw new Error(
+        `A premine on the ERC20 pairing ${flaunchParams.pairedToken} needs maxPremineCost (the paired-token spend cap you have approved the zap for); the zap reverts Erc20PremineRequiresMaxCost otherwise. Use flaunchVestedWithPreBuy to have it quoted.`
+      );
+    }
+    const { ethRequired } = await zap.calculateFee(
+      { flaunchParams, slippageBps: BigInt(params.slippageBps ?? 0) },
+      { from: sender }
+    );
+    return {
+      flaunchParams,
+      treasuryManagerParams,
+      maxPremineCost: params.maxPremineCost,
+      value: ethRequired,
+    };
+  }
+
+  /**
+   * Launches a coin with vesting schedules through the AnyFlaunchZap — `flaunch()` plus
+   * `vestingSchedules` (and optionally a `pairedToken`, defaulting to flETH). The schedules'
+   * coins are escrowed in MemecoinVesting at launch; the rest seeds the pool. Sends the zap's
+   * quoted fee (as the signer, with `slippageBps` headroom) as `value`. Trusted-signer settings
+   * are rejected; a premine on an ERC20 pairing needs `maxPremineCost`.
+   * @throws Error if vested launches are not deployed on the current chain
+   */
+  async flaunchVested(params: FlaunchVestedParams) {
+    const { value, ...prepared } = await this.prepareVestedLaunch(params);
+    return this.readWriteAnyFlaunchZap.flaunch({ ...prepared, value });
+  }
+
+  /** `flaunchVested` with the token metadata stored on IPFS first. */
+  async flaunchIPFSVested(params: FlaunchVestedIPFSParams) {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
+      metadata: params.metadata,
+      pinataConfig: params.pinataConfig,
+    });
+    return this.flaunchVested({ ...params, tokenUri });
+  }
+
+  /** `flaunchWithRevenueManager` with vesting: deposits the launch NFT into an existing RevenueManager. */
+  flaunchVestedWithRevenueManager(params: FlaunchVestedWithRevenueManagerParams) {
+    return this.flaunchVested(toFlaunchVestedParamsWithRevenueManager(params));
+  }
+
+  async flaunchIPFSVestedWithRevenueManager(
+    params: FlaunchVestedWithRevenueManagerIPFSParams
+  ) {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
+      metadata: params.metadata,
+      pinataConfig: params.pinataConfig,
+    });
+    return this.flaunchVestedWithRevenueManager({ ...params, tokenUri });
+  }
+
+  /** `flaunchWithSplitManager` with vesting: deploys an AddressFeeSplitManager at launch. */
+  flaunchVestedWithSplitManager(params: FlaunchVestedWithSplitManagerParams) {
+    return this.flaunchVested(
+      toFlaunchVestedParamsWithSplitManager(params, this.chainId)
+    );
+  }
+
+  async flaunchIPFSVestedWithSplitManager(
+    params: FlaunchVestedWithSplitManagerIPFSParams
+  ) {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
+      metadata: params.metadata,
+      pinataConfig: params.pinataConfig,
+    });
+    return this.flaunchVestedWithSplitManager({ ...params, tokenUri });
+  }
+
+  /** `flaunchWithDynamicSplitManager` with vesting: deploys a DynamicAddressFeeSplitManager at launch. */
+  flaunchVestedWithDynamicSplitManager(
+    params: FlaunchVestedWithDynamicSplitManagerParams
+  ) {
+    return this.flaunchVested(
+      toFlaunchVestedParamsWithDynamicSplitManager(params, this.chainId)
+    );
+  }
+
+  async flaunchIPFSVestedWithDynamicSplitManager(
+    params: FlaunchVestedWithDynamicSplitManagerIPFSParams
+  ) {
+    const tokenUri = await generateTokenUri(params.name, params.symbol, {
+      metadata: params.metadata,
+      pinataConfig: params.pinataConfig,
+    });
+    return this.flaunchVestedWithDynamicSplitManager({ ...params, tokenUri });
+  }
+
+  /**
+   * A vested launch with a pre-buy: `flaunchWithPreBuy` on the `vested` route. `params` is what
+   * `flaunchVested` takes minus the premine and its cap, which the planner quotes; manager
+   * launches are allowed (the zap has the manager + `maxPremineCost` overload).
+   */
+  flaunchVestedWithPreBuy(
+    input: Omit<Extract<LaunchPreBuyInput, { route: "vested" }>, "route">,
+    options?: LaunchPreBuyExecuteOptions
+  ): Promise<LaunchPreBuyExecution> {
+    return this.flaunchWithPreBuy({ ...input, route: "vested" }, options);
+  }
+
+  /**
+   * Claims vested coins of `coin` for the connected wallet: the given schedule ids, or every
+   * schedule with something claimable when omitted (throws when there is nothing to claim).
+   */
+  claimVesting(coin: Address, scheduleIds?: bigint[]) {
+    const vesting = this.readWriteMemecoinVesting;
+    return scheduleIds === undefined
+      ? vesting.claimAll(coin)
+      : vesting.claim(coin, scheduleIds);
   }
 
   /**
