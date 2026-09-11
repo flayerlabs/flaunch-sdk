@@ -207,6 +207,11 @@ export function toVestingScheduleArgs(
     if (!isUint(start, UINT40_MAX)) {
       throw new Error(`${label}: start must be a unix timestamp in seconds (0 = launch time)`);
     }
+    // The escrow rejects a back-dated start (`ScheduleStartInvalid`, which surfaces from inside
+    // the zap as an undecoded selector). Catch it here, with a minute of clock tolerance.
+    if (start !== 0 && start < Math.floor(Date.now() / 1000) - 60) {
+      throw new Error(`${label}: start is in the past; omit it (launch time) or use a future timestamp`);
+    }
     return {
       beneficiary,
       amount,

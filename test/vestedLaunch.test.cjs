@@ -214,6 +214,7 @@ test("schedule validation rejects what the contracts would revert, before any RP
   rejects(schedule({ cliffDuration: -1 }), /cliffDuration must be a non-negative integer/);
   rejects(schedule({ start: -5 }), /start must be a unix timestamp/);
   rejects(schedule({ start: 2 ** 40 }), /start must be a unix timestamp/);
+  rejects(schedule({ start: 1_000_000 }), /start is in the past/);
   assert.deepEqual(toVestingScheduleArgs(schedule({})), [
     { beneficiary: TEAM, amount: 5n * 10n ** 27n, start: 0, cliffDuration: 0, vestDuration: 100 },
   ]);

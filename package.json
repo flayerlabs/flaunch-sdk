@@ -73,7 +73,8 @@
     "docs:generate": "typedoc --plugin typedoc-plugin-markdown --out docs src/index.ts --excludeExternals --exclude '**/abi/**' --includeVersion",
     "docs:llms": "node scripts/generate-llms-doc.js",
     "validate:multichain": "pnpm build && node scripts/validate-multichain-deployments.mjs",
-    "test:prebuy:fork": "node scripts/test-launch-prebuy-fork.cjs"
+    "test:prebuy:fork": "node scripts/test-launch-prebuy-fork.cjs",
+    "test:vested:fork": "node scripts/test-vested-launch-fork.cjs"
   },
   "packageManager": "pnpm@10.34.3",
   "devDependencies": {
