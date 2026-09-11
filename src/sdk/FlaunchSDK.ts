@@ -86,6 +86,7 @@ import {
   AnyFlaunchZapAddress,
   AnyFlaunchZapPositionManagerAddress,
   MemecoinVestingAddress,
+  GameDeveloperFeeSplitManagerAddress,
 } from "../addresses";
 import {
   ReadFlaunchPositionManager,
@@ -150,6 +151,11 @@ import {
   ReadFlaunchZapV1_3,
   ReadWriteFlaunchZapV1_3,
 } from "../clients/FlaunchZapV1_3Client";
+import {
+  encodeGameDeveloperSplitInitializeData,
+  type GameDeveloperSplitInitializeParams,
+} from "../helpers/gameDeveloperSplit";
+import { doesChainSupportGameDeveloperSplit } from "../helpers/supportedChains";
 import { ReadPairedTokenRegistryV1_3 } from "../clients/PairedTokenRegistryV1_3Client";
 import {
   ReadAnyFlaunchZap,
@@ -665,6 +671,16 @@ function buildApproveCall(token: Address, spender: Address, amount: bigint): Pai
     data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, amount] }),
   };
 }
+
+/** `flaunchPairedToken` plus the developer's slot and the recipients sharing the other 95%. */
+export type FlaunchPairedTokenWithGameDeveloperSplitParams = Omit<
+  FlaunchPairedTokenParams,
+  "treasuryManagerParams"
+> &
+  GameDeveloperSplitInitializeParams & {
+    /** A permissions module for later deposits; `zeroAddress` (default) leaves the manager open. */
+    permissions?: Address;
+  };
 
 export class ReadFlaunchSDK {
   public readonly drift: Drift;
@@ -4645,6 +4661,41 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
 
   flaunchPairedToken(params: FlaunchPairedTokenParams) {
     return this.readWriteFlaunchZapV1_3.flaunch(params);
+  }
+
+  /**
+   * Launches a paired-token coin (a Game Mode launch carrying its gate in `feeCalculatorParams`)
+   * into a GameDeveloperFeeSplitManager: the game developer holds a protected 5% of every fee
+   * for the life of the coin and `splitReceivers` share the other 95%. One transaction, through
+   * the same zap overload as any managed paired launch. Requires the manager to be deployed and
+   * approved on this chain (`doesChainSupportGameDeveloperSplit`).
+   */
+  flaunchPairedTokenWithGameDeveloperSplit(
+    params: FlaunchPairedTokenWithGameDeveloperSplitParams
+  ) {
+    const manager = GameDeveloperFeeSplitManagerAddress[this.chainId];
+    if (!manager || !doesChainSupportGameDeveloperSplit(this.chainId)) {
+      throw new Error(
+        `GameDeveloperFeeSplitManager is not deployed on chain ${this.chainId}`
+      );
+    }
+
+    const { gameDeveloper, moderator, splitReceivers, permissions, ...launch } =
+      params;
+
+    return this.readWriteFlaunchZapV1_3.flaunch({
+      ...launch,
+      treasuryManagerParams: {
+        manager,
+        permissions: permissions ?? zeroAddress,
+        initializeData: encodeGameDeveloperSplitInitializeData({
+          gameDeveloper,
+          moderator,
+          splitReceivers,
+        }),
+        depositData: "0x",
+      },
+    });
   }
 
   /**

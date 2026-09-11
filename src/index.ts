@@ -196,6 +196,12 @@ export {
   ReadWriteDynamicAddressFeeSplitManagerV1_3,
 } from "./clients/DynamicAddressFeeSplitManagerV1_3Client";
 export type { DynamicRecipientInfoV1_3 } from "./clients/DynamicAddressFeeSplitManagerV1_3Client";
+// Game Mode: the DynamicAddressFeeSplitManager whose game developer holds a protected 5% slot
+export {
+  ReadGameDeveloperFeeSplitManager,
+  ReadWriteGameDeveloperFeeSplitManager,
+} from "./clients/GameDeveloperFeeSplitManagerClient";
+export type { FlaunchPairedTokenWithGameDeveloperSplitParams } from "./sdk/FlaunchSDK";
 export {
   ReadStakingManagerV1_3,
   ReadWriteStakingManagerV1_3,

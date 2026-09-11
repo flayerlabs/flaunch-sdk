@@ -381,6 +381,14 @@ export const AddressFeeSplitManagerV1_3Address: Addresses = {
   [robinhood.id]: "0x7dc0f14204841e0314eB0265a0c420995F200243",
 };
 
+/**
+ * GameDeveloperFeeSplitManager: the Game Mode manager whose game developer holds a protected 5%
+ * slot (flaunch-managers `feat/game-developer-fee-split-manager`). Approved on each chain's
+ * v1.3.1 `TreasuryManagerFactoryV1_3Address`. Empty until deployed: fill a chain in once
+ * `Managers.s.sol` has broadcast it there and the factory owner has approved it.
+ */
+export const GameDeveloperFeeSplitManagerAddress: Addresses = {};
+
 export const DynamicAddressFeeSplitManagerV1_3Address: Addresses = {
   [mainnet.id]: "0x0f03Aa8d303Ee15ed3Be81Bf43c41EFfFa4a7a5B",
   [base.id]: "0xC4a0B79A0dB1F7F67da97E7F9A8867B6CaF017b2",

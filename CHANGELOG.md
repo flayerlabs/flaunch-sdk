@@ -24,6 +24,13 @@
   - Addresses / gating: `AnyFlaunchZapAddress`, `MemecoinVestingAddress`, `AnyFlaunchZapPositionManagerAddress` (the hook the zap launches through — a separate generation from the v1.3.3 import hook `AnyPositionManagerV1_3Address`), `AnyFlaunchZapFlaunchAddress`; `doesChainSupportVestedLaunch(chainId)`; `doesChainSupportLaunchPreBuy` is true where vested launches are
   - ABIs: `AnyFlaunchZapAbi`, `MemecoinVestingAbi`, `AnyFlaunchV1_3Abi`, `AnyPositionManagerV1_3Abi` (the legacy `AnyFlaunchAbi` / `AnyPositionManagerAbi` are unchanged and `AnyFlaunchAbi` is now exported); `guides/vested-launch.md`; golden calldata fixtures gain the vested entry points on Base Sepolia
 
+- **GameDeveloperFeeSplitManager** (Game Mode's 5% developer royalty). A v1.3.1 `DynamicAddressFeeSplitManager` whose game developer holds a recipient slot fixed at 5% of every fee that the manager owner and moderator cannot edit, remove, transfer or dilute; the developer can redirect the payout wallet, hand over the role, and is the only account that can withdraw the coin's ERC721 (always back to the creator recorded at deposit).
+  - Addresses: `GameDeveloperFeeSplitManagerAddress` (empty until deployed and approved per chain) and `doesChainSupportGameDeveloperSplit(chainId)`
+  - ABI: `GameDeveloperFeeSplitManagerAbi`
+  - Clients: `ReadGameDeveloperFeeSplitManager` / `ReadWriteGameDeveloperFeeSplitManager`, extending the v1.3.1 dynamic split clients with `gameDeveloper()`, `gameDeveloperPayout()`, `originalCreator()`, `setGameDeveloperPayout()`, `transferGameDeveloper()`, `withdrawToCreator()`
+  - `ReadWriteFlaunchSDK.flaunchPairedTokenWithGameDeveloperSplit({ flaunchParams, gameDeveloper, moderator?, splitReceivers, ... })`: a paired-token (Game Mode) launch escrowed into the manager in one transaction; shares are 5 dp weights (`percentToGameDeveloperShare`) and must total `100_00000` with the developer's `5_00000` added by the SDK
+  - `encodeGameDeveloperSplitInitializeData()` for integrators calling the zap themselves
+
 ### Changed
 
 - Legacy Base, multichain and v1.3 zap `flaunch*` methods now route through the shared builders. Their calldata, fee quote and `value` are unchanged — `test/launchByteIdentity.test.cjs` replays every entry point against fixtures generated from the 0.13.0 build.
