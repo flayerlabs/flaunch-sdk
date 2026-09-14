@@ -28,6 +28,8 @@ const {
   PairedTokenRegistryV1_3Address,
   PairedTokenPositionManagerV1_3Address,
   DynamicAddressFeeSplitManagerAddress,
+  GameDeveloperFeeSplitManagerAddress,
+  encodeGameDeveloperSplitInitializeData,
   AnyFlaunchZapAbi,
   AnyFlaunchZapAddress,
   FLETHAddress,
@@ -887,6 +889,144 @@ test("vested route with a manager and an ERC20 pairing: manager + maxPremineCost
   assert.equal(simulations.length, 1);
   assert.equal(lower(simulations[0].address), lower(zap));
   assert.deepEqual(simulations[0].options, { from: SENDER, value: FEE });
+});
+
+
+test("paired route into a treasury manager: the 4-argument overload is planned, priced and written once", async () => {
+  const drift = fakeDrift({ tokenConfig: { approved: true, tokenType: 4, decimals: 6 } });
+  const publicClient = fakePublicClient(drift);
+  const sdk = new ReadWriteFlaunchSDK(base.id, drift, publicClient);
+  const manager = DynamicAddressFeeSplitManagerAddress[base.id];
+  const result = await sdk.planLaunchPreBuy({
+    route: "pairedToken",
+    params: {
+      ...pairedParams,
+      // a Game Mode launch: the gate's spend-gate params ride verbatim
+      feeCalculatorParams: "0xabcd",
+      treasuryManagerParams: { manager, initializeData: "0x1234" },
+    },
+    preBuyBps: 100,
+    slippageBps: 50,
+  });
+  assert.equal(result.supported, true, JSON.stringify(result.reasons));
+  const { plan } = result;
+  const zap = FlaunchZapV1_3Address[base.id];
+  assert.equal(plan.route, "pairedToken");
+  assert.equal(plan.zapFamily, "pairedToken");
+  assert.equal(lower(plan.launch.to), lower(zap));
+  assert.deepEqual(plan.payment.asset, { chainId: base.id, address: PAIRED, decimals: 6 });
+  assert.equal(plan.pricing.method, "protocolQuoteWithSimulatedImpact");
+  assert.equal(plan.maxPremineCost, 1026n);
+  assert.equal(plan.value, FEE, "an ERC20 premine never leaks into msg.value");
+  assert.equal(plan.approvals.length, 1);
+  assert.equal(plan.approvals[0].spender, zap);
+
+  const decoded = decodeFunctionData({ abi: FlaunchZapV1_3Abi, data: plan.launch.data });
+  assert.equal(decoded.args.length, 4, "manager + _maxPremineCost overload");
+  assert.equal(decoded.args[0].premineAmount, plan.premineAmount);
+  assert.equal(decoded.args[0].feeCalculatorParams, "0xabcd", "gate params verbatim");
+  assert.equal(lower(decoded.args[1].manager), lower(manager));
+  assert.equal(decoded.args[1].permissions, zeroAddress);
+  assert.equal(decoded.args[1].initializeData, "0x1234");
+  assert.equal(decoded.args[1].depositData, "0x");
+  assert.equal(decoded.args[2], zeroAddress);
+  assert.equal(decoded.args[3], 1026n);
+  // the native twin the ERC20 premine is priced against carries the manager too
+  assert.equal(publicClient.calls.length, 1);
+  const twin = decodeFunctionData({ abi: FlaunchZapV1_3Abi, data: publicClient.calls[0].launchData });
+  assert.equal(twin.args.length, 4);
+  assert.equal(twin.args[0].pairedToken, zeroAddress);
+  assert.equal(lower(twin.args[1].manager), lower(manager));
+  assert.equal(computeLaunchPreBuyBinding(plan), plan.binding);
+
+  drift.interactions.length = 0;
+  const { hash } = await sdk.executeLaunchPreBuy(plan);
+  assert.equal(hash, TX_HASH);
+  const all = writes(drift);
+  assert.equal(all.length, 2);
+  assert.equal(all[0].fn, "approve");
+  assert.equal(all[1].fn, "flaunch");
+  assert.equal(lower(all[1].address), lower(zap));
+  assert.deepEqual(Object.keys(all[1].args), [
+    "_flaunchParams",
+    "_treasuryManagerParams",
+    "_trustedFeeSigner",
+    "_maxPremineCost",
+  ]);
+  assert.equal(lower(all[1].args._treasuryManagerParams.manager), lower(manager));
+  assert.equal(all[1].args._maxPremineCost, 1026n);
+  assert.deepEqual(all[1].options, { value: FEE });
+  // the preflight simulation picks the manager overload as well
+  const simulations = drift.interactions.filter((i) => i.kind === "simulate");
+  assert.equal(simulations.length, 1);
+  assert.deepEqual(Object.keys(simulations[0].args), [
+    "_flaunchParams",
+    "_treasuryManagerParams",
+    "_trustedFeeSigner",
+    "_maxPremineCost",
+  ]);
+});
+
+test("Game Mode pre-buy on the Any route: gate params, vesting and the developer's 5% in one plan", async () => {
+  const MANAGER = "0x5555555555555555555555555555555555555555";
+  const DEVELOPER = "0x6666666666666666666666666666666666666666";
+  GameDeveloperFeeSplitManagerAddress[baseSepolia.id] = MANAGER;
+  try {
+    const drift = fakeDrift({ tokenConfig: { approved: true, tokenType: 1, decimals: 18 } });
+    const sdk = new ReadFlaunchSDK(baseSepolia.id, drift, fakePublicClient(drift));
+    const gameDeveloperSplit = {
+      gameDeveloper: DEVELOPER,
+      moderator: SENDER,
+      splitReceivers: [{ address: SENDER, share: 95_00000n }],
+    };
+    const result = await sdk.planLaunchPreBuy({
+      route: "vested",
+      params: { ...vestedParams, feeCalculatorParams: "0xabcd", gameDeveloperSplit },
+      preBuyBps: 100,
+      slippageBps: 50,
+    });
+    assert.equal(result.supported, true, JSON.stringify(result.reasons));
+    const { plan } = result;
+    const decoded = decodeFunctionData({ abi: AnyFlaunchZapAbi, data: plan.launch.data });
+    assert.equal(decoded.args.length, 4, "manager + _maxPremineCost overload");
+    assert.equal(decoded.args[0].feeCalculatorParams, "0xabcd", "the gate rides verbatim");
+    assert.equal(decoded.args[0].vestingSchedules.length, 1, "vesting rides too");
+    assert.equal(decoded.args[0].premineAmount, plan.premineAmount);
+    assert.equal(lower(decoded.args[1].manager), lower(MANAGER));
+    assert.equal(
+      decoded.args[1].initializeData,
+      encodeGameDeveloperSplitInitializeData(gameDeveloperSplit),
+      "the developer's protected 5% plus the 95% receivers"
+    );
+    assert.equal(decoded.args[2], zeroAddress, "a non-zero trusted signer reverts NotSettler");
+    assert.equal(decoded.args[3], plan.maxPremineCost);
+    assert.equal(plan.vestingSchedulesHash, hashVestingSchedules(decoded.args[0].vestingSchedules));
+    assert.equal(computeLaunchPreBuyBinding(plan), plan.binding);
+
+    // no vesting at all is still a valid Game Mode launch
+    const noVesting = await sdk.planLaunchPreBuy({
+      route: "vested",
+      params: { ...vestedParams, vestingSchedules: [], feeCalculatorParams: "0xabcd", gameDeveloperSplit },
+      preBuyBps: 100,
+      slippageBps: 50,
+    });
+    assert.equal(noVesting.supported, true, JSON.stringify(noVesting.reasons));
+    const empty = decodeFunctionData({ abi: AnyFlaunchZapAbi, data: noVesting.plan.launch.data });
+    assert.deepEqual(empty.args[0].vestingSchedules, []);
+
+    // the two manager inputs are mutually exclusive
+    await assert.rejects(
+      sdk.planLaunchPreBuy({
+        route: "vested",
+        params: { ...vestedParams, gameDeveloperSplit, treasuryManagerParams: { manager: OTHER } },
+        preBuyBps: 100,
+        slippageBps: 50,
+      }),
+      /not both/
+    );
+  } finally {
+    delete GameDeveloperFeeSplitManagerAddress[baseSepolia.id];
+  }
 });
 
 test("flaunchWithPreBuy throws a typed error for unsupported launches", async () => {

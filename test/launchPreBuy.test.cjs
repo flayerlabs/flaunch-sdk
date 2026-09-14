@@ -20,6 +20,7 @@ const {
   FlaunchZapAddress,
   FlaunchZapMultichainAddress,
   FlaunchZapV1_3Address,
+  GameDeveloperFeeSplitManagerAddress,
 } = require("../dist/index.cjs.js");
 
 const CREATOR = "0x1111111111111111111111111111111111111111";
@@ -160,20 +161,80 @@ test("paired-token classification: gate params, trusted signer, manager", () => 
   assert.deepEqual(classifyLaunchPreBuyInput(base.id, paired({})), []);
   assert.deepEqual(classifyLaunchPreBuyInput(base.id, paired({ premineAmount: undefined })), []);
   assert.deepEqual(classifyLaunchPreBuyInput(base.id, paired({ premineAmount: 1n })), ["PREMINE_ALREADY_SET"]);
-  assert.deepEqual(classifyLaunchPreBuyInput(base.id, paired({ feeCalculatorParams: "0xabcd" })), [
-    "PROTECTED_LAUNCH_UNSUPPORTED",
-  ]);
+  // a spend gate composes with a premine: the hook issues the premine swap inside its own
+  // unlock, so `Hooks.beforeSwap` returns early and the gated calculator never sees it
+  assert.deepEqual(classifyLaunchPreBuyInput(base.id, paired({ feeCalculatorParams: "0xabcd" })), []);
+  // the trusted-signer half is real: `setTrustedPoolKeySigner` reverts `NotSettler`
   assert.deepEqual(classifyLaunchPreBuyInput(base.id, paired({ trustedFeeSigner: CREATOR })), [
     "PROTECTED_LAUNCH_UNSUPPORTED",
   ]);
   assert.deepEqual(classifyLaunchPreBuyInput(base.id, paired({ trustedFeeSigner: zeroAddress })), []);
+  // a launch into a treasury manager is supported since 0.16.0 (the zap's 4-argument overload)
   assert.deepEqual(
     classifyLaunchPreBuyInput(base.id, paired({ treasuryManagerParams: { manager: CREATOR } })),
-    ["PAIRED_MANAGER_LAUNCH_UNSUPPORTED"]
+    []
   );
+  assert.deepEqual(
+    classifyLaunchPreBuyInput(
+      base.id,
+      paired({ feeCalculatorParams: "0xabcd", treasuryManagerParams: { manager: CREATOR } })
+    ),
+    [],
+    "a Game Mode launch into a manager is plannable"
+  );
+  assert.ok(!LAUNCH_PRE_BUY_REASON_CODES.includes("PAIRED_MANAGER_LAUNCH_UNSUPPORTED"));
   // Ethereum v1.4.0 (0.15.0) launches through the v1.3 zap with native ETH as the default pairing
   assert.deepEqual(classifyLaunchPreBuyInput(mainnet.id, paired({})), []);
   assert.deepEqual(classifyLaunchPreBuyInput(unichain.id, paired({})), ["ROUTE_UNSUPPORTED"]);
+});
+
+test("vested classification: empty schedules are valid, malformed are not, gates ride, signers do not", () => {
+  const schedule = { beneficiary: CREATOR, percent: 20, cliffDuration: 0, vestDuration: 86_400 };
+  const vested = (params) =>
+    okInput({
+      route: "vested",
+      params: {
+        name: "Coin",
+        symbol: "COIN",
+        tokenUri: "ipfs://coin",
+        initialMarketCapUSD: 4000,
+        creator: CREATOR,
+        creatorFeeAllocationPercent: 100,
+        vestingSchedules: [schedule],
+        ...params,
+      },
+    });
+  assert.deepEqual(classifyLaunchPreBuyInput(baseSepolia.id, vested({})), []);
+  // an empty array is a valid no-vesting Any launch, which the launch methods already accept
+  assert.deepEqual(classifyLaunchPreBuyInput(baseSepolia.id, vested({ vestingSchedules: [] })), []);
+  assert.deepEqual(
+    classifyLaunchPreBuyInput(
+      baseSepolia.id,
+      vested({ vestingSchedules: [{ ...schedule, cliffDuration: 10, vestDuration: 5 }] })
+    ),
+    ["INVALID_VESTING_SCHEDULE"]
+  );
+  // the gate's spend-gate params ride the Any route too
+  assert.deepEqual(classifyLaunchPreBuyInput(baseSepolia.id, vested({ feeCalculatorParams: "0xabcd" })), []);
+  assert.deepEqual(
+    classifyLaunchPreBuyInput(baseSepolia.id, vested({ trustedSignerSettings: { enabled: true } })),
+    ["PROTECTED_LAUNCH_UNSUPPORTED"]
+  );
+  // a Game Mode pre-buy — gate params, vesting and the developer split together — is plannable
+  // once the manager is deployed, and reports the chain as unsupported until then
+  const gameDeveloperSplit = {
+    gameDeveloper: CREATOR,
+    splitReceivers: [{ address: PAIRED, share: 95_00000n }],
+  };
+  const gameMode = vested({ gameDeveloperSplit, feeCalculatorParams: "0xabcd" });
+  assert.equal(GameDeveloperFeeSplitManagerAddress[baseSepolia.id], undefined, "not deployed yet");
+  assert.deepEqual(classifyLaunchPreBuyInput(baseSepolia.id, gameMode), ["ROUTE_UNSUPPORTED"]);
+  GameDeveloperFeeSplitManagerAddress[baseSepolia.id] = PAIRED;
+  try {
+    assert.deepEqual(classifyLaunchPreBuyInput(baseSepolia.id, gameMode), []);
+  } finally {
+    delete GameDeveloperFeeSplitManagerAddress[baseSepolia.id];
+  }
 });
 
 test("legacy Base zap routes cannot premine; the paired-token route is the way on Base", () => {
@@ -223,7 +284,6 @@ test("capability matrix per chain", () => {
     assert.equal(caps.supported, supportedRoutes.length > 0);
     assert.equal(caps.defaultQuoteTtlMs, DEFAULT_QUOTE_TTL_MS);
     assert.deepEqual(caps.unsupported, {
-      pairedTokenWithManager: "PAIRED_MANAGER_LAUNCH_UNSUPPORTED",
       anyFlaunch: "ANY_FLAUNCH_UNSUPPORTED",
       gasless: "GASLESS_UNSUPPORTED",
       protectedLaunch: "PROTECTED_LAUNCH_UNSUPPORTED",

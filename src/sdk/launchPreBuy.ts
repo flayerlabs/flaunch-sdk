@@ -2,6 +2,7 @@ import { type Address, type Hex, keccak256, stringToHex, zeroAddress } from "vie
 import {
   AddressFeeSplitManagerAddress,
   DefaultPairedTokenAddress,
+  GameDeveloperFeeSplitManagerAddress,
   AnyFlaunchZapAddress,
   DynamicAddressFeeSplitManagerAddress,
   FlaunchZapAddress,
@@ -21,6 +22,8 @@ import {
   type FlaunchVestedParams,
 } from "../clients/VestedLaunchParams";
 import { percentToBps } from "../helpers/bps";
+import type { GameDeveloperSplitInitializeParams } from "../helpers/gameDeveloperSplit";
+import type { PermissionsInput } from "../helpers/permissions";
 import {
   doesChainSupportPairedTokenLaunch,
   doesChainSupportVestedLaunch,
@@ -76,7 +79,6 @@ export const LAUNCH_PRE_BUY_REASON_CODES = [
   "ROUTE_UNSUPPORTED",
   "GASLESS_UNSUPPORTED",
   "PROTECTED_LAUNCH_UNSUPPORTED",
-  "PAIRED_MANAGER_LAUNCH_UNSUPPORTED",
   "ANY_FLAUNCH_UNSUPPORTED",
   "PAIRED_TOKEN_NOT_APPROVED",
   "ROUTE_PREMINE_UNAVAILABLE",
@@ -112,10 +114,24 @@ export type PairedTokenPreBuyLaunchParams = Omit<
 > & {
   /** Must be absent or 0 — the planner derives the premine from `preBuyBps`. */
   premineAmount?: bigint;
-  /** Must be absent or the zero address; a gated launch is not supported for pre-buy. */
+  /**
+   * Must be absent or the zero address. The zap's `setTrustedPoolKeySigner` reverts `NotSettler`
+   * on a spend-gated calculator, so a trusted-signer launch cannot also pre-buy
+   * (`PROTECTED_LAUNCH_UNSUPPORTED`). A gate's `feeCalculatorParams` are fine.
+   */
   trustedFeeSigner?: Address;
-  /** Not supported for a paired-token pre-buy in this version; presence is rejected. */
-  treasuryManagerParams?: unknown;
+  /**
+   * Launch into a treasury manager: an approved implementation is deployed and initialized, a
+   * known instance receives the launch NFT. The planner encodes the zap's manager +
+   * `_maxPremineCost` overload. A zero `manager` is treated as absent.
+   */
+  treasuryManagerParams?: {
+    manager: Address;
+    /** Defaults to `zeroAddress` (open). A `Permissions` value resolves through the v1.3.1 map. */
+    permissions?: PermissionsInput;
+    initializeData?: Hex;
+    depositData?: Hex;
+  };
 };
 
 /**
@@ -130,6 +146,15 @@ export type VestedPreBuyLaunchParams = Omit<
 > & {
   /** Must be absent or 0 — the planner derives the premine from `preBuyBps`. */
   premineAmount?: bigint;
+  /**
+   * Game Mode: launch into this chain's GameDeveloperFeeSplitManager, the developer holding a
+   * protected 5% and `splitReceivers` sharing the other 95%. A convenience over
+   * `treasuryManagerParams`, with which it is mutually exclusive (setting both throws). With the
+   * gate's `feeCalculatorParams` and any vesting schedules this is the full Game Mode pre-buy.
+   */
+  gameDeveloperSplit?: GameDeveloperSplitInitializeParams & {
+    permissions?: PermissionsInput;
+  };
 };
 
 type LaunchPreBuyCommon = {
@@ -255,9 +280,9 @@ export type LaunchPreBuyCapabilities = {
   routes: Record<LaunchPreBuyRoute, LaunchPreBuyRouteCapability>;
   /** Launch kinds that never support pre-buy in this version, with their reason code. */
   unsupported: {
-    pairedTokenWithManager: LaunchPreBuyReasonCode;
     anyFlaunch: LaunchPreBuyReasonCode;
     gasless: LaunchPreBuyReasonCode;
+    /** Trusted-signer launches only; a spend gate's `feeCalculatorParams` are supported. */
     protectedLaunch: LaunchPreBuyReasonCode;
   };
 };
@@ -394,16 +419,11 @@ export function getLaunchPreBuyCapabilities(
     defaultQuoteTtlMs: DEFAULT_QUOTE_TTL_MS,
     routes,
     unsupported: {
-      pairedTokenWithManager: "PAIRED_MANAGER_LAUNCH_UNSUPPORTED",
       anyFlaunch: "ANY_FLAUNCH_UNSUPPORTED",
       gasless: "GASLESS_UNSUPPORTED",
       protectedLaunch: "PROTECTED_LAUNCH_UNSUPPORTED",
     },
   };
-}
-
-function isEmptyBytes(value: string | undefined): boolean {
-  return value === undefined || value === "0x" || value === "";
 }
 
 /**
@@ -433,24 +453,29 @@ export function classifyLaunchPreBuyInput(
   }
   if (!params.creator || params.creator === zeroAddress) reasons.add("INVALID_CREATOR");
 
+  // A spend-gated launch (a Game Mode gate's `feeCalculatorParams`) composes with a premine:
+  // `Hooks.beforeSwap` returns early when `msg.sender == address(self)` (v4-core `Hooks.sol:253`)
+  // and the premine swap is issued by the hook inside its own unlock
+  // (`AnyPositionManager.sol:258-275`), so neither the `flaunchAt` schedule check nor the
+  // spend-gated calculator ever observes it. Only the trusted-signer half is refused
+  // (`PROTECTED_LAUNCH_UNSUPPORTED`): the zap calling `setTrustedPoolKeySigner` on a spend gate
+  // reverts `NotSettler`.
   if (input.route === "pairedToken") {
     const paired = input.params;
-    if (!isEmptyBytes(paired.feeCalculatorParams)) reasons.add("PROTECTED_LAUNCH_UNSUPPORTED");
     if (paired.trustedFeeSigner && paired.trustedFeeSigner !== zeroAddress) {
       reasons.add("PROTECTED_LAUNCH_UNSUPPORTED");
     }
-    if (paired.treasuryManagerParams !== undefined) {
-      reasons.add("PAIRED_MANAGER_LAUNCH_UNSUPPORTED");
-    }
   } else if (input.route === "vested") {
     const vested = input.params;
-    if (!isEmptyBytes(vested.feeCalculatorParams)) reasons.add("PROTECTED_LAUNCH_UNSUPPORTED");
     if (vested.trustedSignerSettings !== undefined) reasons.add("PROTECTED_LAUNCH_UNSUPPORTED");
+    // An empty array is a valid no-vesting Any launch; only a malformed schedule is refused.
     try {
-      if (vested.vestingSchedules.length === 0) throw new Error("no schedules");
-      toVestingScheduleArgs(vested.vestingSchedules);
+      toVestingScheduleArgs(vested.vestingSchedules ?? []);
     } catch {
       reasons.add("INVALID_VESTING_SCHEDULE");
+    }
+    if (vested.gameDeveloperSplit && !GameDeveloperFeeSplitManagerAddress[chainId]) {
+      reasons.add("ROUTE_UNSUPPORTED");
     }
   } else {
     const flaunch = input.params;

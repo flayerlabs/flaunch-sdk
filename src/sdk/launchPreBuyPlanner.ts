@@ -56,6 +56,9 @@ import {
 import { FLAUNCH_TOTAL_SUPPLY } from "../clients/FlaunchZapClient";
 import { ReadMemecoin, ReadWriteMemecoin } from "../clients/MemecoinClient";
 import type { ReadPairedTokenRegistryV1_3 } from "../clients/PairedTokenRegistryV1_3Client";
+import { GameDeveloperFeeSplitManagerAddress } from "../addresses";
+import { encodeGameDeveloperSplitInitializeData } from "../helpers/gameDeveloperSplit";
+import { resolvePermissionsV1_3 } from "../helpers/permissions";
 import { PAIRED_TOKEN_TYPE } from "../types";
 import type { LaunchCostProbe } from "./launchCostProbe";
 import {
@@ -80,7 +83,9 @@ import {
   type LaunchPreBuyRequoteReason,
   type LaunchPreBuyResult,
   type LaunchPreBuyZapFamily,
+  type PairedTokenPreBuyLaunchParams,
   type PreBuyAsset,
+  type VestedPreBuyLaunchParams,
 } from "./launchPreBuy";
 
 /*
@@ -221,9 +226,82 @@ export function encodePairedFlaunch(
   });
 }
 
+/**
+ * The 4-argument v1.3 zap overload: launch into a treasury manager with a premine spend cap.
+ * Which of deploy-and-initialize or deposit happens is the manager address's registration state
+ * in `TreasuryManagerFactoryV1_3` (approved implementation → clone + initialize; known instance
+ * → deposit); `initializeData` is only forwarded.
+ */
+export function encodePairedFlaunchWithManager(
+  flaunchParams: PairedTokenFlaunchParams,
+  treasuryManagerParams: PairedTreasuryManagerArgs,
+  trustedFeeSigner: Address,
+  maxPremineCost: bigint
+): Hex {
+  return encodeFunctionData({
+    abi: FlaunchZapV1_3Abi,
+    functionName: "flaunch",
+    args: [flaunchParams, treasuryManagerParams, trustedFeeSigner, maxPremineCost],
+  });
+}
+
 /** Encodes prepared AnyFlaunchZap `flaunch` arguments (any of the four overloads). */
 export function encodeAnyVestedFlaunch(prepared: AnyFlaunchZapFlaunchArgs): Hex {
   return encodeAnyFlaunchZapFlaunch(prepared);
+}
+
+/** The v1.3 zap's `_treasuryManagerParams`, every field resolved. */
+export type PairedTreasuryManagerArgs = {
+  manager: Address;
+  permissions: Address;
+  initializeData: Hex;
+  depositData: Hex;
+};
+
+/**
+ * A paired-token pre-buy's manager arguments, or undefined when no manager is configured (the
+ * zap's 3-argument overload is then encoded). Permissions resolve through the v1.3.1 map: the
+ * FlaunchZapV1_3 is bound to `TreasuryManagerFactoryV1_3Address`.
+ */
+function toPairedTreasuryManagerArgs(
+  chainId: number,
+  params: PairedTokenPreBuyLaunchParams
+): PairedTreasuryManagerArgs | undefined {
+  const manager = params.treasuryManagerParams?.manager;
+  if (!manager || manager === zeroAddress) return undefined;
+  return {
+    manager,
+    permissions: resolvePermissionsV1_3(params.treasuryManagerParams?.permissions, chainId),
+    initializeData: params.treasuryManagerParams?.initializeData ?? "0x",
+    depositData: params.treasuryManagerParams?.depositData ?? "0x",
+  };
+}
+
+/**
+ * A vested pre-buy's manager arguments: the `gameDeveloperSplit` convenience (Game Mode) or an
+ * explicit `treasuryManagerParams`, never both.
+ */
+function toVestedTreasuryManagerArgs(
+  chainId: number,
+  params: VestedPreBuyLaunchParams
+): AnyFlaunchZapTreasuryManagerArgs | undefined {
+  const split = params.gameDeveloperSplit;
+  if (!split) return toAnyFlaunchZapTreasuryManagerArgs(chainId, params);
+  if (params.treasuryManagerParams?.manager) {
+    throw new Error(
+      "Pass either gameDeveloperSplit or treasuryManagerParams for a vested pre-buy, not both"
+    );
+  }
+  const manager = GameDeveloperFeeSplitManagerAddress[chainId];
+  if (!manager) {
+    throw new Error(`GameDeveloperFeeSplitManager is not deployed on chain ${chainId}`);
+  }
+  return {
+    manager,
+    permissions: resolvePermissionsV1_3(split.permissions, chainId),
+    initializeData: encodeGameDeveloperSplitInitializeData(split),
+    depositData: "0x",
+  };
 }
 
 /** Strips planner-only fields and pins the premine; the shape the v1.3 zap struct expects. */
@@ -379,11 +457,18 @@ type NativeTwin = {
   data: Hex;
 };
 
-function pairedNativeTwin(deps: LaunchPreBuyPlannerDeps, flaunchParams: PairedTokenFlaunchParams): NativeTwin {
+function pairedNativeTwin(
+  deps: LaunchPreBuyPlannerDeps,
+  flaunchParams: PairedTokenFlaunchParams,
+  treasuryManagerParams?: PairedTreasuryManagerArgs
+): NativeTwin {
   const nativeParams = { ...flaunchParams, pairedToken: zeroAddress };
   return {
     quote: (block) => quotePairedRoute(deps, nativeParams, 0n, block),
-    data: encodePairedFlaunch(nativeParams, zeroAddress, 0n),
+    // The manager travels with the twin: a manager launch's real ETH cost includes the clone.
+    data: treasuryManagerParams
+      ? encodePairedFlaunchWithManager(nativeParams, treasuryManagerParams, zeroAddress, 0n)
+      : encodePairedFlaunch(nativeParams, zeroAddress, 0n),
   };
 }
 
@@ -785,6 +870,16 @@ export async function planLaunchPreBuy(
     // Quote once with a placeholder cap; the cap is only a calldata argument and does not
     // influence the fee reads, so the calldata is re-encoded with the real maximum below.
     const flaunchParams = toPairedFlaunchParams(input.params, premineAmount);
+    const treasuryManagerParams = toPairedTreasuryManagerArgs(chainId, input.params);
+    const encodePaired = (maxPremineCost: bigint) =>
+      treasuryManagerParams
+        ? encodePairedFlaunchWithManager(
+            flaunchParams,
+            treasuryManagerParams,
+            zeroAddress,
+            maxPremineCost
+          )
+        : encodePairedFlaunch(flaunchParams, zeroAddress, maxPremineCost);
     const [quotes, payment] = await Promise.all([
       quotePairedRoute(deps, flaunchParams, slippageBps, quoteBlockNumber),
       resolvePairedPayment(deps, flaunchParams.pairedToken, quoteBlockNumber),
@@ -803,8 +898,8 @@ export async function planLaunchPreBuy(
       pairedToken: flaunchParams.pairedToken,
       quotes,
       payment,
-      encode: (maxPremineCost) => encodePairedFlaunch(flaunchParams, zeroAddress, maxPremineCost),
-      native: pairedNativeTwin(deps, flaunchParams),
+      encode: encodePaired,
+      native: pairedNativeTwin(deps, flaunchParams, treasuryManagerParams),
     });
     if (!planned.ok) return unsupported(planned.reasons);
     plan = planned.plan;
@@ -827,7 +922,7 @@ export async function planLaunchPreBuy(
       ...input.params,
       premineAmount,
     });
-    const treasuryManagerParams = toAnyFlaunchZapTreasuryManagerArgs(chainId, input.params);
+    const treasuryManagerParams = toVestedTreasuryManagerArgs(chainId, input.params);
     // Always the `_maxPremineCost` overloads: required for an ERC20 pairing, ignored for native.
     const prepare = (maxPremineCost: bigint) =>
       buildAnyFlaunchZapFlaunchArgs({ flaunchParams, maxPremineCost, treasuryManagerParams });
@@ -916,6 +1011,8 @@ export type DecodedLaunchPreBuyCalldata =
   | {
       zapFamily: "pairedToken";
       flaunchParams: PairedTokenFlaunchParams;
+      /** Present when the plan encoded the zap's 4-argument manager overload. */
+      treasuryManagerParams?: PairedTreasuryManagerArgs;
       trustedFeeSigner: Address;
       maxPremineCost: bigint;
     }
@@ -1031,17 +1128,30 @@ export function decodeLaunchPreBuyCalldata(
   }
   const decoded = decodeFunctionData({ abi: FlaunchZapV1_3Abi, data });
   if (decoded.functionName !== "flaunch") throw new Error("Not a paired-token zap flaunch call");
-  // The paired route plans the `_maxPremineCost` overload only; manager launches are refused at
-  // planning time (`PAIRED_MANAGER_LAUNCH_UNSUPPORTED`), so their calldata never reaches here.
-  if (decoded.args.length !== 3 || typeof decoded.args[2] !== "bigint") {
+  // The paired route always plans a `_maxPremineCost` overload: 3 arguments without a treasury
+  // manager, 4 with one (`_flaunchParams, _treasuryManagerParams, _trustedFeeSigner,
+  // _maxPremineCost`).
+  const args = decoded.args as readonly unknown[];
+  if (args.length === 4) {
+    if (typeof args[3] !== "bigint") {
+      throw new Error("Not a paired-token zap pre-buy flaunch call");
+    }
+    return {
+      zapFamily,
+      flaunchParams: { ...(args[0] as PairedTokenFlaunchParams) },
+      treasuryManagerParams: { ...(args[1] as PairedTreasuryManagerArgs) },
+      trustedFeeSigner: args[2] as Address,
+      maxPremineCost: args[3],
+    };
+  }
+  if (args.length !== 3 || typeof args[2] !== "bigint") {
     throw new Error("Not a paired-token zap pre-buy flaunch call");
   }
-  const [flaunchParams, trustedFeeSigner, maxPremineCost] = decoded.args;
   return {
     zapFamily,
-    flaunchParams: { ...flaunchParams },
-    trustedFeeSigner,
-    maxPremineCost,
+    flaunchParams: { ...(args[0] as PairedTokenFlaunchParams) },
+    trustedFeeSigner: args[1] as Address,
+    maxPremineCost: args[2],
   };
 }
 
@@ -1119,11 +1229,13 @@ export async function assertLaunchPreBuyPlanCurrent(
       plan.vestingSchedulesHash !== undefined &&
       hashVestingSchedules(vested.vestingSchedules) === plan.vestingSchedulesHash;
   }
+  // `feeCalculatorParams` is not checked here: a spend-gated (Game Mode) launch is supported, and
+  // the whole calldata is already covered by the binding hash. A non-zero trusted signer is not —
+  // the zap's `setTrustedPoolKeySigner` reverts `NotSettler` on a spend gate.
   const agrees =
     struct.premineAmount === plan.premineAmount &&
     isAddressEqual(struct.creator, plan.creator) &&
     trustedFeeSigner === zeroAddress &&
-    struct.feeCalculatorParams === "0x" &&
     familyAgrees;
   if (!agrees) requote("CALLDATA_MISMATCH", "Pre-buy plan and calldata disagree");
   return decoded;
@@ -1236,6 +1348,7 @@ export async function verifyLaunchPreBuyPlan(
       const zap = deps.pairedZap!;
       const { memecoin, ethSpent } = await zap.simulateFlaunch({
         flaunchParams: decoded.flaunchParams,
+        treasuryManagerParams: decoded.treasuryManagerParams,
         trustedFeeSigner: decoded.trustedFeeSigner,
         maxPremineCost: decoded.maxPremineCost,
         value: plan.value,
@@ -1355,6 +1468,7 @@ export async function executeLaunchPreBuy(
     if (!writer) throw new Error(`Paired-token FlaunchZap writer is not available on chain ${deps.chainId}`);
     hash = await writer.flaunch({
       flaunchParams: decoded.flaunchParams,
+      treasuryManagerParams: decoded.treasuryManagerParams,
       trustedFeeSigner: decoded.trustedFeeSigner,
       maxPremineCost: decoded.maxPremineCost,
       value: plan.value,

@@ -84,6 +84,7 @@ const packageExports = [
   ["@flaunch/sdk/helpers", "encodeDynamicSplitInitializeData"],
   ["@flaunch/sdk/helpers", "encodeStaticSplit"],
   ["@flaunch/sdk/helpers", "resolvePermissionsV1_3"],
+  ["@flaunch/sdk", "encodePairedFlaunchWithManager"],
 ];
 
 test("published package exports resolve through CommonJS and ESM", async () => {

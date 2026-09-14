@@ -74,12 +74,14 @@ export {
   encodeLegacyFlaunch,
   encodeMultichainFlaunch,
   encodePairedFlaunch,
+  encodePairedFlaunchWithManager,
 } from "./sdk/launchPreBuyPlanner";
 export type {
   LaunchPreBuyExecuteOptions,
   LaunchPreBuyExecution,
   LaunchPreBuyVerification,
   DecodedLaunchPreBuyCalldata,
+  PairedTreasuryManagerArgs,
 } from "./sdk/launchPreBuyPlanner";
 export {
   ReadFeeEscrowV1_3,

@@ -85,20 +85,34 @@ export class ReadFlaunchZapV1_3 {
    */
   async simulateFlaunch({
     flaunchParams,
+    treasuryManagerParams,
     trustedFeeSigner,
     maxPremineCost,
     value,
     from,
   }: FlaunchPairedTokenParams & { from: Address }) {
-    const { memecoin_, ethSpent_ } = await this.contract.simulateWrite(
-      "flaunch",
-      {
-        _flaunchParams: flaunchParams,
-        _trustedFeeSigner: trustedFeeSigner,
-        _maxPremineCost: maxPremineCost,
-      },
-      { from, value }
-    );
+    // Manager presence selects the overload, as in `ReadWriteFlaunchZapV1_3.flaunch`: the
+    // 3-argument form would simulate a launch that silently drops the manager.
+    const { memecoin_, ethSpent_ } = treasuryManagerParams
+      ? await this.contract.simulateWrite(
+          "flaunch",
+          {
+            _flaunchParams: flaunchParams,
+            _treasuryManagerParams: treasuryManagerParams,
+            _trustedFeeSigner: trustedFeeSigner,
+            _maxPremineCost: maxPremineCost,
+          },
+          { from, value }
+        )
+      : await this.contract.simulateWrite(
+          "flaunch",
+          {
+            _flaunchParams: flaunchParams,
+            _trustedFeeSigner: trustedFeeSigner,
+            _maxPremineCost: maxPremineCost,
+          },
+          { from, value }
+        );
     return { memecoin: memecoin_, ethSpent: ethSpent_ };
   }
 }
