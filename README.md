@@ -45,6 +45,7 @@ Static-split recipients independently divide 100% of the pool remaining after cr
     - [How to generate `base64Image` from User uploaded file](#how-to-generate-base64image-from-user-uploaded-file)
   - [Launching with a pre-buy](#launching-with-a-pre-buy)
   - [Launching with vesting](#launching-with-vesting)
+  - [Game Mode launches with a developer split (Any route)](#game-mode-launches-with-a-developer-split-any-route)
   - [Flaunch with Address Fee Splits](#flaunch-with-address-fee-splits)
   - [Buying a Flaunch coin](#buying-a-flaunch-coin)
   - [Selling with Permit2](#selling-with-permit2)
@@ -495,6 +496,68 @@ vest`, `vest > 0`). The total vested must stay under the zap's `maxVestedBps` (5
 `getMaxVestedBps()`), and a premine must be smaller than the non-vested seed. `flaunchVested*`
 check all of this before asking for a signature. Trusted-signer and gasless launches are not
 available on this path.
+
+### Game Mode launches with a developer split (Any route)
+
+A Game Mode coin can launch through the same `AnyFlaunchZap` into a **GameDeveloperFeeSplitManager**:
+a v1.3.1 dynamic fee split whose game developer holds a recipient slot pinned at 5% of every fee
+that the manager owner and moderator cannot edit, dilute or remove. The route takes the vested
+launch parameters (`vestingSchedules` may be an empty array — no vesting), forwards the game
+gate's dispatcher-prefixed spend-gate params in `feeCalculatorParams` verbatim, and deposits the
+coin into a fresh manager clone in one transaction. Gate on
+`doesChainSupportAnyGameDeveloperSplit(chainId)` (the manager is deployed and approved there
+**and** the vested stack exists); `GameDeveloperFeeSplitManagerAddress` is empty until the
+implementation is broadcast and approved on a chain.
+
+`prepareAnyGameLaunch(params)` quotes and encodes without sending, so a transaction flow that
+wants the raw call (`to`, `data`, `value`) and the exact `args` can hold them and send later;
+`execute()` sends through the SDK's signer and resolves to the hash. `flaunchAnyWithGameDeveloperSplit(params)`
+is prepare + execute.
+
+```ts
+import {
+  createFlaunch,
+  doesChainSupportAnyGameDeveloperSplit,
+  percentToGameDeveloperShare,
+} from "@flaunch/sdk";
+
+if (!doesChainSupportAnyGameDeveloperSplit(baseSepolia.id)) throw new Error("no Any game route here");
+
+const prepared = await flaunchWrite.prepareAnyGameLaunch({
+  name: "Arena Coin",
+  symbol: "ARENA",
+  tokenUri: "ipfs://...",
+  creator: launcher,
+  creatorFeeAllocationPercent: 80,
+  initialMarketCapUSD: 4_000,
+  pairedToken: FLETHAddress[baseSepolia.id],  // default flETH; zeroAddress = native ETH
+  flaunchAt: roundStartsAt,                    // unix seconds; the game round's start
+  feeCalculatorParams: gate.feeCalculatorParams, // dispatcher-prefixed spend-gate params from the game gate
+  vestingSchedules: [],                        // or the same schedules `flaunchVested` takes
+  gameDeveloper: developerWallet,              // pinned 5%, added by the SDK
+  moderator: gate.moderator,                   // optional, zeroAddress = none
+  splitReceivers: [                            // the other 95%, 5 dp weights summing to 95_00000
+    { address: launcher, share: percentToGameDeveloperShare(60) },
+    { address: friend, share: percentToGameDeveloperShare(35) },
+  ],
+});
+// prepared.args (the `managerMaxPremineCost` overload), prepared.to, prepared.data, prepared.value
+const hash = await prepared.execute();
+
+const launch = await flaunchRead.getVestedLaunchFromTx(hash);
+const developerPayout = await flaunchRead.getGameDeveloperPayout(launch.vesting.treasuryManager);
+// the developer's payout wallet, or null when the manager is not a GameDeveloperFeeSplitManager
+```
+
+Rules: the zap's `_trustedFeeSigner` is always `address(0)` on this route — the gate's signer and
+settler travel inside `feeCalculatorParams`, and a non-zero signer makes the zap call
+`setTrustedPoolKeySigner` on the spend gate, which reverts `NotSettler`. The fee is quoted as the
+signer through `calculateFee` (the exemption is caller-sensitive); `maxPremineCost` defaults to the
+quoted paired premine cost and `slippageBps` to 0. The vested hook's `PoolCreated` carries no
+`flaunchAt` and no metadata (`getPoolCreatedFromLogs` returns `flaunchAt: 0n` and blank
+name / symbol / tokenUri for it): the round start is what you passed as `flaunchAt`, on chain in
+the hook's `PoolScheduled` event. `isGameDeveloperFeeSplitManagerImplementation(chainId, impl)`
+checks a `TreasuryManagerFactory.managerImplementation()` result against the chain's manager.
 
 ### Flaunch with Address Fee Splits
 
