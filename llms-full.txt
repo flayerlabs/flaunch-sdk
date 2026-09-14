@@ -1858,9 +1858,9 @@ Ordinary `buyCoin`, `sellCoin`, `getBuyQuoteExactInput`, `getBuyQuoteExactOutput
 
 Quotes and execution use identical referral hook data. `resolveReferralHookData({ referrer, hookData })` rejects conflicting addresses and malformed leading words, preserving supplied payload bytes. Omitting `referrer` preserves an embedded referrer. A nonzero referrer with empty hook data is a conflict.
 
-`encodeTrustedReferralHookData(message, referrer)` packages legacy trusted-signer authorizations; `encodeSpendReferralHookData(message, referrer)` packages spend-gated/Game Mode authorizations. Matching decode helpers expose their fields. These helpers package **existing** signatures; your authorized signer must produce the authorization for the actual chain, pool and gate. Never replace signed hook data with an address-only encoding.
+`encodeTrustedReferralHookData(message, referrer)` packages legacy trusted-signer authorizations; `encodeSpendReferralHookData(message, referrer)` packages spend gate v2 ("cumulative spend ceilings") Game Mode authorizations: `abi.encode(address referrer, (address buyer, bytes32 poolId, uint256 deadline, uint256 spendCeilingWei, bytes signature))`. Matching decode helpers expose their fields. These helpers package **existing** signatures; your authorized signer must produce the authorization for the actual chain, pool and gate. Never replace signed hook data with an address-only encoding.
 
-The existing spend-gate signature binds buyer, pool, deadline, spend cap and nonce, but not the leading referrer. Neither links nor SDK checks enforce immutable attribution onchain. Self-referral and first-/last-click policies are app choices.
+The spend gate v2 signature (EIP-712 domain `FlaunchSpendGate`, version `2`, struct `SpendAuthorization(address buyer,bytes32 poolId,uint256 deadline,uint256 spendCeilingWei)`) binds buyer, pool, deadline and a **cumulative** spend ceiling, but not the leading referrer. There is no nonce: the same signature is reusable until `deadline` by design, and the gate enforces the ceiling against the buyer's running total in that pool. v1 payloads (`maxSpendWei` + `nonce`, a six-field tuple) are no longer accepted. Neither links nor SDK checks enforce immutable attribution onchain. Self-referral and first-/last-click policies are app choices.
 
 ## Fee configuration and balances
 
@@ -2348,9 +2348,9 @@ Ordinary `buyCoin`, `sellCoin`, `getBuyQuoteExactInput`, `getBuyQuoteExactOutput
 
 Quotes and execution use identical referral hook data. `resolveReferralHookData({ referrer, hookData })` rejects conflicting addresses and malformed leading words, preserving supplied payload bytes. Omitting `referrer` preserves an embedded referrer. A nonzero referrer with empty hook data is a conflict.
 
-`encodeTrustedReferralHookData(message, referrer)` packages legacy trusted-signer authorizations; `encodeSpendReferralHookData(message, referrer)` packages spend-gated/Game Mode authorizations. Matching decode helpers expose their fields. These helpers package **existing** signatures; your authorized signer must produce the authorization for the actual chain, pool and gate. Never replace signed hook data with an address-only encoding.
+`encodeTrustedReferralHookData(message, referrer)` packages legacy trusted-signer authorizations; `encodeSpendReferralHookData(message, referrer)` packages spend gate v2 ("cumulative spend ceilings") Game Mode authorizations: `abi.encode(address referrer, (address buyer, bytes32 poolId, uint256 deadline, uint256 spendCeilingWei, bytes signature))`. Matching decode helpers expose their fields. These helpers package **existing** signatures; your authorized signer must produce the authorization for the actual chain, pool and gate. Never replace signed hook data with an address-only encoding.
 
-The existing spend-gate signature binds buyer, pool, deadline, spend cap and nonce, but not the leading referrer. Neither links nor SDK checks enforce immutable attribution onchain. Self-referral and first-/last-click policies are app choices.
+The spend gate v2 signature (EIP-712 domain `FlaunchSpendGate`, version `2`, struct `SpendAuthorization(address buyer,bytes32 poolId,uint256 deadline,uint256 spendCeilingWei)`) binds buyer, pool, deadline and a **cumulative** spend ceiling, but not the leading referrer. There is no nonce: the same signature is reusable until `deadline` by design, and the gate enforces the ceiling against the buyer's running total in that pool. v1 payloads (`maxSpendWei` + `nonce`, a six-field tuple) are no longer accepted. Neither links nor SDK checks enforce immutable attribution onchain. Self-referral and first-/last-click policies are app choices.
 
 ## Fee configuration and balances
 
@@ -24202,7 +24202,7 @@ Defined in: sdk/launchPreBuyPlanner.ts:1021
 
 > **decodeReferralEvents**(`logs`, `params`): `ReferralEvent`[]
 
-Defined in: utils/referrals.ts:142
+Defined in: utils/referrals.ts:157
 
 Decode only logs from caller-verified hooks/escrows. Removed logs are never earnings.
 
@@ -24270,7 +24270,9 @@ The leading word is the referral recipient, not proof of a permanent binding.
 
 > **decodeSpendReferralHookData**(`hookData`): `object`
 
-Defined in: utils/referrals.ts:122
+Defined in: utils/referrals.ts:137
+
+Decodes a spend gate v2 payload (`referrer`, then the 5-field `SpendAuthorization`).
 
 ## Parameters
 
@@ -24294,14 +24296,6 @@ message.deadline
 
 > **deadline**: `bigint`
 
-message.maxSpendWei
-
-> **maxSpendWei**: `bigint`
-
-message.nonce
-
-> **nonce**: `bigint`
-
 message.poolId
 
 > **poolId**: `` `0x${string}` ``
@@ -24309,6 +24303,10 @@ message.poolId
 message.signature
 
 > **signature**: `` `0x${string}` ``
+
+message.spendCeilingWei
+
+> **spendCeilingWei**: `bigint`
 
 ### referrer
 
@@ -24327,7 +24325,7 @@ message.signature
 
 > **decodeTrustedReferralHookData**(`hookData`): `object`
 
-Defined in: utils/referrals.ts:117
+Defined in: utils/referrals.ts:131
 
 ## Parameters
 
@@ -25148,9 +25146,11 @@ The ABI-encoded `FlaunchToken[]`
 
 > **encodeSpendReferralHookData**(`message`, `referrer?`): `` `0x${string}` ``
 
-Defined in: utils/referrals.ts:110
+Defined in: utils/referrals.ts:124
 
-For SpendGatedSignerFeeCalculator, including Game Mode.
+For the spend gate v2 fee calculator (cumulative spend ceilings), including Game Mode.
+Packages an existing v2 authorization behind the leading referrer word; it does not sign or
+alter the signed fields, and the same payload stays valid until `deadline`.
 
 ## Parameters
 
@@ -25206,7 +25206,7 @@ Recipient percentages divide the remainder after creator and owner fees.
 
 > **encodeTrustedReferralHookData**(`message`, `referrer?`): `` `0x${string}` ``
 
-Defined in: utils/referrals.ts:102
+Defined in: utils/referrals.ts:112
 
 Packages an existing authorization; it does not sign or alter its signed fields.
 
@@ -37101,7 +37101,7 @@ Defined in: clients/ReferralClient.ts:26
 
 > **ReferralEvent** = `object`
 
-Defined in: utils/referrals.ts:127
+Defined in: utils/referrals.ts:142
 
 ## Properties
 
@@ -37109,7 +37109,7 @@ Defined in: utils/referrals.ts:127
 
 > **amount**: `bigint`
 
-Defined in: utils/referrals.ts:134
+Defined in: utils/referrals.ts:149
 
 ***
 
@@ -37117,7 +37117,7 @@ Defined in: utils/referrals.ts:134
 
 > **blockNumber**: `bigint` \| `null`
 
-Defined in: utils/referrals.ts:138
+Defined in: utils/referrals.ts:153
 
 ***
 
@@ -37125,7 +37125,7 @@ Defined in: utils/referrals.ts:138
 
 > **chainId**: `number`
 
-Defined in: utils/referrals.ts:128
+Defined in: utils/referrals.ts:143
 
 ***
 
@@ -37133,7 +37133,7 @@ Defined in: utils/referrals.ts:128
 
 > **emitter**: `Address`
 
-Defined in: utils/referrals.ts:129
+Defined in: utils/referrals.ts:144
 
 ***
 
@@ -37141,7 +37141,7 @@ Defined in: utils/referrals.ts:129
 
 > **kind**: `"assigned"` \| `"claimed"` \| `"paid"`
 
-Defined in: utils/referrals.ts:130
+Defined in: utils/referrals.ts:145
 
 ***
 
@@ -37149,7 +37149,7 @@ Defined in: utils/referrals.ts:130
 
 > **logIndex**: `number` \| `null`
 
-Defined in: utils/referrals.ts:137
+Defined in: utils/referrals.ts:152
 
 ***
 
@@ -37157,7 +37157,7 @@ Defined in: utils/referrals.ts:137
 
 > `optional` **poolId?**: `Hex`
 
-Defined in: utils/referrals.ts:135
+Defined in: utils/referrals.ts:150
 
 ***
 
@@ -37165,7 +37165,7 @@ Defined in: utils/referrals.ts:135
 
 > **recipient**: `Address`
 
-Defined in: utils/referrals.ts:132
+Defined in: utils/referrals.ts:147
 
 ***
 
@@ -37173,7 +37173,7 @@ Defined in: utils/referrals.ts:132
 
 > **token**: `Address`
 
-Defined in: utils/referrals.ts:133
+Defined in: utils/referrals.ts:148
 
 ***
 
@@ -37181,7 +37181,7 @@ Defined in: utils/referrals.ts:133
 
 > **transactionHash**: `Hex` \| `null`
 
-Defined in: utils/referrals.ts:136
+Defined in: utils/referrals.ts:151
 
 ***
 
@@ -37189,7 +37189,7 @@ Defined in: utils/referrals.ts:136
 
 > **user**: `Address`
 
-Defined in: utils/referrals.ts:131
+Defined in: utils/referrals.ts:146
 
 
 ---
@@ -37364,7 +37364,12 @@ delta.flETHBought
 
 > **SpendReferralMessage** = `TrustedReferralMessage` & `object`
 
-Defined in: utils/referrals.ts:95
+Defined in: utils/referrals.ts:106
+
+A spend gate v2 `SpendAuthorization` plus its EIP-712 signature (domain `FlaunchSpendGate`,
+version `2`). `spendCeilingWei` is a **cumulative** ceiling on the buyer's total spend in the
+pool, not a per-swap cap; there is no nonce, and the signature is reusable until `deadline` by
+design. The gate compares the ceiling against what the buyer has already spent.
 
 ## Type Declaration
 
@@ -37372,13 +37377,9 @@ Defined in: utils/referrals.ts:95
 
 > **buyer**: `Address`
 
-### maxSpendWei
+### spendCeilingWei
 
-> **maxSpendWei**: `bigint`
-
-### nonce
-
-> **nonce**: `bigint`
+> **spendCeilingWei**: `bigint`
 
 
 ---
@@ -37461,7 +37462,7 @@ Defined in: clients/StakingManagerV1\_3Client.ts:25
 
 > **TrustedReferralMessage** = `object`
 
-Defined in: utils/referrals.ts:90
+Defined in: utils/referrals.ts:95
 
 ## Properties
 
@@ -37469,7 +37470,7 @@ Defined in: utils/referrals.ts:90
 
 > **deadline**: `bigint`
 
-Defined in: utils/referrals.ts:92
+Defined in: utils/referrals.ts:97
 
 ***
 
@@ -37477,7 +37478,7 @@ Defined in: utils/referrals.ts:92
 
 > **poolId**: `Hex`
 
-Defined in: utils/referrals.ts:91
+Defined in: utils/referrals.ts:96
 
 ***
 
@@ -37485,7 +37486,7 @@ Defined in: utils/referrals.ts:91
 
 > **signature**: `Hex`
 
-Defined in: utils/referrals.ts:93
+Defined in: utils/referrals.ts:98
 
 
 ---

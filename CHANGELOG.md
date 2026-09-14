@@ -48,6 +48,7 @@
 
 - Legacy Base, multichain and v1.3 zap `flaunch*` methods now route through the shared builders. Their calldata, fee quote and `value` are unchanged — `test/launchByteIdentity.test.cjs` replays every entry point against fixtures generated from the 0.13.0 build.
 - `PairedTokenRegistryV1_3.tokenConfig(token, { block })` accepts a pinned block.
+- **Spend gate v2 ("cumulative spend ceilings").** `SpendReferralMessage`, `encodeSpendReferralHookData` and `decodeSpendReferralHookData` now carry the v2 `SpendAuthorization(address buyer,bytes32 poolId,uint256 deadline,uint256 spendCeilingWei)` (EIP-712 domain `FlaunchSpendGate`, version `2`): `maxSpendWei` becomes the cumulative `spendCeilingWei` and `nonce` is removed, so the hook data is `abi.encode(address referrer, (buyer, poolId, deadline, spendCeilingWei, bytes signature))` — a five-field tuple at dynamic offset 160 instead of six at 192. A signature is reusable until `deadline` by design. The referrer-first envelope and `resolveReferralHookData` are unchanged.
 
 ### Unchanged
 
