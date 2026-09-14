@@ -18,6 +18,7 @@ This guide is the capability matrix and the rules behind `planLaunchPreBuy` /
 | `splitManager` (static) | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✗ `ROUTE_UNSUPPORTED` | ✓ multichain zap | native ETH | never | 1000 bps |
 | `dynamicSplitManager` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✗ `ROUTE_UNSUPPORTED` | ✓ multichain zap | native ETH | never | 1000 bps |
 | `pairedToken` | ✓ v1.3 zap | ✓ v1.3 zap | ✓ v1.3 zap | ✓ v1.3 zap (native ETH default, `pairedToken = zeroAddress`) | — | follows the pairing (below) | ERC20 pairings only | 1000 bps |
+| `vested` | ✗ `ROUTE_UNSUPPORTED` | ✓ AnyFlaunchZap | ✗ `ROUTE_UNSUPPORTED` | ✗ `ROUTE_UNSUPPORTED` | ✗ `ROUTE_UNSUPPORTED` | follows the pairing (below) | ERC20 pairings only | 1000 bps |
 
 **On Base, Base Sepolia and Ethereum the only pre-buy route is `pairedToken`.** Ethereum's
 current generation (v1.4.0, SDK 0.15.0) pairs with native ETH by default and every `flaunch*`
@@ -27,8 +28,11 @@ there targets the v1.3 zap, so the multichain routes report `ROUTE_UNSUPPORTED` 
 `PremineExceedsInitialAmount`. An "ordinary" coin with a pre-buy on Base therefore launches
 through `pairedToken` with `pairedToken = FLETHAddress[chainId]` (or `zeroAddress` for raw
 ETH) on the current v1.3 PositionManager — the same generation custom-paired coins already
-use. Earnings splits cannot be combined with that route in this version
-(`PAIRED_MANAGER_LAUNCH_UNSUPPORTED`).
+use. Since 0.16.0 that route also carries a treasury manager (an earnings split, a revenue
+manager, the Game Mode developer split): pass `treasuryManagerParams` and the planner encodes
+the zap's manager + `_maxPremineCost` overload. The `vested` route (AnyFlaunchZap, Base Sepolia)
+takes `vestingSchedules` — possibly empty, which is a plain no-vesting Any launch — and either
+`treasuryManagerParams` or the `gameDeveloperSplit` convenience, never both.
 
 `getLaunchPreBuyCapabilities(chainId)` returns this table for one chain from the SDK's address
 maps (no RPC), including the reason code for each unsupported cell.
@@ -52,10 +56,24 @@ pairing `plan.value` is exactly that fee; the purchase never travels as ETH.
 | Launch kind | Reason code | Why |
 | --- | --- | --- |
 | Gasless / relayed launches (`gasless: true`) | `GASLESS_UNSUPPORTED` | The relayer pays and signs; the SDK cannot bind a spend cap to it. |
-| Protected launches — trusted signer (`trustedSignerSettings`) or a spend gate (`feeCalculatorParams != 0x`, non-zero `trustedFeeSigner`) | `PROTECTED_LAUNCH_UNSUPPORTED` | Game Mode launches are excluded for now. |
-| Paired-token launch into a treasury manager | `PAIRED_MANAGER_LAUNCH_UNSUPPORTED` | The SDK does not carry the zap's manager + `maxPremineCost` overload yet. |
+| Trusted-signer launches: `trustedSignerSettings`, or a non-zero `trustedFeeSigner` | `PROTECTED_LAUNCH_UNSUPPORTED` | The zap's `setTrustedPoolKeySigner` reverts `NotSettler` against a spend-gated calculator, so the launch cannot both install a signer and pre-buy. A gate's signer travels inside `feeCalculatorParams` instead, which **is** supported. |
+| Malformed vesting schedules (`vested` route) | `INVALID_VESTING_SCHEDULE` | Whatever `toVestingScheduleArgs` rejects. An **empty array is valid** — a no-vesting Any launch. |
+| Vested supply over the zap's cap | `VESTED_SUPPLY_EXCEEDS_CAP` | `AnyFlaunchZap.maxVestedBps`, read at the quote block before any pricing. |
 | `anyFlaunch` (imported coins) | `ANY_FLAUNCH_UNSUPPORTED` | No premine exists on that path. |
 | Fair-launch fields (`fairLaunchPercent != 0`; `fairLaunchDuration != 0` on multichain) | `FAIR_LAUNCH_UNSUPPORTED` | Mirrors the launch methods, which reject them too. |
+
+### Spend-gated (Game Mode) launches are supported
+
+A gate's `feeCalculatorParams` ride a pre-buy verbatim on both two-legged routes. The premine
+never reaches the gate: `Hooks.beforeSwap` returns early when `msg.sender == address(self)`
+(v4-core `Hooks.sol:253`), and the premine swap is issued by the hook inside its own unlock
+(`AnyPositionManager.sol:258-275`, `FlaunchLibrary.seedLiquidityAndPremineFromPayload`), so
+neither the `flaunchAt` schedule check nor the spend-gated fee calculator ever observes it. Only
+the trusted-signer half is refused (see the table above).
+
+A full Game Mode pre-buy on the `vested` route is therefore one plan: the gate's
+`feeCalculatorParams`, any `vestingSchedules`, `gameDeveloperSplit` (the developer's protected
+5% plus the receivers sharing the other 95%) and `preBuyBps`.
 
 ## Amounts
 
@@ -145,11 +163,15 @@ routes sweep them back to the original creator after the manager takes the launc
 ## Reason codes
 
 `LAUNCH_PRE_BUY_REASON_CODES`: `CHAIN_UNSUPPORTED`, `ROUTE_UNSUPPORTED`, `GASLESS_UNSUPPORTED`,
-`PROTECTED_LAUNCH_UNSUPPORTED`, `PAIRED_MANAGER_LAUNCH_UNSUPPORTED`, `ANY_FLAUNCH_UNSUPPORTED`,
+`PROTECTED_LAUNCH_UNSUPPORTED`, `ANY_FLAUNCH_UNSUPPORTED`,
 `PAIRED_TOKEN_NOT_APPROVED`, `ROUTE_PREMINE_UNAVAILABLE`, `PREMINE_NOT_FILLABLE`,
 `INVALID_PERCENTAGE`, `EXCEEDS_ROUTE_LIMIT`, `INVALID_LIMIT`,
 `INVALID_SLIPPAGE`, `INVALID_CREATOR`, `PREMINE_ALREADY_SET`, `FAIR_LAUNCH_UNSUPPORTED`,
-`SENDER_REQUIRED`, `QUOTE_INCONSISTENT`.
+`SENDER_REQUIRED`, `QUOTE_INCONSISTENT`, `INVALID_VESTING_SCHEDULE`,
+`VESTED_SUPPLY_EXCEEDS_CAP`.
+
+`PAIRED_MANAGER_LAUNCH_UNSUPPORTED` was removed in 0.16.0: a paired-token launch into a
+treasury manager is planned like any other.
 
 `ROUTE_PREMINE_UNAVAILABLE` is the legacy Base zap (see the matrix). `PREMINE_NOT_FILLABLE`
 means the pricing simulation reverted: the pool cannot deliver that many coins within three

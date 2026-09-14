@@ -414,7 +414,7 @@ const result = await flaunchRead.planLaunchPreBuy({
     creatorFeeAllocation: 8_000,
     flaunchAt: 0n,
     initialPriceParams,
-    feeCalculatorParams: "0x", // a spend-gated (Game Mode) launch is PROTECTED_LAUNCH_UNSUPPORTED
+    feeCalculatorParams: "0x", // or a Game Mode gate's params — a spend gate is supported
     pairedToken, // registry-approved; zeroAddress = native ETH
   },
   preBuyBps: 100,
@@ -434,10 +434,45 @@ With `createFlaunchCalldata`, `executeLaunchPreBuy` returns the encoded launch c
 broadcasting; a wallet that supports batching (ERC-5792) can send
 `[...plan.approvals, plan.launch]` as one bundle — each is a `{ to, data, value }`.
 
-Not supported for pre-buy in this version, and reported as such rather than ignored: gasless
-launches (`gasless: true`), protected Game Mode / trusted-signer launches, a paired-token
-launch into a treasury manager, and `anyFlaunch`. Launches without a pre-buy keep using the
-existing `flaunch*` methods unchanged.
+A pre-buy can also launch into a treasury manager (an earnings split, a revenue manager, the
+Game Mode developer split) — pass `treasuryManagerParams` and the planner encodes the zap's
+manager + `_maxPremineCost` overload:
+
+```ts
+const result = await flaunchRead.planLaunchPreBuy({
+  route: "pairedToken",
+  params: {
+    ...pairedLaunchParams,
+    feeCalculatorParams: gateParams, // a Game Mode gate rides verbatim
+    treasuryManagerParams: {
+      manager: DynamicAddressFeeSplitManagerV1_3Address[chainId],
+      initializeData: encodeDynamicSplitInitializeData({
+        creatorShare: 10_00000n,
+        managerOwnerShare: 0n,
+        moderator: address,
+        splitReceivers: [{ address: friend, share: 100_00000n }],
+      }),
+    },
+  },
+  preBuyBps: 100,
+  slippageBps: 50,
+});
+```
+
+On the `vested` route (Base Sepolia) `gameDeveloperSplit` is the Game Mode shorthand, so one
+plan carries the gate's `feeCalculatorParams`, any `vestingSchedules` (an empty array is a valid
+no-vesting launch), the developer's protected 5% and the pre-buy.
+
+A spend gate never sees the premine: `Hooks.beforeSwap` returns early when
+`msg.sender == address(self)` (v4-core `Hooks.sol:253`) and the premine swap is issued by the
+hook inside its own unlock (`AnyPositionManager.sol:258-275`), so neither the `flaunchAt`
+schedule check nor the spend-gated fee calculator observes it.
+
+Not supported for pre-buy, and reported as such rather than ignored: gasless launches
+(`gasless: true`), trusted-signer launches (`trustedSignerSettings` or a non-zero
+`trustedFeeSigner` — the zap's `setTrustedPoolKeySigner` reverts `NotSettler` against a spend
+gate: `PROTECTED_LAUNCH_UNSUPPORTED`), and `anyFlaunch`. Launches without a pre-buy keep using
+the existing `flaunch*` methods unchanged.
 
 ### Launching with vesting
 
@@ -619,6 +654,41 @@ await flaunchWrite.flaunchIPFSWithDynamicSplitManager({
   ],
 });
 ```
+
+On a paired-token launch (Base, Base Sepolia, Robinhood, Ethereum — the v1.3 PositionManager and
+custom pairings) the same split rides `flaunchPairedTokenWithDynamicSplitManager`, which deploys
+the manager in the launch transaction:
+
+```ts
+await flaunchWrite.flaunchPairedTokenWithDynamicSplitManager({
+  flaunchParams: {
+    name: "...",
+    symbol: "...",
+    tokenUri: "ipfs://...",
+    premineAmount: 0n,
+    creator: "0x...",
+    creatorFeeAllocation: 8_000,
+    flaunchAt: 0n,
+    initialPriceParams,
+    feeCalculatorParams: "0x", // or a Game Mode gate's params
+    pairedToken, // registry-approved; zeroAddress = native ETH
+  },
+  trustedFeeSigner: zeroAddress,
+  maxPremineCost: fee.pairedPremineCost,
+  value: fee.ethRequired,
+  // the split
+  creatorShare: 10_00000n, // 10%
+  managerOwnerShare: 0n,
+  moderator: "0xmoderator...",
+  splitReceivers: [{ address: "0x123...", share: 100_00000n }],
+  permissions: Permissions.OPEN, // or an explicit permissions-module address
+});
+```
+
+The implementation is `DynamicAddressFeeSplitManagerV1_3Address` (the generation the v1.3 zap's
+factory approves); for a Game Mode coin whose developer holds a protected 5% use
+`flaunchPairedTokenWithGameDeveloperSplit` instead. `encodeDynamicSplitInitializeData` and
+`encodeStaticSplit` are exported if you call a zap yourself.
 
 You can update recipient distribution after deployment:
 
