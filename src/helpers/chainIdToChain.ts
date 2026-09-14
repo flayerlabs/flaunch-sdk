@@ -1,5 +1,6 @@
 import { Chain } from "viem";
 import {
+  arbitrum,
   base,
   baseSepolia,
   mainnet,
@@ -10,6 +11,7 @@ import {
 export const chainIdToChain: {
   [key: number]: Chain;
 } = {
+  [arbitrum.id]: arbitrum,
   [base.id]: base,
   [baseSepolia.id]: baseSepolia,
   [mainnet.id]: mainnet,

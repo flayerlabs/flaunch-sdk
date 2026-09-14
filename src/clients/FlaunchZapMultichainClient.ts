@@ -137,7 +137,7 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
     const flaunchParams = this.prepareFlaunch(params);
     const manager = params.treasuryManagerParams?.manager;
 
-    // Ethereum's current generation defaults to native ETH. Keep the legacy client and
+    // The v1.4 generation defaults to native ETH. Keep the legacy client and
     // address maps intact for existing pools while new launches use the paired-token ABI.
     if (DefaultPairedTokenAddress[chainId] === zeroAddress) {
       const zap = new ReadWriteFlaunchZapV1_3(FlaunchZapV1_3Address[chainId], this.drift);

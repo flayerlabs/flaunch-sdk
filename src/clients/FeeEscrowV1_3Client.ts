@@ -6,9 +6,15 @@ import {
   type ReadWriteAdapter,
   createDrift,
 } from "@delvtech/drift";
+import { parseAbi } from "viem";
 import { FeeEscrowV1_3Abi } from "../abi/FeeEscrowV1_3";
 
 export type FeeEscrowV1_3ABI = typeof FeeEscrowV1_3Abi;
+
+// Select the batch overload explicitly, including when withdrawing just native ETH.
+const batchWithdrawAbi = parseAbi([
+  "function withdrawFees(address[] _tokens, address _recipient, bool _unwrap)",
+]);
 
 /** A claimable balance on the multi-token escrow, in the escrow token's own raw units. */
 export interface EscrowTokenBalance {
@@ -102,12 +108,14 @@ export class ReadFeeEscrowV1_3 {
  */
 export class ReadWriteFeeEscrowV1_3 extends ReadFeeEscrowV1_3 {
   declare contract: ReadWriteContract<FeeEscrowV1_3ABI>;
+  private readonly batchWithdrawContract: ReadWriteContract<typeof batchWithdrawAbi>;
 
   constructor(
     address: Address,
     drift: Drift<ReadWriteAdapter> = createDrift()
   ) {
     super(address, drift);
+    this.batchWithdrawContract = drift.contract({ abi: batchWithdrawAbi, address });
   }
 
   /**
@@ -125,7 +133,7 @@ export class ReadWriteFeeEscrowV1_3 extends ReadFeeEscrowV1_3 {
     recipient: Address;
     unwrap?: boolean;
   }) {
-    return this.contract.write("withdrawFees", {
+    return this.batchWithdrawContract.write("withdrawFees", {
       _tokens: params.tokens,
       _recipient: params.recipient,
       _unwrap: params.unwrap ?? true,

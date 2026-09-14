@@ -580,7 +580,7 @@ export class ReadFlaunchSDK {
   public readonly TICK_SPACING = TICK_SPACING;
   private readonly baseClients?: BaseReadClients;
   private readonly swapClients?: SwapReadClients;
-  public readonly readFeeEscrow: ReadFeeEscrow;
+  private readonly legacyFeeEscrow?: ReadFeeEscrow;
   private readonly feeEscrowV1_3?: ReadFeeEscrowV1_3;
   private readonly flaunchManagerZapV1_3?: ReadFlaunchManagerZapV1_3;
   private readonly treasuryManagerFactoryV1_3?: ReadTreasuryManagerFactory;
@@ -593,6 +593,13 @@ export class ReadFlaunchSDK {
   private readonly pairedSwapStateView?: ReadStateView;
 
   public resolveIPFS: (value: string) => string;
+
+  get readFeeEscrow(): ReadFeeEscrow {
+    if (!this.legacyFeeEscrow) {
+      throw new Error(`Legacy FeeEscrow is not supported on chain ${this.chainId}; use creatorRevenueByToken()`);
+    }
+    return this.legacyFeeEscrow;
+  }
 
   /**
    * The v1.3.1 multi-token FeeEscrow. Throws on chains without one — gate with
@@ -803,10 +810,10 @@ export class ReadFlaunchSDK {
     this.drift = drift;
     this.publicClient = publicClient;
     this.resolveIPFS = defaultResolveIPFS;
-    this.readFeeEscrow = new ReadFeeEscrow(
-      FeeEscrowAddress[this.chainId],
-      drift
-    );
+    const legacyFeeEscrowAddress = FeeEscrowAddress[this.chainId];
+    if (legacyFeeEscrowAddress) {
+      this.legacyFeeEscrow = new ReadFeeEscrow(legacyFeeEscrowAddress, drift);
+    }
     const feeEscrowV1_3Address = FeeEscrowV1_3Address[this.chainId];
     if (feeEscrowV1_3Address) {
       this.feeEscrowV1_3 = new ReadFeeEscrowV1_3(feeEscrowV1_3Address, drift);
@@ -2107,6 +2114,8 @@ export class ReadFlaunchSDK {
     if (isMultichainDeployment(this.chainId)) {
       const positionManager =
         FlaunchPositionManagerMultichainAddress[this.chainId];
+
+      if (!positionManager) return null;
 
       for (const log of logs) {
         if (!isAddressEqual(log.address, positionManager)) {
@@ -3853,8 +3862,15 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
   private readonly readWriteFlaunchZapMultichain?: ReadWriteFlaunchZapMultichain;
   private readonly readWriteFlaunchZapV1_3Client?: ReadWriteFlaunchZapV1_3;
   private readonly readWritePoolSwapV1_3Client?: ReadWritePoolSwapV1_3;
-  public readonly readWriteFeeEscrow: ReadWriteFeeEscrow;
+  private readonly legacyWriteFeeEscrow?: ReadWriteFeeEscrow;
   private readonly readWriteFeeEscrowV1_3Client?: ReadWriteFeeEscrowV1_3;
+
+  get readWriteFeeEscrow(): ReadWriteFeeEscrow {
+    if (!this.legacyWriteFeeEscrow) {
+      throw new Error(`Legacy FeeEscrow is not supported on chain ${this.chainId}; use withdrawCreatorRevenueByToken()`);
+    }
+    return this.legacyWriteFeeEscrow;
+  }
   private readonly readWriteFlaunchManagerZapV1_3Client?: ReadWriteFlaunchManagerZapV1_3;
 
   /**
@@ -3959,10 +3975,10 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
     publicClient?: PublicClient
   ) {
     super(chainId, drift, publicClient);
-    this.readWriteFeeEscrow = new ReadWriteFeeEscrow(
-      FeeEscrowAddress[this.chainId],
-      drift
-    );
+    const legacyFeeEscrowAddress = FeeEscrowAddress[this.chainId];
+    if (legacyFeeEscrowAddress) {
+      this.legacyWriteFeeEscrow = new ReadWriteFeeEscrow(legacyFeeEscrowAddress, drift);
+    }
     const feeEscrowV1_3Address = FeeEscrowV1_3Address[this.chainId];
     if (feeEscrowV1_3Address) {
       this.readWriteFeeEscrowV1_3Client = new ReadWriteFeeEscrowV1_3(
@@ -3994,7 +4010,7 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
 
     if (isMultichainDeployment(this.chainId)) {
       this.readWriteFlaunchZapMultichain = new ReadWriteFlaunchZapMultichain(
-        FlaunchZapMultichainAddress[this.chainId],
+        FlaunchZapMultichainAddress[this.chainId] ?? FlaunchZapV1_3Address[this.chainId],
         drift
       );
       return;

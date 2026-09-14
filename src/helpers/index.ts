@@ -3,6 +3,7 @@ export * from "./ipfs";
 export * from "./chainIdToChain";
 export {
   isChainSupported,
+  isV1_4Deployment,
   doesChainSupportSplitManager,
   doesChainSupportMultiTokenFeeEscrow,
   doesChainSupportMultiAssetManagers,

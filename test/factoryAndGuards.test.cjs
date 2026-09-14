@@ -7,6 +7,7 @@ const {
   defineChain,
 } = require("viem");
 const {
+  arbitrum,
   base,
   baseSepolia,
   mainnet,
@@ -24,7 +25,7 @@ const {
 } = require("../dist/index.cjs.js");
 
 const WALLET = "0x1111111111111111111111111111111111111111";
-const supportedChains = [base, baseSepolia, mainnet, unichain, robinhood];
+const supportedChains = [base, baseSepolia, mainnet, unichain, robinhood, arbitrum];
 
 function noNetworkTransport(requests) {
   return custom({
@@ -61,7 +62,7 @@ test("all supported-chain factories construct without network access", () => {
   }
 });
 
-test("isChainSupported accepts exactly the five configured chain IDs", () => {
+test("isChainSupported accepts exactly the configured chain IDs", () => {
   assert.deepEqual(
     Object.keys(chainIdToChain).map(Number).sort((a, b) => a - b),
     supportedChains.map(({ id }) => id).sort((a, b) => a - b)
