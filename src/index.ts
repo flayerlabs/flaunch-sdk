@@ -201,7 +201,11 @@ export {
   ReadGameDeveloperFeeSplitManager,
   ReadWriteGameDeveloperFeeSplitManager,
 } from "./clients/GameDeveloperFeeSplitManagerClient";
-export type { FlaunchPairedTokenWithGameDeveloperSplitParams } from "./sdk/FlaunchSDK";
+export type {
+  FlaunchAnyWithGameDeveloperSplitParams,
+  FlaunchPairedTokenWithGameDeveloperSplitParams,
+  PreparedAnyGameLaunch,
+} from "./sdk/FlaunchSDK";
 export {
   ReadStakingManagerV1_3,
   ReadWriteStakingManagerV1_3,

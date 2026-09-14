@@ -153,17 +153,25 @@ import {
 } from "../clients/FlaunchZapV1_3Client";
 import {
   encodeGameDeveloperSplitInitializeData,
+  isGameDeveloperFeeSplitManagerImplementation,
   type GameDeveloperSplitInitializeParams,
 } from "../helpers/gameDeveloperSplit";
-import { doesChainSupportGameDeveloperSplit } from "../helpers/supportedChains";
+import {
+  doesChainSupportAnyGameDeveloperSplit,
+  doesChainSupportGameDeveloperSplit,
+} from "../helpers/supportedChains";
 import { ReadPairedTokenRegistryV1_3 } from "../clients/PairedTokenRegistryV1_3Client";
 import {
   ReadAnyFlaunchZap,
   ReadWriteAnyFlaunchZap,
+  buildAnyFlaunchZapFlaunchArgs,
+  encodeAnyFlaunchZapFlaunch,
   type AnyFlaunchZapFee,
+  type AnyFlaunchZapFlaunchArgs,
   type AnyFlaunchZapFlaunchParams,
   type AnyFlaunchZapTreasuryManagerArgs,
 } from "../clients/AnyFlaunchZapClient";
+import { ReadGameDeveloperFeeSplitManager } from "../clients/GameDeveloperFeeSplitManagerClient";
 import {
   ReadMemecoinVesting,
   ReadWriteMemecoinVesting,
@@ -681,6 +689,36 @@ export type FlaunchPairedTokenWithGameDeveloperSplitParams = Omit<
     /** A permissions module for later deposits; `zeroAddress` (default) leaves the manager open. */
     permissions?: Address;
   };
+
+/**
+ * A Game Mode launch on the Any route (AnyFlaunchZap → the vested AnyPositionManager) into a
+ * GameDeveloperFeeSplitManager: the vested launch params (schedules may be empty — no vesting)
+ * plus the developer's slot and the recipients sharing the other 95%. `feeCalculatorParams`
+ * carries the gate's dispatcher-prefixed spend-gate params verbatim; the gate's signer and
+ * settler travel inside them, so the zap's `_trustedFeeSigner` is always `address(0)`.
+ */
+export type FlaunchAnyWithGameDeveloperSplitParams = Omit<
+  FlaunchVestedParams,
+  "treasuryManagerParams" | "trustedSignerSettings"
+> &
+  GameDeveloperSplitInitializeParams & {
+    /** A permissions module for later deposits; `zeroAddress` (default) leaves the manager open. */
+    permissions?: Address;
+  };
+
+/** A quoted, fully encoded Any-route game launch: send it yourself or call `execute()`. */
+export type PreparedAnyGameLaunch = {
+  /** The zap `flaunch` overload and its exact arguments (`managerMaxPremineCost`). */
+  args: AnyFlaunchZapFlaunchArgs;
+  /** ETH to send: the flaunching fee plus the ETH-funded premine cap, quoted as the signer. */
+  value: bigint;
+  /** The AnyFlaunchZap on this chain. */
+  to: Address;
+  /** ABI-encoded `args`, for wallets and batchers that take raw calldata. */
+  data: HexString;
+  /** Sends the launch through the SDK's signer and resolves to the transaction hash. */
+  execute: () => Promise<HexString>;
+};
 
 export class ReadFlaunchSDK {
   public readonly drift: Drift;
@@ -1256,6 +1294,32 @@ export class ReadFlaunchSDK {
   /** The zap's cap on vested supply in bps of total supply (5000 = 50% by default). */
   getMaxVestedBps(): Promise<bigint> {
     return this.readAnyFlaunchZap.maxVestedBps();
+  }
+
+  /**
+   * The wallet holding the protected 5% developer slot of a GameDeveloperFeeSplitManager clone,
+   * or null when `manager` is not one: the v1.3.1 TreasuryManagerFactory's
+   * `managerImplementation(manager)` must equal this chain's
+   * `GameDeveloperFeeSplitManagerAddress` (`isGameDeveloperFeeSplitManagerImplementation`).
+   * Null too on chains without the factory or the manager.
+   */
+  async getGameDeveloperPayout(manager: Address): Promise<Address | null> {
+    if (
+      !this.treasuryManagerFactoryV1_3 ||
+      !GameDeveloperFeeSplitManagerAddress[this.chainId] ||
+      !manager ||
+      manager === zeroAddress
+    ) {
+      return null;
+    }
+    const implementation = await this.treasuryManagerFactoryV1_3.contract.read(
+      "managerImplementation",
+      { _manager: manager }
+    );
+    if (!isGameDeveloperFeeSplitManagerImplementation(this.chainId, implementation)) {
+      return null;
+    }
+    return new ReadGameDeveloperFeeSplitManager(manager, this.drift).gameDeveloperPayout();
   }
 
   /** Every vesting schedule `beneficiary` holds on `coin`, in id order. */
@@ -4696,6 +4760,75 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         depositData: "0x",
       },
     });
+  }
+
+  /**
+   * Quotes and encodes a Game Mode launch on the Any route without sending it: the AnyFlaunchZap
+   * launches into the vested AnyPositionManager and deposits the coin into a fresh
+   * GameDeveloperFeeSplitManager clone in one transaction. `feeCalculatorParams` (the gate's
+   * dispatcher-prefixed spend-gate params) and `flaunchAt` are forwarded verbatim;
+   * `vestingSchedules` may be empty. Always the `_maxPremineCost` manager overload, with the
+   * cap defaulting to the zap's own quote (ignored on chain for native / flETH pairings, the
+   * approved spend cap for ERC20 ones), and `_trustedFeeSigner = address(0)` — the zap calling
+   * `setTrustedPoolKeySigner` on the spend gate reverts `NotSettler`; the signer lives in the
+   * gate params. The fee is quoted as the signer (the exemption is caller-sensitive).
+   * @throws Error when the manager or the vested stack is not deployed on this chain
+   *   (`doesChainSupportAnyGameDeveloperSplit`)
+   */
+  async prepareAnyGameLaunch(
+    params: FlaunchAnyWithGameDeveloperSplitParams
+  ): Promise<PreparedAnyGameLaunch> {
+    const manager = GameDeveloperFeeSplitManagerAddress[this.chainId];
+    if (!manager || !doesChainSupportAnyGameDeveloperSplit(this.chainId)) {
+      throw new Error(
+        `GameDeveloperFeeSplitManager launches through the AnyFlaunchZap are not deployed on chain ${this.chainId}`
+      );
+    }
+
+    const { gameDeveloper, moderator, splitReceivers, permissions, ...launch } = params;
+    const zap = this.readWriteAnyFlaunchZap;
+    const flaunchParams = toAnyFlaunchZapFlaunchParams(this.chainId, {
+      ...launch,
+      vestingSchedules: launch.vestingSchedules ?? [],
+    });
+    const treasuryManagerParams: AnyFlaunchZapTreasuryManagerArgs = {
+      manager,
+      permissions: permissions ?? zeroAddress,
+      initializeData: encodeGameDeveloperSplitInitializeData({
+        gameDeveloper,
+        moderator,
+        splitReceivers,
+      }),
+      depositData: "0x",
+    };
+
+    const sender = await this.drift.getSignerAddress();
+    const { ethRequired, pairedPremineCost } = await zap.calculateFee(
+      { flaunchParams, slippageBps: BigInt(launch.slippageBps ?? 0) },
+      { from: sender }
+    );
+    const args = buildAnyFlaunchZapFlaunchArgs({
+      flaunchParams,
+      treasuryManagerParams,
+      trustedFeeSigner: zeroAddress,
+      maxPremineCost: launch.maxPremineCost ?? pairedPremineCost,
+    });
+
+    return {
+      args,
+      value: ethRequired,
+      to: zap.address,
+      data: encodeAnyFlaunchZapFlaunch(args),
+      execute: () => zap.flaunchPrepared(args, ethRequired),
+    };
+  }
+
+  /** `prepareAnyGameLaunch` and send it: the Any-route twin of `flaunchPairedTokenWithGameDeveloperSplit`. */
+  async flaunchAnyWithGameDeveloperSplit(
+    params: FlaunchAnyWithGameDeveloperSplitParams
+  ): Promise<HexString> {
+    const prepared = await this.prepareAnyGameLaunch(params);
+    return prepared.execute();
   }
 
   /**

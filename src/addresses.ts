@@ -135,6 +135,7 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
     "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // `.vpt2` PM, gate 0x2c91…
     "0x28118f40eca9b884beb42b0196409a73269525dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // `.vpt2` AnyPM, same gate
     "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.3.3 PM, gate 0x54cd…
+    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0xF0f388a31a1745A5E2378B812eD51525f70595be", // vested AnyPM (AnyFlaunchZap generation), the router approved on gate 0x54cd… for that hook
   },
   [robinhood.id]: {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 PM, gate 0xB246…
@@ -387,7 +388,12 @@ export const AddressFeeSplitManagerV1_3Address: Addresses = {
  * v1.3.1 `TreasuryManagerFactoryV1_3Address`. Empty until deployed: fill a chain in once
  * `Managers.s.sol` has broadcast it there and the factory owner has approved it.
  */
-export const GameDeveloperFeeSplitManagerAddress: Addresses = {};
+export const GameDeveloperFeeSplitManagerAddress: Addresses = {
+  // TODO(deploy): fill 84532 from flaunch-managers Managers.s.sol broadcast
+  // (broadcast/Managers.s.sol/84532/run-latest.json) once the implementation is deployed and
+  // approved on TreasuryManagerFactoryV1_3Address[84532]. Until then every game-developer
+  // launch route reports the chain as unsupported.
+};
 
 export const DynamicAddressFeeSplitManagerV1_3Address: Addresses = {
   [mainnet.id]: "0x0f03Aa8d303Ee15ed3Be81Bf43c41EFfFa4a7a5B",

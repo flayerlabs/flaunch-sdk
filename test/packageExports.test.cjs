@@ -60,6 +60,23 @@ const packageExports = [
   ["@flaunch/sdk/addresses", "AnyFlaunchZapPositionManagerAddress"],
   ["@flaunch/sdk/addresses", "AnyFlaunchZapFlaunchAddress"],
   ["@flaunch/sdk/helpers", "doesChainSupportVestedLaunch"],
+  // Game Mode developer split (GameDeveloperFeeSplitManager) and the Any game route
+  ["@flaunch/sdk", "GameDeveloperFeeSplitManagerAddress"],
+  ["@flaunch/sdk", "doesChainSupportGameDeveloperSplit"],
+  ["@flaunch/sdk", "doesChainSupportAnyGameDeveloperSplit"],
+  ["@flaunch/sdk", "isGameDeveloperFeeSplitManagerImplementation"],
+  ["@flaunch/sdk", "encodeGameDeveloperSplitInitializeData"],
+  ["@flaunch/sdk", "ReadGameDeveloperFeeSplitManager"],
+  ["@flaunch/sdk", "ReadWriteGameDeveloperFeeSplitManager"],
+  ["@flaunch/sdk", "AnyFlaunchZapAbi"],
+  ["@flaunch/sdk", "MemecoinVestingAbi"],
+  ["@flaunch/sdk", "AnyFlaunchZapPositionManagerAddress"],
+  ["@flaunch/sdk", "doesChainSupportVestedLaunch"],
+  ["@flaunch/sdk/abi", "GameDeveloperFeeSplitManagerAbi"],
+  ["@flaunch/sdk/addresses", "GameDeveloperFeeSplitManagerAddress"],
+  ["@flaunch/sdk/helpers", "doesChainSupportGameDeveloperSplit"],
+  ["@flaunch/sdk/helpers", "doesChainSupportAnyGameDeveloperSplit"],
+  ["@flaunch/sdk/helpers", "isGameDeveloperFeeSplitManagerImplementation"],
 ];
 
 test("published package exports resolve through CommonJS and ESM", async () => {

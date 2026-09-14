@@ -9,6 +9,7 @@ export {
   getV1_3PositionManagers,
   doesChainSupportPairedTokenLaunch,
   doesChainSupportGameDeveloperSplit,
+  doesChainSupportAnyGameDeveloperSplit,
   doesChainSupportPairedTokenSwap,
   poolSwapForHook,
   doesChainSupportPairedTokenAcquisition,

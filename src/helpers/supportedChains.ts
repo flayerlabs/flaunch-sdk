@@ -90,6 +90,18 @@ export function doesChainSupportGameDeveloperSplit(chainId: number): boolean {
   );
 }
 
+/**
+ * Whether a Game Mode coin can launch into a GameDeveloperFeeSplitManager through the
+ * AnyFlaunchZap (the "Any" route: vesting optional, gate params forwarded verbatim): the manager
+ * is deployed and approved there AND the vested launch stack exists.
+ */
+export function doesChainSupportAnyGameDeveloperSplit(chainId: number): boolean {
+  return (
+    GameDeveloperFeeSplitManagerAddress[chainId] !== undefined &&
+    doesChainSupportVestedLaunch(chainId)
+  );
+}
+
 export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
   return (
     FlaunchZapV1_3Address[chainId] !== undefined &&

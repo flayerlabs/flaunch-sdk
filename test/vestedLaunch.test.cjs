@@ -219,7 +219,10 @@ test("schedule validation rejects what the contracts would revert, before any RP
     { beneficiary: TEAM, amount: 5n * 10n ** 27n, start: 0, cliffDuration: 0, vestDuration: 100 },
   ]);
 
-  assert.throws(() => toAnyFlaunchZapFlaunchParams(CHAIN, { ...vestedParams, vestingSchedules: [] }), /at least one vesting schedule/);
+  // an empty schedule list is a launch with no vesting (the Any game route without vesting)
+  const noVesting = toAnyFlaunchZapFlaunchParams(CHAIN, { ...vestedParams, vestingSchedules: [] });
+  assert.deepEqual(noVesting.vestingSchedules, []);
+  assert.equal(vestedSupplyOf(noVesting.vestingSchedules), 0n);
   assert.throws(
     () => toAnyFlaunchZapFlaunchParams(CHAIN, { ...vestedParams, trustedSignerSettings: { enabled: true } }),
     /Trusted-signer settings are not supported on vested launches/

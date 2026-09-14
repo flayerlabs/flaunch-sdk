@@ -260,7 +260,8 @@ export function hashVestingSchedules(schedules: readonly VestingScheduleArgs[]):
 /**
  * `FlaunchVestedParams` → the zap's `FlaunchParams` struct: market cap to USDC (6 dp) exactly
  * as the other launch routes, creator fee percent to 2 dp, schedules validated and converted,
- * `pairedToken` defaulting to the chain's flETH. Trusted-signer settings are rejected — the
+ * `pairedToken` defaulting to the chain's flETH. `vestingSchedules` may be empty (no vesting;
+ * the route is then a plain AnyFlaunchZap launch). Trusted-signer settings are rejected — the
  * zap has no signer-gated premine path.
  * @param options.maxVestedBps - When known (read from the zap), the schedules are checked against it here
  */
@@ -281,9 +282,8 @@ export function toAnyFlaunchZapFlaunchParams(
   if (!params.creator || params.creator === zeroAddress) {
     throw new Error("creator cannot be the zero address");
   }
-  if (params.vestingSchedules.length === 0) {
-    throw new Error("A vested launch needs at least one vesting schedule; use flaunch() otherwise");
-  }
+  // An empty array is a launch with no vesting: the zap takes it (nothing is escrowed and the
+  // whole supply seeds the pool), which is how a Game Mode coin without vesting uses this route.
   const vestingSchedules = toVestingScheduleArgs(params.vestingSchedules);
   if (options.maxVestedBps !== undefined) {
     assertVestedSupplyWithinCap(vestingSchedules, options.maxVestedBps);

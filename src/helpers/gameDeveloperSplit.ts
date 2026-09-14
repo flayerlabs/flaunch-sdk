@@ -1,4 +1,12 @@
-import { encodeAbiParameters, getAddress, zeroAddress, type Address, type Hex } from "viem";
+import {
+  encodeAbiParameters,
+  getAddress,
+  isAddressEqual,
+  zeroAddress,
+  type Address,
+  type Hex,
+} from "viem";
+import { GameDeveloperFeeSplitManagerAddress } from "../addresses";
 
 /** Every active share weight on a GameDeveloperFeeSplitManager sums to this (5 dp: 100_00000 = 100%). */
 export const GAME_DEVELOPER_SPLIT_SHARE_TOTAL = 100_00000n;
@@ -108,4 +116,17 @@ export function encodeGameDeveloperSplitInitializeData(
       gameDeveloper,
     ]
   );
+}
+
+/**
+ * Whether `implementation` (as `TreasuryManagerFactory.managerImplementation(manager)` reports
+ * it) is the chain's GameDeveloperFeeSplitManager. False on chains where it is not deployed.
+ */
+export function isGameDeveloperFeeSplitManagerImplementation(
+  chainId: number,
+  implementation: Address | undefined | null
+): boolean {
+  const expected = GameDeveloperFeeSplitManagerAddress[chainId];
+  if (!expected || !implementation || implementation === zeroAddress) return false;
+  return isAddressEqual(implementation, expected);
 }
