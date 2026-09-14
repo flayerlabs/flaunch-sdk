@@ -6,7 +6,7 @@ const {
   encodeAbiParameters,
   zeroAddress,
 } = require("viem");
-const { base, baseSepolia, mainnet, robinhood, unichain } = require("viem/chains");
+const { arbitrum, base, baseSepolia, mainnet, robinhood, unichain } = require("viem/chains");
 const {
   MAX_SQRT_PRICE_LIMIT,
   MIN_SQRT_PRICE_LIMIT,
@@ -151,7 +151,7 @@ function recordingDrift({
 }
 
 test("paired-token swap addresses and capability cover the deployed V1.3 chains", () => {
-  for (const chainId of [base.id, baseSepolia.id, robinhood.id, mainnet.id]) {
+  for (const chainId of [base.id, baseSepolia.id, robinhood.id, mainnet.id, arbitrum.id]) {
     assert.ok(PoolSwapV1_3Address[chainId], `PoolSwap on ${chainId}`);
     assert.equal(doesChainSupportPairedTokenSwap(chainId), true);
   }
@@ -518,6 +518,25 @@ test("paired-token swaps refuse chains without the deployment", async () => {
     /not supported on chain 130/,
   );
   assert.throws(() => sdk.readPoolSwapV1_3, /not supported/);
+});
+
+test("Arbitrum native ETH buy and sell plans use the protected router for both hooks", async () => {
+  for (const hook of [PairedTokenPositionManagerV1_3Address[arbitrum.id], AnyPositionManagerV1_3Address[arbitrum.id]]) {
+    const poolKey = pairedPoolKey(COIN, zeroAddress, hook);
+    const { drift } = recordingDrift({ poolKey, answeringHook: hook });
+    const sdk = new ReadFlaunchSDK(arbitrum.id, drift);
+    for (const direction of ["buy", "sell"]) {
+      const plan = await sdk.planPairedTokenSwap({
+        coinAddress: COIN, amountIn: 10_000n, slippageBps: 100, sender: SENDER, direction,
+      });
+      assert.deepEqual(plan.poolKey, poolKey);
+      assert.equal(plan.swap.to.toLowerCase(), PoolSwapV1_3Address[arbitrum.id].toLowerCase());
+      assert.equal(plan.amountOutMin, 9_801n);
+      assert.equal(plan.swap.value, direction === "buy" ? 10_000n : 0n);
+      if (direction === "buy") assert.equal(plan.approve, undefined);
+      else assert.equal(plan.approve.token.toLowerCase(), COIN.toLowerCase());
+    }
+  }
 });
 
 test("Ethereum ETH, MILADY and LIL plans use the protected router for both current hooks", async (t) => {
