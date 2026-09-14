@@ -541,8 +541,9 @@ launch parameters (`vestingSchedules` may be an empty array — no vesting), for
 gate's dispatcher-prefixed spend-gate params in `feeCalculatorParams` verbatim, and deposits the
 coin into a fresh manager clone in one transaction. Gate on
 `doesChainSupportAnyGameDeveloperSplit(chainId)` (the manager is deployed and approved there
-**and** the vested stack exists); `GameDeveloperFeeSplitManagerAddress` is empty until the
-implementation is broadcast and approved on a chain.
+**and** the vested stack exists). `GameDeveloperFeeSplitManagerAddress` is live on Base Sepolia
+(`0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e`, block 46817954); other chains stay unsupported
+until the implementation is broadcast and approved there.
 
 `prepareAnyGameLaunch(params)` quotes and encodes without sending, so a transaction flow that
 wants the raw call (`to`, `data`, `value`) and the exact `args` can hold them and send later;
@@ -2512,7 +2513,7 @@ ABI-encoded schedules — so executing a plan with different schedules is a `BIN
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -2630,7 +2631,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -2711,7 +2712,7 @@ Defined in: sdk/errors.ts:64
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -2784,7 +2785,7 @@ Defined in: sdk/errors.ts:41
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -2841,7 +2842,7 @@ Defined in: sdk/errors.ts:53
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -2900,7 +2901,7 @@ Defined in: sdk/errors.ts:24
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -2959,7 +2960,7 @@ Defined in: sdk/errors.ts:12
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -3018,7 +3019,7 @@ Defined in: sdk/errors.ts:3
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -3254,7 +3255,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -3545,7 +3546,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -3942,7 +3943,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -4113,7 +4114,7 @@ Promise<bigint> - The total allocated, in the token's raw units
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -4206,7 +4207,7 @@ Promise<Address> - The factory address
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -7797,7 +7798,7 @@ Subscription to pool swap events
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -8019,7 +8020,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -8136,7 +8137,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -8229,7 +8230,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -8786,7 +8787,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -8968,7 +8969,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -9108,7 +9109,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -9205,7 +9206,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -9292,7 +9293,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -9363,7 +9364,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -9453,7 +9454,7 @@ Promise<bigint> - The allocated token amount
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -9807,7 +9808,7 @@ Promise<bigint> - The deferred amount in the asset's raw units
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -10223,7 +10224,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -10502,7 +10503,7 @@ Promise<Address> - The factory address
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -10868,7 +10869,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -11425,7 +11426,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -12177,7 +12178,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -12398,7 +12399,7 @@ Promise<Hex> - The transaction hash
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -12560,7 +12561,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -18910,7 +18911,7 @@ Transaction response
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -19456,7 +19457,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -19818,7 +19819,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -19945,7 +19946,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -20813,7 +20814,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -21080,7 +21081,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -21189,7 +21190,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -21311,7 +21312,7 @@ Promise<void>
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -21914,7 +21915,7 @@ Promise<Hex> - The transaction hash
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -22696,7 +22697,7 @@ Returns
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23198,7 +23199,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23253,7 +23254,7 @@ Defined in: types.ts:70
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23282,7 +23283,7 @@ Defined in: types.ts:87
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23321,7 +23322,7 @@ Defined in: types.ts:100
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23384,7 +23385,7 @@ Defined in: types.ts:83
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23411,7 +23412,7 @@ readonly \[\{ `inputs`: readonly \[\]; `name`: `"slot0"`; `outputs`: readonly \[
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23442,7 +23443,7 @@ readonly `VestingScheduleArgs`[]
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23472,7 +23473,7 @@ silently drops the manager, so presence is what selects it.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23516,7 +23517,7 @@ when `fairLaunchPercent` is not 0 (FairLaunch is deprecated)
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23552,7 +23553,7 @@ on fair-launch or trusted-signer inputs, which this deployment family does not s
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23643,7 +23644,7 @@ swapType
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23668,7 +23669,7 @@ Defined in: helpers/hex.ts:3
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23713,7 +23714,7 @@ Defined in: utils/univ4.ts:184
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23755,7 +23756,7 @@ caller's slippage haircut absorbs that and the router's `amountInMaximum` enforc
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23787,7 +23788,7 @@ without touching the network. An empty list means the planner may quote.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23815,7 +23816,7 @@ bigints as decimal strings). Recomputed before execution so any edit to a plan i
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23842,7 +23843,7 @@ Creates a custom wallet client that returns encoded calldata instead of broadcas
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23917,7 +23918,7 @@ Error if publicClient.chain is not configured
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -23992,7 +23993,7 @@ Error if publicClient.chain is not configured
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24067,7 +24068,7 @@ Error if publicClient.chain is not configured
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24095,7 +24096,7 @@ op-geth / Nitro / Anvil do).
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24131,7 +24132,7 @@ amount1 in the lower. Positive = the pool owes the swapper, negative = the swapp
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24162,7 +24163,7 @@ Call data containing to, value, and data
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24191,7 +24192,7 @@ Defined in: sdk/launchPreBuyPlanner.ts:1021
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24232,7 +24233,7 @@ readonly `` `0x${string}` ``[]
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24259,7 +24260,7 @@ The leading word is the referral recipient, not proof of a permanent binding.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24316,7 +24317,7 @@ message.signature
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24361,7 +24362,7 @@ message.signature
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24390,7 +24391,7 @@ is deployed and approved there AND the vested launch stack exists.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24418,7 +24419,7 @@ the manager is deployed and approved there AND the paired-token zap that install
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24446,7 +24447,7 @@ executed through the SDK). Per-route detail lives in `getLaunchPreBuyCapabilitie
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24478,7 +24479,7 @@ reading or claiming from a v1.3.1 manager.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24509,7 +24510,7 @@ legacy single-token escrow, so gate on this before reading or claiming.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24534,7 +24535,7 @@ Defined in: addresses.ts:605
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24562,7 +24563,7 @@ through the SDK's acquisition route. Base Sepolia's mUSD has no venue — it is 
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24587,7 +24588,7 @@ Defined in: helpers/supportedChains.ts:105
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24617,7 +24618,7 @@ fails closed on legacy deployments.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24646,7 +24647,7 @@ deployment, so callers should gate on this before using them.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24676,7 +24677,7 @@ pre-buy route and the vesting reads/claims on this.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24701,7 +24702,7 @@ Defined in: addresses.ts:615
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24734,7 +24735,7 @@ whatever the leg did not need. Send with `value = amountInMaximum`.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24771,7 +24772,7 @@ positive int24, so the uint24 packing is the value that router decodes too.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24810,7 +24811,7 @@ The exact-INPUT path for a venue (input first), the mirror of the exact-output p
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24842,7 +24843,7 @@ exact-output swap, paid by allowance pull. Flavour differences are confined here
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24869,7 +24870,7 @@ ABI-encodes prepared `flaunch` arguments (the pre-buy planner's calldata).
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24896,7 +24897,7 @@ Encodes prepared AnyFlaunchZap `flaunch` arguments (any of the four overloads).
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24923,7 +24924,7 @@ The `initializeData` of a DynamicAddressFeeSplitManager; validates shares and re
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24954,7 +24955,7 @@ receiver that is the developer, and when the shares do not total exactly 100_000
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -24981,7 +24982,7 @@ Defined in: clients/FlaunchZapClient.ts:153
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25006,7 +25007,7 @@ Defined in: sdk/launchPreBuyPlanner.ts:183
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25031,7 +25032,7 @@ Defined in: sdk/launchPreBuyPlanner.ts:198
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25064,7 +25065,7 @@ Defined in: sdk/launchPreBuyPlanner.ts:217
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25106,7 +25107,7 @@ in `TreasuryManagerFactoryV1_3` (approved implementation → clone + initialize;
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25137,7 +25138,7 @@ The ABI-encoded `FlaunchToken[]`
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25168,7 +25169,7 @@ For SpendGatedSignerFeeCalculator, including Game Mode.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25195,7 +25196,7 @@ Recipient percentages divide the remainder after creator and owner fees.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25226,7 +25227,7 @@ Packages an existing authorization; it does not sign or alter its signed fields.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25259,7 +25260,7 @@ Defined in: helpers/ipfs.ts:318
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25298,7 +25299,7 @@ EXACT_OUT adds the slippage, EXACT_IN removes it
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25348,7 +25349,7 @@ tickUpper
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25382,7 +25383,7 @@ maxPreBuyBps?
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25427,7 +25428,7 @@ tickUpper
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25458,7 +25459,7 @@ tickSpacing
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25495,7 +25496,7 @@ The corresponding permissions contract address
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25535,7 +25536,7 @@ The corresponding permissions contract address
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25618,7 +25619,7 @@ typedData.types.PermitSingle
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25643,7 +25644,7 @@ Defined in: utils/univ4.ts:15
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25668,7 +25669,7 @@ Defined in: utils/univ4.ts:122
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25697,7 +25698,7 @@ whether an arbitrary hook address (e.g. from an indexer `Pool.positionManager`) 
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25732,7 +25733,7 @@ tickSpacing
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25759,7 +25760,7 @@ readonly `VestingScheduleArgs`[]
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25784,7 +25785,7 @@ Defined in: helpers/supportedChains.ts:42
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25811,7 +25812,7 @@ Whether `poolKey` names a pool at all (an unknown coin reads back as a zeroed ke
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25843,7 +25844,7 @@ it) is the chain's GameDeveloperFeeSplitManager. False on chains where it is not
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25868,7 +25869,7 @@ Defined in: sdk/launchPreBuy.ts:305
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25893,7 +25894,7 @@ Defined in: sdk/launchPreBuy.ts:311
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25924,7 +25925,7 @@ Whether a swap selling `tokenIn` into this key moves currency0 → currency1.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -25968,7 +25969,7 @@ liquidity for amount0, precise
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26011,7 +26012,7 @@ liquidity for amount1
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26038,7 +26039,7 @@ The most that may vest under a `maxVestedBps` cap.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26063,7 +26064,7 @@ Defined in: sdk/launchPreBuy.ts:551
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26108,7 +26109,7 @@ Defined in: utils/univ4.ts:28
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26146,7 +26147,7 @@ native ETH), not a default. `poolKey(memecoin)` on the hook the coin was launche
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26177,7 +26178,7 @@ The non-coin side of a paired pool's key; `address(0)` means native ETH.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26214,7 +26215,7 @@ Promise<CallData> with decoded transaction parameters
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26251,7 +26252,7 @@ Parsed swap data with type and delta information
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26279,7 +26280,7 @@ finer than 0.01% cannot be represented and is rejected rather than rounded.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26307,7 +26308,7 @@ The rows are expected to sum to 95, leaving the developer's fixed 5.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26341,7 +26342,7 @@ the hook. Falls back to the chain's current router for a hook the table does not
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26368,7 +26369,7 @@ Coins for a share of supply in basis points. Exact: 1e29 is divisible by 1e4.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26395,7 +26396,7 @@ Inverse of `preBuyAmountFromBps` for display; exact only for planner-produced am
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26442,7 +26443,7 @@ spacing
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26467,7 +26468,7 @@ Defined in: helpers/ipfs.ts:14
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26492,7 +26493,7 @@ Defined in: sdk/launchPreBuy.ts:382
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26525,7 +26526,7 @@ explicit address is used as given (addresses are `0x`-prefixed, the enum values 
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26558,7 +26559,7 @@ referrer?
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26633,7 +26634,7 @@ signature?
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26682,7 +26683,7 @@ when the tolerance is out of range, or so small the bound would not move off spo
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26725,7 +26726,7 @@ When known (read from the zap), the schedules are checked against it here
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26759,7 +26760,7 @@ WhitelistedPermissions instance validates groups against that factory.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26784,7 +26785,7 @@ Defined in: clients/FlaunchZapMultichainClient.ts:111
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26821,7 +26822,7 @@ Dynamic split launch → plain launch params deploying a DynamicAddressFeeSplitM
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26855,7 +26856,7 @@ Generic over the launch shape so the vested variants keep their extra fields.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26892,7 +26893,7 @@ Static split launch → plain launch params deploying an AddressFeeSplitManager.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26923,7 +26924,7 @@ Dynamic split vested launch → `FlaunchVestedParams` deploying a DynamicAddress
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26950,7 +26951,7 @@ Revenue-manager vested launch → `FlaunchVestedParams` depositing into the exis
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -26981,7 +26982,7 @@ Static split vested launch → `FlaunchVestedParams` deploying an AddressFeeSpli
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27010,7 +27011,7 @@ readonly `VestingScheduleParams`[]
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27035,7 +27036,7 @@ Defined in: helpers/hex.ts:7
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27080,7 +27081,7 @@ Upload response with CID and other details
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27111,7 +27112,7 @@ Upload response with IPFS hash
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27156,7 +27157,7 @@ Upload response with CID and other details
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27201,7 +27202,7 @@ Upload response with CID and other details
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27232,7 +27233,7 @@ Upload response with IPFS hash
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27259,7 +27260,7 @@ Coins for a share of supply in integer bps. Exact: 1e29 is divisible by 1e4.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27286,7 +27287,7 @@ readonly (`VestingScheduleArgs` \| `VestingScheduleParams`)[]
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27317,7 +27318,7 @@ The zap a route launches through on `chainId`, or undefined when that family is 
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27346,11 +27347,11 @@ Defined in: sdk/launchPreBuy.ts:317
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
-# @flaunch/sdk v0.16.0-preview.2
+# @flaunch/sdk v0.16.0-preview.3
 
 ## Enumerations
 
@@ -27791,7 +27792,7 @@ Defined in: sdk/launchPreBuy.ts:317
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27808,7 +27809,7 @@ Defined in: types.ts:9
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27841,7 +27842,7 @@ The payout asset — `zeroAddress` for native ETH
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27882,7 +27883,7 @@ Defined in: utils/parseSwap.ts:22
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27919,7 +27920,7 @@ Defined in: sdk/calldata.ts:22
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -27996,7 +27997,7 @@ Defined in: types.ts:47
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -28049,7 +28050,7 @@ The permissions to set on the manager. Defaults to OPEN
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -28082,7 +28083,7 @@ The escrow token key — `zeroAddress` for native ETH
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -28327,7 +28328,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -28484,7 +28485,7 @@ walletCap?
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -28769,7 +28770,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -28998,7 +28999,7 @@ Defined in: clients/VestedLaunchParams.ts:52
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -29327,7 +29328,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -29616,7 +29617,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -29901,7 +29902,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -30142,7 +30143,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -30461,7 +30462,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -30740,7 +30741,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -31029,7 +31030,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -31262,7 +31263,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -31507,7 +31508,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -31708,7 +31709,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -31987,7 +31988,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32214,7 +32215,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32278,7 +32279,7 @@ Defined in: types.ts:60
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32377,7 +32378,7 @@ That pool's key in the path's 3-byte slot: `tickSpacing` (slipstream) or `fee` (
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32444,7 +32445,7 @@ Defined in: utils/pairedTokenAcquisition.ts:286
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32485,7 +32486,7 @@ How the number was produced — a depth-aware quoter, or the calculator pool's s
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32538,7 +32539,7 @@ The pool's key for the path / router params: `tickSpacing` (slipstream) or `fee`
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32559,7 +32560,7 @@ Defined in: helpers/ipfs.ts:27
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32616,7 +32617,7 @@ Defined in: types.ts:17
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32701,7 +32702,7 @@ Inherited from
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32742,7 +32743,7 @@ Defined in: utils/parseSwap.ts:31
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32779,7 +32780,7 @@ Defined in: types.ts:213
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32808,7 +32809,7 @@ Defined in: utils/parseSwap.ts:17
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32917,7 +32918,7 @@ Defined in: utils/parseSwap.ts:13
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -32990,7 +32991,7 @@ Seconds over which the schedule vests linearly; must be > 0.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33025,7 +33026,7 @@ The premine's cost in the paired token (equals the ETH premine cost for native p
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33042,7 +33043,7 @@ The exact argument object of each `flaunch` overload; the key set selects the ov
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33065,7 +33066,7 @@ ETH sent: the flaunching fee plus the ETH-funded premine cap.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33178,7 +33179,7 @@ Defined in: clients/AnyFlaunchZapClient.ts:46
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33227,7 +33228,7 @@ Defined in: clients/AnyFlaunchZapClient.ts:64
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33368,7 +33369,7 @@ merkleRoot
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33389,7 +33390,7 @@ Defined in: clients/FlaunchPositionManagerClient.ts:40
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33444,7 +33445,7 @@ Defined in: clients/AnyFlaunchZapClient.ts:107
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33489,7 +33490,7 @@ delta.flETHSold
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33504,7 +33505,7 @@ Defined in: types.ts:118
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33535,7 +33536,7 @@ Defined in: clients/AnyFlaunchZapClient.ts:58
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33566,7 +33567,7 @@ Defined in: clients/FlaunchZapV1\_3Client.ts:34
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33599,7 +33600,7 @@ Type helper for SDK methods that return encoded calldata
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33616,7 +33617,7 @@ Type helper for the result of a calldata operation
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33637,7 +33638,7 @@ Defined in: types.ts:91
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33652,7 +33653,7 @@ Defined in: types.ts:192
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33683,7 +33684,7 @@ Defined in: sdk/calldata.ts:28
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33714,7 +33715,7 @@ Defined in: sdk/factory.ts:9
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33777,7 +33778,7 @@ zapFamily
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33824,7 +33825,7 @@ Defined in: clients/DynamicAddressFeeSplitManagerClient.ts:24
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33873,7 +33874,7 @@ Defined in: clients/DynamicAddressFeeSplitManagerV1\_3Client.ts:23
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33902,7 +33903,7 @@ A permissions module for later deposits; `zeroAddress` (default) leaves the mana
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -33975,7 +33976,7 @@ Defined in: clients/FlaunchZapV1\_3Client.ts:48
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34028,7 +34029,7 @@ The receivers dividing what is left after the creator and owner shares.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34053,7 +34054,7 @@ A permissions module for later deposits; `zeroAddress` (default) leaves the mana
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34142,7 +34143,7 @@ Defined in: clients/FlaunchZapMultichainClient.ts:42
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34187,7 +34188,7 @@ Everyone except the developer, whose 5% row is added here.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34220,7 +34221,7 @@ Share weight in 5 dp (1_00000 = 1%). The receivers plus the developer's 5% must 
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34235,7 +34236,7 @@ Defined in: types.ts:140
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34250,7 +34251,7 @@ Defined in: types.ts:174
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34265,7 +34266,7 @@ Defined in: types.ts:259
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34280,7 +34281,7 @@ Defined in: types.ts:245
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34295,7 +34296,7 @@ Defined in: types.ts:217
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34310,7 +34311,7 @@ Defined in: types.ts:231
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34325,7 +34326,7 @@ Defined in: types.ts:286
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34340,7 +34341,7 @@ Defined in: types.ts:267
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34355,7 +34356,7 @@ Defined in: types.ts:276
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34370,7 +34371,7 @@ Defined in: types.ts:104
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34397,7 +34398,7 @@ Signature the SDK exposes for injection and tests.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34458,7 +34459,7 @@ ETH forwarded to the launch — an ample cap; the probe reports what was actuall
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34493,7 +34494,7 @@ ETH the launch consumed from the sender (fee plus premine, after the zap's refun
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34522,7 +34523,7 @@ Defined in: sdk/launchPreBuy.ts:195
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34561,7 +34562,7 @@ payment.max
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34600,7 +34601,7 @@ Defined in: sdk/launchPreBuy.ts:194
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34673,7 +34674,7 @@ Trusted-signer launches only; a spend gate's `feeCalculatorParams` are supported
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34700,7 +34701,7 @@ calldata, balances still run). On-chain caps apply regardless.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34731,7 +34732,7 @@ Defined in: sdk/launchPreBuyPlanner.ts:137
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34774,7 +34775,7 @@ Defined in: sdk/launchPreBuy.ts:207
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34805,7 +34806,7 @@ Defined in: sdk/launchPreBuy.ts:201
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34820,7 +34821,7 @@ Defined in: sdk/launchPreBuy.ts:177
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -34835,7 +34836,7 @@ Defined in: sdk/launchPreBuy.ts:264
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35089,7 +35090,7 @@ Defined in: sdk/launchPreBuy.ts:214
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35111,7 +35112,7 @@ larger premines, so choose slippage accordingly.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35126,7 +35127,7 @@ Defined in: sdk/launchPreBuy.ts:98
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35143,7 +35144,7 @@ Why an executable plan must be re-planned before it can be signed.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35158,7 +35159,7 @@ Defined in: sdk/launchPreBuy.ts:255
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35173,7 +35174,7 @@ Defined in: sdk/launchPreBuy.ts:59
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35236,7 +35237,7 @@ Defined in: sdk/launchPreBuy.ts:267
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35251,7 +35252,7 @@ Defined in: sdk/launchPreBuyPlanner.ts:124
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35268,7 +35269,7 @@ Which zap ABI a route's launch calldata is encoded against on a given chain. `an
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35285,7 +35286,7 @@ The exact argument object the multichain zap `flaunch` overloads take; the key s
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35350,7 +35351,7 @@ Simulate as this wallet — required when the hook binds `hookData` to a buyer.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35379,7 +35380,7 @@ Defined in: sdk/FlaunchSDK.ts:625
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35418,7 +35419,7 @@ Defined in: sdk/FlaunchSDK.ts:624
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35433,7 +35434,7 @@ Defined in: sdk/FlaunchSDK.ts:521
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35480,7 +35481,7 @@ Defined in: sdk/FlaunchSDK.ts:641
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35579,7 +35580,7 @@ Fee-inclusive output shortfall versus AMM spot, not pure price impact.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35602,7 +35603,7 @@ planPairedTokenSwap's input: the swap params plus which way the swap goes.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35621,7 +35622,7 @@ call. `buyCoinPairedToken` / `sellCoinPairedToken` run exactly this plan.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35645,7 +35646,7 @@ A buy that starts from ETH/USDC(/USDG) routes through it before the coin's own p
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35662,7 +35663,7 @@ What a routed buy pays with: native ETH, or the chain's USD hub token (USDC / US
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35754,7 +35755,7 @@ Exactly this much paired token is delivered (exact-output).
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35821,7 +35822,7 @@ Defined in: sdk/FlaunchSDK.ts:599
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35878,7 +35879,7 @@ Defined in: sdk/FlaunchSDK.ts:565
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35961,7 +35962,7 @@ Defined in: clients/PairedTokenRegistryV1\_3Client.ts:16
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -35992,7 +35993,7 @@ Defined in: clients/FlaunchZapV1\_3Client.ts:29
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36087,7 +36088,7 @@ Defined in: clients/FlaunchZapV1\_3Client.ts:17
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36146,7 +36147,7 @@ on a spend-gated calculator, so a trusted-signer launch cannot also pre-buy
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36267,7 +36268,7 @@ Haircut below quoted net output, 0..9999 basis points (50 = 0.5%). Enforced on c
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36282,7 +36283,7 @@ Defined in: types.ts:37
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36331,7 +36332,7 @@ Defined in: sdk/launchPreBuyPlanner.ts:256
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36346,7 +36347,7 @@ Defined in: utils/parseSwap.ts:39
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36363,7 +36364,7 @@ Either a `Permissions` enum value or an explicit permissions-module address.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36410,7 +36411,7 @@ Defined in: utils/universalRouter.ts:24
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36449,7 +36450,7 @@ Defined in: utils/universalRouter.ts:32
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36572,7 +36573,7 @@ Defined in: types.ts:297
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36587,7 +36588,7 @@ Defined in: clients/FlaunchPositionManagerClient.ts:27
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36602,7 +36603,7 @@ Defined in: clients/FlaunchPositionManagerClient.ts:68
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36643,7 +36644,7 @@ Defined in: clients/PoolSwapV1\_3Client.ts:22
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36705,7 +36706,7 @@ Native ETH input for a pool whose paired side is `address(0)`; 0 for ERC20 / flE
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36736,7 +36737,7 @@ Defined in: sdk/launchPreBuy.ts:192
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36777,7 +36778,7 @@ Defined in: sdk/launchPreBuy.ts:191
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36848,7 +36849,7 @@ ETH to send: the flaunching fee plus the ETH-funded premine cap, quoted as the s
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36879,7 +36880,7 @@ Defined in: clients/DynamicAddressFeeSplitManagerClient.ts:18
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36910,7 +36911,7 @@ Defined in: clients/ReferralClient.ts:28
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -36931,7 +36932,7 @@ Defined in: clients/ReferralClient.ts:27
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37034,7 +37035,7 @@ Defined in: clients/ReferralClient.ts:17
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37067,7 +37068,7 @@ Whether the deployed escrow accepts claimTokens(tokens, recipient, unwrap).
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37090,7 +37091,7 @@ Defined in: clients/ReferralClient.ts:26
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37193,7 +37194,7 @@ Defined in: utils/referrals.ts:131
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37218,7 +37219,7 @@ Defined in: clients/ReferralClient.ts:29
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37259,7 +37260,7 @@ Defined in: sdk/FlaunchSDK.ts:618
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37308,7 +37309,7 @@ Defined in: clients/FlaunchZapClient.ts:338
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37353,7 +37354,7 @@ delta.flETHBought
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37382,7 +37383,7 @@ Defined in: utils/referrals.ts:95
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37415,7 +37416,7 @@ Defined in: clients/StakingManagerV1\_3Client.ts:20
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37450,7 +37451,7 @@ Defined in: clients/StakingManagerV1\_3Client.ts:25
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37489,7 +37490,7 @@ Defined in: utils/referrals.ts:93
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37549,7 +37550,7 @@ vesting.treasuryManager
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37614,7 +37615,7 @@ Defined in: sdk/FlaunchSDK.ts:373
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37657,7 +37658,7 @@ Must be absent or 0 — the planner derives the premine from `preBuyBps`.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37728,7 +37729,7 @@ Defined in: clients/MemecoinVestingClient.ts:45
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37775,7 +37776,7 @@ Coins vested so far (claimed or not), from the contract.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37846,7 +37847,7 @@ Seconds.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37911,7 +37912,7 @@ Seconds; must be > 0.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37940,7 +37941,7 @@ A launch (vested or not) with a manager adapter's fields swapped for `treasuryMa
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37955,7 +37956,7 @@ Defined in: addresses.ts:333
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37970,7 +37971,7 @@ Defined in: addresses.ts:378
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -37985,7 +37986,7 @@ Defined in: addresses.ts:304
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38000,7 +38001,7 @@ Defined in: addresses.ts:310
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38015,7 +38016,7 @@ Defined in: addresses.ts:237
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38030,7 +38031,7 @@ Defined in: addresses.ts:243
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38045,7 +38046,7 @@ Defined in: addresses.ts:256
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38062,7 +38063,7 @@ The AnyFlaunch ERC721 of `AnyFlaunchZapPositionManagerAddress` (launch NFTs of v
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38079,7 +38080,7 @@ The AnyPositionManager hook `AnyFlaunchZapAddress` launches through; emits the v
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38094,7 +38095,7 @@ Defined in: addresses.ts:201
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38109,7 +38110,7 @@ Defined in: addresses.ts:207
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38124,7 +38125,7 @@ Defined in: sdk/launchPreBuy.ts:44
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38139,7 +38140,7 @@ Defined in: addresses.ts:285
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38154,7 +38155,7 @@ Defined in: addresses.ts:291
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38169,7 +38170,7 @@ Defined in: addresses.ts:297
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38184,7 +38185,7 @@ Defined in: addresses.ts:354
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38199,7 +38200,7 @@ Defined in: sdk/launchPreBuy.ts:43
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38214,7 +38215,7 @@ Defined in: addresses.ts:451
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38231,7 +38232,7 @@ Permissions
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38246,7 +38247,7 @@ Defined in: addresses.ts:510
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38263,7 +38264,7 @@ Default route limit: 10% of supply. The protocol has no on-chain cap; see the ca
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38280,7 +38281,7 @@ How long a plan stays executable without a fresh quote.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38297,7 +38298,7 @@ Default pairing for new launches. FLETHAddress remains available for legacy pool
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38312,7 +38313,7 @@ Defined in: addresses.ts:456
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38327,7 +38328,7 @@ Defined in: addresses.ts:341
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38342,7 +38343,7 @@ Defined in: addresses.ts:398
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38357,7 +38358,7 @@ Defined in: addresses.ts:405
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38374,7 +38375,7 @@ Defined in: clients/FlaunchZapClient.ts:150
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38389,7 +38390,7 @@ Defined in: addresses.ts:548
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38404,7 +38405,7 @@ Defined in: addresses.ts:623
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38419,7 +38420,7 @@ Defined in: addresses.ts:274
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38434,7 +38435,7 @@ Defined in: addresses.ts:280
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38449,7 +38450,7 @@ Defined in: addresses.ts:630
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38466,7 +38467,7 @@ Defined in: addresses.ts:516
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38481,7 +38482,7 @@ Defined in: addresses.ts:528
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38496,7 +38497,7 @@ Defined in: addresses.ts:214
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38511,7 +38512,7 @@ Defined in: addresses.ts:428
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38526,7 +38527,7 @@ Defined in: addresses.ts:41
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38541,7 +38542,7 @@ Defined in: addresses.ts:48
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38556,7 +38557,7 @@ Defined in: addresses.ts:35
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38571,7 +38572,7 @@ Defined in: addresses.ts:53
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38586,7 +38587,7 @@ Defined in: addresses.ts:58
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38601,7 +38602,7 @@ Defined in: addresses.ts:66
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38626,7 +38627,7 @@ Defined in: index.ts:248
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38641,7 +38642,7 @@ Defined in: addresses.ts:219
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38656,7 +38657,7 @@ Defined in: addresses.ts:224
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38671,7 +38672,7 @@ Defined in: addresses.ts:230
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38686,7 +38687,7 @@ Defined in: addresses.ts:11
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38701,7 +38702,7 @@ Defined in: addresses.ts:29
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38716,7 +38717,7 @@ Defined in: addresses.ts:22
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38733,7 +38734,7 @@ The game developer's protected share weight: 5% of GAME\_DEVELOPER\_SPLIT\_SHARE
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38750,7 +38751,7 @@ Every active share weight on a GameDeveloperFeeSplitManager sums to this (5 dp: 
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38758,19 +38759,19 @@ Every active share weight on a GameDeveloperFeeSplitManager sums to this (5 dp: 
 
 # Variable: GameDeveloperFeeSplitManagerAddress
 
-> `const` **GameDeveloperFeeSplitManagerAddress**: `Addresses` = `{}`
+> `const` **GameDeveloperFeeSplitManagerAddress**: `Addresses`
 
 Defined in: addresses.ts:391
 
 GameDeveloperFeeSplitManager: the Game Mode manager whose game developer holds a protected 5%
 slot (flaunch-managers `feat/game-developer-fee-split-manager`). Approved on each chain's
-v1.3.1 `TreasuryManagerFactoryV1_3Address`. Empty until deployed: fill a chain in once
-`Managers.s.sol` has broadcast it there and the factory owner has approved it.
+v1.3.1 `TreasuryManagerFactoryV1_3Address`. Live on Base Sepolia only; fill another chain in
+once `Managers.s.sol` has broadcast it there and the factory owner has approved it.
 
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38785,7 +38786,7 @@ Defined in: addresses.ts:419
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38819,7 +38820,7 @@ repeats that estimate rather than the real spend.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38834,7 +38835,7 @@ Defined in: sdk/launchPreBuy.ts:49
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38849,7 +38850,7 @@ Defined in: sdk/launchPreBuy.ts:77
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38864,7 +38865,7 @@ Defined in: sdk/launchPreBuy.ts:51
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38879,7 +38880,7 @@ Defined in: utils/univ4.ts:448
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38898,7 +38899,7 @@ or minimum output; protected PoolSwap execution enforces both from the final del
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38913,7 +38914,7 @@ Defined in: addresses.ts:260
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38953,7 +38954,7 @@ Defined in: types.ts:29
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -38978,7 +38979,7 @@ Defined in: utils/universalRouter.ts:668
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39003,7 +39004,7 @@ Defined in: utils/universalRouter.ts:675
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39018,7 +39019,7 @@ Defined in: addresses.ts:173
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39033,7 +39034,7 @@ Defined in: addresses.ts:93
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39048,7 +39049,7 @@ Defined in: addresses.ts:100
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39063,7 +39064,7 @@ Defined in: addresses.ts:664
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39078,7 +39079,7 @@ Defined in: addresses.ts:635
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39095,7 +39096,7 @@ Hook (lowercase) → the PoolSwap approved on that hook generation's spend gate.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39110,7 +39111,7 @@ Defined in: addresses.ts:117
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39125,7 +39126,7 @@ Defined in: utils/univ4.ts:11
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39140,7 +39141,7 @@ Defined in: utils/univ4.ts:10
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39155,7 +39156,7 @@ Defined in: addresses.ts:649
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39170,7 +39171,7 @@ Defined in: addresses.ts:535
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39185,7 +39186,7 @@ Defined in: addresses.ts:541
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39200,7 +39201,7 @@ Defined in: addresses.ts:325
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39215,7 +39216,7 @@ Defined in: addresses.ts:371
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39232,7 +39233,7 @@ Slipstream-shaped CL pool reads. `slot0` is six fields — V3's `feeProtocol` is
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39249,7 +39250,7 @@ The Slipstream SwapRouter write surface — `tickSpacing`-keyed, `deadline` insi
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39264,7 +39265,7 @@ Defined in: addresses.ts:461
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39279,7 +39280,7 @@ Defined in: addresses.ts:349
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39294,7 +39295,7 @@ Defined in: addresses.ts:412
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39309,7 +39310,7 @@ Defined in: addresses.ts:656
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39329,7 +39330,7 @@ regenerated onto a fixed InternalSwapPool (v1.3.3).
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39344,7 +39345,7 @@ Defined in: utils/univ4.ts:13
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39361,7 +39362,7 @@ Defined in: sdk/launchPreBuy.ts:42
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39386,7 +39387,7 @@ Defined in: utils/univ4.ts:5
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39403,7 +39404,7 @@ Verifiers
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39418,7 +39419,7 @@ Defined in: addresses.ts:444
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39433,7 +39434,7 @@ Defined in: addresses.ts:317
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39448,7 +39449,7 @@ Defined in: addresses.ts:364
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39465,7 +39466,7 @@ The two getters read off a paired token's registered two-hop price calculator.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39484,7 +39485,7 @@ Defined in: addresses.ts:676
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39499,7 +39500,7 @@ Defined in: addresses.ts:671
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39516,7 +39517,7 @@ Defined in: utils/pairedTokenAcquisition.ts:174
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39533,7 +39534,7 @@ Canonical Uniswap V3 pool reads. `slot0` carries the seventh `feeProtocol` field
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39550,7 +39551,7 @@ Uniswap `QuoterV2`'s depth-aware exact-input quote.
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39568,7 +39569,7 @@ is enforced by the `multicall(uint256 deadline, bytes[])` overload every routed 
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39583,7 +39584,7 @@ Defined in: addresses.ts:643
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39598,7 +39599,7 @@ Defined in: addresses.ts:466
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39613,7 +39614,7 @@ Defined in: addresses.ts:471
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39628,7 +39629,7 @@ Defined in: addresses.ts:492
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39643,7 +39644,7 @@ Defined in: addresses.ts:503
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39658,7 +39659,7 @@ Defined in: addresses.ts:476
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 
@@ -39677,7 +39678,7 @@ Defined in: helpers/chainIdToChain.ts:10
 
 ---
 
-**@flaunch/sdk v0.16.0-preview.2**
+**@flaunch/sdk v0.16.0-preview.3**
 
 ***
 

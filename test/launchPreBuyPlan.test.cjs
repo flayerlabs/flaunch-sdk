@@ -970,6 +970,7 @@ test("paired route into a treasury manager: the 4-argument overload is planned, 
 test("Game Mode pre-buy on the Any route: gate params, vesting and the developer's 5% in one plan", async () => {
   const MANAGER = "0x5555555555555555555555555555555555555555";
   const DEVELOPER = "0x6666666666666666666666666666666666666666";
+  const deployedManager = GameDeveloperFeeSplitManagerAddress[baseSepolia.id];
   GameDeveloperFeeSplitManagerAddress[baseSepolia.id] = MANAGER;
   try {
     const drift = fakeDrift({ tokenConfig: { approved: true, tokenType: 1, decimals: 18 } });
@@ -1025,7 +1026,7 @@ test("Game Mode pre-buy on the Any route: gate params, vesting and the developer
       /not both/
     );
   } finally {
-    delete GameDeveloperFeeSplitManagerAddress[baseSepolia.id];
+    GameDeveloperFeeSplitManagerAddress[baseSepolia.id] = deployedManager;
   }
 });
 

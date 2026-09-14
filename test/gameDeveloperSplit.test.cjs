@@ -178,8 +178,10 @@ const {
 const CHAIN = baseSepolia.id;
 const SIGNER = "0x1111111111111111111111111111111111111111";
 const MODERATOR = "0x3333333333333333333333333333333333333333";
-/** Test-injected manager implementation: the real one is not deployed yet (see addresses.ts). */
+/** Test-injected manager implementation, used to prove the map (not a constant) drives routing. */
 const TEST_MANAGER_IMPL = "0x9999999999999999999999999999999999999999";
+/** The real Base Sepolia deployment: block 46817954, approved on the v1.3.1 TreasuryManagerFactory. */
+const DEPLOYED_MANAGER_IMPL = "0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e";
 const CLONE = "0x4444444444444444444444444444444444444444";
 const PAYOUT = "0x5555555555555555555555555555555555555555";
 const SPEND_GATE = "0x54cdcf0b0000000000000000000000000000cafe";
@@ -248,7 +250,7 @@ function recordingDrift({ fee = { ethRequired: 12n, pairedPremineCost: 34n }, im
   };
 }
 
-/** Runs `fn` with the manager implementation injected into the (still empty) address map. */
+/** Runs `fn` with a test manager implementation injected over whatever the address map holds. */
 async function withManagerDeployed(fn) {
   const before = GameDeveloperFeeSplitManagerAddress[CHAIN];
   GameDeveloperFeeSplitManagerAddress[CHAIN] = TEST_MANAGER_IMPL;
@@ -260,19 +262,59 @@ async function withManagerDeployed(fn) {
   }
 }
 
-test("Any game route: an empty manager map means unsupported, on every chain", async () => {
-  assert.equal(GameDeveloperFeeSplitManagerAddress[CHAIN], undefined, "not deployed yet — fill from the Managers.s.sol broadcast");
+test("Any game route: the Base Sepolia manager is deployed, so both game routes build calldata", async () => {
+  assert.equal(GameDeveloperFeeSplitManagerAddress[CHAIN], DEPLOYED_MANAGER_IMPL);
   assert.equal(doesChainSupportVestedLaunch(CHAIN), true);
-  assert.equal(doesChainSupportAnyGameDeveloperSplit(CHAIN), false);
-  assert.equal(doesChainSupportGameDeveloperSplit(CHAIN), false);
+  assert.equal(doesChainSupportAnyGameDeveloperSplit(CHAIN), true);
+  assert.equal(doesChainSupportGameDeveloperSplit(CHAIN), true);
+  assert.equal(isGameDeveloperFeeSplitManagerImplementation(CHAIN, DEPLOYED_MANAGER_IMPL), true);
+  assert.equal(isGameDeveloperFeeSplitManagerImplementation(CHAIN, DEPLOYED_MANAGER_IMPL.toLowerCase()), true);
   assert.equal(isGameDeveloperFeeSplitManagerImplementation(CHAIN, TEST_MANAGER_IMPL), false);
 
-  const sdk = new ReadWriteFlaunchSDK(CHAIN, recordingDrift());
-  await assert.rejects(sdk.prepareAnyGameLaunch(gameLaunch), /not deployed on chain 84532/);
-  await assert.rejects(sdk.flaunchAnyWithGameDeveloperSplit(gameLaunch), /not deployed on chain 84532/);
-  assert.equal(await sdk.getGameDeveloperPayout(CLONE), null);
-  assert.deepEqual(sdk.drift.interactions, [], "nothing is read before the chain check");
+  // both routes now install the deployed implementation instead of rejecting the chain
+  const anyDrift = recordingDrift({ implementation: DEPLOYED_MANAGER_IMPL });
+  const prepared = await new ReadWriteFlaunchSDK(CHAIN, anyDrift).prepareAnyGameLaunch(gameLaunch);
+  assert.equal(prepared.to.toLowerCase(), AnyFlaunchZapAddress[CHAIN].toLowerCase());
+  const pairedDrift = recordingDrift({ implementation: DEPLOYED_MANAGER_IMPL });
+  assert.equal(
+    await new ReadWriteFlaunchSDK(CHAIN, pairedDrift).flaunchPairedTokenWithGameDeveloperSplit({
+      flaunchParams: {
+        name: "Arena Coin",
+        symbol: "ARENA",
+        tokenUri: "ipfs://arena",
+        premineAmount: 0n,
+        creator: SIGNER,
+        creatorFeeAllocation: 8_000,
+        flaunchAt: 0n,
+        initialPriceParams: "0x1234",
+        feeCalculatorParams: gateParams(),
+        pairedToken: FLETHAddress[CHAIN],
+      },
+      trustedFeeSigner: zeroAddress,
+      maxPremineCost: 0n,
+      value: 12n,
+      gameDeveloper: dev,
+      moderator: MODERATOR,
+      splitReceivers: gameLaunch.splitReceivers,
+    }),
+    TX_HASH
+  );
+  assert.equal(
+    pairedDrift.interactions.filter((i) => i.kind === "write")[0].args._treasuryManagerParams.manager,
+    DEPLOYED_MANAGER_IMPL
+  );
 
+  // a chain without the manager still names itself, and reads nothing before the chain check
+  const unsupported = new ReadWriteFlaunchSDK(base.id, recordingDrift());
+  await assert.rejects(unsupported.prepareAnyGameLaunch(gameLaunch), /not deployed on chain 8453/);
+  await assert.rejects(unsupported.flaunchAnyWithGameDeveloperSplit(gameLaunch), /not deployed on chain 8453/);
+  assert.equal(doesChainSupportAnyGameDeveloperSplit(base.id), false);
+  assert.equal(doesChainSupportGameDeveloperSplit(base.id), false);
+  assert.equal(isGameDeveloperFeeSplitManagerImplementation(base.id, DEPLOYED_MANAGER_IMPL), false);
+  assert.equal(await unsupported.getGameDeveloperPayout(CLONE), null);
+  assert.deepEqual(unsupported.drift.interactions, [], "nothing is read before the chain check");
+
+  // an injected implementation still overrides the map, so routing follows the map not a constant
   await withManagerDeployed(async () => {
     assert.equal(doesChainSupportAnyGameDeveloperSplit(CHAIN), true);
     assert.equal(doesChainSupportGameDeveloperSplit(CHAIN), true);

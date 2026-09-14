@@ -385,14 +385,14 @@ export const AddressFeeSplitManagerV1_3Address: Addresses = {
 /**
  * GameDeveloperFeeSplitManager: the Game Mode manager whose game developer holds a protected 5%
  * slot (flaunch-managers `feat/game-developer-fee-split-manager`). Approved on each chain's
- * v1.3.1 `TreasuryManagerFactoryV1_3Address`. Empty until deployed: fill a chain in once
- * `Managers.s.sol` has broadcast it there and the factory owner has approved it.
+ * v1.3.1 `TreasuryManagerFactoryV1_3Address`. Live on Base Sepolia only; fill another chain in
+ * once `Managers.s.sol` has broadcast it there and the factory owner has approved it.
  */
 export const GameDeveloperFeeSplitManagerAddress: Addresses = {
-  // TODO(deploy): fill 84532 from flaunch-managers Managers.s.sol broadcast
-  // (broadcast/Managers.s.sol/84532/run-latest.json) once the implementation is deployed and
-  // approved on TreasuryManagerFactoryV1_3Address[84532]. Until then every game-developer
-  // launch route reports the chain as unsupported.
+  // Base Sepolia, deployed 2026-09-14 at block 46817954 and approved on
+  // TreasuryManagerFactory 0x98dfdd0AAc46c85FA35d67941d394019b7e3a18d
+  // (flaunch-managers PR #6). GAME_DEVELOPER_SHARE is a pinned 5_00000 (5%).
+  [baseSepolia.id]: "0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e",
 };
 
 export const DynamicAddressFeeSplitManagerV1_3Address: Addresses = {

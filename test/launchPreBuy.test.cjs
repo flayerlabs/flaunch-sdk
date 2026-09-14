@@ -227,13 +227,19 @@ test("vested classification: empty schedules are valid, malformed are not, gates
     splitReceivers: [{ address: PAIRED, share: 95_00000n }],
   };
   const gameMode = vested({ gameDeveloperSplit, feeCalculatorParams: "0xabcd" });
-  assert.equal(GameDeveloperFeeSplitManagerAddress[baseSepolia.id], undefined, "not deployed yet");
-  assert.deepEqual(classifyLaunchPreBuyInput(baseSepolia.id, gameMode), ["ROUTE_UNSUPPORTED"]);
-  GameDeveloperFeeSplitManagerAddress[baseSepolia.id] = PAIRED;
+  assert.equal(
+    GameDeveloperFeeSplitManagerAddress[baseSepolia.id],
+    "0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e",
+    "deployed 2026-09-14 at block 46817954"
+  );
+  assert.deepEqual(classifyLaunchPreBuyInput(baseSepolia.id, gameMode), []);
+  // the classification follows the address map, not a constant
+  const deployed = GameDeveloperFeeSplitManagerAddress[baseSepolia.id];
+  delete GameDeveloperFeeSplitManagerAddress[baseSepolia.id];
   try {
-    assert.deepEqual(classifyLaunchPreBuyInput(baseSepolia.id, gameMode), []);
+    assert.deepEqual(classifyLaunchPreBuyInput(baseSepolia.id, gameMode), ["ROUTE_UNSUPPORTED"]);
   } finally {
-    delete GameDeveloperFeeSplitManagerAddress[baseSepolia.id];
+    GameDeveloperFeeSplitManagerAddress[baseSepolia.id] = deployed;
   }
 });
 

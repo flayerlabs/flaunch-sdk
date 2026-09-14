@@ -541,8 +541,9 @@ launch parameters (`vestingSchedules` may be an empty array — no vesting), for
 gate's dispatcher-prefixed spend-gate params in `feeCalculatorParams` verbatim, and deposits the
 coin into a fresh manager clone in one transaction. Gate on
 `doesChainSupportAnyGameDeveloperSplit(chainId)` (the manager is deployed and approved there
-**and** the vested stack exists); `GameDeveloperFeeSplitManagerAddress` is empty until the
-implementation is broadcast and approved on a chain.
+**and** the vested stack exists). `GameDeveloperFeeSplitManagerAddress` is live on Base Sepolia
+(`0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e`, block 46817954); other chains stay unsupported
+until the implementation is broadcast and approved there.
 
 `prepareAnyGameLaunch(params)` quotes and encodes without sending, so a transaction flow that
 wants the raw call (`to`, `data`, `value`) and the exact `args` can hold them and send later;
