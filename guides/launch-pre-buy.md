@@ -13,13 +13,15 @@ This guide is the capability matrix and the rules behind `planLaunchPreBuy` /
 
 | Route (`LaunchPreBuyInput.route`) | Base (8453) | Base Sepolia (84532) | Robinhood (4663) | Ethereum (1) | Unichain (130) | Payment asset | Approval | Limit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `standard` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✓ multichain zap | ✓ multichain zap | native ETH via `msg.value` | never | 1000 bps |
-| `revenueManager` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✓ multichain zap | ✓ multichain zap | native ETH | never | 1000 bps |
-| `splitManager` (static) | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✓ multichain zap | ✓ multichain zap | native ETH | never | 1000 bps |
-| `dynamicSplitManager` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✓ multichain zap | ✓ multichain zap | native ETH | never | 1000 bps |
-| `pairedToken` | ✓ v1.3 zap | ✓ v1.3 zap | ✓ v1.3 zap | — | — | follows the pairing (below) | ERC20 pairings only | 1000 bps |
+| `standard` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✗ `ROUTE_UNSUPPORTED` (v1.3 zap since 0.15.0) | ✓ multichain zap | native ETH via `msg.value` | never | 1000 bps |
+| `revenueManager` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✗ `ROUTE_UNSUPPORTED` | ✓ multichain zap | native ETH | never | 1000 bps |
+| `splitManager` (static) | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✗ `ROUTE_UNSUPPORTED` | ✓ multichain zap | native ETH | never | 1000 bps |
+| `dynamicSplitManager` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✗ `ROUTE_UNSUPPORTED` | ✓ multichain zap | native ETH | never | 1000 bps |
+| `pairedToken` | ✓ v1.3 zap | ✓ v1.3 zap | ✓ v1.3 zap | ✓ v1.3 zap (native ETH default, `pairedToken = zeroAddress`) | — | follows the pairing (below) | ERC20 pairings only | 1000 bps |
 
-**On Base and Base Sepolia the only pre-buy route is `pairedToken`.** The legacy Base zap
+**On Base, Base Sepolia and Ethereum the only pre-buy route is `pairedToken`.** Ethereum's
+current generation (v1.4.0, SDK 0.15.0) pairs with native ETH by default and every `flaunch*`
+there targets the v1.3 zap, so the multichain routes report `ROUTE_UNSUPPORTED` on chain 1. The legacy Base zap
 (v1.1 PositionManager) fills a premine out of the fair-launch allocation, which the SDK pins to
 0 because fair launches are deprecated, so any premine there reverts with
 `PremineExceedsInitialAmount`. An "ordinary" coin with a pre-buy on Base therefore launches

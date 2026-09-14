@@ -17,7 +17,7 @@ const {
   AnyFlaunchZapAddress,
   AnyFlaunchZapFlaunchAddress,
   AnyFlaunchZapPositionManagerAddress,
-  AnyPositionManagerV1_3Abi,
+  AnyFlaunchZapPositionManagerAbi,
   AnyPositionManagerV1_3Address,
   FLAUNCH_TOTAL_SUPPLY,
   FLETHAddress,
@@ -427,8 +427,8 @@ test("getVestedLaunchFromLogs decodes PoolCreated + MemecoinFlaunched + Schedule
     feeCalculatorParams: "0x",
     pairedToken: FLETHAddress[CHAIN],
   };
-  const poolCreated = eventLog(AnyPositionManagerV1_3Abi, HOOK, "PoolCreated", { _poolId: POOL_ID }, [MEMECOIN, TREASURY, 9n, true, hookParams]);
-  const scheduled = eventLog(AnyPositionManagerV1_3Abi, HOOK, "PoolScheduled", { _poolId: POOL_ID }, [1_900_000_000n]);
+  const poolCreated = eventLog(AnyFlaunchZapPositionManagerAbi, HOOK, "PoolCreated", { _poolId: POOL_ID }, [MEMECOIN, TREASURY, 9n, true, hookParams]);
+  const scheduled = eventLog(AnyFlaunchZapPositionManagerAbi, HOOK, "PoolScheduled", { _poolId: POOL_ID }, [1_900_000_000n]);
   const flaunched = eventLog(AnyFlaunchZapAbi, ZAP, "MemecoinFlaunched", { _memecoin: MEMECOIN, _creator: SIGNER }, [825n * 10n ** 26n, 175n * 10n ** 26n, 2n, MANAGER]);
   const schedule0 = eventLog(MemecoinVestingAbi, VESTING, "ScheduleCreated", { _token: MEMECOIN, _beneficiary: TEAM }, [0n, 125n * 10n ** 26n, 1_900_000_000, 86_400, 31_536_000]);
   const schedule1 = eventLog(MemecoinVestingAbi, VESTING, "ScheduleCreated", { _token: MEMECOIN, _beneficiary: ADVISOR }, [0n, 5n * 10n ** 27n, 1_800_000_000, 0, 7_776_000]);
@@ -481,7 +481,10 @@ test("getVestedLaunchFromLogs decodes PoolCreated + MemecoinFlaunched + Schedule
   // without the hook's PoolCreated or the zap's MemecoinFlaunched there is no vested launch
   assert.equal(sdk.getVestedLaunchFromLogs([wrongEmitter, flaunched, schedule0]), null);
   assert.equal(sdk.getVestedLaunchFromLogs([poolCreated, schedule0]), null);
-  assert.equal(sdk.getPoolCreatedFromLogs([wrongEmitter]), null);
+  // The v1.3.3 import hook's PoolCreated decodes on its own since 0.15.0 (imported pools), but it
+  // is a different contract: no creator correction, and never a vested launch.
+  assert.equal(sdk.getPoolCreatedFromLogs([wrongEmitter])?.params.creator, ZAP);
+  assert.equal(sdk.getPoolCreatedFromLogs([{ ...poolCreated, address: TEAM }]), null);
   // the hook's raw creator is kept when the receipt holds no MemecoinFlaunched
   assert.equal(sdk.getPoolCreatedFromLogs([poolCreated]).params.creator, ZAP);
   // other chains never treat these logs as a launch

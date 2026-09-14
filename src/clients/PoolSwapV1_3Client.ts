@@ -1,3 +1,4 @@
+import { resolveReferralHookData } from "../utils/referrals";
 import {
   type Address,
   type Drift,
@@ -28,8 +29,7 @@ export type PoolSwapV1_3SwapParams = {
   params: PoolSwapParams;
   /**
    * Arbitrary bytes for the pool's hook — a spend-gated launch's signed authorisation travels here.
-   * When present the `bytes` overload is used and `referrer` is ignored (the gate's payload already
-   * leads with the referrer address).
+   * When present the `bytes` overload is used; an explicit referrer must match its leading address.
    */
   hookData?: HexString;
   /** Referral attribution via the `address` overload; zero (or absent) means none. */
@@ -79,6 +79,7 @@ export class ReadWritePoolSwapV1_3 extends ReadPoolSwapV1_3 {
    * is enforced by callers (the spend gate rejects exact-output swaps).
    */
   swap({ poolKey, params, hookData, referrer, value = 0n }: PoolSwapV1_3SwapParams) {
+    resolveReferralHookData({ hookData, referrer });
     if (hookData !== undefined) {
       // A single-overload ABI keeps drift's name-based dispatch unambiguous.
       const contract = this.drift.contract({

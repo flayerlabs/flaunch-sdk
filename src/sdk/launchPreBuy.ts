@@ -1,6 +1,7 @@
 import { type Address, type Hex, keccak256, stringToHex, zeroAddress } from "viem";
 import {
   AddressFeeSplitManagerAddress,
+  DefaultPairedTokenAddress,
   AnyFlaunchZapAddress,
   DynamicAddressFeeSplitManagerAddress,
   FlaunchZapAddress,
@@ -326,6 +327,15 @@ function routeReasons(chainId: number, route: LaunchPreBuyRoute): LaunchPreBuyRe
     return reasons;
   }
   if (!zapAddressForRoute(chainId, route)) reasons.push("ROUTE_UNSUPPORTED");
+  // Ethereum's current generation (v1.4.0) pairs with native ETH and launches through the v1.3
+  // zap — `flaunch*` no longer targets the multichain zap there, so neither does a pre-buy.
+  // Launch through `pairedToken` with `pairedToken = zeroAddress` instead.
+  if (
+    zapFamilyForRoute(chainId, route) === "multichain" &&
+    DefaultPairedTokenAddress[chainId] === zeroAddress
+  ) {
+    reasons.push("ROUTE_UNSUPPORTED");
+  }
   // The legacy Base zap (v1.1 PositionManager) fills a premine out of the fair-launch
   // allocation, which is deprecated and always 0 here — so it can never premine
   // (`PremineExceedsInitialAmount`). Launch through `pairedToken` with flETH / native ETH instead.

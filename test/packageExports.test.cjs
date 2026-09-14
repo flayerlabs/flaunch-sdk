@@ -54,6 +54,7 @@ const packageExports = [
   ["@flaunch/sdk/abi", "AnyFlaunchZapAbi"],
   ["@flaunch/sdk/abi", "MemecoinVestingAbi"],
   ["@flaunch/sdk/abi", "AnyPositionManagerV1_3Abi"],
+  ["@flaunch/sdk/abi", "AnyFlaunchZapPositionManagerAbi"],
   ["@flaunch/sdk/addresses", "AnyFlaunchZapAddress"],
   ["@flaunch/sdk/addresses", "MemecoinVestingAddress"],
   ["@flaunch/sdk/addresses", "AnyFlaunchZapPositionManagerAddress"],

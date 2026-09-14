@@ -9,8 +9,9 @@ import {
   createDrift,
 } from "@delvtech/drift";
 import { QuoterAbi } from "../abi/Quoter";
-import { encodeFunctionData, decodeFunctionResult, formatUnits, parseEther, zeroAddress } from "viem";
-import { FLETHAddress, FLETHHooksAddress, USDCETHPoolKeys } from "addresses";
+import { encodeAbiParameters, encodeFunctionData, decodeFunctionResult, formatUnits, parseEther, zeroAddress } from "viem";
+import { DefaultPairedTokenAddress, FLETHAddress, FLETHHooksAddress, FlaunchPositionManagerV1_3Address, USDCETHPoolKeys } from "addresses";
+import { ReadFlaunchPositionManagerV1_2 } from "./FlaunchPositionManagerV1_2Client";
 import { PoolKey, PoolWithHookData } from "types";
 
 export type QuoterABI = typeof QuoterAbi;
@@ -435,6 +436,15 @@ export class ReadQuoter {
    * @returns Promise<number> - The price of 1 ETH in USDC, formatted with 2 decimal places
    */
   async getETHUSDCPrice() {
+    if (DefaultPairedTokenAddress[this.chainId] === zeroAddress) {
+      // The mainnet launch oracle converts a 6-decimal USD market cap into ETH wei
+      // using its 30-minute WETH/USDC V3 TWAP. Invert that conversion for USD per ETH.
+      const marketCapInETH = await new ReadFlaunchPositionManagerV1_2(
+        FlaunchPositionManagerV1_3Address[this.chainId], this.quoteDrift
+      ).getFlaunchingMarketCap(encodeAbiParameters([{ type: "uint256" }], [10_000_000_000n]));
+      return Number((10_000 / Number(formatUnits(marketCapInETH, 18))).toFixed(2));
+    }
+
     const amountIn = parseEther("1");
 
     const res = await this.contract.simulateWrite("quoteExactInput", {

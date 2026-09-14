@@ -12,7 +12,7 @@ const {
   toHex,
   zeroAddress,
 } = require("viem");
-const { base, robinhood, baseSepolia, mainnet } = require("viem/chains");
+const { base, robinhood, baseSepolia, mainnet, unichain } = require("viem/chains");
 const {
   createFlaunchCalldata,
   decodeCallData,
@@ -149,12 +149,12 @@ function decodeBalancesArgs(call) {
   return decodeFunctionData({ abi: TreasuryManagerV1_3Abi, data: call.data }).args;
 }
 
-test("the v1.3.1 manager generation is pinned to the Base, Robinhood and Base Sepolia releases and absent elsewhere", () => {
+test("the multi-asset manager generation retains the Base, Robinhood and Base Sepolia releases", () => {
   for (const [name, [map, expectedBase, expectedRobinhood]] of Object.entries(RELEASE_ADDRESSES)) {
     assert.deepEqual(
       Object.keys(map).sort(),
-      [String(robinhood.id), String(base.id), String(baseSepolia.id)].sort(),
-      `${name} should be Base + Robinhood + Base Sepolia only`
+      [String(robinhood.id), String(base.id), String(baseSepolia.id), String(mainnet.id)].sort(),
+      `${name} should include Ethereum and the existing deployments`
     );
     assert.equal(getAddress(map[base.id]), getAddress(expectedBase), name);
     assert.equal(getAddress(map[robinhood.id]), getAddress(expectedRobinhood), name);
@@ -182,13 +182,13 @@ test("the v1.3.1 manager generation is pinned to the Base, Robinhood and Base Se
   assert.equal(SupersededPositionManagerV1_3Address[base.id], undefined);
   assert.deepEqual(
     getV1_3PositionManagers(robinhood.id).map((a) => a.toLowerCase()),
-    [FlaunchPositionManagerV1_3Address[robinhood.id].toLowerCase(), "0x588c683ecc450f8b2aadb13d7f63792b840425dc", "0x6ea0edee449a287504990df8d87951b9436825dc"]
+    [FlaunchPositionManagerV1_3Address[robinhood.id].toLowerCase(), "0x9abfbdc34a294de5210c0889f21d5af54c4965dc", "0x588c683ecc450f8b2aadb13d7f63792b840425dc", "0x6ea0edee449a287504990df8d87951b9436825dc"]
   );
   assert.equal(doesChainSupportMultiAssetManagers(robinhood.id), true);
 
   assert.equal(doesChainSupportMultiAssetManagers(base.id), true);
   assert.equal(doesChainSupportMultiAssetManagers(baseSepolia.id), true); // since 2026-09-03
-  assert.equal(doesChainSupportMultiAssetManagers(mainnet.id), false);
+  assert.equal(doesChainSupportMultiAssetManagers(mainnet.id), true);
 });
 
 test("v1.3.1 permissions map WHITELISTED to the factory-bound instance and leave the old mapping alone", () => {
@@ -458,7 +458,7 @@ test("revenueManagerPayoutAssets and treasuryManagerBalancesV1_3 enumerate the m
 });
 
 test("chains without the v1.3.1 manager generation say so before anything is sent", async () => {
-  for (const chain of [mainnet]) {
+  for (const chain of [unichain]) {
     const requests = [];
     const sdk = calldataSdk(chain, (call) => {
       requests.push(call);

@@ -9,8 +9,15 @@ import {
 } from "@delvtech/drift";
 import { encodeAbiParameters, parseUnits, zeroAddress } from "viem";
 import { FlaunchZapAbi } from "../abi/FlaunchZap";
+import {
+  AddressFeeSplitManagerV1_3Address,
+  DefaultPairedTokenAddress,
+  DynamicAddressFeeSplitManagerV1_3Address,
+  FlaunchZapV1_3Address,
+} from "../addresses";
 import { generateTokenUri } from "../helpers/ipfs";
-import { getPermissionsAddress } from "../helpers/permissions";
+import { getPermissionsAddress, getPermissionsAddressV1_3 } from "../helpers/permissions";
+import { ReadWriteFlaunchZapV1_3 } from "./FlaunchZapV1_3Client";
 import { Permissions } from "../types";
 import {
   toFlaunchParamsWithDynamicSplitManager,
@@ -135,6 +142,31 @@ export function toFlaunchParamsMultichain(
   };
 }
 
+/**
+ * Ethereum's current generation (v1.4.0) pairs with native ETH by default and launches through
+ * the v1.3 paired-token zap; every other multichain deployment launches through `FlaunchZap`.
+ */
+export function usesNativeDefaultPairing(chainId: number): boolean {
+  return DefaultPairedTokenAddress[chainId] === zeroAddress;
+}
+
+/**
+ * Swaps the legacy manager implementation for its `*V1_3` generation on chains whose launches go
+ * through the v1.3 zap (see `usesNativeDefaultPairing`); a no-op elsewhere.
+ */
+function withManagerGeneration<
+  T extends { treasuryManagerParams: { manager: Address } },
+>(params: T, chainId: number, v1_3Managers: Record<number, Address>): T {
+  if (!usesNativeDefaultPairing(chainId)) return params;
+  return {
+    ...params,
+    treasuryManagerParams: {
+      ...params.treasuryManagerParams,
+      manager: v1_3Managers[chainId],
+    },
+  };
+}
+
 /** Minimal read client for the multichain FlaunchZap deployment family. */
 export class ReadFlaunchZapMultichain {
   public readonly contract: ReadContract<FlaunchZapMultichainABI>;
@@ -185,7 +217,7 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
 
   constructor(
     address: Address,
-    drift: Drift<ReadWriteAdapter> = createDrift()
+    private readonly drift: Drift<ReadWriteAdapter> = createDrift()
   ) {
     super(address, drift);
   }
@@ -200,6 +232,31 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
    * is what selects it.
    */
   async flaunch(chainId: number, params: FlaunchParams) {
+    // Ethereum's current generation defaults to native ETH. Keep the legacy client and
+    // address maps intact for existing pools while new launches use the paired-token ABI.
+    if (usesNativeDefaultPairing(chainId)) {
+      const flaunchParams = this.prepareFlaunch(params);
+      const manager = params.treasuryManagerParams?.manager;
+      const zap = new ReadWriteFlaunchZapV1_3(FlaunchZapV1_3Address[chainId], this.drift);
+      const pairedParams = { ...flaunchParams, pairedToken: zeroAddress };
+      const fee = await zap.calculateFee({ flaunchParams: pairedParams, slippageBps: 500n });
+      return zap.flaunch({
+        flaunchParams: pairedParams,
+        trustedFeeSigner: zeroAddress,
+        maxPremineCost: fee.pairedPremineCost,
+        value: fee.ethRequired,
+        treasuryManagerParams: manager ? {
+          manager,
+          permissions: getPermissionsAddressV1_3(
+            params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+            chainId
+          ),
+          initializeData: params.treasuryManagerParams?.initializeData ?? "0x",
+          depositData: params.treasuryManagerParams?.depositData ?? "0x",
+        } : undefined,
+      });
+    }
+
     const prepared = buildMultichainFlaunchArgs(chainId, params);
     const ethRequired = await this.calculateFee(prepared.args._flaunchParams);
     return this.flaunchPrepared(prepared, ethRequired);
@@ -272,7 +329,11 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
   ) {
     return this.flaunch(
       chainId,
-      toFlaunchParamsWithSplitManager(params, chainId)
+      withManagerGeneration(
+        toFlaunchParamsWithSplitManager(params, chainId),
+        chainId,
+        AddressFeeSplitManagerV1_3Address
+      )
     );
   }
 
@@ -318,7 +379,11 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
   ) {
     return this.flaunch(
       chainId,
-      toFlaunchParamsWithDynamicSplitManager(params, chainId)
+      withManagerGeneration(
+        toFlaunchParamsWithDynamicSplitManager(params, chainId),
+        chainId,
+        DynamicAddressFeeSplitManagerV1_3Address
+      )
     );
   }
 }

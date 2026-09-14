@@ -2,6 +2,7 @@ import { Address, zeroAddress } from "viem";
 import { Permissions } from "../types";
 import {
   ClosedPermissionsAddress,
+  ClosedPermissionsV1_3Address,
   WhitelistedPermissionsAddress,
   WhitelistedPermissionsV1_3Address,
 } from "../addresses";
@@ -42,7 +43,7 @@ export function getPermissionsAddressV1_3(
 ): Address {
   switch (permissions) {
     case Permissions.CLOSED:
-      return ClosedPermissionsAddress[chainId];
+      return ClosedPermissionsV1_3Address[chainId];
     case Permissions.WHITELISTED:
       return WhitelistedPermissionsV1_3Address[chainId];
     case Permissions.OPEN:

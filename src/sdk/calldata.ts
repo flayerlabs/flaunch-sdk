@@ -168,11 +168,11 @@ export function createFlaunchCalldata(params: CreateFlaunchCalldataParams) {
       walletClient: callDataWalletClient,
     });
 
-    return new ReadWriteFlaunchSDK(chainId, drift);
+    return new ReadWriteFlaunchSDK(chainId, drift, publicClient);
   } else {
     // Create read-only SDK with only public client
     const drift = createDrift({ publicClient });
-    return new ReadFlaunchSDK(chainId, drift);
+    return new ReadFlaunchSDK(chainId, drift, publicClient);
   }
 }
 

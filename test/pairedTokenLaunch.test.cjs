@@ -8,7 +8,7 @@ const {
   toFunctionSelector,
   zeroAddress,
 } = require("viem");
-const { base, baseSepolia, mainnet, robinhood } = require("viem/chains");
+const { base, baseSepolia, mainnet, robinhood, unichain } = require("viem/chains");
 const {
   FlaunchPositionManagerV1_3Abi,
   FlaunchPositionManagerV1_3Address,
@@ -73,7 +73,7 @@ function recordingDrift({ approved = true, quote } = {}) {
 }
 
 test("paired-token launch addresses and capability cover deployed V1.3 chains", () => {
-  const supportedChains = [base.id, baseSepolia.id, robinhood.id];
+  const supportedChains = [base.id, baseSepolia.id, robinhood.id, mainnet.id];
 
   for (const chainId of supportedChains) {
     assert.ok(FlaunchZapV1_3Address[chainId]);
@@ -82,7 +82,7 @@ test("paired-token launch addresses and capability cover deployed V1.3 chains", 
     assert.equal(doesChainSupportPairedTokenLaunch(chainId), true);
   }
 
-  assert.equal(doesChainSupportPairedTokenLaunch(mainnet.id), false);
+  assert.equal(doesChainSupportPairedTokenLaunch(unichain.id), false);
   assert.equal(doesChainSupportPairedTokenLaunch(999_999), false);
   // Base Sepolia gained a full v1.3 generation on 2026-09-03 (v1.3.3 regeneration)
   assert.equal(FlaunchPositionManagerV1_3Address[baseSepolia.id].toLowerCase(), "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc");
@@ -207,10 +207,10 @@ test("SDK facades expose paired-token clients on Robinhood and guard unsupported
     TX_HASH
   );
 
-  const unsupported = new ReadFlaunchSDK(mainnet.id, drift);
+  const unsupported = new ReadFlaunchSDK(unichain.id, drift);
   assert.throws(
     () => unsupported.isPairedTokenApproved(PAIRED_TOKEN),
-    /Paired-token launches are not supported on chain 1/
+    /Paired-token launches are not supported on chain 130/
   );
 });
 

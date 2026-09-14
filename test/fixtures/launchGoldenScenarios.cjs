@@ -187,9 +187,13 @@ function harness(chain) {
         if (method === "eth_call") {
           const tx = params[0];
           ethCalls.push({ to: tx.to.toLowerCase(), data: tx.data });
-          // AnyFlaunchZap.calculateFee returns (ethRequired_, pairedPremineCost_)
-          const vestedZap = sdkModule.AnyFlaunchZapAddress[chain.id];
-          if (vestedZap && tx.to.toLowerCase() === vestedZap.toLowerCase()) {
+          // AnyFlaunchZap.calculateFee and FlaunchZapV1_3.calculateFee (Ethereum's native-default
+          // launches, 0.15.0) return (ethRequired_, pairedPremineCost_)
+          const twoWordZaps = [
+            sdkModule.AnyFlaunchZapAddress[chain.id],
+            sdkModule.FlaunchZapV1_3Address[chain.id],
+          ].filter(Boolean);
+          if (twoWordZaps.some((zap) => tx.to.toLowerCase() === zap.toLowerCase())) {
             return encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [FEE, 0n]);
           }
           return encodeAbiParameters([{ type: "uint256" }], [FEE]);

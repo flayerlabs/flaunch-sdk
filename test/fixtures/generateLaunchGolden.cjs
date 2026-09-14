@@ -5,6 +5,11 @@
 // existing launch entry point byte-for-byte identically. Never regenerate to "fix" a failing
 // identity test without a deliberate, reviewed calldata change.
 //
+//
+// Reviewed regenerations: the eight `multichain:1:*` cases were regenerated for 0.16.0 after
+// 0.15.0 (#41) moved Ethereum launches to the v1.3 zap with native ETH as the default pairing;
+// every other case is still byte-identical to the 0.13.0 build.
+//
 //   node test/fixtures/generateLaunchGolden.cjs
 const { writeFileSync } = require("node:fs");
 const path = require("node:path");

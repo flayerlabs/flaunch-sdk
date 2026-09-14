@@ -9,6 +9,13 @@ import { FlaunchParamsV1_3Components } from "./FlaunchParamsV1_3";
 export const FlaunchPositionManagerV1_3Abi = [
   {
     type: "function",
+    name: "flaunchContract",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "poolKey",
     inputs: [{ name: "_token", type: "address", internalType: "address" }],
     outputs: [

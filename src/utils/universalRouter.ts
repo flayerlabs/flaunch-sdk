@@ -1,3 +1,4 @@
+import { resolveReferralHookData } from "./referrals";
 import {
   Address,
   encodeAbiParameters,
@@ -301,11 +302,7 @@ export const buyMemecoin = (params: {
         tickSpacing: 60,
         hooks: flaunchHooks,
         hookData:
-          params.hookData ??
-          encodeAbiParameters(
-            [{ type: "address", name: "referrer" }],
-            [params.referrer ?? zeroAddress]
-          ),
+          resolveReferralHookData({ hookData: params.hookData, referrer: params.referrer ?? undefined }),
       },
     ];
 
@@ -349,11 +346,7 @@ export const buyMemecoin = (params: {
         hooks: flaunchHooks,
         intermediateCurrency: flETH,
         hookData:
-          params.hookData ??
-          (encodeAbiParameters(
-            [{ type: "address", name: "referrer" }],
-            [params.referrer ?? zeroAddress]
-          ) as Hex),
+          resolveReferralHookData({ hookData: params.hookData, referrer: params.referrer ?? undefined }),
       },
     ];
 
@@ -546,16 +539,7 @@ export const sellMemecoinWithPermit2 = (params: {
       tickSpacing: 60,
       hooks: flaunchHooks,
       hookData:
-        params.hookData ??
-        encodeAbiParameters(
-          [
-            {
-              type: "address",
-              name: "referrer",
-            },
-          ],
-          [params.referrer ?? zeroAddress]
-        ),
+        resolveReferralHookData({ hookData: params.hookData, referrer: params.referrer ?? undefined }),
     },
     {
       intermediateCurrency: ETH,

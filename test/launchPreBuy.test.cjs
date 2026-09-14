@@ -171,7 +171,9 @@ test("paired-token classification: gate params, trusted signer, manager", () => 
     classifyLaunchPreBuyInput(base.id, paired({ treasuryManagerParams: { manager: CREATOR } })),
     ["PAIRED_MANAGER_LAUNCH_UNSUPPORTED"]
   );
-  assert.deepEqual(classifyLaunchPreBuyInput(mainnet.id, paired({})), ["ROUTE_UNSUPPORTED"]);
+  // Ethereum v1.4.0 (0.15.0) launches through the v1.3 zap with native ETH as the default pairing
+  assert.deepEqual(classifyLaunchPreBuyInput(mainnet.id, paired({})), []);
+  assert.deepEqual(classifyLaunchPreBuyInput(unichain.id, paired({})), ["ROUTE_UNSUPPORTED"]);
 });
 
 test("legacy Base zap routes cannot premine; the paired-token route is the way on Base", () => {
@@ -193,7 +195,8 @@ test("route availability follows the deployed zaps and managers", () => {
   assert.equal(zapAddressForRoute(base.id, "standard"), FlaunchZapAddress[base.id]);
   assert.equal(zapAddressForRoute(robinhood.id, "standard"), FlaunchZapMultichainAddress[robinhood.id]);
   assert.equal(zapAddressForRoute(base.id, "pairedToken"), FlaunchZapV1_3Address[base.id]);
-  assert.equal(zapAddressForRoute(mainnet.id, "pairedToken"), undefined);
+  assert.equal(zapAddressForRoute(mainnet.id, "pairedToken"), FlaunchZapV1_3Address[mainnet.id]);
+  assert.equal(zapAddressForRoute(unichain.id, "pairedToken"), undefined);
   for (const chain of [base, baseSepolia, robinhood, mainnet, unichain]) {
     assert.equal(doesChainSupportLaunchPreBuy(chain.id), true, chain.name);
   }
@@ -232,7 +235,8 @@ test("capability matrix per chain", () => {
   // the AnyFlaunchZap (vested launches) is deployed on Base Sepolia only
   expect(baseSepolia.id, ["pairedToken", "vested"]);
   expect(robinhood.id, LAUNCH_PRE_BUY_ROUTES.filter((route) => route !== "vested"));
-  expect(mainnet.id, ethRoutes);
+  // Ethereum's `flaunch*` targets the v1.3 zap since 0.15.0, so the multichain routes are off there
+  expect(mainnet.id, ["pairedToken"]);
   expect(unichain.id, ethRoutes);
   const unknown = expect(999_999, []);
   assert.deepEqual(unknown.routes.standard.reasons, ["CHAIN_UNSUPPORTED"]);

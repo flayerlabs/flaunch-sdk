@@ -1031,6 +1031,11 @@ export function decodeLaunchPreBuyCalldata(
   }
   const decoded = decodeFunctionData({ abi: FlaunchZapV1_3Abi, data });
   if (decoded.functionName !== "flaunch") throw new Error("Not a paired-token zap flaunch call");
+  // The paired route plans the `_maxPremineCost` overload only; manager launches are refused at
+  // planning time (`PAIRED_MANAGER_LAUNCH_UNSUPPORTED`), so their calldata never reaches here.
+  if (decoded.args.length !== 3 || typeof decoded.args[2] !== "bigint") {
+    throw new Error("Not a paired-token zap pre-buy flaunch call");
+  }
   const [flaunchParams, trustedFeeSigner, maxPremineCost] = decoded.args;
   return {
     zapFamily,
