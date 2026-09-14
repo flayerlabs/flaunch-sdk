@@ -28,6 +28,23 @@ export function getPermissionsAddress(
   }
 }
 
+/** Either a `Permissions` enum value or an explicit permissions-module address. */
+export type PermissionsInput = Permissions | Address;
+
+/**
+ * Resolves what a caller passed as `permissions` to the address a v1.3.1 manager takes: an
+ * explicit address is used as given (addresses are `0x`-prefixed, the enum values are not), a
+ * `Permissions` value goes through {@link getPermissionsAddressV1_3}, and `undefined` is open.
+ */
+export function resolvePermissionsV1_3(
+  permissions: PermissionsInput | undefined,
+  chainId: number
+): Address {
+  if (permissions === undefined) return zeroAddress;
+  if (permissions.startsWith("0x")) return permissions as Address;
+  return getPermissionsAddressV1_3(permissions as Permissions, chainId);
+}
+
 /**
  * Maps a Permissions enum value to the contract address to set on a v1.3.1 multi-asset
  * manager. WhitelistedPermissions validates a group against the factory it was deployed

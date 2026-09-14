@@ -87,6 +87,7 @@ import {
   AnyFlaunchZapPositionManagerAddress,
   MemecoinVestingAddress,
   GameDeveloperFeeSplitManagerAddress,
+  DynamicAddressFeeSplitManagerV1_3Address,
 } from "../addresses";
 import {
   ReadFlaunchPositionManager,
@@ -119,6 +120,7 @@ import {
   DeployRevenueManagerParams,
   DeployStakingManagerParams,
   DeployBuyBackManagerParams,
+  encodeDynamicSplitInitializeData,
 } from "../clients/FlaunchZapClient";
 import {
   ReadFlaunchZapMultichain,
@@ -341,6 +343,7 @@ import {
 } from "utils/universalRouter";
 import { resolveIPFS as defaultResolveIPFS } from "../helpers/ipfs";
 import { getPermissionsAddress } from "helpers";
+import { resolvePermissionsV1_3 } from "../helpers/permissions";
 import { ReadMulticall } from "clients/MulticallClient";
 import { MemecoinAbi, Permit2Abi } from "abi";
 import { FLETHAbi } from "abi/FLETH";
@@ -689,6 +692,31 @@ export type FlaunchPairedTokenWithGameDeveloperSplitParams = Omit<
     /** A permissions module for later deposits; `zeroAddress` (default) leaves the manager open. */
     permissions?: Address;
   };
+
+/**
+ * `flaunchPairedToken` plus a DynamicAddressFeeSplitManager deployed at launch: the creator and
+ * the manager owner take their shares first, the named receivers divide the remainder. Shares
+ * are 5 dp weights (`1_00000` = 1%) and the receivers must total `100_00000`.
+ */
+export type FlaunchPairedTokenWithDynamicSplitManagerParams = Omit<
+  FlaunchPairedTokenParams,
+  "treasuryManagerParams"
+> & {
+  /** The coin creator's cut, 5 dp (`10_00000` = 10%). */
+  creatorShare: bigint;
+  /** The manager owner's cut, 5 dp; `creatorShare + managerOwnerShare <= 100_00000`. */
+  managerOwnerShare: bigint;
+  /** Can re-split the receivers later. Cannot be the zero address. */
+  moderator: Address;
+  /** The receivers dividing what is left after the creator and owner shares. */
+  splitReceivers: { address: Address; share: bigint }[];
+  /**
+   * A permissions module for later deposits. Either a `Permissions` enum value (resolved against
+   * this chain's v1.3.1 permissions instances) or an explicit address; `zeroAddress` (the
+   * default) leaves the manager open.
+   */
+  permissions?: Address | Permissions;
+};
 
 /**
  * A Game Mode launch on the Any route (AnyFlaunchZap → the vested AnyPositionManager) into a
@@ -4754,6 +4782,53 @@ export class ReadWriteFlaunchSDK extends ReadFlaunchSDK {
         permissions: permissions ?? zeroAddress,
         initializeData: encodeGameDeveloperSplitInitializeData({
           gameDeveloper,
+          moderator,
+          splitReceivers,
+        }),
+        depositData: "0x",
+      },
+    });
+  }
+
+  /**
+   * Launches a paired-token coin into a DynamicAddressFeeSplitManager deployed in the same
+   * transaction: the creator and the manager owner take their shares of every fee, the named
+   * receivers divide the remainder, and the moderator may re-split them later. The paired twin
+   * of `flaunchWithDynamicSplitManager` (which rides the legacy zap) and the no-game-developer
+   * twin of `flaunchPairedTokenWithGameDeveloperSplit`.
+   *
+   * The implementation is the v1.3.1 `DynamicAddressFeeSplitManagerV1_3Address` — the
+   * FlaunchZapV1_3 is bound to `TreasuryManagerFactoryV1_3Address`, which only approves that
+   * generation — and `permissions` resolves through the v1.3.1 permissions instances.
+   * @throws Error naming the chain when the manager is not deployed there
+   */
+  flaunchPairedTokenWithDynamicSplitManager(
+    params: FlaunchPairedTokenWithDynamicSplitManagerParams
+  ) {
+    const manager = DynamicAddressFeeSplitManagerV1_3Address[this.chainId];
+    if (!manager || !doesChainSupportPairedTokenLaunch(this.chainId)) {
+      throw new Error(
+        `DynamicAddressFeeSplitManager paired-token launches are not available on chain ${this.chainId}`
+      );
+    }
+
+    const {
+      creatorShare,
+      managerOwnerShare,
+      moderator,
+      splitReceivers,
+      permissions,
+      ...launch
+    } = params;
+
+    return this.readWriteFlaunchZapV1_3.flaunch({
+      ...launch,
+      treasuryManagerParams: {
+        manager,
+        permissions: resolvePermissionsV1_3(permissions, this.chainId),
+        initializeData: encodeDynamicSplitInitializeData({
+          creatorShare,
+          managerOwnerShare,
           moderator,
           splitReceivers,
         }),

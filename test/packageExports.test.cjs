@@ -77,6 +77,13 @@ const packageExports = [
   ["@flaunch/sdk/helpers", "doesChainSupportGameDeveloperSplit"],
   ["@flaunch/sdk/helpers", "doesChainSupportAnyGameDeveloperSplit"],
   ["@flaunch/sdk/helpers", "isGameDeveloperFeeSplitManagerImplementation"],
+  // manager initializeData encoders (0.16.0): root and /helpers
+  ["@flaunch/sdk", "encodeDynamicSplitInitializeData"],
+  ["@flaunch/sdk", "encodeStaticSplit"],
+  ["@flaunch/sdk", "resolvePermissionsV1_3"],
+  ["@flaunch/sdk/helpers", "encodeDynamicSplitInitializeData"],
+  ["@flaunch/sdk/helpers", "encodeStaticSplit"],
+  ["@flaunch/sdk/helpers", "resolvePermissionsV1_3"],
 ];
 
 test("published package exports resolve through CommonJS and ESM", async () => {

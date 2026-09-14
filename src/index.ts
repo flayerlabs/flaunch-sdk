@@ -204,6 +204,7 @@ export {
 export type {
   FlaunchAnyWithGameDeveloperSplitParams,
   FlaunchPairedTokenWithGameDeveloperSplitParams,
+  FlaunchPairedTokenWithDynamicSplitManagerParams,
   PreparedAnyGameLaunch,
 } from "./sdk/FlaunchSDK";
 export {

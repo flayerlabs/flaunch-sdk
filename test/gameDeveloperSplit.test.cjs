@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { decodeAbiParameters, getAddress, zeroAddress } = require("viem");
-const { base, baseSepolia, robinhood, mainnet } = require("viem/chains");
+const { base, baseSepolia, robinhood, mainnet, unichain } = require("viem/chains");
 const {
   GAME_DEVELOPER_SHARE,
   GAME_DEVELOPER_SPLIT_SHARE_TOTAL,
@@ -168,6 +168,11 @@ const {
   doesChainSupportVestedLaunch,
   isGameDeveloperFeeSplitManagerImplementation,
   toAnyFlaunchZapFlaunchParams,
+  DynamicAddressFeeSplitManagerV1_3Address,
+  FlaunchZapV1_3Address,
+  encodeDynamicSplitInitializeData,
+  Permissions,
+  ClosedPermissionsV1_3Address,
 } = require("../dist/index.cjs.js");
 
 const CHAIN = baseSepolia.id;
@@ -437,3 +442,99 @@ const GOLDEN_ANY_GAME_LAUNCH = {
   data: 
     "0x34813cc30000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000042000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000001e000000000000000000000000011111111111111111111111111111111111111110000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000ee6b2800000000000000000000000000000000000000000000000000000000000000022000000000000000000000000079fc52701cd4be6f9ba9adc94c207de37e3314eb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000070a71c800000000000000000000000000000000000000000000000000000000000000380000000000000000000000000000000000000000000000000000000000000000a4172656e6120436f696e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000054152454e41000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c697066733a2f2f6172656e61000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001401d4955e8009e4c0c2adaeae92b8663d3922e786f4be931aee43e5f25cdb9cf0900000000000000000000000054cdcf0b0000000000000000000000000000cafe000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c025772d4a421392c00dc09aad6e68d98e05f4f9a9f55e436f58a0f9ee165340760000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000016345785d8a00000000000000000000000000006666666666666666666666666666666666666666000000000000000000000000777777777777777777777777777777777777777700000000000000000000000000000000000000000000000000000000713fb3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000999999999999999999999999999999999999999900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000024000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000dead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000333333333333333333333333333333333333333300000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000dead000000000000000000000000000000000000000000000000000000000007a120000000000000000000000000111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000005b8d80000000000000000000000000222222222222222222222222222222222222222200000000000000000000000000000000000000000000000000000000003567e00000000000000000000000000000000000000000000000000000000000000000",
 };
+
+const DYNAMIC_INITIALIZE_PARAMS = [INITIALIZE_PARAMS[0]];
+
+test("paired route: flaunchPairedTokenWithDynamicSplitManager deploys the v1.3.1 dynamic split manager", async () => {
+  const manager = DynamicAddressFeeSplitManagerV1_3Address[base.id];
+  const zap = FlaunchZapV1_3Address[base.id];
+  const splitReceivers = [
+    { address: launcher, share: 60_00000n },
+    { address: friend, share: 40_00000n },
+  ];
+  const launch = {
+    flaunchParams: {
+      name: "Split Coin",
+      symbol: "SPLIT",
+      tokenUri: "ipfs://split",
+      premineAmount: 0n,
+      creator: SIGNER,
+      creatorFeeAllocation: 8_000,
+      flaunchAt: 0n,
+      initialPriceParams: "0x1234",
+      feeCalculatorParams: "0x",
+      pairedToken: zeroAddress,
+    },
+    trustedFeeSigner: zeroAddress,
+    maxPremineCost: 0n,
+    value: 12n,
+    creatorShare: 10_00000n,
+    managerOwnerShare: 5_00000n,
+    moderator: MODERATOR,
+    splitReceivers,
+  };
+
+  const drift = recordingDrift();
+  const hash = await new ReadWriteFlaunchSDK(base.id, drift).flaunchPairedTokenWithDynamicSplitManager(launch);
+  assert.equal(hash, TX_HASH);
+  const [write] = drift.interactions.filter((i) => i.kind === "write");
+  assert.equal(write.fn, "flaunch");
+  assert.equal(write.address.toLowerCase(), zap.toLowerCase());
+  assert.deepEqual(Object.keys(write.args), [
+    "_flaunchParams",
+    "_treasuryManagerParams",
+    "_trustedFeeSigner",
+    "_maxPremineCost",
+  ]);
+  assert.deepEqual(write.options, { value: 12n });
+  assert.equal(write.args._trustedFeeSigner, zeroAddress);
+  // the implementation is the v1.3.1 generation: FlaunchZapV1_3 is bound to
+  // TreasuryManagerFactoryV1_3Address, which approves only that one
+  assert.equal(write.args._treasuryManagerParams.manager, manager);
+  assert.equal(write.args._treasuryManagerParams.permissions, zeroAddress, "open by default");
+  assert.equal(write.args._treasuryManagerParams.depositData, "0x");
+  // byte-identical to the shared encoder
+  assert.equal(
+    write.args._treasuryManagerParams.initializeData,
+    encodeDynamicSplitInitializeData(launch)
+  );
+  const [params] = decodeAbiParameters(DYNAMIC_INITIALIZE_PARAMS, write.args._treasuryManagerParams.initializeData);
+  assert.equal(params.creatorShare, 10_00000n);
+  assert.equal(params.ownerShare, 5_00000n);
+  assert.equal(params.moderator, getAddress(MODERATOR));
+  assert.deepEqual(
+    params.recipientShares.map((r) => [r.recipient, r.share]),
+    splitReceivers.map((r) => [getAddress(r.address), r.share])
+  );
+
+  // permissions accept the enum or an explicit address
+  const enumDrift = recordingDrift();
+  await new ReadWriteFlaunchSDK(base.id, enumDrift).flaunchPairedTokenWithDynamicSplitManager({
+    ...launch,
+    permissions: Permissions.CLOSED,
+  });
+  assert.equal(
+    enumDrift.interactions.filter((i) => i.kind === "write")[0].args._treasuryManagerParams.permissions,
+    ClosedPermissionsV1_3Address[base.id]
+  );
+  const addressDrift = recordingDrift();
+  await new ReadWriteFlaunchSDK(base.id, addressDrift).flaunchPairedTokenWithDynamicSplitManager({
+    ...launch,
+    permissions: CLONE,
+  });
+  assert.equal(
+    addressDrift.interactions.filter((i) => i.kind === "write")[0].args._treasuryManagerParams.permissions,
+    CLONE
+  );
+
+  // the encoder's own checks still apply, and a chain without the manager names itself
+  assert.throws(
+    () => new ReadWriteFlaunchSDK(base.id, recordingDrift()).flaunchPairedTokenWithDynamicSplitManager({ ...launch, moderator: zeroAddress }),
+    /moderator cannot be zero/
+  );
+  assert.equal(DynamicAddressFeeSplitManagerV1_3Address[unichain.id], undefined);
+  assert.throws(
+    () => new ReadWriteFlaunchSDK(unichain.id, recordingDrift()).flaunchPairedTokenWithDynamicSplitManager(launch),
+    new RegExp(`not available on chain ${unichain.id}`)
+  );
+});
