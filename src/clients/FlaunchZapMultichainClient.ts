@@ -232,7 +232,7 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
    * is what selects it.
    */
   async flaunch(chainId: number, params: FlaunchParams) {
-    // Ethereum's current generation defaults to native ETH. Keep the legacy client and
+    // The v1.4 generation defaults to native ETH. Keep the legacy client and
     // address maps intact for existing pools while new launches use the paired-token ABI.
     if (usesNativeDefaultPairing(chainId)) {
       const flaunchParams = this.prepareFlaunch(params);

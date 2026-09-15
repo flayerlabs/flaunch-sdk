@@ -1,4 +1,5 @@
 import {
+  arbitrum,
   base,
   baseSepolia,
   mainnet,
@@ -20,6 +21,7 @@ export const FlaunchZapAddress: Addresses = {
 // launch into the manager IMPLEMENTATION, stranding the launch NFT — never point a manager launch
 // at one. Base Sepolia's zap is still factory-less.
 export const FlaunchZapV1_3Address: Addresses = {
+  [arbitrum.id]: "0xBd5ae825DDC67834002A6b586CfF5802971e3A7F",
   [mainnet.id]: "0x11666704fcd96e1CAFF9b99501FA1e79D64900fC", // v1.4.0, factory-bound, 2026-09-11
   [base.id]: "0xf787d757674b21efd713fb636b16ed994bfa82a8",
   [baseSepolia.id]: "0x0c560537301396683c150eade42277a04b96e6d8", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202); bound to factory 0x98dfdd0A…
@@ -64,6 +66,7 @@ export const FlaunchPositionManagerV1_2Address: Addresses = {
 // (fresh post-#285 InternalSwapPool; same registry / escrow / factory as v1.3.1). Robinhood's
 // superseded v1.3.1 hooks still serve their pools — see SupersededPositionManagerV1_3Address.
 export const FlaunchPositionManagerV1_3Address: Addresses = {
+  [arbitrum.id]: "0xCAb62e007AB6656877Ab556cEa330De27AE025DC",
   [mainnet.id]: "0xb741a710E456FC6d7f76c88F5C56B27D05e8A5DC", // v1.4.0 (same paired-token ABI family)
   [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
   [baseSepolia.id]: "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
@@ -91,6 +94,7 @@ export const SupersededPositionManagerV1_3Address: Record<number, Address[]> = {
 // PositionManagers used by the paired-token launch path. This is separate from
 // FlaunchPositionManagerV1_3Address because that map also drives version routing.
 export const PairedTokenPositionManagerV1_3Address: Addresses = {
+  [arbitrum.id]: "0xCAb62e007AB6656877Ab556cEa330De27AE025DC",
   [mainnet.id]: "0xb741a710E456FC6d7f76c88F5C56B27D05e8A5DC",
   [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
   [baseSepolia.id]: "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
@@ -98,6 +102,7 @@ export const PairedTokenPositionManagerV1_3Address: Addresses = {
 };
 
 export const PairedTokenRegistryV1_3Address: Addresses = {
+  [arbitrum.id]: "0x16EF4F8e1d41cE4727d98ae0E9EC4e9cDDd14Ac4",
   [mainnet.id]: "0xFc28B339376018727eFcD45fdb257D0A0861A391",
   [base.id]: "0x26958422636655b5a4eCE23a062e2EB61332c6da",
   [baseSepolia.id]: "0x23cb441d18ca75c6a14964b06806df668d45a1c6",
@@ -115,6 +120,7 @@ export const PairedTokenRegistryV1_3Address: Addresses = {
 // v1.3.3). `PoolSwapForHookV1_3Address` maps each hook to the router its gate approves; use
 // `poolSwapForHook(chainId, hook)` from `helpers`.
 export const PoolSwapV1_3Address: Addresses = {
+  [arbitrum.id]: "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A",
   [mainnet.id]: "0x05c6C717B2a985809a83D27F779044c2da27fd56", // Protected API v1, v1.4.0
   [base.id]: "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // Protected API v1 (v1.3.4), deployed 2026-09-08 @ 51035669, Basescan-verified
   [baseSepolia.id]: "0xb32a99502f433f78454a4d20304e654cdda75c5c", // Protected API v1; verified and gate-approved 2026-09-07
@@ -123,6 +129,10 @@ export const PoolSwapV1_3Address: Addresses = {
 
 /** Hook (lowercase) → the PoolSwap approved on that hook generation's spend gate. */
 export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>> = {
+  [arbitrum.id]: {
+    "0xcab62e007ab6656877ab556cea330de27ae025dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A",
+    "0xbbe1b9831117e829fe80be97fce82f2b49c1a5dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A",
+  },
   [mainnet.id]: {
     "0xb741a710e456fc6d7f76c88f5c56b27d05e8a5dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
     "0x0215c3ef94ef3e86c32e847c662ad649000965dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
@@ -205,6 +215,7 @@ export const AnyPositionManagerAddress: Addresses = {
 
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyPositionManagerV1_3Address: Addresses = {
+  [arbitrum.id]: "0xbbE1b9831117E829Fe80Be97fCe82F2b49C1a5DC",
   [mainnet.id]: "0x0215C3ef94ef3e86c32e847c662ad649000965Dc",
   [base.id]: "0x6ea0edee449a287504990df8d87951b9436825dc",
   [baseSepolia.id]: "0x9abfbdc34a294de5210c0889f21d5af54c4965dc", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
@@ -228,6 +239,7 @@ export const FlaunchV1_2Address: Addresses = {
 
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const FlaunchV1_3Address: Addresses = {
+  [arbitrum.id]: "0x99c55BC5C2e4a15a98cBc705F240cF8b1889775f",
   [mainnet.id]: "0x393a09033Bf60cF67809d6D8b77C1254f39d2FF9",
   [base.id]: "0x475a09618bfd00fa4cb03b8504e95b62075e6f7d",
   [baseSepolia.id]: "0xc17a8523290ea839b4c1ddef121d8736a06f5623", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
@@ -241,6 +253,7 @@ export const AnyFlaunchAddress: Addresses = {
 
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyFlaunchV1_3Address: Addresses = {
+  [arbitrum.id]: "0x71001DD43209015cdd430F2ea043c93AfcE43666",
   [mainnet.id]: "0x154f2E2ef6fAdFFe6bCF4d86a2639A6Ef4981c5C",
   [base.id]: "0x299c7e6992a4630d77a8cbd60aa78e17189e53f7",
   [baseSepolia.id]: "0x2154c604df568a5285284d1c4918dc98c39240df", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
@@ -295,6 +308,7 @@ export const BidWallV1_1Address: Addresses = {
 
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const BidWallV1_3Address: Addresses = {
+  [arbitrum.id]: "0x36b41E8F726011D26Dc9812d2e8E76F490e9B590",
   [mainnet.id]: "0xE02e0C934969647E0099Cb231BBC6BBCe1b91dF6",
   [base.id]: "0x0dae90b70f62ce3b1d5278f4763bd1f595d6a687",
   [baseSepolia.id]: "0xdedfd72f5e0555bd21e3c3d94297dee2a435b366", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
@@ -308,6 +322,7 @@ export const AnyBidWallAddress: Addresses = {
 
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const AnyBidWallV1_3Address: Addresses = {
+  [arbitrum.id]: "0xd9e3c35ea96C1108a574050BD1Be940b1622A147",
   [mainnet.id]: "0xE1eBcD62AEBd327A4c22dB9e68A8E81119a7eABF",
   [base.id]: "0x9d58ca8011096ad711babf0d990c45b9d5bb047d",
   [baseSepolia.id]: "0x4c8a5c0fe00448c5bbbd0d7aec95c9ef3b81262b", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
@@ -362,6 +377,7 @@ export const BuyBackManagerAddress: Addresses = {
 // and zap, paying out per payout asset (ETH = address(0), or the coin's paired token). Managers
 // deployed from the old factory keep working through the unsuffixed APIs.
 export const TreasuryManagerFactoryV1_3Address: Addresses = {
+  [arbitrum.id]: "0x15617e43Ba6E4f51cE2A54d30Af26E744190e313",
   [mainnet.id]: "0xD2B91d92AF59b7BEd15b5458feCF0e87C8A7c21e",
   [base.id]: "0xB03Be6c735ef90189D6a22bBC8F6A45a33348fDe",
   [baseSepolia.id]: "0x98dfdd0aac46c85fa35d67941d394019b7e3a18d", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
@@ -369,6 +385,7 @@ export const TreasuryManagerFactoryV1_3Address: Addresses = {
 };
 
 export const RevenueManagerV1_3Address: Addresses = {
+  [arbitrum.id]: "0x32e59c950DBBf0123E3A7008DaB56480c3500983",
   [mainnet.id]: "0xf2947840eeA730f9E9ECC6559526392d68e89569",
   [base.id]: "0x908D692E628073A5B644Bc32B8dF57A5d1842288",
   [baseSepolia.id]: "0x0cf6bdf0a85a9d6763361037985b76c8893553af", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
@@ -376,6 +393,7 @@ export const RevenueManagerV1_3Address: Addresses = {
 };
 
 export const AddressFeeSplitManagerV1_3Address: Addresses = {
+  [arbitrum.id]: "0xB4512bf57d50fbcb64a3adF8b17a79b2A204C18C",
   [mainnet.id]: "0x740f8278Fd9C548fF50b64805337eA8Ad24b2553",
   [base.id]: "0x7dC776cf57DacA91b315fe4F8803577dAb560ba5",
   [baseSepolia.id]: "0x7397390360bd9d559d9277e60d47b99933791232", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
@@ -396,6 +414,7 @@ export const GameDeveloperFeeSplitManagerAddress: Addresses = {
 };
 
 export const DynamicAddressFeeSplitManagerV1_3Address: Addresses = {
+  [arbitrum.id]: "0xFE5a906379F78965393D23BC604036bb74214926",
   [mainnet.id]: "0x0f03Aa8d303Ee15ed3Be81Bf43c41EFfFa4a7a5B",
   [base.id]: "0xC4a0B79A0dB1F7F67da97E7F9A8867B6CaF017b2",
   [baseSepolia.id]: "0xd37aee3edebf59f149b5d3b29b6ad2239f8a6b00", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
@@ -403,6 +422,7 @@ export const DynamicAddressFeeSplitManagerV1_3Address: Addresses = {
 };
 
 export const ERC721OwnerFeeSplitManagerV1_3Address: Addresses = {
+  [arbitrum.id]: "0x8C31AC369f6e2807109d0C25F2c26dB6A666138e",
   [mainnet.id]: "0x43ff2F15A821C24A0576Fc376B789846080F2F0f",
   [base.id]: "0xDbFA9d3cab72EAE6Ba44ebC27175706aA451d9c0",
   [baseSepolia.id]: "0xce84bdd578c60e98e79a3a05392010b443ddaa9e", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
@@ -410,6 +430,7 @@ export const ERC721OwnerFeeSplitManagerV1_3Address: Addresses = {
 };
 
 export const StakingManagerV1_3Address: Addresses = {
+  [arbitrum.id]: "0xA56f12E2488E0Eb0EFC3468a39aefEFa9F28233a",
   [mainnet.id]: "0xEf8be05d08fbCBFB89bAa05fA7a56BD818Ca9181",
   [base.id]: "0x72b9192017361eA00cDc1Cf1AC0F178cf89920cA",
   [baseSepolia.id]: "0x4d5616c04e59ce47b40e54c1d106363da74c1a2e", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
@@ -417,6 +438,7 @@ export const StakingManagerV1_3Address: Addresses = {
 };
 
 export const GroupMapperV1_3Address: Addresses = {
+  [arbitrum.id]: "0xd0c557c72B2d381f7794599E4d39d906744FBc21",
   [mainnet.id]: "0x3F7C69F516238FEC37CF06Fde0B95BD37B2B531D",
   [base.id]: "0x4a68638179De37163d86B10e6B4b927CA1a0dE87",
   [baseSepolia.id]: "0x41964dd84f25cd5830f5c4deeb54efab3ed7e087", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
@@ -426,6 +448,7 @@ export const GroupMapperV1_3Address: Addresses = {
 // Deploys + initializes a v1.3.1 manager through the v1.3.1 factory in one call. Launching a coin
 // straight into a manager stays with the core FlaunchZap.
 export const FlaunchManagerZapV1_3Address: Addresses = {
+  [arbitrum.id]: "0xa55904b7a456859649766CF7f30264A90285df05",
   [mainnet.id]: "0xf7579C3cb8607F6CE00311465d28Ac45666f39Ad",
   [base.id]: "0xD7E0c1D2B2a588cEC3b2Bdc9428FfE59b739749B",
   [baseSepolia.id]: "0xf175a370eb26ea26c42caaecd10ee723ed844c50", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
@@ -442,6 +465,7 @@ export const TokenImporterAddress: Addresses = {
 // previous generation's importer (Base's 0x6fb66f4f… is being retired) and is left untouched for
 // callers importing into the old hooks.
 export const TokenImporterV1_3Address: Addresses = {
+  [arbitrum.id]: "0x083a628477048CB37831A4A7D8Ebff1A0659af3f",
   [mainnet.id]: "0x319A17b4D6529107FC9a8312371f3C74D4083e5e",
   [base.id]: "0xea78c26690b5a0dde2a5a8db7760b5da79bfd76e",
   [baseSepolia.id]: "0xc65fc67fa953869df97ab2dba96fa58f2bdc9891", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
@@ -501,6 +525,7 @@ export const WhitelistedPermissionsAddress: Addresses = {
 // WhitelistedPermissions validates a group against the factory it was built with, so managers
 // from the v1.3.1 factory need this instance. ClosedPermissions is factory-agnostic and reused.
 export const WhitelistedPermissionsV1_3Address: Addresses = {
+  [arbitrum.id]: "0x862D5471B3E49d48E2E152793f00c91a9CAf054A",
   [mainnet.id]: "0x4765Ea884Bc29219eCC430F2C478d4f646071d78",
   [base.id]: "0xaCE028CB08A19C4d2a6e442516EbA7d114C09Af9",
   [baseSepolia.id]: "0xbe6245b2c8d59618a080bd5b2d67b3c813a9ab7c", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
@@ -509,6 +534,7 @@ export const WhitelistedPermissionsV1_3Address: Addresses = {
 
 export const ClosedPermissionsV1_3Address: Addresses = {
   ...ClosedPermissionsAddress,
+  [arbitrum.id]: "0x8ea82B35B890987CD6B55271F593aBbC0Fe226f6",
   [mainnet.id]: "0x00BD5d089626F84E0DfF241D5e71336Add6D4bF3",
 };
 /** =========== */
@@ -526,6 +552,7 @@ export const FeeEscrowAddress: Addresses = {
 // `.vpt2` deployment (flaunch-contracts deployments/base-sepolia.md); Robinhood from
 // deployments/robinhood-mainnet.md.
 export const FeeEscrowV1_3Address: Addresses = {
+  [arbitrum.id]: "0x635B4afCf977ed946BDa31fc7E381c970159077a",
   [mainnet.id]: "0xd992F465d55B005E8D2Aff9fcE977Cb78f5652e0",
   [base.id]: "0x17fbf54d6d15ebff82eee77e616f701952d08bb4",
   [baseSepolia.id]: "0xf4af7b459e971d9757c2100c626199c6c6334fca",
@@ -539,6 +566,7 @@ export const ReferralEscrowAddress: Addresses = {
 
 // v1.3.1 (GitHub release v1.3.1) - Base mainnet + Robinhood (4663); no baseSepolia deployment
 export const ReferralEscrowV1_3Address: Addresses = {
+  [arbitrum.id]: "0x9972EFc88674bbeeB1B0f0116A73a3006a98Ba3c",
   [mainnet.id]: "0x2FAde59484677FE39144D6d1B74aE57E8E424595",
   [base.id]: "0xe86bfebc4f094d36074833618779d279a9af01aa",
   [baseSepolia.id]: "0x7c6088c1185fbb770deb1ca7ddeed4ba57659663", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
@@ -556,6 +584,7 @@ export const FLETHAddress: Addresses = {
 /** Default pairing for new launches. FLETHAddress remains available for legacy pools. */
 export const DefaultPairedTokenAddress: Addresses = {
   ...FLETHAddress,
+  [arbitrum.id]: zeroAddress,
   [mainnet.id]: zeroAddress,
 };
 
@@ -633,6 +662,7 @@ export const FastFlaunchZapAddress: Addresses = {
 };
 
 export const PoolManagerAddress: Addresses = {
+  [arbitrum.id]: "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
   [base.id]: "0x498581fF718922c3f8e6A244956aF099B2652b2b",
   [baseSepolia.id]: "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
   [mainnet.id]: "0x000000000004444c5dc75cB358380D2e3dE08A90",
@@ -641,12 +671,14 @@ export const PoolManagerAddress: Addresses = {
 };
 
 export const UniversalRouterAddress: Addresses = {
+  [arbitrum.id]: "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
   [base.id]: "0x6fF5693b99212Da76ad316178A184AB56D299b43",
   [baseSepolia.id]: "0x492E6456D9528771018DeB9E87ef7750EF184104",
   ...freshChainNativeETHSwapAddresses("universalRouter"),
 };
 
 export const QuoterAddress: Addresses = {
+  [arbitrum.id]: "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
   [mainnet.id]: "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203",
   [base.id]: "0x0d5e0f971ed27fbff6c2837bf31316121532048d",
   [baseSepolia.id]: "0x4a6513c898fe1b2d0e78d3b0e0a4a151589b1cba",
@@ -654,6 +686,7 @@ export const QuoterAddress: Addresses = {
 };
 
 export const StateViewAddress: Addresses = {
+  [arbitrum.id]: "0x76fd297e2d437cd7f76d50f01afe6160f86e9990",
   [base.id]: "0xA3c0c9b65baD0b08107Aa264b0f3dB444b867A71",
   [baseSepolia.id]: "0x571291b572ed32ce6751a2Cb2486EbEe8DEfB9B4",
   [mainnet.id]: "0x7fFE42C4a5DEeA5b0feC41C94C136Cf115597227",
@@ -662,6 +695,7 @@ export const StateViewAddress: Addresses = {
 };
 
 export const Permit2Address: Addresses = {
+  [arbitrum.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
   [mainnet.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
   [base.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
   [baseSepolia.id]: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
@@ -669,6 +703,7 @@ export const Permit2Address: Addresses = {
 };
 
 export const UniV4PositionManagerAddress: Addresses = {
+  [arbitrum.id]: "0xd88f38f930b7952f2db2432cb002e7abbf3dd869",
   [base.id]: "0x7C5f5A4bBd8fD63184577525326123B519429bDc",
   [baseSepolia.id]: "0x4B2C77d209D3405F41a037Ec6c77F7F5b8e2ca80",
 };

@@ -9,7 +9,7 @@ const {
   toHex,
   zeroAddress,
 } = require("viem");
-const { base, mainnet, robinhood, unichain } = require("viem/chains");
+const { arbitrum, base, mainnet, robinhood, unichain } = require("viem/chains");
 const {
   AddressFeeSplitManagerAddress,
   AddressFeeSplitManagerV1_3Address,
@@ -21,11 +21,12 @@ const {
   FlaunchZapV1_3Address,
   createFlaunchCalldata,
   decodeCallData,
+  isV1_4Deployment,
 } = require("../dist/index.cjs.js");
 
 const CREATOR = "0x1111111111111111111111111111111111111111";
 const FEE = 987_654_321n;
-const multichainDeploymentChains = [mainnet, unichain, robinhood];
+const multichainDeploymentChains = [mainnet, arbitrum, unichain, robinhood];
 const params = {
   name: "Multichain Coin",
   symbol: "MULTI",
@@ -40,7 +41,7 @@ const params = {
 };
 
 function multichainHarness(chain) {
-  const nativeDefault = chain.id === mainnet.id;
+  const nativeDefault = isV1_4Deployment(chain.id);
   const abi = nativeDefault ? FlaunchZapV1_3Abi : FlaunchZapAbi;
   const zapAddress = nativeDefault ? FlaunchZapV1_3Address[chain.id] : FlaunchZapMultichainAddress[chain.id];
   const ethCalls = [];
@@ -84,7 +85,7 @@ function multichainHarness(chain) {
   };
 }
 
-test("multichain launches encode the canonical tuple on all three chains", async (t) => {
+test("multichain launches encode the canonical tuple on every deployment chain", async (t) => {
   for (const chain of multichainDeploymentChains) {
     await t.test(`${chain.name} (${chain.id})`, async () => {
       const harness = multichainHarness(chain);
@@ -408,11 +409,11 @@ test("every multichain IPFS entry point preserves its manager and uploaded URI",
     const cases = [
       ["flaunchIPFS", params, undefined],
       ["flaunchIPFSWithRevenueManager", { ...params, revenueManagerInstanceAddress }, revenueManagerInstanceAddress],
-      ["flaunchIPFSWithSplitManager", staticSplit, (chain.id === mainnet.id ? AddressFeeSplitManagerV1_3Address : AddressFeeSplitManagerAddress)[chain.id]],
+      ["flaunchIPFSWithSplitManager", staticSplit, (isV1_4Deployment(chain.id) ? AddressFeeSplitManagerV1_3Address : AddressFeeSplitManagerAddress)[chain.id]],
       ["flaunchIPFSWithDynamicSplitManager", {
         ...params, creatorShare: 2_000_000n, managerOwnerShare: 0n,
         moderator: CREATOR, splitReceivers: [{ address: CREATOR, share: 10_000_000n }],
-      }, (chain.id === mainnet.id ? DynamicAddressFeeSplitManagerV1_3Address : DynamicAddressFeeSplitManagerAddress)[chain.id]],
+      }, (isV1_4Deployment(chain.id) ? DynamicAddressFeeSplitManagerV1_3Address : DynamicAddressFeeSplitManagerAddress)[chain.id]],
     ];
     for (const [method, input, manager] of cases) {
       const { sdk, abi, nativeDefault } = multichainHarness(chain);
@@ -425,5 +426,5 @@ test("every multichain IPFS entry point preserves its manager and uploaded URI",
       if (manager) assert.equal(decoded.args[1].manager.toLowerCase(), manager.toLowerCase());
     }
   }
-  assert.equal(upload.mock.callCount(), 24);
+  assert.equal(upload.mock.callCount(), 8 * multichainDeploymentChains.length);
 });

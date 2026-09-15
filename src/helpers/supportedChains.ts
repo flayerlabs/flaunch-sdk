@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import {
+  arbitrum,
   mainnet,
   robinhood,
   unichain,
@@ -14,6 +15,7 @@ import {
   MemecoinVestingAddress,
   DynamicAddressFeeSplitManagerAddress,
   GameDeveloperFeeSplitManagerAddress,
+  DynamicAddressFeeSplitManagerV1_3Address,
   AnyPositionManagerV1_3Address,
   FeeEscrowV1_3Address,
   FlaunchManagerZapV1_3Address,
@@ -30,6 +32,7 @@ import {
 } from "../addresses";
 
 const multichainDeploymentChainIds = new Set<number>([
+  arbitrum.id,
   mainnet.id,
   unichain.id,
   robinhood.id,
@@ -43,13 +46,21 @@ export function isChainSupported(chainId: number): boolean {
   return chainIdToChain[chainId] !== undefined;
 }
 
+/** Chains using the native-ETH v1.4 core and factory-bound zap generation. */
+export function isV1_4Deployment(chainId: number): boolean {
+  return chainId === mainnet.id || chainId === arbitrum.id;
+}
+
 /**
  * Whether the DynamicAddressFeeSplitManager is deployed
  * on the given chain. Split-manager flaunches revert on chains without a
  * deployment, so callers should gate on this before using them.
  */
 export function doesChainSupportSplitManager(chainId: number): boolean {
-  return DynamicAddressFeeSplitManagerAddress[chainId] !== undefined;
+  return (
+    DynamicAddressFeeSplitManagerAddress[chainId] !== undefined ||
+    DynamicAddressFeeSplitManagerV1_3Address[chainId] !== undefined
+  );
 }
 
 /**

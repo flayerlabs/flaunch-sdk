@@ -19,9 +19,11 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 - 🏗️ Build your own token launchpads on top of the flaunch protocol
 - 📊 Read functions for token and pool data
 - 🔒 Built-in Permit2 support for gasless approvals
-- 🌐 Works on Base, Base Sepolia, Ethereum, Unichain, and Robinhood
+- 🌐 Works on Base, Base Sepolia, Ethereum, Arbitrum One, Unichain, and Robinhood
 
 ## Network support
+
+Arbitrum One (`42161`) uses the [v1.4.1 deployment and manager/zap addendum](https://github.com/flayerlabs/flaunch-contracts/releases/tag/v1.4.1) through the same `*V1_3` APIs. Its only bootstrap pairing is native ETH (`zeroAddress`); use protected paired-token swaps and token-denominated fee claims. No legacy flETH, Doppler or Game Mode deployment is assumed. Uniswap periphery addresses follow the [official Arbitrum deployment list](https://developers.uniswap.org/docs/protocols/v4/deployments#arbitrum-one-42161).
 
 Base and Base Sepolia retain their generation-specific launch paths. Unichain and Robinhood retain their legacy multichain launch helpers. Robinhood also supports native ETH swaps and paired-token launches through their separate capability-gated paths.
 

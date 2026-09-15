@@ -12,7 +12,7 @@ const {
   toHex,
   zeroAddress,
 } = require("viem");
-const { base, robinhood, baseSepolia, mainnet, unichain } = require("viem/chains");
+const { arbitrum, base, robinhood, baseSepolia, mainnet, unichain } = require("viem/chains");
 const {
   createFlaunchCalldata,
   decodeCallData,
@@ -153,8 +153,8 @@ test("the multi-asset manager generation retains the Base, Robinhood and Base Se
   for (const [name, [map, expectedBase, expectedRobinhood]] of Object.entries(RELEASE_ADDRESSES)) {
     assert.deepEqual(
       Object.keys(map).sort(),
-      [String(robinhood.id), String(base.id), String(baseSepolia.id), String(mainnet.id)].sort(),
-      `${name} should include Ethereum and the existing deployments`
+      [String(robinhood.id), String(base.id), String(baseSepolia.id), String(mainnet.id), String(arbitrum.id)].sort(),
+      `${name} should include Arbitrum, Ethereum and the existing deployments`
     );
     assert.equal(getAddress(map[base.id]), getAddress(expectedBase), name);
     assert.equal(getAddress(map[robinhood.id]), getAddress(expectedRobinhood), name);

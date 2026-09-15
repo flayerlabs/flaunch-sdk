@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.16.0]
+## [0.16.0-preview.5]
 
 ### Added
 
@@ -53,6 +53,15 @@
 ### Unchanged
 
 - Launches without a pre-buy: same methods, same bytes. Existing callers need no changes.
+
+## [0.16.0] - 2026-09-14
+
+### Added
+- Arbitrum One v1.4.1 core, factory-bound zap and multi-asset manager addresses, native-ETH launches, protected swaps and token-denominated fee claims.
+- `isV1_4Deployment()` identifies Ethereum and Arbitrum without implying legacy flETH, Doppler or Game Mode support.
+
+### Fixed
+- Chains without a legacy FeeEscrow can initialize the SDK; legacy fee methods fail explicitly while current token-denominated claims remain available.
 
 ## [0.15.0] - 2026-09-11
 
