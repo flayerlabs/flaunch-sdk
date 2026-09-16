@@ -1,15 +1,15 @@
 # Publishing the combined SDK
 
-The `0.16.0-preview.5` candidate combines the vested/Game Mode branch (PR #43)
+The `0.17.0-preview.1` candidate (previously labelled `0.16.0-preview.5`) combines the vested/Game Mode branch (PR #43)
 with the Arbitrum v1.4.1 release (PR #44), retaining spend-gate v2. Published
 `0.16.0` contains Arbitrum support but does not contain the preview APIs.
 
 ## Release preparation
 
-1. Merge this integration into `release/0.16.0-vested-game-developer`, then finish
-   reviewing PR #43 against `master`. Preserve the Arbitrum deployments and the
+1. This integration lives on `release/0.17.0-vested-game-developer` (a superset of
+   `master` at `0.16.0`); PR #43 is retargeted to it and reviewed against `master`. Preserve the Arbitrum deployments and the
    preview launch APIs. Do not publish the old PR #43 snapshot.
-2. Use a new version: recommend `0.17.0` for the stable combined release, since
+2. The version is `0.17.0` for the stable combined release, since
    `SpendReferralMessage` changes from `maxSpendWei` plus `nonce` to cumulative
    `spendCeilingWei`. Its encoder/decoder now use spend-gate v2; callers must
    migrate with their gate. `0.16.0` cannot be republished.

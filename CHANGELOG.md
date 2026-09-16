@@ -1,6 +1,8 @@
 # Changelog
 
-## [0.16.0-preview.5]
+## [0.17.0-preview.1] - UNRELEASED
+
+Preview of the combined vested / Game Mode / pre-buy release on top of the published `0.16.0` (Arbitrum v1.4.1). The `0.16.0` version number is taken on npm by a build without these APIs, so this line ships as `0.17.0`. Earlier tarballs of this work were labelled `0.16.0-preview.1` to `0.16.0-preview.5`.
 
 ### Added
 
