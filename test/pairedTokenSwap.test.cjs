@@ -28,6 +28,8 @@ const {
   sqrtPriceLimitFromSlippage,
   PAIRED_TOKEN_TYPE,
   poolSwapForHook,
+  AnyFlaunchZapPositionManagerAddress,
+  getV1_3PositionManagers,
 } = require("../dist/index.cjs.js");
 
 const SENDER = "0x1111111111111111111111111111111111111111";
@@ -716,6 +718,46 @@ test("superseded Sepolia hooks submit and approve the newly gate-approved protec
   const approveWrite = writes.find((w) => w.fn === "approve");
   assert.equal(
     approveWrite.args.spender.toLowerCase(),
+    "0xb32a99502f433f78454a4d20304e654cdda75c5c",
+  );
+});
+
+test("a vested-launch coin resolves to the AnyFlaunchZap hook and swaps through the protected router", async () => {
+  // The vested AnyPositionManager is its own hook address. The locator must reach it (it is the
+  // last v1.3 hook probed, after the current PM, the import AnyPM and the superseded ones), the
+  // pool key must name it, and the router must be the one its spend gate approves — the vested
+  // hook shares the v1.3.3 PositionManager's dispatcher and gate, and only the PROTECTED router
+  // has the `swapExactInput` the SDK submits.
+  const vested = AnyFlaunchZapPositionManagerAddress[baseSepolia.id].toLowerCase();
+  assert.ok(getV1_3PositionManagers(baseSepolia.id).map((h) => h.toLowerCase()).includes(vested));
+  assert.equal(
+    poolSwapForHook(baseSepolia.id, vested).toLowerCase(),
+    "0xb32a99502f433f78454a4d20304e654cdda75c5c",
+  );
+
+  const vestedKey = pairedPoolKey(COIN, MUSD, vested);
+  const { drift, interactions } = recordingDrift({
+    poolKey: vestedKey,
+    answeringHook: vested,
+    allowance: 0n,
+  });
+  const sdk = new ReadWriteFlaunchSDK(baseSepolia.id, drift);
+
+  const pool = await sdk.resolvePairedPool(COIN);
+  assert.equal(pool.poolKey.hooks.toLowerCase(), vested);
+
+  await sdk.buyCoinPairedToken({
+    coinAddress: COIN,
+    amountIn: 1_000_000n,
+    slippageBps: 100,
+    sender: SENDER,
+  });
+  const writes = interactions.filter((i) => i.kind === "write");
+  const swapWrite = writes.find((w) => w.fn === "swapExactInput");
+  assert.ok(swapWrite, "a swap was written");
+  assert.equal(swapWrite.address.toLowerCase(), "0xb32a99502f433f78454a4d20304e654cdda75c5c");
+  assert.equal(
+    writes.find((w) => w.fn === "approve").args.spender.toLowerCase(),
     "0xb32a99502f433f78454a4d20304e654cdda75c5c",
   );
 });

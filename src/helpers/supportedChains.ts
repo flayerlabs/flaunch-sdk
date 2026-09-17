@@ -122,17 +122,22 @@ export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
 }
 
 /**
- * Every v1.3 hook that has ever been the paired-token PositionManager on a chain: the current
- * one plus any superseded generations that still serve their pools. Use this when deciding
- * whether an arbitrary hook address (e.g. from an indexer `Pool.positionManager`) is a v1.3 hook.
+ * Every v1.3 hook that has ever served paired-token pools on a chain: the current
+ * PositionManager, the import-generation AnyPositionManager, any superseded generations that
+ * still serve their pools, and the vested-launch hook (the AnyPositionManager behind the
+ * AnyFlaunchZap - same pool shape and registry, its own address). Use this when deciding whether
+ * an arbitrary hook address (e.g. from an indexer `Pool.positionManager`) is a v1.3 hook; the
+ * paired-pool locator, `PoolCreated` decoding and the liquidity helpers all iterate it.
  */
 export function getV1_3PositionManagers(chainId: number): Address[] {
   const current = PairedTokenPositionManagerV1_3Address[chainId];
   const any = AnyPositionManagerV1_3Address[chainId];
+  const vested = AnyFlaunchZapPositionManagerAddress[chainId];
   return [
     ...(current ? [current] : []),
     ...(any ? [any] : []),
     ...(SupersededPositionManagerV1_3Address[chainId] ?? []),
+    ...(vested ? [vested] : []),
   ];
 }
 
