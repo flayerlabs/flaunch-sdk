@@ -137,7 +137,6 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
   [mainnet.id]: {
     "0xb741a710e456fc6d7f76c88f5c56b27d05e8a5dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
     "0x0215c3ef94ef3e86c32e847c662ad649000965dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
-    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56", // vested AnyPM (CREATE3 parity, pending deploy)
   },
   [base.id]: {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // v1.3.1 PM, gate 0xBdbF…
@@ -271,14 +270,15 @@ export const AnyFlaunchV1_3Address: Addresses = {
 // which keep serving `anyFlaunch()`. Bound to the chain's v1.3.1 TreasuryManagerFactory
 // (`TreasuryManagerFactoryV1_3Address`) and PairedTokenRegistry.
 //
-// Mainnets (1 / 4663 / 8453 / 42161): CREATE3 parity deploy through Create3Factory 0x65cC…EDF7 with
-// one salt and one deployer per contract, so every mainnet shares one address — predicted 2026-09-17
-// by flaunch-contracts `script/deployment/AnyVestedStack.s.sol` and reproduced by dry runs on each
-// chain. DO NOT SHIP the mainnet entries until flaunch-contracts `deployments/game-mode-all-chains.md`
+// Mainnets (4663 / 8453 / 42161): CREATE3 parity deploy through Create3Factory 0x65cC…EDF7 with one
+// salt and one deployer per contract, so every mainnet shares one address — predicted 2026-09-17 by
+// flaunch-contracts `script/deployment/AnyVestedStack.s.sol` and reproduced by dry runs on each chain.
+// DO NOT SHIP the mainnet entries until flaunch-contracts `deployments/game-mode-all-chains.md`
 // records the broadcast for that chain: `doesChainSupportVestedLaunch` turns true the moment they exist.
+// Ethereum (1) is deliberately absent: vesting is not offered there (Linear FLA2-417 tracks a later
+// Ethereum deploy); pre-buy on Ethereum keeps working through the paired route.
 export const AnyFlaunchZapAddress: Addresses = {
   [arbitrum.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
-  [mainnet.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
   [base.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
   [baseSepolia.id]: "0xaA0872BcA9c6eCB0Cda78528cd89149822bc124D",
   [robinhood.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
@@ -286,7 +286,6 @@ export const AnyFlaunchZapAddress: Addresses = {
 
 export const MemecoinVestingAddress: Addresses = {
   [arbitrum.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
-  [mainnet.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
   [base.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
   [baseSepolia.id]: "0x3F8004335C113Fac0873c061a28670F0AaD6A87b",
   [robinhood.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
@@ -298,7 +297,6 @@ export const MemecoinVestingAddress: Addresses = {
  */
 export const AnyFlaunchZapPositionManagerAddress: Addresses = {
   [arbitrum.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
-  [mainnet.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
   [base.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
   [baseSepolia.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
   [robinhood.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
@@ -307,7 +305,6 @@ export const AnyFlaunchZapPositionManagerAddress: Addresses = {
 /** The AnyFlaunch ERC721 of `AnyFlaunchZapPositionManagerAddress` (launch NFTs of vested coins). */
 export const AnyFlaunchZapFlaunchAddress: Addresses = {
   [arbitrum.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
-  [mainnet.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
   [base.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
   [baseSepolia.id]: "0xE9ec22D7c245743DC5dC958e5cCd664732Ae04b9",
   [robinhood.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
@@ -443,9 +440,8 @@ export const GameDeveloperFeeSplitManagerAddress: Addresses = {
   // Mainnets: CREATE3 parity deploy via flaunch-managers `Managers.s.sol`, salt
   // keccak256('flaunch.GameDeveloperFeeSplitManager.v1'), predicted 2026-09-17 and reproduced by
   // dry runs on each chain. DO NOT SHIP until the broadcast and the factory's `approveManager` are
-  // recorded for that chain (Ethereum's approval is a Safe transaction).
+  // recorded for that chain. Ethereum (1) is absent until FLA2-417 deploys it there.
   [arbitrum.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
-  [mainnet.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
   [base.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
   [robinhood.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
 };

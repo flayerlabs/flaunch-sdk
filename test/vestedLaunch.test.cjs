@@ -129,7 +129,8 @@ const writes = (drift) => drift.interactions.filter((i) => i.kind === "write");
 const reads = (drift, fn) => drift.interactions.filter((i) => i.kind === "read" && i.fn === fn);
 
 test("vested launch addresses cover Base Sepolia plus the CREATE3 parity mainnets, and stay distinct from the import-generation hook", () => {
-  const MAINNETS = [base.id, robinhood.id, mainnet.id, arbitrum.id];
+  // Ethereum is deliberately absent: vesting is not offered there yet (FLA2-417)
+  const MAINNETS = [base.id, robinhood.id, arbitrum.id];
   for (const map of [AnyFlaunchZapAddress, MemecoinVestingAddress, AnyFlaunchZapPositionManagerAddress, AnyFlaunchZapFlaunchAddress]) {
     assert.ok(map[CHAIN]);
     assert.equal(Object.keys(map).length, 1 + MAINNETS.length);
@@ -148,8 +149,9 @@ test("vested launch addresses cover Base Sepolia plus the CREATE3 parity mainnet
   for (const chainId of MAINNETS) {
     assert.equal(doesChainSupportVestedLaunch(chainId), true);
   }
-  // a chain the SDK knows but without the vested stack (Unichain) refuses the vested clients by name
+  // chains the SDK knows but without the vested stack (Unichain, Ethereum) refuse the vested clients by name
   assert.equal(doesChainSupportVestedLaunch(unichain.id), false);
+  assert.equal(doesChainSupportVestedLaunch(mainnet.id), false);
   assert.equal(doesChainSupportVestedLaunch(999_999), false);
   const drift = recordingDrift();
   assert.throws(() => new ReadFlaunchSDK(unichain.id, drift).readAnyFlaunchZap, /Vested launches are not supported on chain 130/);
