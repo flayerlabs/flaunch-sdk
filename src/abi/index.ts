@@ -4,6 +4,7 @@ export * from "./BidWall";
 export * from "./BidWallV1_1";
 export * from "./DynamicAddressFeeSplitManager";
 export * from "./DynamicAddressFeeSplitManagerV1_3";
+export * from "./GameDeveloperFeeSplitManager";
 export * from "./ERC721OwnerFeeSplitManagerV1_3";
 export * from "./FairLaunch";
 export * from "./FairLaunchV1_1";
@@ -38,5 +39,10 @@ export * from "./TreasuryManagerFactory";
 export * from "./TreasuryManagerV1_3";
 export * from "./UniversalRouter";
 export * from "./PoolSwapV1_3";
+export * from "./AnyFlaunch";
+export * from "./AnyFlaunchV1_3";
+export * from "./AnyFlaunchZap";
+export * from "./AnyFlaunchZapPositionManager";
+export * from "./MemecoinVesting";
 
 export * from "./Referral";

@@ -73,6 +73,7 @@ test("Arbitrum SDK never constructs absent legacy contracts", () => {
   const client = new sdk.ReadWriteFlaunchSDK(arbitrum.id, drift);
   assert.ok(addresses.includes(DEPLOYMENTS.FlaunchZapV1_3Address.toLowerCase()));
   assert.ok(addresses.includes(DEPLOYMENTS.TreasuryManagerFactoryV1_3Address.toLowerCase()));
+  assert.throws(() => client.readFlaunchZapMultichain, /multichain FlaunchZap is not deployed/);
   assert.throws(() => client.readFeeEscrow, /Legacy FeeEscrow.*creatorRevenueByToken/);
   assert.throws(() => client.readWriteFeeEscrow, /Legacy FeeEscrow.*withdrawCreatorRevenueByToken/);
   assert.equal(client.readFeeEscrowV1_3.contract.address, DEPLOYMENTS.FeeEscrowV1_3Address);
@@ -101,4 +102,16 @@ test("Arbitrum receipt parsing ignores unrelated and malformed logs", () => {
   for (const address of [CREATOR, DEPLOYMENTS.FlaunchPositionManagerV1_3Address, DEPLOYMENTS.AnyPositionManagerV1_3Address]) {
     assert.equal(client.getPoolCreatedFromLogs([{ address, topics: [], data: "0x" }]), null);
   }
+});
+
+
+test("combined candidate retains Arbitrum pre-buy and Sepolia preview capabilities", () => {
+  const capabilities = sdk.getLaunchPreBuyCapabilities(arbitrum.id);
+  assert.equal(capabilities.routes.pairedToken.supported, true);
+  assert.equal(capabilities.routes.dynamicSplitManager.supported, false);
+  assert.equal(sdk.doesChainSupportVestedLaunch(arbitrum.id), false);
+  assert.equal(sdk.doesChainSupportGameDeveloperSplit(arbitrum.id), false);
+  assert.equal(sdk.doesChainSupportVestedLaunch(84532), true);
+  assert.equal(sdk.doesChainSupportGameDeveloperSplit(84532), true);
+  assert.equal(sdk.doesChainSupportAnyGameDeveloperSplit(84532), true);
 });

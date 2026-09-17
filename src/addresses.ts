@@ -145,6 +145,7 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
     "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // `.vpt2` PM, gate 0x2c91…
     "0x28118f40eca9b884beb42b0196409a73269525dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // `.vpt2` AnyPM, same gate
     "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.3.3 PM, gate 0x54cd…
+    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // vested AnyPM (AnyFlaunchZap generation, 2026-09-11): same dispatcher + gate 0x54cd… as the v1.3.3 PM. Gate 0x54cd… approves BOTH the legacy 0xF0f3… and the protected 0xb32a… routers; the SDK swaps via swapExactInput, which only the protected one has
   },
   [robinhood.id]: {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 PM, gate 0xB246…
@@ -257,6 +258,30 @@ export const AnyFlaunchV1_3Address: Addresses = {
   [base.id]: "0x299c7e6992a4630d77a8cbd60aa78e17189e53f7",
   [baseSepolia.id]: "0x2154c604df568a5285284d1c4918dc98c39240df", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0x1bbbD15A6D5176edc7B42f2cc6cA800D9d74015D",
+};
+
+// Vested launches (AnyFlaunchZap + MemecoinVesting), Base Sepolia only so far: deployed
+// 2026-09-11 (blocks 46682862–46682881). The zap launches through its own AnyPositionManager
+// generation (`AnyFlaunchZapPositionManagerAddress`, ERC721 `AnyFlaunchZapFlaunchAddress`) — a
+// SEPARATE hook from the v1.3.3 import-generation `AnyPositionManagerV1_3Address` /
+// `AnyFlaunchV1_3Address`, which keep serving `anyFlaunch()`. Bound to the chain's v1.3.1
+// TreasuryManagerFactory (`TreasuryManagerFactoryV1_3Address`) and PairedTokenRegistry.
+export const AnyFlaunchZapAddress: Addresses = {
+  [baseSepolia.id]: "0xaA0872BcA9c6eCB0Cda78528cd89149822bc124D",
+};
+
+export const MemecoinVestingAddress: Addresses = {
+  [baseSepolia.id]: "0x3F8004335C113Fac0873c061a28670F0AaD6A87b",
+};
+
+/** The AnyPositionManager hook `AnyFlaunchZapAddress` launches through; emits the vested coins' `PoolCreated`. */
+export const AnyFlaunchZapPositionManagerAddress: Addresses = {
+  [baseSepolia.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
+};
+
+/** The AnyFlaunch ERC721 of `AnyFlaunchZapPositionManagerAddress` (launch NFTs of vested coins). */
+export const AnyFlaunchZapFlaunchAddress: Addresses = {
+  [baseSepolia.id]: "0xE9ec22D7c245743DC5dC958e5cCd664732Ae04b9",
 };
 
 export const FairLaunchAddress: Addresses = {
@@ -373,6 +398,19 @@ export const AddressFeeSplitManagerV1_3Address: Addresses = {
   [base.id]: "0x7dC776cf57DacA91b315fe4F8803577dAb560ba5",
   [baseSepolia.id]: "0x7397390360bd9d559d9277e60d47b99933791232", // Base Sepolia v1.3.1 managers, 2026-09-03 (blocks 46348872–46348885)
   [robinhood.id]: "0x7dc0f14204841e0314eB0265a0c420995F200243",
+};
+
+/**
+ * GameDeveloperFeeSplitManager: the Game Mode manager whose game developer holds a protected 5%
+ * slot (flaunch-managers `feat/game-developer-fee-split-manager`). Approved on each chain's
+ * v1.3.1 `TreasuryManagerFactoryV1_3Address`. Live on Base Sepolia only; fill another chain in
+ * once `Managers.s.sol` has broadcast it there and the factory owner has approved it.
+ */
+export const GameDeveloperFeeSplitManagerAddress: Addresses = {
+  // Base Sepolia, deployed 2026-09-14 at block 46817954 and approved on
+  // TreasuryManagerFactory 0x98dfdd0AAc46c85FA35d67941d394019b7e3a18d
+  // (flaunch-managers PR #6). GAME_DEVELOPER_SHARE is a pinned 5_00000 (5%).
+  [baseSepolia.id]: "0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e",
 };
 
 export const DynamicAddressFeeSplitManagerV1_3Address: Addresses = {

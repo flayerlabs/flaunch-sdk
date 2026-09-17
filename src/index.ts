@@ -24,9 +24,65 @@ export type {
   RecipientShare,
 } from "./clients/DynamicAddressFeeSplitManagerClient";
 export type {
+  FlaunchParams,
+  FlaunchIPFSParams,
+  FlaunchWithRevenueManagerParams,
+  FlaunchWithRevenueManagerIPFSParams,
+  FlaunchWithSplitManagerParams,
+  FlaunchWithSplitManagerIPFSParams,
   FlaunchWithDynamicSplitManagerParams,
   FlaunchWithDynamicSplitManagerIPFSParams,
+  BaseFlaunchArgs,
+  ResolvedTreasuryManagerInput,
+  WithTreasuryManagerParams,
 } from "./clients/FlaunchZapClient";
+export {
+  ReadFlaunchZap,
+  ReadWriteFlaunchZap,
+  FLAUNCH_TOTAL_SUPPLY,
+  buildBaseFlaunchArgs,
+  encodeInitialPriceParams,
+  toFlaunchParamsWithRevenueManager,
+  toFlaunchParamsWithSplitManager,
+  toFlaunchParamsWithDynamicSplitManager,
+} from "./clients/FlaunchZapClient";
+export {
+  ReadFlaunchZapMultichain,
+  ReadWriteFlaunchZapMultichain,
+  buildMultichainFlaunchArgs,
+  toFlaunchParamsMultichain,
+} from "./clients/FlaunchZapMultichainClient";
+export type {
+  FlaunchParamsMultichain,
+  MultichainFlaunchArgs,
+} from "./clients/FlaunchZapMultichainClient";
+
+// Launch pre-buy: a creator buys an exact share of supply atomically with the launch
+export * from "./sdk/launchPreBuy";
+export {
+  createLaunchCostProbe,
+  LAUNCH_COST_PROBE_BYTECODE,
+} from "./sdk/launchCostProbe";
+export type {
+  LaunchCostProbe,
+  LaunchCostProbeParams,
+  LaunchCostProbeResult,
+} from "./sdk/launchCostProbe";
+export {
+  decodeLaunchPreBuyCalldata,
+  encodeAnyVestedFlaunch,
+  encodeLegacyFlaunch,
+  encodeMultichainFlaunch,
+  encodePairedFlaunch,
+  encodePairedFlaunchWithManager,
+} from "./sdk/launchPreBuyPlanner";
+export type {
+  LaunchPreBuyExecuteOptions,
+  LaunchPreBuyExecution,
+  LaunchPreBuyVerification,
+  DecodedLaunchPreBuyCalldata,
+  PairedTreasuryManagerArgs,
+} from "./sdk/launchPreBuyPlanner";
 export {
   ReadFeeEscrowV1_3,
   ReadWriteFeeEscrowV1_3,
@@ -42,6 +98,60 @@ export type {
   PairedTokenFlaunchFee,
   PairedTokenFlaunchParams,
 } from "./clients/FlaunchZapV1_3Client";
+// Vested launches: the AnyFlaunchZap (Base Sepolia) escrows vesting schedules in MemecoinVesting at launch
+export {
+  ReadAnyFlaunchZap,
+  ReadWriteAnyFlaunchZap,
+  buildAnyFlaunchZapFlaunchArgs,
+  encodeAnyFlaunchZapFlaunch,
+} from "./clients/AnyFlaunchZapClient";
+export type {
+  AnyFlaunchZapFee,
+  AnyFlaunchZapFlaunchArgs,
+  AnyFlaunchZapFlaunchCall,
+  AnyFlaunchZapFlaunchParams,
+  AnyFlaunchZapTreasuryManagerArgs,
+  BuildAnyFlaunchZapFlaunchArgsParams,
+  CalculateAnyFlaunchZapFeeParams,
+  VestingScheduleArgs,
+} from "./clients/AnyFlaunchZapClient";
+export {
+  ReadMemecoinVesting,
+  ReadWriteMemecoinVesting,
+} from "./clients/MemecoinVestingClient";
+export type {
+  VestingPosition,
+  VestingPositionSchedule,
+  VestingSchedule,
+} from "./clients/MemecoinVestingClient";
+export {
+  assertVestedSupplyWithinCap,
+  hashVestingSchedules,
+  maxVestedSupply,
+  toAnyFlaunchZapFlaunchParams,
+  toAnyFlaunchZapTreasuryManagerArgs,
+  toFlaunchVestedParamsWithDynamicSplitManager,
+  toFlaunchVestedParamsWithRevenueManager,
+  toFlaunchVestedParamsWithSplitManager,
+  toVestingScheduleArgs,
+  vestedAmountFromBps,
+  vestedSupplyOf,
+} from "./clients/VestedLaunchParams";
+export type {
+  FlaunchVestedIPFSParams,
+  FlaunchVestedParams,
+  FlaunchVestedWithDynamicSplitManagerIPFSParams,
+  FlaunchVestedWithDynamicSplitManagerParams,
+  FlaunchVestedWithRevenueManagerIPFSParams,
+  FlaunchVestedWithRevenueManagerParams,
+  FlaunchVestedWithSplitManagerIPFSParams,
+  FlaunchVestedWithSplitManagerParams,
+  VestingScheduleParams,
+} from "./clients/VestedLaunchParams";
+export type {
+  VestedLaunchEventData,
+  VestedLaunchSchedule,
+} from "./sdk/FlaunchSDK";
 export { ReadPairedTokenRegistryV1_3 } from "./clients/PairedTokenRegistryV1_3Client";
 export type { PairedTokenConfig } from "./clients/PairedTokenRegistryV1_3Client";
 // v1.3.1 paired-token swaps through PoolSwap (mUSD-, native-ETH-, flETH- or B20-paired pools)
@@ -88,6 +198,17 @@ export {
   ReadWriteDynamicAddressFeeSplitManagerV1_3,
 } from "./clients/DynamicAddressFeeSplitManagerV1_3Client";
 export type { DynamicRecipientInfoV1_3 } from "./clients/DynamicAddressFeeSplitManagerV1_3Client";
+// Game Mode: the DynamicAddressFeeSplitManager whose game developer holds a protected 5% slot
+export {
+  ReadGameDeveloperFeeSplitManager,
+  ReadWriteGameDeveloperFeeSplitManager,
+} from "./clients/GameDeveloperFeeSplitManagerClient";
+export type {
+  FlaunchAnyWithGameDeveloperSplitParams,
+  FlaunchPairedTokenWithGameDeveloperSplitParams,
+  FlaunchPairedTokenWithDynamicSplitManagerParams,
+  PreparedAnyGameLaunch,
+} from "./sdk/FlaunchSDK";
 export {
   ReadStakingManagerV1_3,
   ReadWriteStakingManagerV1_3,

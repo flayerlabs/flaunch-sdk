@@ -166,7 +166,7 @@ test("trusted and spend-gated payloads preserve every authorization field and si
     referrer: USER,
     message,
   });
-  const spend = { ...message, buyer: OTHER, maxSpendWei: 123n, nonce: 42n };
+  const spend = { ...message, buyer: OTHER, spendCeilingWei: 123n };
   const payload = sdk.encodeSpendReferralHookData(spend, USER);
   assert.deepEqual(sdk.decodeSpendReferralHookData(payload), {
     referrer: USER,
@@ -177,6 +177,77 @@ test("trusted and spend-gated payloads preserve every authorization field and si
     payload,
   );
   assert.equal(sdk.resolveReferralHookData({ hookData: payload }), payload);
+});
+
+test("spend gate v2 payload is referrer + a 5-field SpendAuthorization tuple at offset 160", () => {
+  const spend = {
+    buyer: OTHER,
+    poolId: POOL_ID,
+    deadline: 1_800_000_000n,
+    spendCeilingWei: 5n * 10n ** 18n,
+    signature: `0x${"cd".repeat(65)}`,
+  };
+  const payload = sdk.encodeSpendReferralHookData(spend, USER);
+  const word = (i) => payload.slice(2 + i * 64, 2 + (i + 1) * 64);
+  // envelope: word 0 referrer, word 1 offset of the tuple (2 head words = 64, same as v1)
+  assert.equal(word(0), USER.slice(2).toLowerCase().padStart(64, "0"));
+  assert.equal(BigInt(`0x${word(1)}`), 64n);
+  // tuple head: buyer, poolId, deadline, spendCeilingWei, then the offset of `signature`
+  // = 5 head fields * 32 = 160 (v1's six-field tuple put it at 192)
+  assert.equal(word(2), OTHER.slice(2).toLowerCase().padStart(64, "0"));
+  assert.equal(`0x${word(3)}`, POOL_ID.toLowerCase());
+  assert.equal(BigInt(`0x${word(4)}`), spend.deadline);
+  assert.equal(BigInt(`0x${word(5)}`), spend.spendCeilingWei);
+  assert.equal(BigInt(`0x${word(6)}`), 160n);
+  assert.equal(BigInt(`0x${word(7)}`), 65n);
+  assert.equal(payload.length, 2 + 64 * (8 + 3));
+  const decoded = sdk.decodeSpendReferralHookData(payload);
+  assert.deepEqual(decoded, { referrer: USER, message: spend });
+  assert.equal(Object.keys(decoded.message).length, 5);
+  assert.ok(!("nonce" in decoded.message));
+  assert.ok(!("maxSpendWei" in decoded.message));
+  // a signature is reusable until `deadline`: re-encoding the same authorization is byte-identical
+  assert.equal(sdk.encodeSpendReferralHookData(spend, USER), payload);
+  // resolveReferralHookData is shape-agnostic and passes the v2 payload through untouched
+  assert.equal(sdk.resolveReferralHookData({ hookData: payload }), payload);
+  assert.equal(
+    sdk.resolveReferralHookData({ hookData: payload, referrer: USER }),
+    payload,
+  );
+  assert.equal(sdk.decodeReferralHookData(payload), USER);
+  assert.throws(
+    () => sdk.resolveReferralHookData({ hookData: payload, referrer: OTHER }),
+    /conflicts/,
+  );
+  // a v1 six-field payload no longer decodes as a v2 authorization
+  const v1 = encodeAbiParameters(
+    [
+      { type: "address" },
+      {
+        type: "tuple",
+        components: [
+          { type: "address" },
+          { type: "bytes32" },
+          { type: "uint256" },
+          { type: "uint256" },
+          { type: "uint256" },
+          { type: "bytes" },
+        ],
+      },
+    ],
+    [USER, [OTHER, POOL_ID, spend.deadline, 1n, 0n, spend.signature]],
+  );
+  assert.equal(BigInt(`0x${v1.slice(2 + 64 * 7, 2 + 64 * 8)}`), 192n);
+  assert.notDeepEqual(
+    (() => {
+      try {
+        return sdk.decodeSpendReferralHookData(v1);
+      } catch {
+        return null;
+      }
+    })(),
+    { referrer: USER, message: spend },
+  );
 });
 
 test("configuration reads the supplied hook and live pool-specific fee at one block", async () => {
@@ -446,8 +517,7 @@ test("public quote helpers accept referrer and gated sell authorization", async 
       buyer: OTHER,
       poolId: POOL_ID,
       deadline: 999n,
-      maxSpendWei: 1n,
-      nonce: 0n,
+      spendCeilingWei: 1n,
       signature: "0x12",
     },
     USER,

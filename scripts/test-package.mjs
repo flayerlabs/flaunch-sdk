@@ -91,7 +91,7 @@ import {
 const user = '0x1111111111111111111111111111111111111111' as const;
 const escrow = '0x2222222222222222222222222222222222222222' as const;
 const poolId = '0x' + '00'.repeat(32) as \`0x\${string}\`;
-const payload = encodeSpendReferralHookData({ buyer: user, poolId, deadline: 1n, maxSpendWei: 1n, nonce: 0n, signature: '0x' }, user);
+const payload = encodeSpendReferralHookData({ buyer: user, poolId, deadline: 1n, spendCeilingWei: 1n, signature: '0x' }, user);
 decodeSpendReferralHookData(resolveReferralHookData({ referrer: user, hookData: payload }));
 decodeReferralEvents([], { chainId: base.id, hooks: [], escrows: [escrow] });
 const reader = createFlaunch({ publicClient });

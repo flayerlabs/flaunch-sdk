@@ -23,9 +23,9 @@ Ordinary `buyCoin`, `sellCoin`, `getBuyQuoteExactInput`, `getBuyQuoteExactOutput
 
 Quotes and execution use identical referral hook data. `resolveReferralHookData({ referrer, hookData })` rejects conflicting addresses and malformed leading words, preserving supplied payload bytes. Omitting `referrer` preserves an embedded referrer. A nonzero referrer with empty hook data is a conflict.
 
-`encodeTrustedReferralHookData(message, referrer)` packages legacy trusted-signer authorizations; `encodeSpendReferralHookData(message, referrer)` packages spend-gated/Game Mode authorizations. Matching decode helpers expose their fields. These helpers package **existing** signatures; your authorized signer must produce the authorization for the actual chain, pool and gate. Never replace signed hook data with an address-only encoding.
+`encodeTrustedReferralHookData(message, referrer)` packages legacy trusted-signer authorizations; `encodeSpendReferralHookData(message, referrer)` packages spend gate v2 ("cumulative spend ceilings") Game Mode authorizations: `abi.encode(address referrer, (address buyer, bytes32 poolId, uint256 deadline, uint256 spendCeilingWei, bytes signature))`. Matching decode helpers expose their fields. These helpers package **existing** signatures; your authorized signer must produce the authorization for the actual chain, pool and gate. Never replace signed hook data with an address-only encoding.
 
-The existing spend-gate signature binds buyer, pool, deadline, spend cap and nonce, but not the leading referrer. Neither links nor SDK checks enforce immutable attribution onchain. Self-referral and first-/last-click policies are app choices.
+The spend gate v2 signature (EIP-712 domain `FlaunchSpendGate`, version `2`, struct `SpendAuthorization(address buyer,bytes32 poolId,uint256 deadline,uint256 spendCeilingWei)`) binds buyer, pool, deadline and a **cumulative** spend ceiling, but not the leading referrer. There is no nonce: the same signature is reusable until `deadline` by design, and the gate enforces the ceiling against the buyer's running total in that pool. v1 payloads (`maxSpendWei` + `nonce`, a six-field tuple) are no longer accepted. Neither links nor SDK checks enforce immutable attribution onchain. Self-referral and first-/last-click policies are app choices.
 
 ## Fee configuration and balances
 

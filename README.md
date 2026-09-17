@@ -14,6 +14,7 @@ _Note: Add this `llms-full.txt` file into Cursor IDE / LLMs to provide context a
 ## Features
 
 - 🚀 Flaunch new memecoins
+- 🛒 Launch pre-buy: the creator buys an exact share of supply atomically with the launch
 - 💱 Buy and sell memecoins via Uniswap V4 hooks
 - 🏗️ Build your own token launchpads on top of the flaunch protocol
 - 📊 Read functions for token and pool data
@@ -44,6 +45,9 @@ Static-split recipients independently divide 100% of the pool remaining after cr
   - [Flaunching a Memecoin](#flaunching-a-memecoin)
   - [Flaunching with a Paired Token](#flaunching-with-a-paired-token)
     - [How to generate `base64Image` from User uploaded file](#how-to-generate-base64image-from-user-uploaded-file)
+  - [Launching with a pre-buy](#launching-with-a-pre-buy)
+  - [Launching with vesting](#launching-with-vesting)
+  - [Game Mode launches with a developer split (Any route)](#game-mode-launches-with-a-developer-split-any-route)
   - [Flaunch with Address Fee Splits](#flaunch-with-address-fee-splits)
   - [Buying a Flaunch coin](#buying-a-flaunch-coin)
   - [Selling with Permit2](#selling-with-permit2)
@@ -285,6 +289,314 @@ const handleImageChange = useCallback(
 />;
 ```
 
+### Launching with a pre-buy
+
+A creator can buy an exact percentage of the coin's supply as part of the launch transaction.
+The SDK prices it by executing the launch in an `eth_call` (a state-override probe measures the
+ETH the launch really consumes — the zaps' `calculateFee` is a linear estimate that under-quotes
+larger premines), binds the quote to the chain, sender and launch parameters, and executes it
+through the same launch route the coin would use anyway — one transaction, with the maximum
+payment enforced on chain (`msg.value` for ETH-funded routes, `maxPremineCost` for ERC20
+pairings). The capability matrix, quote model and revalidation rules are in
+[guides/launch-pre-buy.md](guides/launch-pre-buy.md).
+
+Where it works: on Robinhood, Ethereum and Unichain every route (`standard`, `revenueManager`,
+`splitManager`, `dynamicSplitManager`, `pairedToken`); on Base and Base Sepolia only
+`pairedToken` — the legacy Base zap cannot premine with fair launches deprecated
+(`ROUTE_PREMINE_UNAVAILABLE`), so an ordinary Base coin with a pre-buy launches through
+`pairedToken` with flETH or native ETH on the current v1.3 PositionManager.
+
+Percentages are integer basis points (`100 = 1%`, `percentToBps("2.5") === 250`), slippage is
+integer basis points the caller chooses, and the default route limit is 10% of supply.
+
+```ts
+import { getLaunchPreBuyCapabilities, percentToBps } from "@flaunch/sdk";
+
+// 1. Which routes can pre-buy here, and in what asset? Pure — no RPC.
+const capabilities = getLaunchPreBuyCapabilities(publicClient.chain.id);
+if (!capabilities.routes.standard.supported) {
+  console.log(capabilities.routes.standard.reasons); // e.g. ["CHAIN_UNSUPPORTED"]
+}
+
+// 2. Quote. `params` is exactly what you would pass to `flaunch()` today (premineAmount unset).
+// (`standard` is a multichain-zap route — Robinhood, Ethereum, Unichain. On Base use `pairedToken`.)
+const result = await flaunchRead.planLaunchPreBuy({
+  route: "standard",
+  params: {
+    name: "Test",
+    symbol: "TEST",
+    tokenUri: "ipfs://...",
+    fairLaunchPercent: 0,
+    fairLaunchDuration: 0,
+    initialMarketCapUSD: 4_000,
+    creator: address,
+    creatorFeeAllocationPercent: 80,
+  },
+  preBuyBps: percentToBps("2.5"), // 2.5% of supply
+  slippageBps: 50, // 0.5% headroom over the protocol quote, enforced on chain
+  sender: address,
+});
+
+if (!result.supported) {
+  // machine-readable: GASLESS_UNSUPPORTED, PROTECTED_LAUNCH_UNSUPPORTED, EXCEEDS_ROUTE_LIMIT, …
+  throw new Error(result.reasons.join(", "));
+}
+
+const { plan } = result;
+plan.premineAmount; // exact coins bought: TOTAL_SUPPLY * 250 / 10_000
+plan.fee; // { asset: { chainId, address: zeroAddress, decimals: 18 }, amount } — the flaunching fee, always native ETH
+plan.payment; // { asset, expected, max } — the purchase in its real payment asset; expected is the simulated real cost
+plan.pricing; // { method: "simulation" | "protocolQuoteWithSimulatedImpact" | "protocolQuote", protocolQuote }
+plan.value; // ETH sent with the launch (fee + max purchase on ETH routes); unspent ETH is refunded
+plan.approvals; // ERC20 approve calls to send first (empty on ETH routes)
+plan.expiresAtMs; // default 30 s after the quote block was read
+plan.funding.sufficient; // sender balance versus value / maxPremineCost at the quote block
+
+// 3. Execute. Revalidates chain, signer, expiry, binding, calldata and balances, re-quotes and
+// simulates, then sends the plan's exact calldata. Throws LaunchPreBuyRequoteRequiredError
+// (code "REQUOTE_REQUIRED") before any signature when a fresh plan is needed — re-plan and
+// show the new numbers. Never retries.
+const { hash } = await flaunchWrite.executeLaunchPreBuy(plan);
+const created = await flaunchRead.getLaunchPreBuyResultFromTx(hash, plan);
+console.log(created?.memecoin, created?.params.premineAmount === plan.premineAmount);
+```
+
+Handling a stale quote:
+
+```ts
+import { LaunchPreBuyRequoteRequiredError, LaunchPreBuyInsufficientBalanceError } from "@flaunch/sdk";
+
+try {
+  await flaunchWrite.executeLaunchPreBuy(plan);
+} catch (error) {
+  if (error instanceof LaunchPreBuyRequoteRequiredError) {
+    // error.reason: EXPIRED | CHAIN_MISMATCH | SENDER_MISMATCH | BINDING_MISMATCH | CALLDATA_MISMATCH | PRICE_MOVED | FEE_CHANGED
+    const fresh = await flaunchRead.planLaunchPreBuy(input); // then show fresh.plan and ask again
+  } else if (error instanceof LaunchPreBuyInsufficientBalanceError) {
+    // error.asset, error.required, error.available — nothing was sent
+  } else throw error;
+}
+```
+
+Split-manager launch (earnings shared with recipients; the premined coins still go to the
+creator — the manager only takes the launch NFT):
+
+```ts
+const result = await flaunchRead.planLaunchPreBuy({
+  route: "dynamicSplitManager",
+  params: {
+    ...baseParams, // the same FlaunchParams fields as above
+    creatorShare: 0n,
+    managerOwnerShare: 0n,
+    moderator: address,
+    splitReceivers: [
+      { address: "0xRecipientA", share: 70_00000n },
+      { address: "0xRecipientB", share: 30_00000n },
+    ],
+  },
+  preBuyBps: 100,
+  slippageBps: 50,
+  sender: address,
+});
+```
+
+Custom-paired launch (Base, Base Sepolia, Robinhood). The payment asset follows the pairing:
+native ETH and flETH pools are paid from `msg.value`; an ERC20 pairing (a B20 equity at 8
+decimals, mUSD/USDC at 6) is paid in that token and needs an approval to the v1.3 zap, which
+the plan carries. The flaunching fee is native ETH either way and stays separate:
+
+```ts
+const result = await flaunchRead.planLaunchPreBuy({
+  route: "pairedToken",
+  params: {
+    name: "Paired Coin",
+    symbol: "PAIR",
+    tokenUri: "ipfs://...",
+    creator: address,
+    creatorFeeAllocation: 8_000,
+    flaunchAt: 0n,
+    initialPriceParams,
+    feeCalculatorParams: "0x", // or a Game Mode gate's params — a spend gate is supported
+    pairedToken, // registry-approved; zeroAddress = native ETH
+  },
+  preBuyBps: 100,
+  slippageBps: 50,
+  sender: address,
+});
+if (result.supported) {
+  const { plan } = result;
+  plan.payment.asset; // { chainId, address: pairedToken, decimals: 6 } for mUSD — or ETH for native/flETH pairings
+  plan.maxPremineCost; // the zap's on-chain cap in the paired token
+  plan.value; // exactly the flaunching fee for an ERC20 pairing
+  plan.approvals; // [{ to: pairedToken, data: approve(FlaunchZapV1_3, maxPremineCost), … }]
+}
+```
+
+With `createFlaunchCalldata`, `executeLaunchPreBuy` returns the encoded launch call instead of
+broadcasting; a wallet that supports batching (ERC-5792) can send
+`[...plan.approvals, plan.launch]` as one bundle — each is a `{ to, data, value }`.
+
+A pre-buy can also launch into a treasury manager (an earnings split, a revenue manager, the
+Game Mode developer split) — pass `treasuryManagerParams` and the planner encodes the zap's
+manager + `_maxPremineCost` overload:
+
+```ts
+const result = await flaunchRead.planLaunchPreBuy({
+  route: "pairedToken",
+  params: {
+    ...pairedLaunchParams,
+    feeCalculatorParams: gateParams, // a Game Mode gate rides verbatim
+    treasuryManagerParams: {
+      manager: DynamicAddressFeeSplitManagerV1_3Address[chainId],
+      initializeData: encodeDynamicSplitInitializeData({
+        creatorShare: 10_00000n,
+        managerOwnerShare: 0n,
+        moderator: address,
+        splitReceivers: [{ address: friend, share: 100_00000n }],
+      }),
+    },
+  },
+  preBuyBps: 100,
+  slippageBps: 50,
+});
+```
+
+On the `vested` route (Base Sepolia) `gameDeveloperSplit` is the Game Mode shorthand, so one
+plan carries the gate's `feeCalculatorParams`, any `vestingSchedules` (an empty array is a valid
+no-vesting launch), the developer's protected 5% and the pre-buy.
+
+A spend gate never sees the premine: `Hooks.beforeSwap` returns early when
+`msg.sender == address(self)` (v4-core `Hooks.sol:253`) and the premine swap is issued by the
+hook inside its own unlock (`AnyPositionManager.sol:258-275`), so neither the `flaunchAt`
+schedule check nor the spend-gated fee calculator observes it.
+
+Not supported for pre-buy, and reported as such rather than ignored: gasless launches
+(`gasless: true`), trusted-signer launches (`trustedSignerSettings` or a non-zero
+`trustedFeeSigner` — the zap's `setTrustedPoolKeySigner` reverts `NotSettler` against a spend
+gate: `PROTECTED_LAUNCH_UNSUPPORTED`), and `anyFlaunch`. Launches without a pre-buy keep using
+the existing `flaunch*` methods unchanged.
+
+### Launching with vesting
+
+A vested launch locks part of the supply into linear vesting schedules and seeds the rest into
+the pool exactly like a standard launch. The methods mirror the standard family one-to-one —
+same parameters, plus `vestingSchedules` — so an integration that already calls `flaunch()`
+switches to `flaunchVested()` by adding the schedules. Base Sepolia today; gate on
+`doesChainSupportVestedLaunch(chainId)`. Rules and the quote model: [`guides/vested-launch.md`](guides/vested-launch.md).
+
+| Standard | Vested twin | Extra fields |
+| --- | --- | --- |
+| `flaunch` / `flaunchIPFS` | `flaunchVested` / `flaunchIPFSVested` | `vestingSchedules`, optional `pairedToken` (default flETH), `feeCalculatorParams`, `slippageBps`, `maxPremineCost` |
+| `flaunchWithRevenueManager` (+ IPFS) | `flaunchVestedWithRevenueManager` (+ IPFS) | same |
+| `flaunchWithSplitManager` (+ IPFS) | `flaunchVestedWithSplitManager` (+ IPFS) | same |
+| `flaunchWithDynamicSplitManager` (+ IPFS) | `flaunchVestedWithDynamicSplitManager` (+ IPFS) | same |
+| `flaunchWithPreBuy` / `planLaunchPreBuy({ route })` | `flaunchVestedWithPreBuy` / `planLaunchPreBuy({ route: "vested" })` | `params: VestedPreBuyLaunchParams` |
+| `calculatePairedTokenFlaunchFee` | `calculateVestedFlaunchFee(params, slippageBps?)` | quotes as the signer |
+| `getPoolCreatedFromTx` | `getVestedLaunchFromTx` (and `getPoolCreatedFromTx` still works) | adds `vesting: { seedAmount, totalVested, schedules… }` |
+
+```ts
+import { createFlaunch, doesChainSupportVestedLaunch } from "@flaunch/sdk";
+
+if (!doesChainSupportVestedLaunch(baseSepolia.id)) throw new Error("no vested launches here");
+
+const hash = await flaunchWrite.flaunchVested({
+  name: "Vested Coin",
+  symbol: "VEST",
+  tokenUri: "ipfs://…",
+  initialMarketCapUSD: 4_000,          // fully diluted; vesting changes the float, not the price
+  creator: creatorAddress,
+  creatorFeeAllocationPercent: 80,
+  vestingSchedules: [
+    // exactly one of `percent` (≤ 2 dp of total supply) or `amount` (wei) per schedule
+    { beneficiary: team, percent: 12.5, cliffDuration: 30 * 86_400, vestDuration: 365 * 86_400 },
+    { beneficiary: advisor, amount: 5n * 10n ** 27n, cliffDuration: 0, vestDuration: 90 * 86_400 },
+    // `start` (unix seconds) defaults to the launch block; a past start reverts on chain
+  ],
+  // pairedToken: zeroAddress,            // raw ETH instead of flETH; approved ERC20s also work
+  // premineAmount: 10n ** 27n,           // optional creator buy at launch, paid from `value`
+  // treasuryManagerParams: { manager },  // deposit the launch NFT into a manager, as usual
+});
+
+const launch = await flaunchRead.getVestedLaunchFromTx(hash);
+// launch.memecoin, launch.vesting.seedAmount, launch.vesting.totalVested, launch.vesting.schedules[]
+
+// Later, as a beneficiary:
+const position = await flaunchRead.getVestingPosition(launch.memecoin, team);
+// position.schedules[i].{ scheduleId, total, claimed, vested, claimable, cliffAt, endsAt }
+await flaunchWrite.claimVesting(launch.memecoin);            // every claimable schedule
+await flaunchWrite.claimVesting(launch.memecoin, [0n]);      // or specific ids
+```
+
+Units: `percent` is a percent of the 100-billion-coin supply with at most two decimals (converted
+exactly, never rounded), `amount` is wei, `cliffDuration` / `vestDuration` are seconds (`cliff <=
+vest`, `vest > 0`). The total vested must stay under the zap's `maxVestedBps` (50% by default —
+`getMaxVestedBps()`), and a premine must be smaller than the non-vested seed. `flaunchVested*`
+check all of this before asking for a signature. Trusted-signer and gasless launches are not
+available on this path.
+
+### Game Mode launches with a developer split (Any route)
+
+A Game Mode coin can launch through the same `AnyFlaunchZap` into a **GameDeveloperFeeSplitManager**:
+a v1.3.1 dynamic fee split whose game developer holds a recipient slot pinned at 5% of every fee
+that the manager owner and moderator cannot edit, dilute or remove. The route takes the vested
+launch parameters (`vestingSchedules` may be an empty array — no vesting), forwards the game
+gate's dispatcher-prefixed spend-gate params in `feeCalculatorParams` verbatim, and deposits the
+coin into a fresh manager clone in one transaction. Gate on
+`doesChainSupportAnyGameDeveloperSplit(chainId)` (the manager is deployed and approved there
+**and** the vested stack exists). `GameDeveloperFeeSplitManagerAddress` is live on Base Sepolia
+(`0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e`, block 46817954); other chains stay unsupported
+until the implementation is broadcast and approved there.
+
+`prepareAnyGameLaunch(params)` quotes and encodes without sending, so a transaction flow that
+wants the raw call (`to`, `data`, `value`) and the exact `args` can hold them and send later;
+`execute()` sends through the SDK's signer and resolves to the hash. `flaunchAnyWithGameDeveloperSplit(params)`
+is prepare + execute.
+
+```ts
+import {
+  createFlaunch,
+  doesChainSupportAnyGameDeveloperSplit,
+  percentToGameDeveloperShare,
+} from "@flaunch/sdk";
+
+if (!doesChainSupportAnyGameDeveloperSplit(baseSepolia.id)) throw new Error("no Any game route here");
+
+const prepared = await flaunchWrite.prepareAnyGameLaunch({
+  name: "Arena Coin",
+  symbol: "ARENA",
+  tokenUri: "ipfs://...",
+  creator: launcher,
+  creatorFeeAllocationPercent: 80,
+  initialMarketCapUSD: 4_000,
+  pairedToken: FLETHAddress[baseSepolia.id],  // default flETH; zeroAddress = native ETH
+  flaunchAt: roundStartsAt,                    // unix seconds; the game round's start
+  feeCalculatorParams: gate.feeCalculatorParams, // dispatcher-prefixed spend-gate params from the game gate
+  vestingSchedules: [],                        // or the same schedules `flaunchVested` takes
+  gameDeveloper: developerWallet,              // pinned 5%, added by the SDK
+  moderator: gate.moderator,                   // optional, zeroAddress = none
+  splitReceivers: [                            // the other 95%, 5 dp weights summing to 95_00000
+    { address: launcher, share: percentToGameDeveloperShare(60) },
+    { address: friend, share: percentToGameDeveloperShare(35) },
+  ],
+});
+// prepared.args (the `managerMaxPremineCost` overload), prepared.to, prepared.data, prepared.value
+const hash = await prepared.execute();
+
+const launch = await flaunchRead.getVestedLaunchFromTx(hash);
+const developerPayout = await flaunchRead.getGameDeveloperPayout(launch.vesting.treasuryManager);
+// the developer's payout wallet, or null when the manager is not a GameDeveloperFeeSplitManager
+```
+
+Rules: the zap's `_trustedFeeSigner` is always `address(0)` on this route — the gate's signer and
+settler travel inside `feeCalculatorParams`, and a non-zero signer makes the zap call
+`setTrustedPoolKeySigner` on the spend gate, which reverts `NotSettler`. The fee is quoted as the
+signer through `calculateFee` (the exemption is caller-sensitive); `maxPremineCost` defaults to the
+quoted paired premine cost and `slippageBps` to 0. The vested hook's `PoolCreated` carries no
+`flaunchAt` and no metadata (`getPoolCreatedFromLogs` returns `flaunchAt: 0n` and blank
+name / symbol / tokenUri for it): the round start is what you passed as `flaunchAt`, on chain in
+the hook's `PoolScheduled` event. `isGameDeveloperFeeSplitManagerImplementation(chainId, impl)`
+checks a `TreasuryManagerFactory.managerImplementation()` result against the chain's manager.
+
 ### Flaunch with Address Fee Splits
 
 You can flaunch a coin and share the revenue with the creator and an array of recipients, each with a different percentage share.\
@@ -345,6 +657,41 @@ await flaunchWrite.flaunchIPFSWithDynamicSplitManager({
   ],
 });
 ```
+
+On a paired-token launch (Base, Base Sepolia, Robinhood, Ethereum — the v1.3 PositionManager and
+custom pairings) the same split rides `flaunchPairedTokenWithDynamicSplitManager`, which deploys
+the manager in the launch transaction:
+
+```ts
+await flaunchWrite.flaunchPairedTokenWithDynamicSplitManager({
+  flaunchParams: {
+    name: "...",
+    symbol: "...",
+    tokenUri: "ipfs://...",
+    premineAmount: 0n,
+    creator: "0x...",
+    creatorFeeAllocation: 8_000,
+    flaunchAt: 0n,
+    initialPriceParams,
+    feeCalculatorParams: "0x", // or a Game Mode gate's params
+    pairedToken, // registry-approved; zeroAddress = native ETH
+  },
+  trustedFeeSigner: zeroAddress,
+  maxPremineCost: fee.pairedPremineCost,
+  value: fee.ethRequired,
+  // the split
+  creatorShare: 10_00000n, // 10%
+  managerOwnerShare: 0n,
+  moderator: "0xmoderator...",
+  splitReceivers: [{ address: "0x123...", share: 100_00000n }],
+  permissions: Permissions.OPEN, // or an explicit permissions-module address
+});
+```
+
+The implementation is `DynamicAddressFeeSplitManagerV1_3Address` (the generation the v1.3 zap's
+factory approves); for a Game Mode coin whose developer holds a protected 5% use
+`flaunchPairedTokenWithGameDeveloperSplit` instead. `encodeDynamicSplitInitializeData` and
+`encodeStaticSplit` are exported if you call a zap yourself.
 
 You can update recipient distribution after deployment:
 

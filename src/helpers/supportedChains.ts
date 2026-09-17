@@ -7,7 +7,14 @@ import {
 } from "viem/chains";
 import { chainIdToChain } from "./chainIdToChain";
 import {
+  FlaunchZapAddress,
+  FlaunchZapMultichainAddress,
+  AnyFlaunchZapAddress,
+  AnyFlaunchZapFlaunchAddress,
+  AnyFlaunchZapPositionManagerAddress,
+  MemecoinVestingAddress,
   DynamicAddressFeeSplitManagerAddress,
+  GameDeveloperFeeSplitManagerAddress,
   DynamicAddressFeeSplitManagerV1_3Address,
   AnyPositionManagerV1_3Address,
   FeeEscrowV1_3Address,
@@ -83,6 +90,29 @@ export function doesChainSupportMultiAssetManagers(chainId: number): boolean {
 }
 
 /** Whether all contracts required for paired-token launches are deployed. */
+/**
+ * Whether a Game Mode coin can launch into a GameDeveloperFeeSplitManager on the given chain:
+ * the manager is deployed and approved there AND the paired-token zap that installs it exists.
+ */
+export function doesChainSupportGameDeveloperSplit(chainId: number): boolean {
+  return (
+    GameDeveloperFeeSplitManagerAddress[chainId] !== undefined &&
+    doesChainSupportPairedTokenLaunch(chainId)
+  );
+}
+
+/**
+ * Whether a Game Mode coin can launch into a GameDeveloperFeeSplitManager through the
+ * AnyFlaunchZap (the "Any" route: vesting optional, gate params forwarded verbatim): the manager
+ * is deployed and approved there AND the vested launch stack exists.
+ */
+export function doesChainSupportAnyGameDeveloperSplit(chainId: number): boolean {
+  return (
+    GameDeveloperFeeSplitManagerAddress[chainId] !== undefined &&
+    doesChainSupportVestedLaunch(chainId)
+  );
+}
+
 export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
   return (
     FlaunchZapV1_3Address[chainId] !== undefined &&
@@ -92,17 +122,22 @@ export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
 }
 
 /**
- * Every v1.3 hook that has ever been the paired-token PositionManager on a chain: the current
- * one plus any superseded generations that still serve their pools. Use this when deciding
- * whether an arbitrary hook address (e.g. from an indexer `Pool.positionManager`) is a v1.3 hook.
+ * Every v1.3 hook that has ever served paired-token pools on a chain: the current
+ * PositionManager, the import-generation AnyPositionManager, any superseded generations that
+ * still serve their pools, and the vested-launch hook (the AnyPositionManager behind the
+ * AnyFlaunchZap - same pool shape and registry, its own address). Use this when deciding whether
+ * an arbitrary hook address (e.g. from an indexer `Pool.positionManager`) is a v1.3 hook; the
+ * paired-pool locator, `PoolCreated` decoding and the liquidity helpers all iterate it.
  */
 export function getV1_3PositionManagers(chainId: number): Address[] {
   const current = PairedTokenPositionManagerV1_3Address[chainId];
   const any = AnyPositionManagerV1_3Address[chainId];
+  const vested = AnyFlaunchZapPositionManagerAddress[chainId];
   return [
     ...(current ? [current] : []),
     ...(any ? [any] : []),
     ...(SupersededPositionManagerV1_3Address[chainId] ?? []),
+    ...(vested ? [vested] : []),
   ];
 }
 
@@ -142,5 +177,38 @@ export function doesChainSupportPairedTokenAcquisition(chainId: number): boolean
   return (
     PairedTokenAcquisitionDexAddress[chainId] !== undefined &&
     PairedTokenRegistryV1_3Address[chainId] !== undefined
+  );
+}
+
+/**
+ * Whether vested launches (AnyFlaunchZap + MemecoinVesting, the hook it launches through and
+ * its ERC721, plus the v1.3.1 TreasuryManagerFactory and PairedTokenRegistry it is bound to)
+ * are deployed on the given chain — Base Sepolia today. Gate `flaunchVested*`, the `vested`
+ * pre-buy route and the vesting reads/claims on this.
+ */
+export function doesChainSupportVestedLaunch(chainId: number): boolean {
+  return (
+    AnyFlaunchZapAddress[chainId] !== undefined &&
+    MemecoinVestingAddress[chainId] !== undefined &&
+    AnyFlaunchZapPositionManagerAddress[chainId] !== undefined &&
+    AnyFlaunchZapFlaunchAddress[chainId] !== undefined &&
+    TreasuryManagerFactoryV1_3Address[chainId] !== undefined &&
+    PairedTokenRegistryV1_3Address[chainId] !== undefined
+  );
+}
+
+/**
+ * Whether any launch route on this chain can include a pre-buy (a creator premine planned and
+ * executed through the SDK). Per-route detail lives in `getLaunchPreBuyCapabilities()`.
+ */
+export function doesChainSupportLaunchPreBuy(chainId: number): boolean {
+  if (!isChainSupported(chainId)) return false;
+  const zap = isMultichainDeployment(chainId)
+    ? FlaunchZapMultichainAddress[chainId]
+    : FlaunchZapAddress[chainId];
+  return (
+    zap !== undefined ||
+    doesChainSupportPairedTokenLaunch(chainId) ||
+    doesChainSupportVestedLaunch(chainId)
   );
 }

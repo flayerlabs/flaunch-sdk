@@ -1,0 +1,193 @@
+# Launch pre-buy
+
+A creator can buy an exact share of a coin's supply as part of the launch transaction. The
+protocol fills it as a premine: the launch seeds the pool, swaps the requested coins out of the
+just-seeded position, delivers them to `creator`, and refunds unspent payment. The SDK plans
+that purchase from protocol quotes and executes it through the launch route the coin would
+have used anyway — no separate buy, no simulated pricing.
+
+This guide is the capability matrix and the rules behind `planLaunchPreBuy` /
+`executeLaunchPreBuy`. Usage examples are in the README under "Launching with a pre-buy".
+
+## Capability matrix
+
+| Route (`LaunchPreBuyInput.route`) | Base (8453) | Base Sepolia (84532) | Robinhood (4663) | Ethereum (1) | Unichain (130) | Payment asset | Approval | Limit |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `standard` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✗ `ROUTE_UNSUPPORTED` (v1.3 zap since 0.15.0) | ✓ multichain zap | native ETH via `msg.value` | never | 1000 bps |
+| `revenueManager` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✗ `ROUTE_UNSUPPORTED` | ✓ multichain zap | native ETH | never | 1000 bps |
+| `splitManager` (static) | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✗ `ROUTE_UNSUPPORTED` | ✓ multichain zap | native ETH | never | 1000 bps |
+| `dynamicSplitManager` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✗ `ROUTE_PREMINE_UNAVAILABLE` | ✓ multichain zap | ✗ `ROUTE_UNSUPPORTED` | ✓ multichain zap | native ETH | never | 1000 bps |
+| `pairedToken` | ✓ v1.3 zap | ✓ v1.3 zap | ✓ v1.3 zap | ✓ v1.3 zap (native ETH default, `pairedToken = zeroAddress`) | — | follows the pairing (below) | ERC20 pairings only | 1000 bps |
+| `vested` | ✗ `ROUTE_UNSUPPORTED` | ✓ AnyFlaunchZap | ✗ `ROUTE_UNSUPPORTED` | ✗ `ROUTE_UNSUPPORTED` | ✗ `ROUTE_UNSUPPORTED` | follows the pairing (below) | ERC20 pairings only | 1000 bps |
+
+**On Base, Base Sepolia and Ethereum the only pre-buy route is `pairedToken`.** Ethereum's
+current generation (v1.4.0, SDK 0.15.0) pairs with native ETH by default and every `flaunch*`
+there targets the v1.3 zap, so the multichain routes report `ROUTE_UNSUPPORTED` on chain 1. The legacy Base zap
+(v1.1 PositionManager) fills a premine out of the fair-launch allocation, which the SDK pins to
+0 because fair launches are deprecated, so any premine there reverts with
+`PremineExceedsInitialAmount`. An "ordinary" coin with a pre-buy on Base therefore launches
+through `pairedToken` with `pairedToken = FLETHAddress[chainId]` (or `zeroAddress` for raw
+ETH) on the current v1.3 PositionManager — the same generation custom-paired coins already
+use. Since 0.16.0 that route also carries a treasury manager (an earnings split, a revenue
+manager, the Game Mode developer split): pass `treasuryManagerParams` and the planner encodes
+the zap's manager + `_maxPremineCost` overload. The `vested` route (AnyFlaunchZap, Base Sepolia)
+takes `vestingSchedules` — possibly empty, which is a plain no-vesting Any launch — and either
+`treasuryManagerParams` or the `gameDeveloperSplit` convenience, never both.
+
+`getLaunchPreBuyCapabilities(chainId)` returns this table for one chain from the SDK's address
+maps (no RPC), including the reason code for each unsupported cell.
+`doesChainSupportLaunchPreBuy(chainId)` is the one-bit version.
+
+### Paired-token payment asset
+
+The registry row (`PairedTokenRegistryV1_3.tokenConfig`) decides how the premine is paid:
+
+| `tokenType` | Examples | Payment asset in the plan | Approval |
+| --- | --- | --- | --- |
+| `nativeEth` (`zeroAddress` pairing) | raw ETH pools | ETH, 18 dp, inside `msg.value`; unspent refunded | none |
+| `nativeWrapper` | flETH | ETH, 18 dp, inside `msg.value`; the zap wraps and refunds | none |
+| `erc20` / `erc20Wrapper` | B20 equities (8 dp), mUSD / USDC (6 dp) | the paired token itself, its own decimals | `approve(FlaunchZapV1_3, maxPremineCost)` |
+
+The flaunching fee is always native ETH and is reported separately (`plan.fee`). For an ERC20
+pairing `plan.value` is exactly that fee; the purchase never travels as ETH.
+
+### Not supported in this version
+
+| Launch kind | Reason code | Why |
+| --- | --- | --- |
+| Gasless / relayed launches (`gasless: true`) | `GASLESS_UNSUPPORTED` | The relayer pays and signs; the SDK cannot bind a spend cap to it. |
+| Trusted-signer launches: `trustedSignerSettings`, or a non-zero `trustedFeeSigner` | `PROTECTED_LAUNCH_UNSUPPORTED` | The zap's `setTrustedPoolKeySigner` reverts `NotSettler` against a spend-gated calculator, so the launch cannot both install a signer and pre-buy. A gate's signer travels inside `feeCalculatorParams` instead, which **is** supported. |
+| Malformed vesting schedules (`vested` route) | `INVALID_VESTING_SCHEDULE` | Whatever `toVestingScheduleArgs` rejects. An **empty array is valid** — a no-vesting Any launch. |
+| Vested supply over the zap's cap | `VESTED_SUPPLY_EXCEEDS_CAP` | `AnyFlaunchZap.maxVestedBps`, read at the quote block before any pricing. |
+| `anyFlaunch` (imported coins) | `ANY_FLAUNCH_UNSUPPORTED` | No premine exists on that path. |
+| Fair-launch fields (`fairLaunchPercent != 0`; `fairLaunchDuration != 0` on multichain) | `FAIR_LAUNCH_UNSUPPORTED` | Mirrors the launch methods, which reject them too. |
+
+### Spend-gated (Game Mode) launches are supported
+
+A gate's `feeCalculatorParams` ride a pre-buy verbatim on both two-legged routes. The premine
+never reaches the gate: `Hooks.beforeSwap` returns early when `msg.sender == address(self)`
+(v4-core `Hooks.sol:253`), and the premine swap is issued by the hook inside its own unlock
+(`AnyPositionManager.sol:258-275`, `FlaunchLibrary.seedLiquidityAndPremineFromPayload`), so
+neither the `flaunchAt` schedule check nor the spend-gated fee calculator ever observes it. Only
+the trusted-signer half is refused (see the table above).
+
+A full Game Mode pre-buy on the `vested` route is therefore one plan: the gate's
+`feeCalculatorParams`, any `vestingSchedules`, `gameDeveloperSplit` (the developer's protected
+5% plus the receivers sharing the other 95%) and `preBuyBps`.
+
+## Amounts
+
+- Total supply is `100n * 10n ** 27n` (100 billion coins, 18 decimals) on every route.
+- `preBuyBps` is an integer, `100 = 1%`. `premineAmount = TOTAL_SUPPLY * preBuyBps / 10_000` —
+  exact, no rounding. `percentToBps("2.5")` converts a UI string; more than two decimals is
+  rejected (`INVALID_PERCENTAGE`), never rounded.
+- The default limit is `DEFAULT_MAX_PRE_BUY_BPS = 1000` (10%). The protocol has **no on-chain
+  cap**: the premine is an exact-output swap against the whole seeded position, so cost rises
+  super-linearly with size and a very large premine simply cannot be filled. Pass
+  `maxPreBuyBps` (integer 1..9999) to change the limit deliberately; above it the planner
+  returns `EXCEEDS_ROUTE_LIMIT`.
+- Slippage is an integer 0..9999 bps (`INVALID_SLIPPAGE` otherwise). It is applied by the zap's
+  `calculateFee`, on top of the zap's own 1% price-impact buffer.
+
+## Quote model
+
+A premine is an exact-output swap against the whole just-seeded position, so its cost grows
+faster than linearly with size. The zaps' `calculateFee` is a *linear* estimate (market cap ×
+share, plus a 1% buffer): measured on forks of Base, Base Sepolia and Robinhood it under-quotes
+by about 0.15% at 1% of supply, 2.2% at 3%, 4.4% at 5% and 10.2% at 10%. The multichain zap's
+`ethSpent_` return value repeats that estimate rather than the real spend. Neither is good
+enough to size a spending cap, so the planner prices the launch by running it:
+
+| `plan.pricing.method` | How `payment.expected` is derived | When |
+| --- | --- | --- |
+| `simulation` | The launch is executed in an `eth_call` with the sender's code replaced by a tiny probe and its balance overridden (`createLaunchCostProbe`); the probe reports the ETH the launch really consumed, at `plan.quoteBlockNumber`. Exact. | ETH-funded routes and native / flETH pairings, when the node honours `eth_call` state overrides (geth, op-geth, Arbitrum Nitro, Anvil all do). |
+| `protocolQuoteWithSimulatedImpact` | The zap's linear quote in the paired token, scaled by the price impact measured on the native-equivalent launch (same pool curve, same premine). Measured within rounding on the Base Sepolia mUSD fork. | ERC20 pairings (the paired token cannot be conjured for a probe). |
+| `protocolQuote` | The zap's `calculateFee` alone. | No `publicClient` on the SDK instance (no state-override call available). Choose slippage generously — roughly the premine's share in percent. |
+
+In every case, all pinned to `plan.quoteBlockNumber`:
+
+| Field | Meaning |
+| --- | --- |
+| `fee.amount` | The flaunching fee (native ETH): `calculateFee` with premine 0. Zero below the protocol's market-cap threshold. |
+| `payment.expected` | The purchase alone, priced as above. |
+| `payment.max` | `expected × (1 + slippageBps)`, rounded up — the cap the chain enforces. On ETH routes `value = fee + max`; on ERC20 pairings `maxPremineCost = max` and `value = fee`. |
+| `pricing.protocolQuote` | The zap's own linear view at 0 bps and at `slippageBps`, for comparison. |
+
+On-chain enforcement: ETH-funded routes revert with `InsufficientPreminePayment` when the
+premine would cost more than `msg.value - fee`; ERC20 pairings revert with
+`PremineCostExceedsMaximum` when it would cost more than `_maxPremineCost`. Both are the
+quoted `payment.max`; the SDK never represents an estimate as the limit. Whatever the premine
+actually costs below the cap is all that is taken — the zap refunds the rest.
+
+`plan.funding` reports the sender's ETH (and paired-token) balance against `value` (and
+`maxPremineCost`) at the quote block. A shortfall does not make the plan unsupported — the UI
+can show it — but `executeLaunchPreBuy` refuses to send (`LaunchPreBuyInsufficientBalanceError`,
+`code: "INSUFFICIENT_BALANCE"`). Gas is not included.
+
+## Binding and revalidation
+
+`plan.binding` is `keccak256` over the canonical JSON of the bound fields (`chainId`, `sender`,
+`creator`, route and zap family, `premineAmount`, `preBuyBps`, `slippageBps`, `value`,
+`maxPremineCost`, `pairedToken`, payment asset and maximum, fee, `launch.to/data/value`,
+`quoteBlockNumber`, `expiresAtMs`). `computeLaunchPreBuyBinding` is exported so a host can
+recompute it.
+
+Before requesting the first signature, `executeLaunchPreBuy` checks, in order:
+
+| Check | `LaunchPreBuyRequoteRequiredError.reason` |
+| --- | --- |
+| Plan chain equals the SDK chain | `CHAIN_MISMATCH` |
+| Drift signer equals `plan.sender` | `SENDER_MISMATCH` |
+| `Date.now() < expiresAtMs` (default lifetime 30 s, `quoteTtlMs`) | `EXPIRED` |
+| Recomputed binding equals `plan.binding` | `BINDING_MISMATCH` |
+| `launch.data` decodes to the plan's premine, creator, `maxPremineCost`, pairing, zero trusted signer and empty fee-calculator params, and targets this chain's zap with `launch.value === value` | `CALLDATA_MISMATCH` |
+| Fresh balances cover `value` / `maxPremineCost` | `LaunchPreBuyInsufficientBalanceError` |
+| Fresh pricing (same method as planning, latest block) still fits under `value` / `maxPremineCost` | `PRICE_MOVED` or `FEE_CHANGED` |
+| (default `revalidate: "simulate"`) `eth_call` of the launch as the sender, with the sender's real balance and allowance, succeeds | `PRICE_MOVED` with the revert as `cause` |
+
+All of these throw with `code: "REQUOTE_REQUIRED"` and nothing is sent. Approvals are sent
+first and awaited; the simulation runs after them (it needs the allowance), and the expiry is
+checked again right before the launch signature. There is no retry and no internal re-quote: a
+thrown error means at most the approval was sent and the launch was not. Re-plan and show the
+new numbers.
+
+`verifyLaunchPreBuyPlan(plan, "quote" | "simulate")` runs the same checks read-only.
+
+## Result
+
+`executeLaunchPreBuy` returns `{ hash, plan }`. `getLaunchPreBuyResultFromTx(hash, plan)`
+decodes the `PoolCreated` event (the SDK's existing launch result) and throws if its
+`premineAmount` is not the plan's. The premined coins land on `plan.creator`; the manager
+routes sweep them back to the original creator after the manager takes the launch NFT.
+
+## Reason codes
+
+`LAUNCH_PRE_BUY_REASON_CODES`: `CHAIN_UNSUPPORTED`, `ROUTE_UNSUPPORTED`, `GASLESS_UNSUPPORTED`,
+`PROTECTED_LAUNCH_UNSUPPORTED`, `ANY_FLAUNCH_UNSUPPORTED`,
+`PAIRED_TOKEN_NOT_APPROVED`, `ROUTE_PREMINE_UNAVAILABLE`, `PREMINE_NOT_FILLABLE`,
+`INVALID_PERCENTAGE`, `EXCEEDS_ROUTE_LIMIT`, `INVALID_LIMIT`,
+`INVALID_SLIPPAGE`, `INVALID_CREATOR`, `PREMINE_ALREADY_SET`, `FAIR_LAUNCH_UNSUPPORTED`,
+`SENDER_REQUIRED`, `QUOTE_INCONSISTENT`, `INVALID_VESTING_SCHEDULE`,
+`VESTED_SUPPLY_EXCEEDS_CAP`.
+
+`PAIRED_MANAGER_LAUNCH_UNSUPPORTED` was removed in 0.16.0: a paired-token launch into a
+treasury manager is planned like any other.
+
+`ROUTE_PREMINE_UNAVAILABLE` is the legacy Base zap (see the matrix). `PREMINE_NOT_FILLABLE`
+means the pricing simulation reverted: the pool cannot deliver that many coins within three
+times the linear quote — reduce the size.
+
+`classifyLaunchPreBuyInput(chainId, input)` returns every static reason without RPC;
+`planLaunchPreBuy` returns them all in `reasons` and stops before quoting. `PREMINE_ALREADY_SET`
+means the caller passed a non-zero `premineAmount` — the planner owns that field. Zero pre-buy
+launches keep using the existing `flaunch*` methods; their calldata is unchanged (see
+`test/launchByteIdentity.test.cjs`).
+
+## Verifying on a fork
+
+`scripts/test-launch-prebuy-fork.cjs` launches with a pre-buy on a local Anvil fork of Base,
+Robinhood or Base Sepolia and asserts the creator's coin balance rises by exactly
+`plan.premineAmount`, `PoolCreated` is emitted, the sender spends at most `payment.max` plus
+the fee (refund observed), and an underfunded launch reverts without a `PoolCreated`. See the
+script header for the opt-in environment variables. Results are recorded in
+`guides/launch-pre-buy-validation.md`.

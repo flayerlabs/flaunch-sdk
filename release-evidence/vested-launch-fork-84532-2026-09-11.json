@@ -1,0 +1,49 @@
+[
+  {
+    "scenario": "maxVestedBps",
+    "maxVestedBps": "5000"
+  },
+  {
+    "scenario": "reject:cap",
+    "result": "rejected",
+    "message": "The contract function \"flaunch\" reverted.\n\nError: VestedSupplyExceedsCap(uint256 _totalVested, uint256 _maxVested)\n     "
+  },
+  {
+    "scenario": "reject:premine >= seed",
+    "result": "rejected",
+    "message": "premineAmount 100000000000000000000000000000 must be below the non-vested seed of 85000000000000000000000000000 wei"
+  },
+  {
+    "scenario": "reject:past start",
+    "result": "rejected",
+    "message": "The contract function \"flaunch\" reverted with the following signature:\n0xaf1b7d36\n\nUnable to decode signature \"0xaf1b7d3"
+  },
+  {
+    "scenario": "flaunchVested",
+    "memecoin": "0x3b29DD58D9056a83D9Cc43A2a43Ff12cC88485D5",
+    "tokenId": "2",
+    "quotedEth": "34118463501839362",
+    "spentEth": "33517312391279543",
+    "seed": "85000000000000000000000000000",
+    "totalVested": "15000000000000000000000000000"
+  },
+  {
+    "scenario": "claimVesting",
+    "claimed": "2500001929012345679012345679",
+    "remaining": "2499998070987654320987654321"
+  },
+  {
+    "scenario": "prebuy:vested",
+    "memecoin": "0x95BeAF1538fA8be9d60a98053ced002e683516a3",
+    "premine": "2000000000000000000000000000",
+    "method": "simulation",
+    "expected": "67842270864276665",
+    "max": "68181482218598049",
+    "spentEth": "67842270864276665"
+  },
+  {
+    "scenario": "flaunchVestedWithRevenueManager",
+    "memecoin": "0xA17d7D72d24a99ccB4932b5b0f195C1b85A8DC37",
+    "manager": "0x852955010D045b055C93C4b32F6977103914F294"
+  }
+]

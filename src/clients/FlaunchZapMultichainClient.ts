@@ -1,4 +1,3 @@
-import { encodeStaticSplit } from "../helpers/staticSplit";
 import {
   type Address,
   type Drift,
@@ -8,18 +7,11 @@ import {
   type ReadWriteContract,
   createDrift,
 } from "@delvtech/drift";
-import {
-  encodeAbiParameters,
-  getAddress,
-  parseUnits,
-  zeroAddress,
-} from "viem";
+import { encodeAbiParameters, parseUnits, zeroAddress } from "viem";
 import { FlaunchZapAbi } from "../abi/FlaunchZap";
 import {
-  AddressFeeSplitManagerAddress,
   AddressFeeSplitManagerV1_3Address,
   DefaultPairedTokenAddress,
-  DynamicAddressFeeSplitManagerAddress,
   DynamicAddressFeeSplitManagerV1_3Address,
   FlaunchZapV1_3Address,
 } from "../addresses";
@@ -27,20 +19,24 @@ import { generateTokenUri } from "../helpers/ipfs";
 import { getPermissionsAddress, getPermissionsAddressV1_3 } from "../helpers/permissions";
 import { ReadWriteFlaunchZapV1_3 } from "./FlaunchZapV1_3Client";
 import { Permissions } from "../types";
-import type {
-  FlaunchIPFSParams,
-  FlaunchParams,
-  FlaunchWithDynamicSplitManagerIPFSParams,
-  FlaunchWithDynamicSplitManagerParams,
-  FlaunchWithRevenueManagerIPFSParams,
-  FlaunchWithRevenueManagerParams,
-  FlaunchWithSplitManagerIPFSParams,
-  FlaunchWithSplitManagerParams,
+import {
+  toFlaunchParamsWithDynamicSplitManager,
+  toFlaunchParamsWithRevenueManager,
+  toFlaunchParamsWithSplitManager,
+  type FlaunchIPFSParams,
+  type FlaunchParams,
+  type FlaunchWithDynamicSplitManagerIPFSParams,
+  type FlaunchWithDynamicSplitManagerParams,
+  type FlaunchWithRevenueManagerIPFSParams,
+  type FlaunchWithRevenueManagerParams,
+  type FlaunchWithSplitManagerIPFSParams,
+  type FlaunchWithSplitManagerParams,
 } from "./FlaunchZapClient";
 
 export type FlaunchZapMultichainABI = typeof FlaunchZapAbi;
 
-type FlaunchParamsMultichain = {
+/** `IPositionManager.FlaunchParams` as the multichain (v1.2+) zap takes it — no fair-launch fields. */
+export type FlaunchParamsMultichain = {
   name: string;
   symbol: string;
   tokenUri: string;
@@ -52,7 +48,67 @@ type FlaunchParamsMultichain = {
   feeCalculatorParams: HexString;
 };
 
-function toFlaunchParamsMultichain(
+/** The `_treasuryManagerParams` tuple of the multichain zap's manager overload. */
+export type MultichainTreasuryManagerArgs = {
+  manager: Address;
+  permissions: Address;
+  initializeData: HexString;
+  depositData: HexString;
+};
+
+/** The exact argument object the multichain zap `flaunch` overloads take; the key set selects the overload. */
+export type MultichainFlaunchArgs =
+  | {
+      overload: "plain";
+      args: { _flaunchParams: FlaunchParamsMultichain; _trustedFeeSigner: Address };
+    }
+  | {
+      overload: "manager";
+      args: {
+        _flaunchParams: FlaunchParamsMultichain;
+        _treasuryManagerParams: MultichainTreasuryManagerArgs;
+        _trustedFeeSigner: Address;
+      };
+    };
+
+/**
+ * Builds the multichain zap `flaunch` arguments without touching the network, selecting the
+ * manager overload when a manager is configured. `flaunch()` and the pre-buy planner share this.
+ * @throws on fair-launch or trusted-signer inputs, which this deployment family does not support
+ */
+export function buildMultichainFlaunchArgs(
+  chainId: number,
+  params: FlaunchParams
+): MultichainFlaunchArgs {
+  const flaunchParams = toFlaunchParamsMultichain(params);
+  const manager = params.treasuryManagerParams?.manager;
+
+  if (!manager) {
+    return {
+      overload: "plain",
+      args: { _flaunchParams: flaunchParams, _trustedFeeSigner: zeroAddress },
+    };
+  }
+
+  return {
+    overload: "manager",
+    args: {
+      _flaunchParams: flaunchParams,
+      _treasuryManagerParams: {
+        manager,
+        permissions: getPermissionsAddress(
+          params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+          chainId
+        ),
+        initializeData: params.treasuryManagerParams?.initializeData ?? "0x",
+        depositData: params.treasuryManagerParams?.depositData ?? "0x",
+      },
+      _trustedFeeSigner: zeroAddress,
+    },
+  };
+}
+
+export function toFlaunchParamsMultichain(
   params: FlaunchParams
 ): FlaunchParamsMultichain {
   if (params.fairLaunchPercent !== 0 || params.fairLaunchDuration !== 0) {
@@ -86,6 +142,31 @@ function toFlaunchParamsMultichain(
   };
 }
 
+/**
+ * Ethereum's current generation (v1.4.0) pairs with native ETH by default and launches through
+ * the v1.3 paired-token zap; every other multichain deployment launches through `FlaunchZap`.
+ */
+export function usesNativeDefaultPairing(chainId: number): boolean {
+  return DefaultPairedTokenAddress[chainId] === zeroAddress;
+}
+
+/**
+ * Swaps the legacy manager implementation for its `*V1_3` generation on chains whose launches go
+ * through the v1.3 zap (see `usesNativeDefaultPairing`); a no-op elsewhere.
+ */
+function withManagerGeneration<
+  T extends { treasuryManagerParams: { manager: Address } },
+>(params: T, chainId: number, v1_3Managers: Record<number, Address>): T {
+  if (!usesNativeDefaultPairing(chainId)) return params;
+  return {
+    ...params,
+    treasuryManagerParams: {
+      ...params.treasuryManagerParams,
+      manager: v1_3Managers[chainId],
+    },
+  };
+}
+
 /** Minimal read client for the multichain FlaunchZap deployment family. */
 export class ReadFlaunchZapMultichain {
   public readonly contract: ReadContract<FlaunchZapMultichainABI>;
@@ -111,6 +192,23 @@ export class ReadFlaunchZapMultichain {
       _slippage: 500n,
     });
   }
+
+  /**
+   * The zap's `calculateFee` with caller-chosen slippage (integer basis points) and an optional
+   * pinned block: the ETH a launch must send — flaunch fee plus the buffered premine cost, both
+   * native on this route. Used by the pre-buy planner.
+   */
+  calculateFeeBps(
+    params: FlaunchParamsMultichain,
+    slippageBps: bigint,
+    options?: { block?: bigint }
+  ) {
+    return this.contract.read(
+      "calculateFee",
+      { _flaunchParams: params, _slippage: slippageBps },
+      options
+    );
+  }
 }
 
 /** Minimal write client for standard launches on multichain deployments. */
@@ -134,12 +232,11 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
    * is what selects it.
    */
   async flaunch(chainId: number, params: FlaunchParams) {
-    const flaunchParams = this.prepareFlaunch(params);
-    const manager = params.treasuryManagerParams?.manager;
-
     // The v1.4 generation defaults to native ETH. Keep the legacy client and
     // address maps intact for existing pools while new launches use the paired-token ABI.
-    if (DefaultPairedTokenAddress[chainId] === zeroAddress) {
+    if (usesNativeDefaultPairing(chainId)) {
+      const flaunchParams = this.prepareFlaunch(params);
+      const manager = params.treasuryManagerParams?.manager;
       const zap = new ReadWriteFlaunchZapV1_3(FlaunchZapV1_3Address[chainId], this.drift);
       const pairedParams = { ...flaunchParams, pairedToken: zeroAddress };
       const fee = await zap.calculateFee({ flaunchParams: pairedParams, slippageBps: 500n });
@@ -160,36 +257,20 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
       });
     }
 
-    const ethRequired = await this.calculateFee(flaunchParams);
+    const prepared = buildMultichainFlaunchArgs(chainId, params);
+    const ethRequired = await this.calculateFee(prepared.args._flaunchParams);
+    return this.flaunchPrepared(prepared, ethRequired);
+  }
 
-    if (!manager) {
-      return this.contract.write(
-        "flaunch",
-        {
-          _flaunchParams: flaunchParams,
-          _trustedFeeSigner: zeroAddress,
-        },
-        { value: ethRequired }
-      );
+  /**
+   * Sends prepared `flaunch` arguments (see `buildMultichainFlaunchArgs`) with an explicit
+   * `value` — the pre-buy executor's quoted maximum, which is the on-chain spending cap.
+   */
+  flaunchPrepared(prepared: MultichainFlaunchArgs, value: bigint) {
+    if (prepared.overload === "plain") {
+      return this.contract.write("flaunch", prepared.args, { value });
     }
-
-    return this.contract.write(
-      "flaunch",
-      {
-        _flaunchParams: flaunchParams,
-        _treasuryManagerParams: {
-          manager,
-          permissions: getPermissionsAddress(
-            params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
-            chainId
-          ),
-          initializeData: params.treasuryManagerParams?.initializeData ?? "0x",
-          depositData: params.treasuryManagerParams?.depositData ?? "0x",
-        },
-        _trustedFeeSigner: zeroAddress,
-      },
-      { value: ethRequired }
-    );
+    return this.contract.write("flaunch", prepared.args, { value });
   }
 
   /**
@@ -217,16 +298,7 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
     chainId: number,
     params: FlaunchWithRevenueManagerParams
   ) {
-    return this.flaunch(chainId, {
-      ...params,
-      treasuryManagerParams: {
-        manager: params.revenueManagerInstanceAddress,
-        permissions:
-          params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
-        initializeData: "0x",
-        depositData: "0x",
-      },
-    });
+    return this.flaunch(chainId, toFlaunchParamsWithRevenueManager(params));
   }
 
   /**
@@ -255,20 +327,14 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
     chainId: number,
     params: FlaunchWithSplitManagerParams
   ) {
-    const initializeData = encodeStaticSplit(params);
-
-    return this.flaunch(chainId, {
-      ...params,
-      treasuryManagerParams: {
-        manager: DefaultPairedTokenAddress[chainId] === zeroAddress
-          ? AddressFeeSplitManagerV1_3Address[chainId]
-          : AddressFeeSplitManagerAddress[chainId],
-        permissions:
-          params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
-        initializeData,
-        depositData: "0x",
-      },
-    });
+    return this.flaunch(
+      chainId,
+      withManagerGeneration(
+        toFlaunchParamsWithSplitManager(params, chainId),
+        chainId,
+        AddressFeeSplitManagerV1_3Address
+      )
+    );
   }
 
   /**
@@ -311,80 +377,13 @@ export class ReadWriteFlaunchZapMultichain extends ReadFlaunchZapMultichain {
     chainId: number,
     params: FlaunchWithDynamicSplitManagerParams
   ) {
-    const validShareTotal = 100_00000n;
-
-    if (params.moderator === zeroAddress) {
-      throw new Error("Dynamic split moderator cannot be zero address");
-    }
-
-    if (params.creatorShare < 0n || params.managerOwnerShare < 0n) {
-      throw new Error("Creator and manager owner shares cannot be negative");
-    }
-
-    if (params.creatorShare + params.managerOwnerShare > validShareTotal) {
-      throw new Error(
-        "Creator and manager owner shares must be less than or equal to 100_00000"
-      );
-    }
-
-    const duplicateRecipients = new Set<string>();
-    const recipientShares = params.splitReceivers.map((receiver) => {
-      if (receiver.address === zeroAddress) {
-        throw new Error("Recipient address cannot be zero address");
-      }
-
-      if (receiver.share <= 0n) {
-        throw new Error("Recipient share must be greater than zero");
-      }
-
-      const recipient = getAddress(receiver.address);
-      if (duplicateRecipients.has(recipient)) {
-        throw new Error("Duplicate recipient found in split receivers");
-      }
-
-      duplicateRecipients.add(recipient);
-      return { recipient, share: receiver.share };
-    });
-
-    const initializeData = encodeAbiParameters(
-      [
-        {
-          type: "tuple",
-          components: [
-            { name: "creatorShare", type: "uint256" },
-            { name: "ownerShare", type: "uint256" },
-            { name: "moderator", type: "address" },
-            {
-              name: "recipientShares",
-              type: "tuple[]",
-              components: [
-                { name: "recipient", type: "address" },
-                { name: "share", type: "uint256" },
-              ],
-            },
-          ],
-        },
-      ],
-      [
-        {
-          creatorShare: params.creatorShare,
-          ownerShare: params.managerOwnerShare,
-          moderator: params.moderator,
-          recipientShares,
-        },
-      ]
+    return this.flaunch(
+      chainId,
+      withManagerGeneration(
+        toFlaunchParamsWithDynamicSplitManager(params, chainId),
+        chainId,
+        DynamicAddressFeeSplitManagerV1_3Address
+      )
     );
-
-    return this.flaunch(chainId, {
-      ...params,
-      treasuryManagerParams: {
-        manager: DefaultPairedTokenAddress[chainId] === zeroAddress
-          ? DynamicAddressFeeSplitManagerV1_3Address[chainId]
-          : DynamicAddressFeeSplitManagerAddress[chainId],
-        permissions: params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
-        initializeData,
-        depositData: "0x",
-      },
-    });
   }
 }

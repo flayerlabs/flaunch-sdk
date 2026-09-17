@@ -2,7 +2,12 @@ import { encodeAbiParameters, getAddress, zeroAddress } from "viem";
 import type { FlaunchWithSplitManagerParams } from "../clients/FlaunchZapClient";
 
 /** Recipient percentages divide the remainder after creator and owner fees. */
-export function encodeStaticSplit(params: FlaunchWithSplitManagerParams) {
+export function encodeStaticSplit(
+  params: Pick<
+    FlaunchWithSplitManagerParams,
+    "creatorSplitPercent" | "managerOwnerSplitPercent" | "splitReceivers"
+  >
+) {
   const total = 10_000_000n;
   function share(percent: number) {
     if (!Number.isInteger(percent) || percent < 0 || percent > 100) {

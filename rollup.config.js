@@ -15,12 +15,12 @@ const isExternalDependency = (id) =>
     (dependency) => id === dependency || id.startsWith(`${dependency}/`)
   );
 
-// Custom onwarn function to ignore circular dependency warnings from viem
+// Custom onwarn function to ignore circular dependency warnings from viem (and ox, its
+// low-level dependency, which the UMD bundle inlines)
 const onwarn = (warning, warn) => {
-  // Ignore circular dependency warnings from viem
   if (
     warning.code === "CIRCULAR_DEPENDENCY" &&
-    warning.message.includes("viem")
+    (warning.message.includes("viem") || warning.message.includes("/ox/"))
   ) {
     return;
   }

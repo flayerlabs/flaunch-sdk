@@ -71,6 +71,12 @@ const trustedMessage = [
     ],
   },
 ] as const;
+/**
+ * Spend gate v2 ("cumulative spend ceilings"): `abi.encode(address referrer, SpendAuthorization)`
+ * where the authorization tuple is `(address buyer, bytes32 poolId, uint256 deadline,
+ * uint256 spendCeilingWei, bytes signature)` — five fields, so the tuple's dynamic offset word
+ * is 160 (v1 carried `maxSpendWei` and `nonce`, six fields, offset 192).
+ */
 const spendMessage = [
   { name: "referrer", type: "address" },
   {
@@ -80,8 +86,7 @@ const spendMessage = [
       { name: "buyer", type: "address" },
       { name: "poolId", type: "bytes32" },
       { name: "deadline", type: "uint256" },
-      { name: "maxSpendWei", type: "uint256" },
-      { name: "nonce", type: "uint256" },
+      { name: "spendCeilingWei", type: "uint256" },
       { name: "signature", type: "bytes" },
     ],
   },
@@ -92,10 +97,15 @@ export type TrustedReferralMessage = {
   deadline: bigint;
   signature: Hex;
 };
+/**
+ * A spend gate v2 `SpendAuthorization` plus its EIP-712 signature (domain `FlaunchSpendGate`,
+ * version `2`). `spendCeilingWei` is a **cumulative** ceiling on the buyer's total spend in the
+ * pool, not a per-swap cap; there is no nonce, and the signature is reusable until `deadline` by
+ * design. The gate compares the ceiling against what the buyer has already spent.
+ */
 export type SpendReferralMessage = TrustedReferralMessage & {
   buyer: Address;
-  maxSpendWei: bigint;
-  nonce: bigint;
+  spendCeilingWei: bigint;
 };
 
 /** Packages an existing authorization; it does not sign or alter its signed fields. */
@@ -106,7 +116,11 @@ export function encodeTrustedReferralHookData(
   return encodeAbiParameters(trustedMessage, [referrer, message]);
 }
 
-/** For SpendGatedSignerFeeCalculator, including Game Mode. */
+/**
+ * For the spend gate v2 fee calculator (cumulative spend ceilings), including Game Mode.
+ * Packages an existing v2 authorization behind the leading referrer word; it does not sign or
+ * alter the signed fields, and the same payload stays valid until `deadline`.
+ */
 export function encodeSpendReferralHookData(
   message: SpendReferralMessage,
   referrer: Address = zeroAddress,
@@ -119,6 +133,7 @@ export function decodeTrustedReferralHookData(hookData: Hex) {
   return { referrer, message };
 }
 
+/** Decodes a spend gate v2 payload (`referrer`, then the 5-field `SpendAuthorization`). */
 export function decodeSpendReferralHookData(hookData: Hex) {
   const [referrer, message] = decodeAbiParameters(spendMessage, hookData);
   return { referrer, message };

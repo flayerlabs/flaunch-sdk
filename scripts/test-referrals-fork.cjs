@@ -200,21 +200,20 @@ async function main() {
           buyer: trader,
           poolId: pool.poolId,
           deadline: block.timestamp + 600n,
-          maxSpendWei: parseEther("1"),
-          nonce: direction === "buy" ? 1n : 2n,
+          // v2: a cumulative ceiling, no nonce; the signature is reusable until the deadline
+          spendCeilingWei: parseEther("1"),
         };
         const hash = await publicClient.readContract({
           address: gate,
           abi: parseAbi([
-            "function hashSpendAuthorization(address,bytes32,uint256,uint256,uint256) view returns (bytes32)",
+            "function hashSpendAuthorization(address,bytes32,uint256,uint256) view returns (bytes32)",
           ]),
           functionName: "hashSpendAuthorization",
           args: [
             message.buyer,
             message.poolId,
             message.deadline,
-            message.maxSpendWei,
-            message.nonce,
+            message.spendCeilingWei,
           ],
         });
         hookData = sdk.encodeSpendReferralHookData(
