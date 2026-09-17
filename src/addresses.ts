@@ -132,7 +132,7 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
   [arbitrum.id]: {
     "0xcab62e007ab6656877ab556cea330de27ae025dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A",
     "0xbbe1b9831117e829fe80be97fce82f2b49c1a5dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A",
-    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A", // vested AnyPM (CREATE3 parity, pending deploy): the v2 gate approves this PoolSwap
+    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A", // vested AnyPM (CREATE3 parity, deployed 2026-09-17): the v2 gate approves this PoolSwap
   },
   [mainnet.id]: {
     "0xb741a710e456fc6d7f76c88f5c56b27d05e8a5dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
@@ -140,7 +140,7 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
   },
   [base.id]: {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // v1.3.1 PM, gate 0xBdbF…
-    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // vested AnyPM (CREATE3 parity, pending deploy): the v2 gate approves this PoolSwap
+    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // vested AnyPM (CREATE3 parity, deployed 2026-09-17): the v2 gate approves this PoolSwap
   },
   [baseSepolia.id]: {
     // Keys stay LOWERCASE — `poolSwapForHook` lowercases its lookup.
@@ -153,7 +153,7 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 PM, gate 0xB246…
     "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.3 PM, gate 0x120a…
     "0x6ea0edee449a287504990df8d87951b9436825dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 AnyPM, same gate as the v1.3.1 PM
-    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // vested AnyPM (CREATE3 parity, pending deploy)
+    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // vested AnyPM (CREATE3 parity, deployed 2026-09-17)
   },
 };
 
@@ -271,10 +271,9 @@ export const AnyFlaunchV1_3Address: Addresses = {
 // (`TreasuryManagerFactoryV1_3Address`) and PairedTokenRegistry.
 //
 // Mainnets (4663 / 8453 / 42161): CREATE3 parity deploy through Create3Factory 0x65cC…EDF7 with one
-// salt and one deployer per contract, so every mainnet shares one address — predicted 2026-09-17 by
-// flaunch-contracts `script/deployment/AnyVestedStack.s.sol` and reproduced by dry runs on each chain.
-// DO NOT SHIP the mainnet entries until flaunch-contracts `deployments/game-mode-all-chains.md`
-// records the broadcast for that chain: `doesChainSupportVestedLaunch` turns true the moment they exist.
+// salt and one deployer per contract, so every mainnet shares one address. Deployed 2026-09-17 by
+// flaunch-contracts `script/deployment/AnyVestedStack.s.sol` (Base blocks 51432968–51432987, Robinhood
+// 65422754–65423329, Arbitrum 506115514–506115711); record in `deployments/game-mode-all-chains.md`.
 // Ethereum (1) is deliberately absent: vesting is not offered there (Linear FLA2-417 tracks a later
 // Ethereum deploy); pre-buy on Ethereum keeps working through the paired route.
 export const AnyFlaunchZapAddress: Addresses = {
@@ -438,9 +437,8 @@ export const GameDeveloperFeeSplitManagerAddress: Addresses = {
   // (flaunch-managers PR #6). GAME_DEVELOPER_SHARE is a pinned 5_00000 (5%).
   [baseSepolia.id]: "0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e",
   // Mainnets: CREATE3 parity deploy via flaunch-managers `Managers.s.sol`, salt
-  // keccak256('flaunch.GameDeveloperFeeSplitManager.v1'), predicted 2026-09-17 and reproduced by
-  // dry runs on each chain. DO NOT SHIP until the broadcast and the factory's `approveManager` are
-  // recorded for that chain. Ethereum (1) is absent until FLA2-417 deploys it there.
+  // keccak256('flaunch.GameDeveloperFeeSplitManager.v1'); deployed and approved 2026-09-17 on Base
+  // (block 51433050), Robinhood (65438565) and Arbitrum (506116331). Ethereum (1) follows in FLA2-417.
   [arbitrum.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
   [base.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
   [robinhood.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
