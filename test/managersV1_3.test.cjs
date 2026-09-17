@@ -182,7 +182,7 @@ test("the multi-asset manager generation retains the Base, Robinhood and Base Se
   assert.equal(SupersededPositionManagerV1_3Address[base.id], undefined);
   assert.deepEqual(
     getV1_3PositionManagers(robinhood.id).map((a) => a.toLowerCase()),
-    [FlaunchPositionManagerV1_3Address[robinhood.id].toLowerCase(), "0x9abfbdc34a294de5210c0889f21d5af54c4965dc", "0x588c683ecc450f8b2aadb13d7f63792b840425dc", "0x6ea0edee449a287504990df8d87951b9436825dc"]
+    [FlaunchPositionManagerV1_3Address[robinhood.id].toLowerCase(), "0x9abfbdc34a294de5210c0889f21d5af54c4965dc", "0x588c683ecc450f8b2aadb13d7f63792b840425dc", "0x6ea0edee449a287504990df8d87951b9436825dc", "0xe753a351fb498051a09dc130fcc29aebc76525dc" /* vested AnyPM, CREATE3 parity */]
   );
   assert.equal(doesChainSupportMultiAssetManagers(robinhood.id), true);
 

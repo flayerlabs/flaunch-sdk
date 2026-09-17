@@ -14,7 +14,7 @@ const {
   toHex,
   zeroAddress,
 } = require("viem");
-const { base, robinhood, baseSepolia } = require("viem/chains");
+const { base, robinhood, baseSepolia, unichain } = require("viem/chains");
 const {
   ReadFlaunchSDK,
   ReadWriteFlaunchSDK,
@@ -838,7 +838,8 @@ test("vested route (Base Sepolia, flETH default): cap read, three pinned fee rea
   });
   assert.deepEqual(gated.reasons, ["PROTECTED_LAUNCH_UNSUPPORTED"]);
   assert.equal(bad.interactions.length, 0);
-  const elsewhere = await new ReadFlaunchSDK(base.id, bad).planLaunchPreBuy({ route: "vested", params: vestedParams, preBuyBps: 100, slippageBps: 50 });
+  // Unichain has no vested stack (every mainnet does, via the CREATE3 parity maps)
+  const elsewhere = await new ReadFlaunchSDK(unichain.id, bad).planLaunchPreBuy({ route: "vested", params: vestedParams, preBuyBps: 100, slippageBps: 50 });
   assert.deepEqual(elsewhere.reasons, ["ROUTE_UNSUPPORTED"]);
 });
 

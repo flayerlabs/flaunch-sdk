@@ -132,13 +132,16 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
   [arbitrum.id]: {
     "0xcab62e007ab6656877ab556cea330de27ae025dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A",
     "0xbbe1b9831117e829fe80be97fce82f2b49c1a5dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A",
+    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A", // vested AnyPM (CREATE3 parity, pending deploy): the v2 gate approves this PoolSwap
   },
   [mainnet.id]: {
     "0xb741a710e456fc6d7f76c88f5c56b27d05e8a5dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
     "0x0215c3ef94ef3e86c32e847c662ad649000965dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
+    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56", // vested AnyPM (CREATE3 parity, pending deploy)
   },
   [base.id]: {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // v1.3.1 PM, gate 0xBdbF…
+    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // vested AnyPM (CREATE3 parity, pending deploy): the v2 gate approves this PoolSwap
   },
   [baseSepolia.id]: {
     // Keys stay LOWERCASE — `poolSwapForHook` lowercases its lookup.
@@ -151,6 +154,7 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 PM, gate 0xB246…
     "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.3 PM, gate 0x120a…
     "0x6ea0edee449a287504990df8d87951b9436825dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 AnyPM, same gate as the v1.3.1 PM
+    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // vested AnyPM (CREATE3 parity, pending deploy)
   },
 };
 
@@ -260,28 +264,53 @@ export const AnyFlaunchV1_3Address: Addresses = {
   [robinhood.id]: "0x1bbbD15A6D5176edc7B42f2cc6cA800D9d74015D",
 };
 
-// Vested launches (AnyFlaunchZap + MemecoinVesting), Base Sepolia only so far: deployed
-// 2026-09-11 (blocks 46682862–46682881). The zap launches through its own AnyPositionManager
-// generation (`AnyFlaunchZapPositionManagerAddress`, ERC721 `AnyFlaunchZapFlaunchAddress`) — a
-// SEPARATE hook from the v1.3.3 import-generation `AnyPositionManagerV1_3Address` /
-// `AnyFlaunchV1_3Address`, which keep serving `anyFlaunch()`. Bound to the chain's v1.3.1
-// TreasuryManagerFactory (`TreasuryManagerFactoryV1_3Address`) and PairedTokenRegistry.
+// Vested launches (AnyFlaunchZap + MemecoinVesting). Base Sepolia: deployed 2026-09-11 (blocks
+// 46682862–46682881). The zap launches through its own AnyPositionManager generation
+// (`AnyFlaunchZapPositionManagerAddress`, ERC721 `AnyFlaunchZapFlaunchAddress`) — a SEPARATE hook
+// from the v1.3.3 import-generation `AnyPositionManagerV1_3Address` / `AnyFlaunchV1_3Address`,
+// which keep serving `anyFlaunch()`. Bound to the chain's v1.3.1 TreasuryManagerFactory
+// (`TreasuryManagerFactoryV1_3Address`) and PairedTokenRegistry.
+//
+// Mainnets (1 / 4663 / 8453 / 42161): CREATE3 parity deploy through Create3Factory 0x65cC…EDF7 with
+// one salt and one deployer per contract, so every mainnet shares one address — predicted 2026-09-17
+// by flaunch-contracts `script/deployment/AnyVestedStack.s.sol` and reproduced by dry runs on each
+// chain. DO NOT SHIP the mainnet entries until flaunch-contracts `deployments/game-mode-all-chains.md`
+// records the broadcast for that chain: `doesChainSupportVestedLaunch` turns true the moment they exist.
 export const AnyFlaunchZapAddress: Addresses = {
+  [arbitrum.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
+  [mainnet.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
+  [base.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
   [baseSepolia.id]: "0xaA0872BcA9c6eCB0Cda78528cd89149822bc124D",
+  [robinhood.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
 };
 
 export const MemecoinVestingAddress: Addresses = {
+  [arbitrum.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
+  [mainnet.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
+  [base.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
   [baseSepolia.id]: "0x3F8004335C113Fac0873c061a28670F0AaD6A87b",
+  [robinhood.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
 };
 
-/** The AnyPositionManager hook `AnyFlaunchZapAddress` launches through; emits the vested coins' `PoolCreated`. */
+/**
+ * The AnyPositionManager hook `AnyFlaunchZapAddress` launches through; emits the vested coins'
+ * `PoolCreated`. The mainnets reuse the salt Base Sepolia mined, so the hook shares its address there.
+ */
 export const AnyFlaunchZapPositionManagerAddress: Addresses = {
+  [arbitrum.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
+  [mainnet.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
+  [base.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
   [baseSepolia.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
+  [robinhood.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
 };
 
 /** The AnyFlaunch ERC721 of `AnyFlaunchZapPositionManagerAddress` (launch NFTs of vested coins). */
 export const AnyFlaunchZapFlaunchAddress: Addresses = {
+  [arbitrum.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
+  [mainnet.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
+  [base.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
   [baseSepolia.id]: "0xE9ec22D7c245743DC5dC958e5cCd664732Ae04b9",
+  [robinhood.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
 };
 
 export const FairLaunchAddress: Addresses = {
@@ -411,6 +440,14 @@ export const GameDeveloperFeeSplitManagerAddress: Addresses = {
   // TreasuryManagerFactory 0x98dfdd0AAc46c85FA35d67941d394019b7e3a18d
   // (flaunch-managers PR #6). GAME_DEVELOPER_SHARE is a pinned 5_00000 (5%).
   [baseSepolia.id]: "0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e",
+  // Mainnets: CREATE3 parity deploy via flaunch-managers `Managers.s.sol`, salt
+  // keccak256('flaunch.GameDeveloperFeeSplitManager.v1'), predicted 2026-09-17 and reproduced by
+  // dry runs on each chain. DO NOT SHIP until the broadcast and the factory's `approveManager` are
+  // recorded for that chain (Ethereum's approval is a Safe transaction).
+  [arbitrum.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
+  [mainnet.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
+  [base.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
+  [robinhood.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
 };
 
 export const DynamicAddressFeeSplitManagerV1_3Address: Addresses = {
