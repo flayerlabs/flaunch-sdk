@@ -88,6 +88,7 @@ test("Ethereum maps match the verified deployment and keep legacy/default pairin
   for (const chain of [base, baseSepolia, robinhood, unichain]) {
     assert.equal(DefaultPairedTokenAddress[chain.id], FLETHAddress[chain.id]);
   }
+  // no vested hook on Ethereum until FLA2-417 deploys it there
   assert.deepEqual(getV1_3PositionManagers(mainnet.id), [HOOK, ANY_HOOK]);
   assert.equal(getPermissionsAddressV1_3(Permissions.CLOSED, mainnet.id), RELEASE_ADDRESSES.ClosedPermissionsV1_3Address);
   assert.equal(getPermissionsAddressV1_3(Permissions.WHITELISTED, mainnet.id), RELEASE_ADDRESSES.WhitelistedPermissionsV1_3Address);

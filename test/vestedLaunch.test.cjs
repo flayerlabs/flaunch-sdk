@@ -11,7 +11,7 @@ const {
   encodeFunctionResult,
   zeroAddress,
 } = require("viem");
-const { base, baseSepolia, mainnet, robinhood } = require("viem/chains");
+const { arbitrum, base, baseSepolia, mainnet, robinhood, unichain } = require("viem/chains");
 const {
   AnyFlaunchZapAbi,
   AnyFlaunchZapAddress,
@@ -128,11 +128,17 @@ function recordingDrift({
 const writes = (drift) => drift.interactions.filter((i) => i.kind === "write");
 const reads = (drift, fn) => drift.interactions.filter((i) => i.kind === "read" && i.fn === fn);
 
-test("vested launch addresses and capability cover Base Sepolia only, and stay distinct from the import-generation hook", () => {
+test("vested launch addresses cover Base Sepolia plus the CREATE3 parity mainnets, and stay distinct from the import-generation hook", () => {
+  // Ethereum is deliberately absent: vesting is not offered there yet (FLA2-417)
+  const MAINNETS = [base.id, robinhood.id, arbitrum.id];
   for (const map of [AnyFlaunchZapAddress, MemecoinVestingAddress, AnyFlaunchZapPositionManagerAddress, AnyFlaunchZapFlaunchAddress]) {
     assert.ok(map[CHAIN]);
-    assert.equal(Object.keys(map).length, 1);
+    assert.equal(Object.keys(map).length, 1 + MAINNETS.length);
+    // one address per contract on every mainnet (CREATE3 parity)
+    for (const chainId of MAINNETS) assert.equal(lower(map[chainId]), lower(map[MAINNETS[0]]));
   }
+  // the hook shares Sepolia's address everywhere; the other three were plain deploys on Sepolia
+  for (const chainId of MAINNETS) assert.equal(lower(AnyFlaunchZapPositionManagerAddress[chainId]), lower(HOOK));
   assert.equal(lower(ZAP), "0xaa0872bca9c6ecb0cda78528cd89149822bc124d");
   assert.equal(lower(VESTING), "0x3f8004335c113fac0873c061a28670f0aad6a87b");
   assert.equal(lower(HOOK), "0xe753a351fb498051a09dc130fcc29aebc76525dc");
@@ -140,12 +146,16 @@ test("vested launch addresses and capability cover Base Sepolia only, and stay d
   assert.notEqual(lower(HOOK), lower(AnyPositionManagerV1_3Address[CHAIN]), "the v1.3.3 import hook is a different contract");
   assert.ok(TreasuryManagerFactoryV1_3Address[CHAIN] && PairedTokenRegistryV1_3Address[CHAIN]);
   assert.equal(doesChainSupportVestedLaunch(CHAIN), true);
-  for (const chainId of [base.id, robinhood.id, mainnet.id, 999_999]) {
-    assert.equal(doesChainSupportVestedLaunch(chainId), false);
+  for (const chainId of MAINNETS) {
+    assert.equal(doesChainSupportVestedLaunch(chainId), true);
   }
+  // chains the SDK knows but without the vested stack (Unichain, Ethereum) refuse the vested clients by name
+  assert.equal(doesChainSupportVestedLaunch(unichain.id), false);
+  assert.equal(doesChainSupportVestedLaunch(mainnet.id), false);
+  assert.equal(doesChainSupportVestedLaunch(999_999), false);
   const drift = recordingDrift();
-  assert.throws(() => new ReadFlaunchSDK(base.id, drift).readAnyFlaunchZap, /Vested launches are not supported on chain 8453/);
-  assert.throws(() => new ReadWriteFlaunchSDK(robinhood.id, drift).readWriteMemecoinVesting, /Vested launches are not supported on chain 4663/);
+  assert.throws(() => new ReadFlaunchSDK(unichain.id, drift).readAnyFlaunchZap, /Vested launches are not supported on chain 130/);
+  assert.throws(() => new ReadWriteFlaunchSDK(unichain.id, drift).readWriteMemecoinVesting, /Vested launches are not supported on chain 130/);
 });
 
 test("developer params convert to the zap struct: exact percent → wei, USDC market cap, 2 dp fee, flETH default", () => {

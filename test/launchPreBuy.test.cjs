@@ -297,11 +297,12 @@ test("capability matrix per chain", () => {
     return caps;
   };
   const ethRoutes = ["standard", "revenueManager", "splitManager", "dynamicSplitManager"];
-  expect(base.id, ["pairedToken"]);
-  // the AnyFlaunchZap (vested launches) is deployed on Base Sepolia only
+  // the AnyFlaunchZap (vested launches): Base Sepolia live, the mainnets via the CREATE3 parity maps
+  expect(base.id, ["pairedToken", "vested"]);
   expect(baseSepolia.id, ["pairedToken", "vested"]);
-  expect(robinhood.id, LAUNCH_PRE_BUY_ROUTES.filter((route) => route !== "vested"));
-  // Ethereum's `flaunch*` targets the v1.3 zap since 0.15.0, so the multichain routes are off there
+  expect(robinhood.id, [...LAUNCH_PRE_BUY_ROUTES]);
+  // Ethereum's `flaunch*` targets the v1.3 zap since 0.15.0, so the multichain routes are off there;
+  // the vested stack is not deployed on Ethereum (FLA2-417), so pre-buy runs through the paired route only
   expect(mainnet.id, ["pairedToken"]);
   expect(unichain.id, ethRoutes);
   const unknown = expect(999_999, []);

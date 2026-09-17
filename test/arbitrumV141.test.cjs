@@ -109,8 +109,9 @@ test("combined candidate retains Arbitrum pre-buy and Sepolia preview capabiliti
   const capabilities = sdk.getLaunchPreBuyCapabilities(arbitrum.id);
   assert.equal(capabilities.routes.pairedToken.supported, true);
   assert.equal(capabilities.routes.dynamicSplitManager.supported, false);
-  assert.equal(sdk.doesChainSupportVestedLaunch(arbitrum.id), false);
-  assert.equal(sdk.doesChainSupportGameDeveloperSplit(arbitrum.id), false);
+  // the CREATE3 parity maps make Arbitrum a vested / Game Mode chain as well
+  assert.equal(sdk.doesChainSupportVestedLaunch(arbitrum.id), true);
+  assert.equal(sdk.doesChainSupportGameDeveloperSplit(arbitrum.id), true);
   assert.equal(sdk.doesChainSupportVestedLaunch(84532), true);
   assert.equal(sdk.doesChainSupportGameDeveloperSplit(84532), true);
   assert.equal(sdk.doesChainSupportAnyGameDeveloperSplit(84532), true);

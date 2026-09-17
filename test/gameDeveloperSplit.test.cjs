@@ -305,12 +305,14 @@ test("Any game route: the Base Sepolia manager is deployed, so both game routes 
   );
 
   // a chain without the manager still names itself, and reads nothing before the chain check
-  const unsupported = new ReadWriteFlaunchSDK(base.id, recordingDrift());
-  await assert.rejects(unsupported.prepareAnyGameLaunch(gameLaunch), /not deployed on chain 8453/);
-  await assert.rejects(unsupported.flaunchAnyWithGameDeveloperSplit(gameLaunch), /not deployed on chain 8453/);
-  assert.equal(doesChainSupportAnyGameDeveloperSplit(base.id), false);
-  assert.equal(doesChainSupportGameDeveloperSplit(base.id), false);
-  assert.equal(isGameDeveloperFeeSplitManagerImplementation(base.id, DEPLOYED_MANAGER_IMPL), false);
+  // (Unichain: an SDK chain with neither the manager nor the vested stack)
+  const UNSUPPORTED_CHAIN = unichain.id;
+  const unsupported = new ReadWriteFlaunchSDK(UNSUPPORTED_CHAIN, recordingDrift());
+  await assert.rejects(unsupported.prepareAnyGameLaunch(gameLaunch), /not deployed on chain 130/);
+  await assert.rejects(unsupported.flaunchAnyWithGameDeveloperSplit(gameLaunch), /not deployed on chain 130/);
+  assert.equal(doesChainSupportAnyGameDeveloperSplit(UNSUPPORTED_CHAIN), false);
+  assert.equal(doesChainSupportGameDeveloperSplit(UNSUPPORTED_CHAIN), false);
+  assert.equal(isGameDeveloperFeeSplitManagerImplementation(UNSUPPORTED_CHAIN, DEPLOYED_MANAGER_IMPL), false);
   assert.equal(await unsupported.getGameDeveloperPayout(CLONE), null);
   assert.deepEqual(unsupported.drift.interactions, [], "nothing is read before the chain check");
 
@@ -321,8 +323,8 @@ test("Any game route: the Base Sepolia manager is deployed, so both game routes 
     assert.equal(isGameDeveloperFeeSplitManagerImplementation(CHAIN, TEST_MANAGER_IMPL.toLowerCase()), true);
     assert.equal(isGameDeveloperFeeSplitManagerImplementation(CHAIN, CLONE), false);
     assert.equal(isGameDeveloperFeeSplitManagerImplementation(CHAIN, zeroAddress), false);
-    // the vested stack is Base Sepolia only, so the Any route stays off elsewhere even with a manager
-    assert.equal(doesChainSupportAnyGameDeveloperSplit(base.id), false);
+    // a chain with neither the vested stack nor a manager stays off even while one is injected elsewhere
+    assert.equal(doesChainSupportAnyGameDeveloperSplit(UNSUPPORTED_CHAIN), false);
   });
 });
 
