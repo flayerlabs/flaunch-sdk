@@ -1,10 +1,14 @@
 # Changelog
 
-## [0.17.0-preview.1] - UNRELEASED
+## [0.17.0] - 2026-09-17
 
-Preview of the combined vested / Game Mode / pre-buy release on top of the published `0.16.0` (Arbitrum v1.4.1). The `0.16.0` version number is taken on npm by a build without these APIs, so this line ships as `0.17.0`. Earlier tarballs of this work were labelled `0.16.0-preview.1` to `0.16.0-preview.5`.
+The combined vested / Game Mode / pre-buy release on top of the published `0.16.0` (Arbitrum v1.4.1). The `0.16.0` version number is taken on npm by a build without these APIs, so this line ships as `0.17.0`. Preview tarballs of this work were labelled `0.16.0-preview.1` to `0.16.0-preview.5` and `0.17.0-preview.1` / `-preview.2`.
+
+Publish only after the reflaunch end-to-end run on at least Base has passed against the vendored tarball, and only once the mainnet Game Mode contracts below are broadcast.
 
 ### Added
+
+- **Game Mode stack on every mainnet, one address per contract** — `AnyFlaunchZapAddress`, `MemecoinVestingAddress`, `AnyFlaunchZapPositionManagerAddress`, `AnyFlaunchZapFlaunchAddress` and `GameDeveloperFeeSplitManagerAddress` gain Base (8453), Robinhood (4663), Ethereum (1) and Arbitrum (42161) entries at the CREATE3 parity addresses predicted by flaunch-contracts `AnyVestedStack.s.sol` and flaunch-managers `Managers.s.sol` (the vested hook keeps Base Sepolia's `0xE753…25DC` everywhere). `doesChainSupportVestedLaunch`, `doesChainSupportGameDeveloperSplit` and the `vested` pre-buy route follow automatically; `PoolSwapForHookV1_3Address` maps the hook to each chain's PoolSwap. These entries are gated on the broadcasts recorded in flaunch-contracts `deployments/game-mode-all-chains.md`.
 
 - **Launch pre-buy** — a creator buys an exact share of supply atomically with the launch, quoted from the protocol and executed through the launch route the coin already uses
   - `planLaunchPreBuy(input)` on `ReadFlaunchSDK`: `preBuyBps` (integer basis points, `100 = 1%`) and caller-chosen `slippageBps` → a typed `LaunchPreBuyPlan` with the exact `premineAmount` (`TOTAL_SUPPLY * bps / 10_000`), the native flaunching `fee` reported separately from the purchase, `payment.expected` / `payment.max` in the real payment asset (`{ chainId, address, decimals }`), `maxPremineCost` for paired-token routes, `approvals` (exact spender and amount), `launch` calldata, `quoteBlockNumber` / `createdAtMs` / `expiresAtMs` (default 30 s), `funding`, and a `binding` hash — or `{ supported: false, reasons }` with machine-readable `LaunchPreBuyReasonCode`s
