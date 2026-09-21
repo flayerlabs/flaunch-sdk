@@ -137,6 +137,7 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
   [mainnet.id]: {
     "0xb741a710e456fc6d7f76c88f5c56b27d05e8a5dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
     "0x0215c3ef94ef3e86c32e847c662ad649000965dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
+    "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56", // vested AnyPM (CREATE3 parity, deployed 2026-09-21): the v1 and v2 gates both approve this PoolSwap
   },
   [base.id]: {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // v1.3.1 PM, gate 0xBdbF…
@@ -274,10 +275,11 @@ export const AnyFlaunchV1_3Address: Addresses = {
 // salt and one deployer per contract, so every mainnet shares one address. Deployed 2026-09-17 by
 // flaunch-contracts `script/deployment/AnyVestedStack.s.sol` (Base blocks 51432968–51432987, Robinhood
 // 65422754–65423329, Arbitrum 506115514–506115711); record in `deployments/game-mode-all-chains.md`.
-// Ethereum (1) is deliberately absent: vesting is not offered there (Linear FLA2-417 tracks a later
-// Ethereum deploy); pre-buy on Ethereum keeps working through the paired route.
+// Ethereum (1): the same parity deploy on 2026-09-21 (FLA2-417, deployer nonces 536–558), owned by the
+// protocol Safe 0x0646…fb6e, which also granted the factory FLAUNCH role and mapped the indexer notifier.
 export const AnyFlaunchZapAddress: Addresses = {
   [arbitrum.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
+  [mainnet.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
   [base.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
   [baseSepolia.id]: "0xaA0872BcA9c6eCB0Cda78528cd89149822bc124D",
   [robinhood.id]: "0xDF22fe67b69916aEFf4846ecB45db0B9016092f6",
@@ -285,6 +287,7 @@ export const AnyFlaunchZapAddress: Addresses = {
 
 export const MemecoinVestingAddress: Addresses = {
   [arbitrum.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
+  [mainnet.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
   [base.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
   [baseSepolia.id]: "0x3F8004335C113Fac0873c061a28670F0AaD6A87b",
   [robinhood.id]: "0xfE616a9c723f5fB35728C7ccCb84dB034A18cC86",
@@ -296,6 +299,7 @@ export const MemecoinVestingAddress: Addresses = {
  */
 export const AnyFlaunchZapPositionManagerAddress: Addresses = {
   [arbitrum.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
+  [mainnet.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
   [base.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
   [baseSepolia.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
   [robinhood.id]: "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
@@ -304,6 +308,7 @@ export const AnyFlaunchZapPositionManagerAddress: Addresses = {
 /** The AnyFlaunch ERC721 of `AnyFlaunchZapPositionManagerAddress` (launch NFTs of vested coins). */
 export const AnyFlaunchZapFlaunchAddress: Addresses = {
   [arbitrum.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
+  [mainnet.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
   [base.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
   [baseSepolia.id]: "0xE9ec22D7c245743DC5dC958e5cCd664732Ae04b9",
   [robinhood.id]: "0xCC6C194fD1d2fbe5fCF2F228DfDF3892bfC76C9c",
@@ -438,8 +443,10 @@ export const GameDeveloperFeeSplitManagerAddress: Addresses = {
   [baseSepolia.id]: "0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e",
   // Mainnets: CREATE3 parity deploy via flaunch-managers `Managers.s.sol`, salt
   // keccak256('flaunch.GameDeveloperFeeSplitManager.v1'); deployed and approved 2026-09-17 on Base
-  // (block 51433050), Robinhood (65438565) and Arbitrum (506116331). Ethereum (1) follows in FLA2-417.
+  // (block 51433050), Robinhood (65438565) and Arbitrum (506116331); Ethereum (1) on 2026-09-21 (FLA2-417),
+  // approved there by the protocol Safe.
   [arbitrum.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
+  [mainnet.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
   [base.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
   [robinhood.id]: "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03",
 };
