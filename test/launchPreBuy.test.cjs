@@ -302,8 +302,8 @@ test("capability matrix per chain", () => {
   expect(baseSepolia.id, ["pairedToken", "vested"]);
   expect(robinhood.id, [...LAUNCH_PRE_BUY_ROUTES]);
   // Ethereum's `flaunch*` targets the v1.3 zap since 0.15.0, so the multichain routes are off there;
-  // the vested stack is not deployed on Ethereum (FLA2-417), so pre-buy runs through the paired route only
-  expect(mainnet.id, ["pairedToken"]);
+  // the vested stack reached Ethereum on 2026-09-21 (FLA2-417), so it pre-buys on both routes like Base
+  expect(mainnet.id, ["pairedToken", "vested"]);
   expect(unichain.id, ethRoutes);
   const unknown = expect(999_999, []);
   assert.deepEqual(unknown.routes.standard.reasons, ["CHAIN_UNSUPPORTED"]);
