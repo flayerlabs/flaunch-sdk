@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.17.1] - 2026-09-22
+
+### Fixed
+
+- **Vested earnings splits deployed the wrong manager generation.** `toFlaunchVestedParamsWithDynamicSplitManager` (behind `flaunchVestedWithDynamicSplitManager` / `flaunchIPFSVestedWithDynamicSplitManager`) named `DynamicAddressFeeSplitManagerAddress`, the multichain zap's implementation, while the AnyFlaunchZap is bound to the v1.3.1 `TreasuryManagerFactory`, which approves only `DynamicAddressFeeSplitManagerV1_3Address`. The zap does not refuse an unapproved manager: `_createWithManagerZap` falls through to transferring the coin's ownership NFT to the given address, so on Base, Robinhood and Ethereum a vested launch with a split would have deposited its ownership into a raw implementation with no owner. It now names the v1.3.1 manager, and throws before signing on a chain without one. The `eth_call` simulation of the old calldata succeeds, which is why nothing caught it; found while decoding a Game Mode launch on Base on 2026-09-22, before any such launch was broadcast.
+
 ## [0.17.0] - 2026-09-17
 
 The combined vested / Game Mode / pre-buy release on top of the published `0.16.0` (Arbitrum v1.4.1). The `0.16.0` version number is taken on npm by a build without these APIs, so this line ships as `0.17.0`. Preview tarballs of this work were labelled `0.16.0-preview.1` to `0.16.0-preview.5` and `0.17.0-preview.1` / `-preview.2`.
