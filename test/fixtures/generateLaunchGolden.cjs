@@ -10,6 +10,12 @@
 // 0.15.0 (#41) moved Ethereum launches to the v1.3 zap with native ETH as the default pairing;
 // every other case is still byte-identical to the 0.13.0 build.
 //
+// The two `vested:84532:vestedDynamicSplitManager:*` cases were regenerated for 0.17.1: the
+// vested dynamic split now deploys `DynamicAddressFeeSplitManagerV1_3Address`, the manager the
+// AnyFlaunchZap's v1.3.1 factory approves, instead of the multichain zap's generation (which the
+// zap would have handed the coin's ownership NFT to, raw). Only `_treasuryManagerParams.manager`
+// changes in those two cases.
+//
 //   node test/fixtures/generateLaunchGolden.cjs
 const { writeFileSync } = require("node:fs");
 const path = require("node:path");

@@ -6,7 +6,10 @@ import {
   parseUnits,
   zeroAddress,
 } from "viem";
-import { FLETHAddress } from "../addresses";
+import {
+  DynamicAddressFeeSplitManagerV1_3Address,
+  FLETHAddress,
+} from "../addresses";
 import { percentToBps } from "../helpers/bps";
 import { getPermissionsAddressV1_3 } from "../helpers/permissions";
 import { IPFSParams, Permissions } from "../types";
@@ -17,7 +20,7 @@ import type {
 } from "./AnyFlaunchZapClient";
 import {
   FLAUNCH_TOTAL_SUPPLY,
-  toFlaunchParamsWithDynamicSplitManager,
+  encodeDynamicSplitInitializeData,
   toFlaunchParamsWithRevenueManager,
   toFlaunchParamsWithSplitManager,
   type FlaunchParams,
@@ -121,12 +124,36 @@ export function toFlaunchVestedParamsWithSplitManager(
   return toFlaunchParamsWithSplitManager(params, chainId);
 }
 
-/** Dynamic split vested launch → `FlaunchVestedParams` deploying a DynamicAddressFeeSplitManager. */
+/**
+ * Dynamic split vested launch → `FlaunchVestedParams` deploying a DynamicAddressFeeSplitManager.
+ *
+ * The v1.3.1 generation (`DynamicAddressFeeSplitManagerV1_3Address`), never the multichain zap's
+ * `DynamicAddressFeeSplitManagerAddress`: the AnyFlaunchZap is bound to the v1.3.1
+ * TreasuryManagerFactory, which approves only that implementation. The zap does not refuse an
+ * unapproved manager — `_createWithManagerZap` falls through to transferring the coin's ownership
+ * NFT to the address as given, which for a raw implementation is a contract with no owner and no
+ * recipients. Through 0.17.0 this helper picked the previous generation and a vested earnings
+ * split on Base, Robinhood or Ethereum would have done exactly that.
+ */
 export function toFlaunchVestedParamsWithDynamicSplitManager(
   params: FlaunchVestedWithDynamicSplitManagerParams,
   chainId: number
 ): FlaunchVestedParams {
-  return toFlaunchParamsWithDynamicSplitManager(params, chainId);
+  const manager = DynamicAddressFeeSplitManagerV1_3Address[chainId];
+  if (!manager) {
+    throw new Error(
+      `DynamicAddressFeeSplitManager (v1.3.1) is not deployed on chain ${chainId}, so a vested launch cannot carry an earnings split there`
+    );
+  }
+  return {
+    ...params,
+    treasuryManagerParams: {
+      manager,
+      permissions: params.treasuryManagerParams?.permissions ?? Permissions.OPEN,
+      initializeData: encodeDynamicSplitInitializeData(params),
+      depositData: "0x",
+    },
+  };
 }
 
 const UINT32_MAX = 2 ** 32 - 1;

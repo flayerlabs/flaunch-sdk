@@ -19,6 +19,8 @@ const {
   AnyFlaunchZapPositionManagerAddress,
   AnyFlaunchZapPositionManagerAbi,
   AnyPositionManagerV1_3Address,
+  DynamicAddressFeeSplitManagerAddress,
+  DynamicAddressFeeSplitManagerV1_3Address,
   FLAUNCH_TOTAL_SUPPLY,
   FLETHAddress,
   MemecoinVestingAbi,
@@ -340,6 +342,29 @@ test("manager variants select the manager overload and keep the vesting schedule
   assert.notEqual(all[1].args._treasuryManagerParams.initializeData, "0x");
   assert.notEqual(all[2].args._treasuryManagerParams.initializeData, "0x");
   assert.notEqual(all[1].args._treasuryManagerParams.manager, all[2].args._treasuryManagerParams.manager);
+  // the dynamic split deploys the v1.3.1 manager: the one the AnyFlaunchZap's factory approves
+  assert.equal(all[2].args._treasuryManagerParams.manager.toLowerCase(), DynamicAddressFeeSplitManagerV1_3Address[CHAIN].toLowerCase());
+});
+
+test("a vested dynamic split names the v1.3.1 manager on every mainnet, never the multichain zap's", async () => {
+  for (const chainId of [base.id, robinhood.id, mainnet.id, arbitrum.id]) {
+    const drift = recordingDrift({ fee: { ethRequired: 5n, pairedPremineCost: 0n } });
+    const sdk = new ReadWriteFlaunchSDK(chainId, drift);
+    await sdk.flaunchVestedWithDynamicSplitManager({
+      ...vestedParams,
+      // Arbitrum has no flETH; the pairing is named so only the manager is under test
+      pairedToken: PAIRED,
+      creatorShare: 0n,
+      managerOwnerShare: 0n,
+      moderator: SIGNER,
+      splitReceivers: [{ address: TEAM, share: 90n }, { address: ADVISOR, share: 10n }],
+    });
+    const [write] = writes(drift);
+    const manager = write.args._treasuryManagerParams.manager.toLowerCase();
+    assert.equal(manager, DynamicAddressFeeSplitManagerV1_3Address[chainId].toLowerCase(), `chain ${chainId}`);
+    const previous = DynamicAddressFeeSplitManagerAddress[chainId];
+    if (previous) assert.notEqual(manager, previous.toLowerCase(), `chain ${chainId} must not deploy the previous generation`);
+  }
 });
 
 test("an ERC20 pairing with a premine needs maxPremineCost; with one, the cap overload is used", async () => {
