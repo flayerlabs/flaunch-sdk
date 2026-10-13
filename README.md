@@ -29,7 +29,7 @@ Base and Base Sepolia retain their generation-specific launch paths. Unichain an
 
 Ethereum uses the verified [v1.4.0 deployment](https://github.com/flayerlabs/flaunch-contracts/releases/tag/v1.4.0), through the compatible `*V1_3` API family. `flaunch()` and its IPFS and manager-launch helpers default to native ETH and the current manager generation. `DefaultPairedTokenAddress[1]` is `zeroAddress`; `FLETHAddress[1]` and the old multichain maps remain available for legacy pools.
 
-Ethereum supports native ETH, MILADY (`0x8b3bc6942d6823a8022605648b671a2feb954800`) and LIL (`0x370e49749b9ff90004f3186aa7135487acc2a8fc`) through `flaunchPairedToken()`, `quotePairedPool()` and protected `planPairedTokenSwap()` / `buyCoinPairedToken()` / `sellCoinPairedToken()`. ERC20 premines require the caller to hold and approve the paired token to `FlaunchZapV1_3Address[1]`. ETH-to-NFTX-token acquisition and Game Mode are not included. Legacy flETH swap helpers reject current Ethereum pools. ETH/USD reads use the deployed launch oracle's 30-minute WETH/USDC V3 TWAP.
+Ethereum supports native ETH, MILADY (`0x8b3bc6942d6823a8022605648b671a2feb954800`) and LIL (`0x370e49749b9ff90004f3186aa7135487acc2a8fc`) through `flaunchPairedToken()`, `quotePairedPool()` and protected `planPairedTokenSwap()` / `buyCoinPairedToken()` / `sellCoinPairedToken()`. ERC20 premines require the caller to hold and approve the paired token to `FlaunchZapV1_3Address[1]`. ETH-to-NFTX-token acquisition is not included. Game Mode launches (the vested stack and `GameDeveloperFeeSplitManagerAddress[1]`) are live at the CREATE3 parity addresses since 2026-09-21. Legacy flETH swap helpers reject current Ethereum pools. ETH/USD reads use the deployed launch oracle's 30-minute WETH/USDC V3 TWAP.
 
 The multi-asset manager generation has address mappings for Base, Base Sepolia, Robinhood and Ethereum. Gate these separate `*V1_3` APIs with `doesChainSupportMultiAssetManagers()`. Use `creatorRevenueByToken()` and `withdrawCreatorRevenueByToken()` for current Ethereum fees, passing native ETH as `zeroAddress`; the unsuffixed revenue methods continue to use the legacy escrow. Current imported-token receipts preserve the pairing but have empty launch-metadata strings because the event does not emit that metadata.
 
@@ -461,7 +461,7 @@ const result = await flaunchRead.planLaunchPreBuy({
 });
 ```
 
-On the `vested` route (Base Sepolia) `gameDeveloperSplit` is the Game Mode shorthand, so one
+On the `vested` route `gameDeveloperSplit` is the Game Mode shorthand, so one
 plan carries the gate's `feeCalculatorParams`, any `vestingSchedules` (an empty array is a valid
 no-vesting launch), the developer's protected 5% and the pre-buy.
 
@@ -481,7 +481,8 @@ the existing `flaunch*` methods unchanged.
 A vested launch locks part of the supply into linear vesting schedules and seeds the rest into
 the pool exactly like a standard launch. The methods mirror the standard family one-to-one —
 same parameters, plus `vestingSchedules` — so an integration that already calls `flaunch()`
-switches to `flaunchVested()` by adding the schedules. Base Sepolia today; gate on
+switches to `flaunchVested()` by adding the schedules. Live on Base Sepolia, Base, Robinhood,
+Arbitrum and Ethereum; gate on
 `doesChainSupportVestedLaunch(chainId)`. Rules and the quote model: [`guides/vested-launch.md`](guides/vested-launch.md).
 
 | Standard | Vested twin | Extra fields |
@@ -544,8 +545,10 @@ gate's dispatcher-prefixed spend-gate params in `feeCalculatorParams` verbatim, 
 coin into a fresh manager clone in one transaction. Gate on
 `doesChainSupportAnyGameDeveloperSplit(chainId)` (the manager is deployed and approved there
 **and** the vested stack exists). `GameDeveloperFeeSplitManagerAddress` is live on Base Sepolia
-(`0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e`, block 46817954); other chains stay unsupported
-until the implementation is broadcast and approved there.
+(`0x905a278CaEA18768180e4Bb4A6BBA1FE1ddcEA6e`, block 46817954) and, at the CREATE3 parity
+address `0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03`, on Base, Robinhood and Arbitrum (2026-09-17)
+and Ethereum (2026-09-21); other chains stay unsupported until the implementation is broadcast and
+approved there.
 
 `prepareAnyGameLaunch(params)` quotes and encodes without sending, so a transaction flow that
 wants the raw call (`to`, `data`, `value`) and the exact `args` can hold them and send later;

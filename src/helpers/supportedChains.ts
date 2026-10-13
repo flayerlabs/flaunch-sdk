@@ -183,8 +183,8 @@ export function doesChainSupportPairedTokenAcquisition(chainId: number): boolean
 /**
  * Whether vested launches (AnyFlaunchZap + MemecoinVesting, the hook it launches through and
  * its ERC721, plus the v1.3.1 TreasuryManagerFactory and PairedTokenRegistry it is bound to)
- * are deployed on the given chain — Base Sepolia today. Gate `flaunchVested*`, the `vested`
- * pre-buy route and the vesting reads/claims on this.
+ * are deployed on the given chain (Base Sepolia, Base, Robinhood, Arbitrum and Ethereum). Gate
+ * `flaunchVested*`, the `vested` pre-buy route and the vesting reads/claims on this.
  */
 export function doesChainSupportVestedLaunch(chainId: number): boolean {
   return (

@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { decodeAbiParameters, getAddress, zeroAddress } = require("viem");
-const { base, baseSepolia, robinhood, mainnet, unichain } = require("viem/chains");
+const { arbitrum, base, baseSepolia, robinhood, mainnet, unichain } = require("viem/chains");
 const {
   GAME_DEVELOPER_SHARE,
   GAME_DEVELOPER_SPLIT_SHARE_TOTAL,
@@ -120,6 +120,27 @@ test("chain support follows the address map and the paired-token zap", () => {
         doesChainSupportPairedTokenLaunch(chain.id)
     );
   }
+});
+
+// flaunch-managers broadcast/Managers.s.sol/1/run-latest.json: CREATE3 deploy of the
+// GameDeveloperFeeSplitManager in tx 0x7393a1d7f890bef1666321a350ba4bc630abc92bcefe3914d9a322085054b661
+// (block 26025981, 2026-09-21), approved on TreasuryManagerFactory 0xD2B91d92AF59b7BEd15b5458feCF0e87C8A7c21e.
+const PARITY_MANAGER = "0xd9E9a5cCdbdb8300B81b08979EA0acB0BC3B2F03";
+
+test("Ethereum carries the GameDeveloperFeeSplitManager at the CREATE3 parity address", () => {
+  assert.equal(getAddress(GameDeveloperFeeSplitManagerAddress[mainnet.id]), getAddress(PARITY_MANAGER));
+  for (const chain of [base, robinhood, arbitrum]) {
+    assert.equal(
+      getAddress(GameDeveloperFeeSplitManagerAddress[chain.id]),
+      getAddress(PARITY_MANAGER),
+      `${chain.name} shares Ethereum's parity address`
+    );
+  }
+  // both game routes treat Ethereum as launchable: the paired-token zap and the vested stack exist there
+  assert.equal(doesChainSupportPairedTokenLaunch(mainnet.id), true);
+  assert.equal(doesChainSupportGameDeveloperSplit(mainnet.id), true);
+  assert.equal(doesChainSupportVestedLaunch(mainnet.id), true);
+  assert.equal(doesChainSupportAnyGameDeveloperSplit(mainnet.id), true);
 });
 
 test("clients expose the developer surface on top of the v1.3.1 dynamic split client", () => {
