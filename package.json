@@ -75,7 +75,8 @@
     "validate:multichain": "pnpm build && node scripts/validate-multichain-deployments.mjs",
     "test:prebuy:fork": "node scripts/test-launch-prebuy-fork.cjs",
     "test:vested:fork": "node scripts/test-vested-launch-fork.cjs",
-    "test:referrals:fork": "node scripts/test-referrals-fork.cjs"
+    "test:referrals:fork": "node scripts/test-referrals-fork.cjs",
+    "test:disposal:fork": "node scripts/test-paired-token-disposal-fork.cjs"
   },
   "packageManager": "pnpm@10.34.3",
   "devDependencies": {

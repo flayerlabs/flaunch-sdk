@@ -57,12 +57,41 @@ export const SlipstreamSwapRouterAbi = [
   },
   {
     type: "function",
+    name: "exactInput",
+    stateMutability: "payable",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        components: [
+          { name: "path", type: "bytes" },
+          { name: "recipient", type: "address" },
+          { name: "deadline", type: "uint256" },
+          { name: "amountIn", type: "uint256" },
+          { name: "amountOutMinimum", type: "uint256" },
+        ],
+      },
+    ],
+    outputs: [{ name: "amountOut", type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "multicall",
     stateMutability: "payable",
     inputs: [{ name: "data", type: "bytes[]" }],
     outputs: [{ name: "results", type: "bytes[]" }],
   },
   { type: "function", name: "refundETH", stateMutability: "payable", inputs: [], outputs: [] },
+  {
+    type: "function",
+    name: "unwrapWETH9",
+    stateMutability: "payable",
+    inputs: [
+      { name: "amountMinimum", type: "uint256" },
+      { name: "recipient", type: "address" },
+    ],
+    outputs: [],
+  },
 ] as const;
 
 /**
@@ -111,6 +140,24 @@ export const UniswapV3SwapRouter02Abi = [
   },
   {
     type: "function",
+    name: "exactInput",
+    stateMutability: "payable",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        components: [
+          { name: "path", type: "bytes" },
+          { name: "recipient", type: "address" },
+          { name: "amountIn", type: "uint256" },
+          { name: "amountOutMinimum", type: "uint256" },
+        ],
+      },
+    ],
+    outputs: [{ name: "amountOut", type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "multicall",
     stateMutability: "payable",
     inputs: [
@@ -120,6 +167,18 @@ export const UniswapV3SwapRouter02Abi = [
     outputs: [{ name: "results", type: "bytes[]" }],
   },
   { type: "function", name: "refundETH", stateMutability: "payable", inputs: [], outputs: [] },
+  {
+    // SwapRouter02 also has a one-argument `unwrapWETH9(uint256)` that pays msg.sender; only the
+    // explicit-recipient overload is listed so encoding is unambiguous.
+    type: "function",
+    name: "unwrapWETH9",
+    stateMutability: "payable",
+    inputs: [
+      { name: "amountMinimum", type: "uint256" },
+      { name: "recipient", type: "address" },
+    ],
+    outputs: [],
+  },
 ] as const;
 
 /** Slipstream-shaped CL pool reads. `slot0` is six fields — V3's `feeProtocol` is dropped. */
@@ -386,6 +445,116 @@ export function encodeAcquisitionEthBuy(dex: PairedTokenAcquisitionDex, leg: Pai
           args: [{ path, recipient: leg.recipient, amountOut: leg.amountOut, amountInMaximum: leg.amountInMaximum }],
         }),
         encodeFunctionData({ abi: UniswapV3SwapRouter02Abi, functionName: "refundETH", args: [] }),
+      ],
+    ],
+  });
+}
+
+
+/**
+ * Selling leftover paired token back to ETH (disposal): the exact-INPUT mirror of the ETH buy.
+ * The whole balance goes in, the path walks `token → hub → WETH` (or `token → WETH` for a direct
+ * pool), the router keeps the WETH in its own custody, and `unwrapWETH9` pays native ETH to the
+ * recipient. Nothing is left on the router: an exact-input leg spends `amountIn` in full and the
+ * unwrap sweeps the router's whole WETH balance.
+ */
+export type PairedTokenDisposalOutput = "eth";
+
+/**
+ * The recipient that makes each flavour's router keep a swap's output in its own custody, so a
+ * following `unwrapWETH9` in the same multicall can pay it out as ETH. Both are read from the
+ * deployed routers' verified source:
+ *
+ * - Slipstream `SwapRouter` (Base, 0x698Cb2b6…): `exactInputInternal` maps `address(0)` to
+ *   `address(this)` (the v3-periphery convention).
+ * - Uniswap `SwapRouter02` (Robinhood, 0xCaf681a6…): `Constants.ADDRESS_THIS = address(2)` maps to
+ *   `address(this)`; `address(0)` there would burn-send to the zero address.
+ */
+export const ROUTER_CUSTODY_RECIPIENT: Record<PairedTokenAcquisitionDex["flavor"], Address> = {
+  slipstream: "0x0000000000000000000000000000000000000000",
+  uniswapV3: "0x0000000000000000000000000000000000000002",
+};
+
+/**
+ * The exact-INPUT path for a sell to ETH: input (the paired token) first, `token → hub → WETH`, or
+ * `token → WETH` for a direct pool. Byte-identical to the ETH buy's exact-output path, which is also
+ * written paired-token first; a separate name keeps each call site honest about which leg it encodes.
+ */
+export function encodeDisposalExactInputPath(
+  dex: PairedTokenAcquisitionDex,
+  pairedToken: Address,
+  route: PairedTokenAcquisitionRoute
+): Hex {
+  return encodeAcquisitionEthExactOutputPath(dex, pairedToken, route);
+}
+
+export interface PairedTokenDisposalLeg {
+  pairedToken: Address;
+  route: PairedTokenAcquisitionRoute;
+  /** Receives the native ETH. */
+  recipient: Address;
+  /** Unix seconds after which the router refuses to execute. */
+  deadline: bigint;
+  /** The exact paired-token amount sold; pulled from the sender by allowance. */
+  amountIn: bigint;
+  /** The least WETH the swap may produce, and the least ETH the unwrap may pay: the price protection. */
+  amountOutMinimum: bigint;
+}
+
+/**
+ * Router calldata selling exactly `amountIn` paired token for ETH: `exactInput` into the router's
+ * own custody, then `unwrapWETH9(amountOutMinimum, recipient)`, inside one multicall. Send with
+ * `value = 0`; the paired token must be approved to the router first.
+ */
+export function encodeDisposalEthSell(dex: PairedTokenAcquisitionDex, leg: PairedTokenDisposalLeg): Hex {
+  const path = encodeDisposalExactInputPath(dex, leg.pairedToken, leg.route);
+  const custody = ROUTER_CUSTODY_RECIPIENT[dex.flavor];
+  if (dex.flavor === "slipstream") {
+    return encodeFunctionData({
+      abi: SlipstreamSwapRouterAbi,
+      functionName: "multicall",
+      args: [
+        [
+          encodeFunctionData({
+            abi: SlipstreamSwapRouterAbi,
+            functionName: "exactInput",
+            args: [
+              {
+                path,
+                recipient: custody,
+                deadline: leg.deadline,
+                amountIn: leg.amountIn,
+                amountOutMinimum: leg.amountOutMinimum,
+              },
+            ],
+          }),
+          encodeFunctionData({
+            abi: SlipstreamSwapRouterAbi,
+            functionName: "unwrapWETH9",
+            args: [leg.amountOutMinimum, leg.recipient],
+          }),
+        ],
+      ],
+    });
+  }
+  return encodeFunctionData({
+    abi: UniswapV3SwapRouter02Abi,
+    functionName: "multicall",
+    args: [
+      leg.deadline,
+      [
+        encodeFunctionData({
+          abi: UniswapV3SwapRouter02Abi,
+          functionName: "exactInput",
+          args: [
+            { path, recipient: custody, amountIn: leg.amountIn, amountOutMinimum: leg.amountOutMinimum },
+          ],
+        }),
+        encodeFunctionData({
+          abi: UniswapV3SwapRouter02Abi,
+          functionName: "unwrapWETH9",
+          args: [leg.amountOutMinimum, leg.recipient],
+        }),
       ],
     ],
   });

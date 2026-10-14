@@ -207,11 +207,14 @@ import { ReadPairedTokenPositionManagerV1_3 } from "../clients/PairedTokenPositi
 import {
   ReadPairedTokenAcquisition,
   type PairedTokenAcquisitionQuote,
+  type PairedTokenDisposalQuote,
 } from "../clients/PairedTokenAcquisitionClient";
 import {
   encodeAcquisitionEthBuy,
   encodeAcquisitionHubBuy,
+  encodeDisposalEthSell,
   type PairedTokenAcquisitionInput,
+  type PairedTokenDisposalOutput,
   type PairedTokenAcquisitionRoute,
 } from "../utils/pairedTokenAcquisition";
 import {
@@ -601,6 +604,38 @@ export type PairedTokenAcquisitionPlan = {
   /** Present for a hub-token input whose router allowance is short of `maxIn`. */
   approve?: PairedSwapApproveCall;
   /** The router call; `value` is `maxIn` for an ETH input (the router refunds the unspent part). */
+  swap: PairedSwapCall;
+};
+
+/** A sell of leftover non-ETH paired token (a B20 equity) back to native ETH. */
+export type PairedTokenDisposalParams = {
+  pairedToken: Address;
+  output: PairedTokenDisposalOutput;
+  /** Exactly this much paired token is sold (exact-input). */
+  amountIn: bigint;
+  /** The least ETH the recipient may receive: the price protection. Must be positive. */
+  amountOutMinimum: bigint;
+  /** Receives the native ETH. */
+  recipient: Address;
+  /** For the paired-token allowance check; defaults to the drift signer, else the approve is always planned. */
+  sender?: Address;
+  /**
+   * The venue to execute on. Defaults to the registry calculator's route; a caller that QUOTED first
+   * must pass the quote's route through so the sell trades on the pool that priced `amountOutMinimum`.
+   */
+  route?: PairedTokenAcquisitionRoute;
+  /** Unix seconds; defaults to now + 10 minutes. */
+  deadline?: bigint;
+};
+
+export type PairedTokenDisposalPlan = {
+  route: PairedTokenAcquisitionRoute;
+  output: PairedTokenDisposalOutput;
+  amountIn: bigint;
+  amountOutMinimum: bigint;
+  /** Present when the sender's paired-token allowance to the venue router is short of `amountIn`. */
+  approve?: PairedSwapApproveCall;
+  /** The router multicall (exactInput, then unwrapWETH9 to the recipient); `value` is always 0. */
   swap: PairedSwapCall;
 };
 
@@ -1806,6 +1841,66 @@ export class ReadFlaunchSDK {
       route: quote.route,
     });
     return { ...plan, quote };
+  }
+
+  /**
+   * Expected ETH (and the venue) for selling an exact paired-token input back to ETH. Prefers a
+   * depth-aware QuoterV2 quote; falls back to the calculator pool's spot price.
+   */
+  async quotePairedTokenDisposal(params: {
+    pairedToken: Address;
+    output: PairedTokenDisposalOutput;
+    amountIn: bigint;
+  }): Promise<PairedTokenDisposalQuote> {
+    this.assertPairedTokenAcquisitionSupported("quotePairedTokenDisposal");
+    if (params.output !== "eth") throw new Error(`Unsupported disposal output: ${String(params.output)}`);
+    if (params.amountIn <= 0n) throw new Error("amountIn must be positive");
+    return this.readPairedTokenAcquisition.quoteDisposal(params.pairedToken, params.amountIn);
+  }
+
+  /**
+   * The calls that sell exactly `amountIn` of a paired token for native ETH: an optional
+   * paired-token approve to the venue's router, then one router multicall that swaps exact-input
+   * `token -> hub -> WETH` (or `token -> WETH` on a direct pool) into the router's custody and
+   * unwraps the WETH to `recipient`. The router keeps nothing: the input is spent in full and the
+   * unwrap sweeps all of the WETH. Pass a quote's `route` and a haircut of its `expectedOut`.
+   */
+  async planPairedTokenDisposal(params: PairedTokenDisposalParams): Promise<PairedTokenDisposalPlan> {
+    this.assertPairedTokenAcquisitionSupported("planPairedTokenDisposal");
+    if (params.output !== "eth") throw new Error(`Unsupported disposal output: ${String(params.output)}`);
+    if (params.amountIn <= 0n) throw new Error("amountIn must be positive");
+    if (params.amountOutMinimum <= 0n) throw new Error("amountOutMinimum must be positive");
+    const acquisition = this.readPairedTokenAcquisition;
+    const dex = acquisition.dex;
+    const route = params.route ?? (await acquisition.resolveRoute(params.pairedToken));
+    const deadline = params.deadline ?? BigInt(Math.floor(Date.now() / 1000) + 600);
+
+    const sender = await this.senderFor(params.sender);
+    const allowance = sender
+      ? await new ReadMemecoin(params.pairedToken, this.drift).allowance(sender, dex.swapRouter)
+      : 0n;
+    const approve =
+      allowance < params.amountIn ? buildApproveCall(params.pairedToken, dex.swapRouter, params.amountIn) : undefined;
+
+    return {
+      route,
+      output: params.output,
+      amountIn: params.amountIn,
+      amountOutMinimum: params.amountOutMinimum,
+      ...(approve ? { approve } : {}),
+      swap: {
+        to: dex.swapRouter,
+        data: encodeDisposalEthSell(dex, {
+          pairedToken: params.pairedToken,
+          route,
+          recipient: params.recipient,
+          deadline,
+          amountIn: params.amountIn,
+          amountOutMinimum: params.amountOutMinimum,
+        }),
+        value: 0n,
+      },
+    };
   }
 
   /**
