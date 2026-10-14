@@ -6,8 +6,10 @@
  *   PAIRED_DISPOSAL_FORK=1 pnpm test:disposal:fork
  *
  * Two modes, per chain (DISPOSAL_MODE_<chainId>):
- * - `anvil` (Robinhood default): spawns a localhost Anvil fork and sends real transactions to it.
- *   The script refuses any non-Anvil, non-localhost endpoint.
+ * - `anvil` (Robinhood default): spawns a localhost Anvil fork per token and sends real
+ *   transactions to it. The script refuses any non-Anvil, non-localhost endpoint. Robinhood's
+ *   public RPC is not an archive node and prunes the forked block within minutes; a slow token
+ *   (RBLX) can outlive it, so point FORK_RPC_ROBINHOOD at an archive endpoint for a reliable run.
  * - `simulate` (Base default): one `eth_simulateV1` block against live state, where the
  *   acquisition, the approve and the sell run in sequence. Base's B20 equities are node-native
  *   tokens (their account code is the single byte `0xef`), which Anvil cannot execute: on an Anvil
@@ -79,7 +81,7 @@ async function rpc(url, method, params = []) {
 
 async function startAnvil(config) {
   const local = `http://127.0.0.1:${config.port}`;
-  const child = spawn("anvil", ["--fork-url", config.upstream, "--port", String(config.port), "--silent"], {
+  const child = spawn("anvil", ["--fork-url", config.upstream, "--port", String(config.port), "--no-rate-limit", "--silent"], {
     stdio: ["ignore", "ignore", "inherit"],
   });
   for (let i = 0; i < 120; i += 1) {
@@ -197,25 +199,27 @@ async function runChain(chainId) {
   const tokens = override ? override.split(",").map((t) => t.trim()) : config.tokens;
   assert(["anvil", "simulate"].includes(config.mode), `DISPOSAL_MODE_${chainId} must be anvil or simulate`);
   if (config.mode === "simulate") return runSimulated(chainId, config, tokens);
-  const { child, local } = await startAnvil(config);
-  try {
-    assert(["127.0.0.1", "localhost"].includes(new URL(local).hostname), "Only localhost may receive writes");
-    assert.match(String(await rpc(local, "web3_clientVersion")), /anvil/i, "Only an Anvil fork may receive writes");
-    assert.equal(Number(await rpc(local, "eth_chainId")), chainId, "fork must keep the chain id");
+  // A fresh fork per token: public non-archive RPCs (Robinhood's) prune the forked block's state
+  // within minutes, after which a long-lived fork fails with "historical state is not available".
+  for (const token of tokens) {
+    const { child, local } = await startAnvil(config);
+    try {
+      assert(["127.0.0.1", "localhost"].includes(new URL(local).hostname), "Only localhost may receive writes");
+      assert.match(String(await rpc(local, "web3_clientVersion")), /anvil/i, "Only an Anvil fork may receive writes");
+      assert.equal(Number(await rpc(local, "eth_chainId")), chainId, "fork must keep the chain id");
 
-    const transport = http(local, { timeout: 60_000, retryCount: 0 });
-    const publicClient = createPublicClient({ chain: config.chain, transport });
-    const dex = sdk.PairedTokenAcquisitionDexAddress[chainId];
-    const balanceOf = (token, owner) =>
-      publicClient.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
-    const routerState = async (token) => ({
-      eth: await publicClient.getBalance({ address: dex.swapRouter }),
-      weth: await balanceOf(dex.weth, dex.swapRouter),
-      hub: await balanceOf(dex.hubToken, dex.swapRouter),
-      paired: await balanceOf(token, dex.swapRouter),
-    });
+      const transport = http(local, { timeout: 60_000, retryCount: 0 });
+      const publicClient = createPublicClient({ chain: config.chain, transport });
+      const dex = sdk.PairedTokenAcquisitionDexAddress[chainId];
+      const balanceOf = (token, owner) =>
+        publicClient.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
+      const routerState = async (token) => ({
+        eth: await publicClient.getBalance({ address: dex.swapRouter }),
+        weth: await balanceOf(dex.weth, dex.swapRouter),
+        hub: await balanceOf(dex.hubToken, dex.swapRouter),
+        paired: await balanceOf(token, dex.swapRouter),
+      });
 
-    for (const token of tokens) {
       const scenario = `${config.chain.name} ${token} (anvil)`;
       try {
         // A fresh key per token: never anvil's default accounts (account #0 is 7702-delegated on
@@ -305,11 +309,21 @@ async function runChain(chainId) {
           greedyMinimumReverted: greedyReverted,
         });
       } catch (error) {
-        record({ scenario, result: "FAIL", chainId, mode: "anvil", error: error.shortMessage || error.message });
+        const message = error.shortMessage || error.message;
+        record({
+          scenario,
+          result: "FAIL",
+          chainId,
+          mode: "anvil",
+          error: message,
+          ...(/internal error/i.test(message)
+            ? { note: `likely the upstream pruned the forked block ("historical state is not available" in anvil's log); use an archive RPC in FORK_RPC_* or DISPOSAL_MODE_${chainId}=simulate` }
+            : {}),
+        });
       }
+        } finally {
+      child.kill();
     }
-  } finally {
-    child.kill();
   }
 }
 
