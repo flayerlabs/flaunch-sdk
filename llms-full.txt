@@ -52,6 +52,7 @@ Static-split recipients independently divide 100% of the pool remaining after cr
   - [Buying a Flaunch coin](#buying-a-flaunch-coin)
   - [Selling with Permit2](#selling-with-permit2)
   - [Swap using USDC or other tokens by passing `intermediatePoolKey`](#swap-using-usdc-or-other-tokens-by-passing-intermediatepoolkey)
+  - [Buying and selling B20 paired tokens (acquisition and disposal)](#buying-and-selling-b20-paired-tokens-acquisition-and-disposal)
   - [Claiming creator revenue](#claiming-creator-revenue)
   - [Advanced Integration: Revenue Sharing with RevenueManager](#advanced-integration-revenue-sharing-with-revenuemanager)
     - [v1.3.1 multi-asset RevenueManager (Base)](#v131-multi-asset-revenuemanager-base)
@@ -891,6 +892,45 @@ if (allowance < parseEther(coinAmount)) {
 ```
 
 3. The quote functions `getSellQuoteExactInput`, `getBuyQuoteExactInput` and `getBuyQuoteExactOutput` also support passing optional `intermediatePoolKey`.
+
+### Buying and selling B20 paired tokens (acquisition and disposal)
+
+On Base and Robinhood a coin can be paired with a tokenised equity (a B20 token such as SPCXc or RDDT) whose only liquidity sits on a concentrated-liquidity DEX: the B20 Slipstream fork on Base and Uniswap V3 on Robinhood. Gate both flows with `doesChainSupportPairedTokenAcquisition(chainId)`; Base Sepolia has no venue.
+
+Acquisition buys an exact amount of the paired token from ETH (or the USD hub token) so it can be spent on the coin's pool:
+
+```ts
+const plan = await flaunchRead.planPairedTokenAcquisitionForBudget({
+  pairedToken,
+  input: "eth",
+  amountIn: parseEther("0.01"),
+  slippageBps: 300,
+  recipient: wallet,
+});
+// plan.approve (hub input only), then plan.swap ({ to, data, value })
+```
+
+Disposal sells leftover paired token back to native ETH. Quote first, take your slippage off `expectedOut`, and pass the quote's `route` so the sell executes on the pool that priced it:
+
+```ts
+const quote = await flaunchRead.quotePairedTokenDisposal({
+  pairedToken,
+  output: "eth",
+  amountIn: leftover,
+});
+const plan = await flaunchRead.planPairedTokenDisposal({
+  pairedToken,
+  output: "eth",
+  amountIn: leftover,
+  amountOutMinimum: (quote.expectedOut * 9_800n) / 10_000n, // 2% slippage
+  recipient: wallet,
+  sender: wallet, // for the allowance check
+  route: quote.route,
+});
+// Send plan.approve if present (paired token -> venue router), then plan.swap (value 0)
+```
+
+The sell is one router multicall: an exact-input swap `token -> hub -> WETH` (or `token -> WETH` through a direct pool on Robinhood) into the router's own custody, then `unwrapWETH9(amountOutMinimum, recipient)`. The whole input is spent and the unwrap sweeps all of the WETH, so the router keeps no dust. Quotes come from each venue's QuoterV2 (depth-aware; `source: "quoter"`), falling back to the registry calculator pool's spot price (`source: "spot"`).
 
 ### Claiming creator revenue
 
@@ -4217,7 +4257,7 @@ Promise<Address> - The factory address
 
 # Class: ReadFlaunchSDK
 
-Defined in: sdk/FlaunchSDK.ts:751
+Defined in: sdk/FlaunchSDK.ts:786
 
 ## Extended by
 
@@ -4229,7 +4269,7 @@ Defined in: sdk/FlaunchSDK.ts:751
 
 > **new ReadFlaunchSDK**(`chainId`, `drift?`, `publicClient?`): `ReadFlaunchSDK`
 
-Defined in: sdk/FlaunchSDK.ts:1003
+Defined in: sdk/FlaunchSDK.ts:1038
 
 Parameters
 
@@ -4253,7 +4293,7 @@ Returns
 
 > `readonly` **chainId**: `number`
 
-Defined in: sdk/FlaunchSDK.ts:753
+Defined in: sdk/FlaunchSDK.ts:788
 
 ***
 
@@ -4261,7 +4301,7 @@ Defined in: sdk/FlaunchSDK.ts:753
 
 > `readonly` **drift**: `Drift`
 
-Defined in: sdk/FlaunchSDK.ts:752
+Defined in: sdk/FlaunchSDK.ts:787
 
 ***
 
@@ -4269,7 +4309,7 @@ Defined in: sdk/FlaunchSDK.ts:752
 
 > `readonly` **publicClient**: \{ \} \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:754
+Defined in: sdk/FlaunchSDK.ts:789
 
 ***
 
@@ -4277,7 +4317,7 @@ Defined in: sdk/FlaunchSDK.ts:754
 
 > **resolveIPFS**: (`value`) => `string`
 
-Defined in: sdk/FlaunchSDK.ts:775
+Defined in: sdk/FlaunchSDK.ts:810
 
 Parameters
 
@@ -4295,7 +4335,7 @@ Returns
 
 > `readonly` **TICK\_SPACING**: `60`
 
-Defined in: sdk/FlaunchSDK.ts:755
+Defined in: sdk/FlaunchSDK.ts:790
 
 ## Accessors
 
@@ -4305,7 +4345,7 @@ Get Signature
 
 > **get** **readAnyBidWall**(): `AnyBidWall`
 
-Defined in: sdk/FlaunchSDK.ts:974
+Defined in: sdk/FlaunchSDK.ts:1009
 
 #Returns
 
@@ -4319,7 +4359,7 @@ Get Signature
 
 > **get** **readAnyFlaunch**(): `ReadAnyFlaunch`
 
-Defined in: sdk/FlaunchSDK.ts:993
+Defined in: sdk/FlaunchSDK.ts:1028
 
 #Returns
 
@@ -4333,7 +4373,7 @@ Get Signature
 
 > **get** **readAnyFlaunchZap**(): `ReadAnyFlaunchZap`
 
-Defined in: sdk/FlaunchSDK.ts:788
+Defined in: sdk/FlaunchSDK.ts:823
 
 The AnyFlaunchZap (vested launches). Throws on chains without one — gate with
 `doesChainSupportVestedLaunch()`.
@@ -4350,7 +4390,7 @@ Get Signature
 
 > **get** **readAnyPositionManager**(): `ReadAnyPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:934
+Defined in: sdk/FlaunchSDK.ts:969
 
 #Returns
 
@@ -4364,7 +4404,7 @@ Get Signature
 
 > **get** **readBidWall**(): `ReadBidWall`
 
-Defined in: sdk/FlaunchSDK.ts:961
+Defined in: sdk/FlaunchSDK.ts:996
 
 #Returns
 
@@ -4378,7 +4418,7 @@ Get Signature
 
 > **get** **readBidWallV1\_1**(): `ReadBidWallV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:964
+Defined in: sdk/FlaunchSDK.ts:999
 
 #Returns
 
@@ -4392,7 +4432,7 @@ Get Signature
 
 > **get** **readBidWallV1\_3**(): `ReadBidWallV1_1` \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:971
+Defined in: sdk/FlaunchSDK.ts:1006
 
 #Returns
 
@@ -4406,7 +4446,7 @@ Get Signature
 
 > **get** **readFairLaunch**(): `ReadFairLaunch`
 
-Defined in: sdk/FlaunchSDK.ts:955
+Defined in: sdk/FlaunchSDK.ts:990
 
 #Returns
 
@@ -4420,7 +4460,7 @@ Get Signature
 
 > **get** **readFairLaunchV1\_1**(): `ReadFairLaunchV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:958
+Defined in: sdk/FlaunchSDK.ts:993
 
 #Returns
 
@@ -4434,7 +4474,7 @@ Get Signature
 
 > **get** **readFeeEscrow**(): `ReadFeeEscrow`
 
-Defined in: sdk/FlaunchSDK.ts:777
+Defined in: sdk/FlaunchSDK.ts:812
 
 #Returns
 
@@ -4448,7 +4488,7 @@ Get Signature
 
 > **get** **readFeeEscrowV1\_3**(): `ReadFeeEscrowV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:811
+Defined in: sdk/FlaunchSDK.ts:846
 
 The v1.3.1 multi-token FeeEscrow. Throws on chains without one — gate with
 `doesChainSupportMultiTokenFeeEscrow()`.
@@ -4465,7 +4505,7 @@ Get Signature
 
 > **get** **readFlaunch**(): `ReadFlaunch`
 
-Defined in: sdk/FlaunchSDK.ts:977
+Defined in: sdk/FlaunchSDK.ts:1012
 
 #Returns
 
@@ -4479,7 +4519,7 @@ Get Signature
 
 > **get** **readFlaunchManagerZapV1\_3**(): `ReadFlaunchManagerZapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:824
+Defined in: sdk/FlaunchSDK.ts:859
 
 The v1.3.1 FlaunchManagerZap, which deploys managers of the multi-asset generation.
 Throws on chains without one — gate with `doesChainSupportMultiAssetManagers()`.
@@ -4496,7 +4536,7 @@ Get Signature
 
 > **get** **readFlaunchV1\_1**(): `ReadFlaunchV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:980
+Defined in: sdk/FlaunchSDK.ts:1015
 
 #Returns
 
@@ -4510,7 +4550,7 @@ Get Signature
 
 > **get** **readFlaunchV1\_2**(): `ReadFlaunchV1_2`
 
-Defined in: sdk/FlaunchSDK.ts:983
+Defined in: sdk/FlaunchSDK.ts:1018
 
 #Returns
 
@@ -4524,7 +4564,7 @@ Get Signature
 
 > **get** **readFlaunchV1\_3**(): `ReadFlaunchV1_2` \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:990
+Defined in: sdk/FlaunchSDK.ts:1025
 
 #Returns
 
@@ -4538,7 +4578,7 @@ Get Signature
 
 > **get** **readFlaunchZap**(): `ReadFlaunchZap`
 
-Defined in: sdk/FlaunchSDK.ts:943
+Defined in: sdk/FlaunchSDK.ts:978
 
 #Returns
 
@@ -4552,7 +4592,7 @@ Get Signature
 
 > **get** **readFlaunchZapMultichain**(): `ReadFlaunchZapMultichain`
 
-Defined in: sdk/FlaunchSDK.ts:1199
+Defined in: sdk/FlaunchSDK.ts:1234
 
 The legacy multichain zap's read client. Throws where that zap is absent, including Arbitrum.
 
@@ -4568,7 +4608,7 @@ Get Signature
 
 > **get** **readFlaunchZapV1\_3**(): `ReadFlaunchZapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:897
+Defined in: sdk/FlaunchSDK.ts:932
 
 #Returns
 
@@ -4582,7 +4622,7 @@ Get Signature
 
 > **get** **readMemecoinVesting**(): `ReadMemecoinVesting`
 
-Defined in: sdk/FlaunchSDK.ts:798
+Defined in: sdk/FlaunchSDK.ts:833
 
 The MemecoinVesting escrow holding vested launches' schedules. Throws on chains without one.
 
@@ -4598,7 +4638,7 @@ Get Signature
 
 > **get** **readPairedTokenAcquisition**(): `ReadPairedTokenAcquisition`
 
-Defined in: sdk/FlaunchSDK.ts:1707
+Defined in: sdk/FlaunchSDK.ts:1742
 
 Reads for buying a non-ETH paired token from ETH / the USD hub. Gate with `doesChainSupportPairedTokenAcquisition()`.
 
@@ -4614,7 +4654,7 @@ Get Signature
 
 > **get** **readPairedTokenPositionManagerV1\_3**(): `ReadPairedTokenPositionManagerV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:926
+Defined in: sdk/FlaunchSDK.ts:961
 
 The paired-token PositionManager V1.3 (pool keys, paired tokens). Same gate as `readPoolSwapV1_3`.
 
@@ -4630,7 +4670,7 @@ Get Signature
 
 > **get** **readPairedTokenRegistryV1\_3**(): `ReadPairedTokenRegistryV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:905
+Defined in: sdk/FlaunchSDK.ts:940
 
 #Returns
 
@@ -4644,7 +4684,7 @@ Get Signature
 
 > **get** **readPermit2**(): `ReadPermit2`
 
-Defined in: sdk/FlaunchSDK.ts:999
+Defined in: sdk/FlaunchSDK.ts:1034
 
 #Returns
 
@@ -4658,7 +4698,7 @@ Get Signature
 
 > **get** **readPoolManager**(): `ReadPoolManager`
 
-Defined in: sdk/FlaunchSDK.ts:946
+Defined in: sdk/FlaunchSDK.ts:981
 
 #Returns
 
@@ -4672,7 +4712,7 @@ Get Signature
 
 > **get** **readPoolSwapV1\_3**(): `ReadPoolSwapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:917
+Defined in: sdk/FlaunchSDK.ts:952
 
 The v1.3.1 PoolSwap router. Throws on chains without paired-token swap support — gate with
 `doesChainSupportPairedTokenSwap()`.
@@ -4689,7 +4729,7 @@ Get Signature
 
 > **get** **readPositionManager**(): `ReadFlaunchPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:885
+Defined in: sdk/FlaunchSDK.ts:920
 
 #Returns
 
@@ -4703,7 +4743,7 @@ Get Signature
 
 > **get** **readPositionManagerV1\_1**(): `ReadFlaunchPositionManagerV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:888
+Defined in: sdk/FlaunchSDK.ts:923
 
 #Returns
 
@@ -4717,7 +4757,7 @@ Get Signature
 
 > **get** **readPositionManagerV1\_2**(): `ReadFlaunchPositionManagerV1_2`
 
-Defined in: sdk/FlaunchSDK.ts:891
+Defined in: sdk/FlaunchSDK.ts:926
 
 #Returns
 
@@ -4731,7 +4771,7 @@ Get Signature
 
 > **get** **readPositionManagerV1\_3**(): `ReadFlaunchPositionManagerV1_2` \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:894
+Defined in: sdk/FlaunchSDK.ts:929
 
 #Returns
 
@@ -4745,7 +4785,7 @@ Get Signature
 
 > **get** **readQuoter**(): `ReadQuoter`
 
-Defined in: sdk/FlaunchSDK.ts:996
+Defined in: sdk/FlaunchSDK.ts:1031
 
 #Returns
 
@@ -4759,7 +4799,7 @@ Get Signature
 
 > **get** **readReferralEscrow**(): `ReadReferralEscrow`
 
-Defined in: sdk/FlaunchSDK.ts:940
+Defined in: sdk/FlaunchSDK.ts:975
 
 #Returns
 
@@ -4773,7 +4813,7 @@ Get Signature
 
 > **get** **readStateView**(): `ReadStateView`
 
-Defined in: sdk/FlaunchSDK.ts:949
+Defined in: sdk/FlaunchSDK.ts:984
 
 #Returns
 
@@ -4787,7 +4827,7 @@ Get Signature
 
 > **get** **readTokenImporter**(): `ReadTokenImporter`
 
-Defined in: sdk/FlaunchSDK.ts:937
+Defined in: sdk/FlaunchSDK.ts:972
 
 #Returns
 
@@ -4801,7 +4841,7 @@ Get Signature
 
 > **get** **readTreasuryManagerFactoryV1\_3**(): `ReadTreasuryManagerFactory`
 
-Defined in: sdk/FlaunchSDK.ts:838
+Defined in: sdk/FlaunchSDK.ts:873
 
 The v1.3.1 TreasuryManagerFactory (multi-asset manager generation), used to resolve
 `ManagerDeployed` events from that factory only. Throws on chains without one — gate
@@ -4817,7 +4857,7 @@ with `doesChainSupportMultiAssetManagers()`.
 
 > `protected` **assertBaseOnlyOperation**(`operation`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:867
+Defined in: sdk/FlaunchSDK.ts:902
 
 Parameters
 
@@ -4835,7 +4875,7 @@ Returns
 
 > `protected` **assertLegacyETHSwapHook**(`hook`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:1538
+Defined in: sdk/FlaunchSDK.ts:1573
 
 Parameters
 
@@ -4853,7 +4893,7 @@ Returns
 
 > `protected` **assertMultiAssetManagersSupported**(`operation`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:877
+Defined in: sdk/FlaunchSDK.ts:912
 
 The v1.3.1 multi-asset manager generation is Base mainnet only; the `*V1_3` manager
 methods refuse to run anywhere it is not deployed rather than sending calls that revert.
@@ -4874,7 +4914,7 @@ Returns
 
 > `protected` **assertPairedTokenAcquisitionSupported**(`operation`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:1698
+Defined in: sdk/FlaunchSDK.ts:1733
 
 Parameters
 
@@ -4892,7 +4932,7 @@ Returns
 
 > `protected` **assertPairedTokenSwapSupported**(`operation`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:1530
+Defined in: sdk/FlaunchSDK.ts:1565
 
 Parameters
 
@@ -4910,7 +4950,7 @@ Returns
 
 > **bidWallPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `pendingEth`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3188
+Defined in: sdk/FlaunchSDK.ts:3283
 
 Gets information about the bid wall position for a coin
 
@@ -4940,7 +4980,7 @@ Promise<{flETHAmount: bigint, coinAmount: bigint, pendingEth: bigint, tickLower:
 
 > **calculateAddLiquidityAmounts**(`params`): `Promise`\<\{ `coinAmount`: `bigint`; `currentTick`: `number`; `ethAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:4100
+Defined in: sdk/FlaunchSDK.ts:4195
 
 Parameters
 
@@ -4958,7 +4998,7 @@ Returns
 
 > **calculateAddLiquidityTicks**(`__namedParameters`): `Promise`\<\{ `coinDecimals`: `number`; `coinTotalSupply`: `bigint`; `currentTick?`: `number`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3887
+Defined in: sdk/FlaunchSDK.ts:3982
 
 Parameters
 
@@ -4994,7 +5034,7 @@ Returns
 
 > **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `formattedTotalSupplyInDecimals`, `marketContext`): `number` \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:3858
+Defined in: sdk/FlaunchSDK.ts:3953
 
 Calculates current tick from market cap if provided
 
@@ -5036,7 +5076,7 @@ Returns
 
 > **calculatePairedTokenFlaunchFee**(`params`): `Promise`\<`PairedTokenFlaunchFee`\>
 
-Defined in: sdk/FlaunchSDK.ts:1304
+Defined in: sdk/FlaunchSDK.ts:1339
 
 Parameters
 
@@ -5054,7 +5094,7 @@ Returns
 
 > **calculateVestedFlaunchFee**(`params`, `slippageBps?`, `options?`): `Promise`\<`AnyFlaunchZapFee`\>
 
-Defined in: sdk/FlaunchSDK.ts:1317
+Defined in: sdk/FlaunchSDK.ts:1352
 
 The ETH a vested launch must send (flaunching fee plus the ETH-funded premine cost at
 `slippageBps` headroom) and the premine's paired-token cost. Quote as the launching wallet
@@ -5093,7 +5133,7 @@ Returns
 
 > **checkSingleSidedAddLiquidity**(`params`): `Promise`\<`SingleSidedLiquidityInfo`\>
 
-Defined in: sdk/FlaunchSDK.ts:4004
+Defined in: sdk/FlaunchSDK.ts:4099
 
 Parameters
 
@@ -5111,7 +5151,7 @@ Returns
 
 > **coinMarketCapInUSD**(`__namedParameters`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2872
+Defined in: sdk/FlaunchSDK.ts:2967
 
 Parameters
 
@@ -5139,7 +5179,7 @@ Returns
 
 > **coinPriceInETH**(`coinAddress`, `version?`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2824
+Defined in: sdk/FlaunchSDK.ts:2919
 
 Calculates the coin price in ETH based on the current tick
 
@@ -5169,7 +5209,7 @@ Promise<string> - The price of the coin in ETH with 18 decimals precision
 
 > **coinPriceInUSD**(`coinAddress`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2856
+Defined in: sdk/FlaunchSDK.ts:2951
 
 Calculates the coin price in USD based on the current ETH/USDC price
 
@@ -5203,7 +5243,7 @@ Promise<string> - The price of the coin in USD with 18 decimal precision
 
 > **convertPriceToTick**(`priceEth`, `isFlethZero`, `decimals0`, `decimals1`): `number`
 
-Defined in: sdk/FlaunchSDK.ts:3840
+Defined in: sdk/FlaunchSDK.ts:3935
 
 Converts token price in ETH to tick
 
@@ -5235,7 +5275,7 @@ Returns
 
 > `protected` **createPoolKey**(`coinAddress`, `version`): `object`
 
-Defined in: sdk/FlaunchSDK.ts:4355
+Defined in: sdk/FlaunchSDK.ts:4450
 
 Creates a pool key for the given coin and version
 
@@ -5285,7 +5325,7 @@ The ordered pool key
 
 > `protected` **createPoolKeyForCoin**(`coinAddress`, `version?`): `Promise`\<`PoolKey`\>
 
-Defined in: sdk/FlaunchSDK.ts:4371
+Defined in: sdk/FlaunchSDK.ts:4466
 
 `createPoolKey` resolved by coin rather than by version: on a multichain deployment the
 hook is probed per coin (see `getPositionManagerAddressForCoin`), so the key matches the
@@ -5311,7 +5351,7 @@ Returns
 
 > **creatorRevenue**(`creator`, `isV1?`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3222
+Defined in: sdk/FlaunchSDK.ts:3317
 
 Gets the ETH balance for the creator to claim
 
@@ -5341,7 +5381,7 @@ The balance of the creator
 
 > **creatorRevenueByToken**(`params`): `Promise`\<`EscrowTokenBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3239
+Defined in: sdk/FlaunchSDK.ts:3334
 
 Gets the creator's claimable revenue on the v1.3.1 multi-token FeeEscrow, per escrow token.
 Coins paired with anything other than flETH (native ETH, the B20 equities, …) escrow their
@@ -5376,7 +5416,7 @@ The claimable amount per token, in that token's raw units (zero balances include
 
 > **currentTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:2809
+Defined in: sdk/FlaunchSDK.ts:2904
 
 Gets the current tick for a given coin's pool
 
@@ -5406,7 +5446,7 @@ Promise<number> - The current tick of the pool
 
 > `protected` **determineCoinVersion**(`coinAddress`, `version?`): `Promise`\<`FlaunchVersion`\>
 
-Defined in: sdk/FlaunchSDK.ts:4331
+Defined in: sdk/FlaunchSDK.ts:4426
 
 Determines the version for a coin, using provided version or fetching it
 
@@ -5436,7 +5476,7 @@ The determined version
 
 > **ethRequiredToFlaunch**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3560
+Defined in: sdk/FlaunchSDK.ts:3655
 
 Calculates the ETH required to flaunch a token, takes into account the ETH for premine and the flaunching fee
 
@@ -5474,7 +5514,7 @@ Promise<bigint> - The ETH required to flaunch
 
 > **fairLaunchCoinOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3125
+Defined in: sdk/FlaunchSDK.ts:3220
 
 Gets information about the coin-only position in a fair launch
 
@@ -5504,7 +5544,7 @@ Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: 
 
 > **fairLaunchDuration**(`coinAddress`, `version?`): `Promise`\<`number` \| `bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3032
+Defined in: sdk/FlaunchSDK.ts:3127
 
 Gets the duration of a fair launch for a given coin
 
@@ -5534,7 +5574,7 @@ Promise<number> - The duration in seconds (30 minutes for V1, variable for V1.1)
 
 > **fairLaunchETHOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3062
+Defined in: sdk/FlaunchSDK.ts:3157
 
 Gets information about the ETH-only position in a fair launch
 
@@ -5564,7 +5604,7 @@ Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: 
 
 > **fairLaunchInfo**(`coinAddress`, `version?`): `Promise`\<\{ `closed`: `boolean`; `endsAt`: `bigint`; `initialTick`: `number`; `revenue`: `bigint`; `startsAt`: `bigint`; `supply`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2940
+Defined in: sdk/FlaunchSDK.ts:3035
 
 Gets information about a fair launch for a given coin
 
@@ -5594,7 +5634,7 @@ Fair launch information from the appropriate contract version
 
 > **flETHIsCurrencyZero**(`coinAddress`): `boolean`
 
-Defined in: sdk/FlaunchSDK.ts:3729
+Defined in: sdk/FlaunchSDK.ts:3824
 
 Determines if flETH is currency0 in the pool
 
@@ -5618,7 +5658,7 @@ boolean - True if flETH is currency0, false otherwise
 
 > **getBidWall**(`version`): `ReadBidWall` \| `AnyBidWall` \| `ReadBidWallV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:2199
+Defined in: sdk/FlaunchSDK.ts:2294
 
 Gets the bid wall instance for a given version
 
@@ -5640,7 +5680,7 @@ Returns
 
 > **getBidWallAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2272
+Defined in: sdk/FlaunchSDK.ts:2367
 
 Parameters
 
@@ -5658,7 +5698,7 @@ Returns
 
 > **getBuyQuoteExactInput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3648
+Defined in: sdk/FlaunchSDK.ts:3743
 
 Gets a quote for buying tokens with an exact amount of ETH or inputToken
 
@@ -5708,7 +5748,7 @@ Promise<bigint> - The expected amount of coins to receive
 
 > **getBuyQuoteExactOutput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3691
+Defined in: sdk/FlaunchSDK.ts:3786
 
 Gets a quote for buying an exact amount of tokens with ETH or inputToken
 
@@ -5758,7 +5798,7 @@ Promise<bigint> - The required amount of ETH or inputToken to spend
 
 > **getCoinInfo**(`coinAddress`): `Promise`\<\{ `decimals`: `number`; `formattedTotalSupplyInDecimals`: `number`; `totalSupply`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3781
+Defined in: sdk/FlaunchSDK.ts:3876
 
 Gets basic coin information (total supply and decimals)
 
@@ -5778,7 +5818,7 @@ Returns
 
 > **getCoinMetadata**(`coinAddress`): `Promise`\<`CoinMetadata` & `object`\>
 
-Defined in: sdk/FlaunchSDK.ts:2307
+Defined in: sdk/FlaunchSDK.ts:2402
 
 Retrieves metadata for a given Flaunch coin
 
@@ -5802,7 +5842,7 @@ Promise<CoinMetadata & { symbol: string }> - The coin's metadata including name,
 
 > **getCoinMetadataFromTokenId**(`flaunch`, `tokenId`): `Promise`\<`CoinMetadata` & `object`\>
 
-Defined in: sdk/FlaunchSDK.ts:2337
+Defined in: sdk/FlaunchSDK.ts:2432
 
 Retrieves metadata for a given Flaunch coin using its token ID & Flaunch contract address
 
@@ -5832,7 +5872,7 @@ The coin's metadata including name, symbol, description, and social links
 
 > **getCoinMetadataFromTokenIds**(`params`, `batchSize?`, `batchDelay?`): `Promise`\<`object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:2353
+Defined in: sdk/FlaunchSDK.ts:2448
 
 Retrieves metadata for multiple Flaunch coins using their token IDs & Flaunch contract addresses
 
@@ -5868,7 +5908,7 @@ An array of objects containing coin address, name, symbol, description, and soci
 
 > **getCoinVersion**(`coinAddress`): `Promise`\<`FlaunchVersion`\>
 
-Defined in: sdk/FlaunchSDK.ts:2128
+Defined in: sdk/FlaunchSDK.ts:2223
 
 Determines the version of a Flaunch coin
 
@@ -5892,7 +5932,7 @@ Promise<FlaunchVersion> - The version of the coin
 
 > **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:2895
+Defined in: sdk/FlaunchSDK.ts:2990
 
 Gets the current ETH/USDC price
 
@@ -5916,7 +5956,7 @@ Promise<number> - The current ETH/USDC price
 
 > **getFairLaunch**(`version`): `ReadFairLaunch` \| `ReadFairLaunchV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:2178
+Defined in: sdk/FlaunchSDK.ts:2273
 
 Gets the fair launch instance for a given version
 
@@ -5938,7 +5978,7 @@ Returns
 
 > **getFairLaunchAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2268
+Defined in: sdk/FlaunchSDK.ts:2363
 
 Parameters
 
@@ -5956,7 +5996,7 @@ Returns
 
 > **getFlaunch**(`version`): `ReadFlaunch` \| `ReadAnyFlaunch` \| `ReadFlaunchV1_1` \| `ReadFlaunchV1_2`
 
-Defined in: sdk/FlaunchSDK.ts:2220
+Defined in: sdk/FlaunchSDK.ts:2315
 
 Gets the flaunch contract instance for a given version
 
@@ -5978,7 +6018,7 @@ Returns
 
 > **getFlaunchAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2251
+Defined in: sdk/FlaunchSDK.ts:2346
 
 Gets the flaunch contract address for a given version
 
@@ -6000,7 +6040,7 @@ Returns
 
 > **getFlaunchingFee**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3513
+Defined in: sdk/FlaunchSDK.ts:3608
 
 Gets the flaunching fee for a given initial price and slippage percent
 
@@ -6038,7 +6078,7 @@ Promise<bigint> - The flaunching fee
 
 > **getFlaunchTokenIdForMemecoin**(`coinAddress`): `Promise`\<\{ `flaunchAddress`: `` `0x${string}` ``; `tokenId`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2281
+Defined in: sdk/FlaunchSDK.ts:2376
 
 Gets the flaunch contract address and token ID for a memecoin
 
@@ -6062,7 +6102,7 @@ Promise<{ flaunchAddress: Address; tokenId: bigint }> - The flaunch contract add
 
 > **getGameDeveloperPayout**(`manager`): `Promise`\<`` `0x${string}` `` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:1341
+Defined in: sdk/FlaunchSDK.ts:1376
 
 The wallet holding the protected 5% developer slot of a GameDeveloperFeeSplitManager clone,
 or null when `manager` is not one: the v1.3.1 TreasuryManagerFactory's
@@ -6086,7 +6126,7 @@ Returns
 
 > **getLaunchPreBuyCapabilities**(`options?`): `LaunchPreBuyCapabilities`
 
-Defined in: sdk/FlaunchSDK.ts:1233
+Defined in: sdk/FlaunchSDK.ts:1268
 
 Which launch routes can include a pre-buy on this chain, in what payment asset, with what
 limit, and which launch kinds never can. Pure — no RPC — so a UI can disable options early.
@@ -6111,7 +6151,7 @@ Returns
 
 > **getLaunchPreBuyResultFromLogs**(`logs`, `plan`): `PoolCreatedEventData` \| `null`
 
-Defined in: sdk/FlaunchSDK.ts:1268
+Defined in: sdk/FlaunchSDK.ts:1303
 
 The launch result for a pre-buy plan from a receipt's logs: the decoded `PoolCreated`
 event, or null when the receipt holds none. Throws when the event's premine differs from
@@ -6137,7 +6177,7 @@ Returns
 
 > **getLaunchPreBuyResultFromTx**(`hash`, `plan`): `Promise`\<`PoolCreatedEventData` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:1288
+Defined in: sdk/FlaunchSDK.ts:1323
 
 `getLaunchPreBuyResultFromLogs` for a transaction hash (needs a public client).
 
@@ -6161,7 +6201,7 @@ Returns
 
 > **getMarketContext**(`coinAddress`, `coinDecimals`): `Promise`\<\{ `decimals0`: `number`; `decimals1`: `number`; `ethUsdPrice`: `number`; `isFlethZero`: `boolean`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3800
+Defined in: sdk/FlaunchSDK.ts:3895
 
 Gets market context information needed for tick calculations
 
@@ -6185,7 +6225,7 @@ Returns
 
 > **getMaxVestedBps**(): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:1330
+Defined in: sdk/FlaunchSDK.ts:1365
 
 The zap's cap on vested supply in bps of total supply (5000 = 50% by default).
 
@@ -6199,7 +6239,7 @@ Returns
 
 > **getPairedPoolQuoteExactInput**(`__namedParameters`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:1633
+Defined in: sdk/FlaunchSDK.ts:1668
 
 Expected output of an exact-input swap on a paired-token pool, via the v4 Quoter's single-hop
 quote (hook fees included). A buy spends the paired token for the coin; a sell the reverse.
@@ -6220,7 +6260,7 @@ Returns
 
 > **getPairedSwapFillFromLogs**(`logs`, `plan`): `PairedSwapFill` \| `null`
 
-Defined in: sdk/FlaunchSDK.ts:2048
+Defined in: sdk/FlaunchSDK.ts:2143
 
 Decode one attributable execution. Multiple matching fills are ambiguous, never silently combined.
 
@@ -6244,7 +6284,7 @@ Returns
 
 > **getPairedSwapFillFromTx**(`txHash`, `plan`): `Promise`\<`PairedSwapFill` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:2087
+Defined in: sdk/FlaunchSDK.ts:2182
 
 Parameters
 
@@ -6266,7 +6306,7 @@ Returns
 
 > **getPoolCreatedFromLogs**(`logs`): `PoolCreatedEventData` \| `null`
 
-Defined in: sdk/FlaunchSDK.ts:2519
+Defined in: sdk/FlaunchSDK.ts:2614
 
 Parses PoolCreated from logs emitted by a PositionManager on this chain. A receipt from the
 vested-launch hook (AnyPositionManager behind the AnyFlaunchZap) decodes too: its event
@@ -6291,7 +6331,7 @@ Returns
 
 > **getPoolCreatedFromTx**(`txHash`): `Promise`\<`PoolCreatedEventData` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:2731
+Defined in: sdk/FlaunchSDK.ts:2826
 
 Parses a transaction to extract PoolCreated event data
 
@@ -6315,7 +6355,7 @@ PoolCreated event parameters or null if not found
 
 > **getPositionManager**(`version`): `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:2157
+Defined in: sdk/FlaunchSDK.ts:2252
 
 Gets the position manager instance for a given version
 
@@ -6337,7 +6377,7 @@ Returns
 
 > **getPositionManagerAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2255
+Defined in: sdk/FlaunchSDK.ts:2350
 
 Parameters
 
@@ -6355,7 +6395,7 @@ Returns
 
 > **getPositionManagerAddressForCoin**(`coinAddress`, `version?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:1510
+Defined in: sdk/FlaunchSDK.ts:1545
 
 The hook (PositionManager) a coin's pool lives on. On Base this is the position manager
 for the coin's version; on a multichain deployment it is probed per coin (see
@@ -6386,7 +6426,7 @@ Returns
 
 > **getReferralConfig**(`params`): `Promise`\<`ReferralConfig`\>
 
-Defined in: sdk/FlaunchSDK.ts:3267
+Defined in: sdk/FlaunchSDK.ts:3362
 
 Read the actual hook's fee rate, escrow and claim capabilities at one block.
 
@@ -6408,7 +6448,7 @@ Returns
 
 > **getReferralEscrowCapabilities**(`escrow`): `Promise`\<`ReferralEscrowCapabilities`\>
 
-Defined in: sdk/FlaunchSDK.ts:3272
+Defined in: sdk/FlaunchSDK.ts:3367
 
 Parameters
 
@@ -6426,7 +6466,7 @@ Returns
 
 > **getSellQuoteExactInput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3605
+Defined in: sdk/FlaunchSDK.ts:3700
 
 Gets a quote for selling an exact amount of tokens for ETH
 
@@ -6476,7 +6516,7 @@ Promise<bigint> - The expected amount of ETH to receive
 
 > **getVestedLaunchFromLogs**(`logs`): `VestedLaunchEventData` \| `null`
 
-Defined in: sdk/FlaunchSDK.ts:1375
+Defined in: sdk/FlaunchSDK.ts:1410
 
 Decodes a vested launch from a receipt's logs: the hook's `PoolCreated`, the zap's
 `MemecoinFlaunched` (seed, total vested, schedule count, manager, end creator) and the
@@ -6498,7 +6538,7 @@ Returns
 
 > **getVestedLaunchFromTx**(`hash`): `Promise`\<`VestedLaunchEventData` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:1446
+Defined in: sdk/FlaunchSDK.ts:1481
 
 `getVestedLaunchFromLogs` for a transaction hash (needs a public client).
 
@@ -6518,7 +6558,7 @@ Returns
 
 > **getVestingPosition**(`coin`, `beneficiary`): `Promise`\<`VestingPosition`\>
 
-Defined in: sdk/FlaunchSDK.ts:1366
+Defined in: sdk/FlaunchSDK.ts:1401
 
 `beneficiary`'s schedules on `coin` with ids, cliff / end times and live vested / claimable figures.
 
@@ -6542,7 +6582,7 @@ Returns
 
 > **getVestingSchedules**(`coin`, `beneficiary`): `Promise`\<`VestingSchedule`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:1361
+Defined in: sdk/FlaunchSDK.ts:1396
 
 Every vesting schedule `beneficiary` holds on `coin`, in id order.
 
@@ -6566,7 +6606,7 @@ Returns
 
 > **initialSqrtPriceX96**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:2905
+Defined in: sdk/FlaunchSDK.ts:3000
 
 Parameters
 
@@ -6590,7 +6630,7 @@ Returns
 
 > **initialTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:3045
+Defined in: sdk/FlaunchSDK.ts:3140
 
 Gets the initial tick for a fair launch
 
@@ -6620,7 +6660,7 @@ Promise<number> - The initial tick value
 
 > **isFairLaunchActive**(`coinAddress`, `version?`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:2953
+Defined in: sdk/FlaunchSDK.ts:3048
 
 Checks if a fair launch is currently active for a given coin
 
@@ -6650,7 +6690,7 @@ Promise<boolean> - True if fair launch is active, false otherwise
 
 > **isFlaunchTokenApprovedForAll**(`version`, `owner`, `operator`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:4310
+Defined in: sdk/FlaunchSDK.ts:4405
 
 Checks if an operator is approved for all flaunch tokens of an owner
 
@@ -6686,7 +6726,7 @@ Promise<boolean> - True if operator is approved for all tokens
 
 > **isMemecoinImported**(`memecoin`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:4286
+Defined in: sdk/FlaunchSDK.ts:4381
 
 Checks if an external memecoin has been imported to Flaunch
 
@@ -6710,7 +6750,7 @@ Promise<boolean> - True if the memecoin has been imported
 
 > **isPairedTokenApproved**(`token`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:1300
+Defined in: sdk/FlaunchSDK.ts:1335
 
 Parameters
 
@@ -6728,7 +6768,7 @@ Returns
 
 > **isValidCoin**(`coinAddress`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:2108
+Defined in: sdk/FlaunchSDK.ts:2203
 
 Checks if a given coin address is a valid Flaunch coin (supports all versions)
 
@@ -6752,7 +6792,7 @@ Promise<boolean> - True if the coin is valid, false otherwise
 
 > `protected` **launchPreBuyPlannerDeps**(): `LaunchPreBuyPlannerDeps`
 
-Defined in: sdk/FlaunchSDK.ts:1211
+Defined in: sdk/FlaunchSDK.ts:1246
 
 The dependency bag the pre-buy planner runs on — the same clients the launch methods use.
 
@@ -6766,7 +6806,7 @@ Returns
 
 > `protected` **locatePairedPool**(`coinAddress`): `Promise`\<\{ `hook`: `` `0x${string}` ``; `poolKey`: `PoolKey`; \} \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:1572
+Defined in: sdk/FlaunchSDK.ts:1607
 
 Which v1.3 hook a coin's paired pool lives on, and its key.
 
@@ -6796,7 +6836,7 @@ The hook and pool key, or null when no v1.3 hook on this chain knows the coin.
 
 > **marketCapToTokenPriceEth**(`marketCapUsd`, `formattedTotalSupplyInDecimals`, `ethUsdPrice`): `number`
 
-Defined in: sdk/FlaunchSDK.ts:3828
+Defined in: sdk/FlaunchSDK.ts:3923
 
 Converts market cap in USD to token price in ETH
 
@@ -6824,7 +6864,7 @@ Returns
 
 > `protected` **pairedTokenPositionManagerAt**(`hook`): `ReadPairedTokenPositionManagerV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:1550
+Defined in: sdk/FlaunchSDK.ts:1585
 
 The paired-token PositionManager client for a given hook address, memoised per hook.
 
@@ -6844,7 +6884,7 @@ Returns
 
 > **parseSwapTx**\<`T`\>(`params`): `Promise`\<`T` *extends* `boolean` ? `GenericBuySwapLog` \| `GenericSellSwapLog` \| `undefined` : `GenericBaseSwapLog` \| `undefined`\>
 
-Defined in: sdk/FlaunchSDK.ts:3753
+Defined in: sdk/FlaunchSDK.ts:3848
 
 Parses a transaction hash to extract PoolSwap events and return parsed swap data
 
@@ -6892,7 +6932,7 @@ Parsed swap log or undefined if no PoolSwap event found.
 
 > **planLaunchPreBuy**(`input`): `Promise`\<`LaunchPreBuyResult`\>
 
-Defined in: sdk/FlaunchSDK.ts:1247
+Defined in: sdk/FlaunchSDK.ts:1282
 
 Quotes a launch that buys `preBuyBps` of the supply for the creator, at one pinned block:
 the exact coin amount, the native flaunching fee, the expected and maximum purchase cost in
@@ -6917,7 +6957,7 @@ Returns
 
 > **planPairedTokenAcquisition**(`params`): `Promise`\<`PairedTokenAcquisitionPlan`\>
 
-Defined in: sdk/FlaunchSDK.ts:1732
+Defined in: sdk/FlaunchSDK.ts:1767
 
 The calls that buy exactly `target` of a paired token from ETH or the USD hub: an optional
 hub-token approve to the venue's router, then the exact-output router call (ETH rides as
@@ -6940,7 +6980,7 @@ Returns
 
 > **planPairedTokenAcquisitionForBudget**(`params`): `Promise`\<`PairedTokenAcquisitionPlan` & `object`\>
 
-Defined in: sdk/FlaunchSDK.ts:1780
+Defined in: sdk/FlaunchSDK.ts:1815
 
 Sizes and plans a routed buy from a BUDGET: quotes the exact input, takes `slippageBps` off, and
 plans an exact-output buy of that much with the whole budget as the price protection — the
@@ -6988,7 +7028,7 @@ Returns
 
 > **planPairedTokenApproval**(`params`): `Promise`\<`PairedSwapApproveCall` \| `undefined`\>
 
-Defined in: sdk/FlaunchSDK.ts:1681
+Defined in: sdk/FlaunchSDK.ts:1716
 
 Just the ERC20 approve a paired-token BUY needs, sized to `amount` — for a host that wants the
 player ready before a round starts (approve the whole wallet cap once; every in-round buy is
@@ -7007,11 +7047,35 @@ Returns
 
 ***
 
+### planPairedTokenDisposal()
+
+> **planPairedTokenDisposal**(`params`): `Promise`\<`PairedTokenDisposalPlan`\>
+
+Defined in: sdk/FlaunchSDK.ts:1868
+
+The calls that sell exactly `amountIn` of a paired token for native ETH: an optional
+paired-token approve to the venue's router, then one router multicall that swaps exact-input
+`token -> hub -> WETH` (or `token -> WETH` on a direct pool) into the router's custody and
+unwraps the WETH to `recipient`. The router keeps nothing: the input is spent in full and the
+unwrap sweeps all of the WETH. Pass a quote's `route` and a haircut of its `expectedOut`.
+
+Parameters
+
+#params
+
+`PairedTokenDisposalParams`
+
+Returns
+
+`Promise`\<`PairedTokenDisposalPlan`\>
+
+***
+
 ### planPairedTokenSwap()
 
 > **planPairedTokenSwap**(`params`): `Promise`\<`PairedSwapPlan`\>
 
-Defined in: sdk/FlaunchSDK.ts:1817
+Defined in: sdk/FlaunchSDK.ts:1912
 
 Builds one quote-backed exact-input plan. Its displayed output and encoded minimum share
 the same quote; slot0 and quote reads use the same block. Requires a protected router.
@@ -7034,7 +7098,7 @@ Returns
 
 > **pollPoolCreatedNow**(`version?`): `Promise`\<`void`\> \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:2497
+Defined in: sdk/FlaunchSDK.ts:2592
 
 Polls for current pool creation events
 
@@ -7058,7 +7122,7 @@ Current pool creation events or undefined if polling is not available
 
 > **pollPoolSwapNow**(`version?`): `Promise`\<`void`\> \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:2780
+Defined in: sdk/FlaunchSDK.ts:2875
 
 Polls for current pool swap events
 
@@ -7082,7 +7146,7 @@ Current pool swap events or undefined if polling is not available
 
 > **poolId**(`coinAddress`, `version?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:3502
+Defined in: sdk/FlaunchSDK.ts:3597
 
 Gets the pool ID for a given coin
 
@@ -7112,7 +7176,7 @@ Promise<string> - The pool ID
 
 > **positionInfo**(`params`): `Promise`\<\{ `feeGrowthInside0LastX128`: `bigint`; `feeGrowthInside1LastX128`: `bigint`; `liquidity`: `bigint`; \} \| \{ `feeGrowthInside0LastX128`: `bigint`; `feeGrowthInside1LastX128`: `bigint`; `liquidity`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2799
+Defined in: sdk/FlaunchSDK.ts:2894
 
 Gets information about a liquidity position
 
@@ -7136,7 +7200,7 @@ Position information from the state view contract
 
 > `protected` **probeMultichainCoinHook**(`coinAddress`): `Promise`\<\{ `hook`: `` `0x${string}` ``; `version`: `FlaunchVersion`; \} \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:1469
+Defined in: sdk/FlaunchSDK.ts:1504
 
 On a multichain deployment a chain can serve several hook generations at once (Robinhood:
 the v1.2 multichain hook, the 2026-08-21 v1.3.1 hooks and the v1.3.3 regeneration). Every
@@ -7162,7 +7226,7 @@ The coin's hook and version, or null when no hook on this chain knows the coin.
 
 > **quotePairedTokenAcquisition**(`params`): `Promise`\<`PairedTokenAcquisitionQuote`\>
 
-Defined in: sdk/FlaunchSDK.ts:1716
+Defined in: sdk/FlaunchSDK.ts:1751
 
 Expected paired-token output (and the venue) for an exact ETH / hub-token input.
 
@@ -7188,11 +7252,42 @@ Returns
 
 ***
 
+### quotePairedTokenDisposal()
+
+> **quotePairedTokenDisposal**(`params`): `Promise`\<`PairedTokenDisposalQuote`\>
+
+Defined in: sdk/FlaunchSDK.ts:1850
+
+Expected ETH (and the venue) for selling an exact paired-token input back to ETH. Prefers a
+depth-aware QuoterV2 quote; falls back to the calculator pool's spot price.
+
+Parameters
+
+#params
+
+##amountIn
+
+`bigint`
+
+##output
+
+`"eth"`
+
+##pairedToken
+
+`` `0x${string}` ``
+
+Returns
+
+`Promise`\<`PairedTokenDisposalQuote`\>
+
+***
+
 ### referralBalance()
 
 > **referralBalance**(`recipient`, `coinAddress`, `options?`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3255
+Defined in: sdk/FlaunchSDK.ts:3350
 
 Gets the balance of a recipient for a given coin
 
@@ -7226,7 +7321,7 @@ Promise<bigint> - The balance of the recipient
 
 > **referralBalances**(`params`): `Promise`\<`ReferralTokenBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3278
+Defined in: sdk/FlaunchSDK.ts:3373
 
 Supply historical escrow/token keys from logs or your indexer. Never aggregate across escrows.
 
@@ -7252,7 +7347,7 @@ Returns
 
 > **resolvePairedPool**(`coinAddress`, `pairedToken?`): `Promise`\<`ResolvedPairedPool`\>
 
-Defined in: sdk/FlaunchSDK.ts:1602
+Defined in: sdk/FlaunchSDK.ts:1637
 
 The pool a paired-token coin trades on: its full key, id and paired side, read from the hook
 the coin was launched on (see `locatePairedPool` — one `poolKey` read per hook probed, then
@@ -7284,7 +7379,7 @@ when no v1.3 hook on this chain launched the coin, or `pairedToken` disagrees wi
 
 > **revenueManagerAllTokensByCreator**(`params`): `Promise`\<readonly `object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3348
+Defined in: sdk/FlaunchSDK.ts:3443
 
 Gets all tokens created by a specific creator address
 
@@ -7324,7 +7419,7 @@ Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects con
 
 > **revenueManagerAllTokensInManager**(`params`): `Promise`\<`object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3371
+Defined in: sdk/FlaunchSDK.ts:3466
 
 Gets all tokens currently managed by a revenue manager
 
@@ -7358,7 +7453,7 @@ Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects con
 
 > **revenueManagerBalance**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3299
+Defined in: sdk/FlaunchSDK.ts:3394
 
 Gets the claimable balance of ETH for the recipient from a revenue manager
 
@@ -7392,7 +7487,7 @@ Promise<bigint> - The claimable balance of ETH
 
 > **revenueManagerBalanceV1\_3**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3417
+Defined in: sdk/FlaunchSDK.ts:3512
 
 Gets the claimable balance of one payout asset for a recipient on a v1.3.1 multi-asset
 RevenueManager. Managers of that generation keep a balance per payout asset — native ETH
@@ -7434,7 +7529,7 @@ Promise<bigint> - The claimable balance in the asset's raw units
 
 > **revenueManagerPayoutAssets**(`revenueManagerAddress`): `Promise`\<readonly `` `0x${string}` ``[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3440
+Defined in: sdk/FlaunchSDK.ts:3535
 
 Gets every payout asset a v1.3.1 revenue manager has ever been credited in. Native ETH
 (`zeroAddress`) is always present; other entries come from the paired tokens of the coins
@@ -7460,7 +7555,7 @@ Promise<readonly Address[]> - The payout assets
 
 > **revenueManagerProtocolBalance**(`revenueManagerAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3316
+Defined in: sdk/FlaunchSDK.ts:3411
 
 Gets the claimable balance of ETH for the protocol from a revenue manager
 
@@ -7484,7 +7579,7 @@ Promise<bigint> - The claimable balance of ETH
 
 > **revenueManagerProtocolBalanceV1\_3**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3455
+Defined in: sdk/FlaunchSDK.ts:3550
 
 Gets the claimable balance of one payout asset for the protocol on a v1.3.1 revenue manager
 
@@ -7516,7 +7611,7 @@ Promise<bigint> - The claimable balance in the asset's raw units
 
 > **revenueManagerTokensCount**(`revenueManagerAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3331
+Defined in: sdk/FlaunchSDK.ts:3426
 
 Gets the total number of tokens managed by a revenue manager
 
@@ -7540,7 +7635,7 @@ Promise<bigint> - The total count of tokens
 
 > `protected` **routerForPool**(`hook`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:1660
+Defined in: sdk/FlaunchSDK.ts:1695
 
 The PoolSwap a pool on `hook` must be traded through. Router approval is per spend gate and
 each hook generation ships its own gate, so a gated buy sent through the wrong generation's
@@ -7562,7 +7657,7 @@ Returns
 
 > **setIPFSResolver**(`resolverFn`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:3739
+Defined in: sdk/FlaunchSDK.ts:3834
 
 Sets a custom IPFS resolver function
 
@@ -7589,7 +7684,7 @@ eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
 
 > **tokenImporterVerifyMemecoin**(`memecoin`): `Promise`\<\{ `isValid`: `boolean`; `verifier`: `` `0x${string}` ``; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3774
+Defined in: sdk/FlaunchSDK.ts:3869
 
 Verifies if a memecoin is valid for importing
 
@@ -7613,7 +7708,7 @@ Promise<{ isValid: boolean; verifier: Address }> - The result of the verificatio
 
 > **treasuryManagerBalancesV1\_3**(`params`): `Promise`\<`AssetBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3480
+Defined in: sdk/FlaunchSDK.ts:3575
 
 Gets a recipient's claimable balances across payout assets on any v1.3.1 multi-asset
 treasury manager (RevenueManager, the fee-split managers, StakingManager). Zero balances are
@@ -7653,7 +7748,7 @@ Promise<AssetBalance[]> - One entry per asset, in the order given
 
 > **treasuryManagerInfo**(`treasuryManagerAddress`): `Promise`\<\{ `managerOwner`: `` `0x${string}` ``; `permissions`: `` `0x${string}` ``; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3388
+Defined in: sdk/FlaunchSDK.ts:3483
 
 Gets treasury manager information including owner and permissions
 
@@ -7677,7 +7772,7 @@ Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner 
 
 > **trustedPoolKeySignerStatus**(`coinAddress`, `version?`): `Promise`\<\{ `fairLaunchEndsAt`: `number`; `fairLaunchStartsAt`: `number`; `isCurrentlyEnabled`: `boolean`; `isFairLaunchActive`: `boolean`; `signer`: `` `0x${string}` ``; `trustedSignerEnabled`: `boolean`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2960
+Defined in: sdk/FlaunchSDK.ts:3055
 
 Parameters
 
@@ -7699,7 +7794,7 @@ Returns
 
 > **verifyLaunchPreBuyPlan**(`plan`, `mode?`): `Promise`\<`LaunchPreBuyVerification`\>
 
-Defined in: sdk/FlaunchSDK.ts:1256
+Defined in: sdk/FlaunchSDK.ts:1291
 
 Preflight of an existing plan against live state. Throws `LaunchPreBuyRequoteRequiredError`
 (`code: "REQUOTE_REQUIRED"`) when the plan must be re-planned; see `LaunchPreBuyVerification`.
@@ -7725,7 +7820,7 @@ Returns
 
 > **verifyPairedTokenSwapPlan**(`plan`, `mode?`): `Promise`\<`PairedSwapVerification`\>
 
-Defined in: sdk/FlaunchSDK.ts:1978
+Defined in: sdk/FlaunchSDK.ts:2073
 
 Preflight only; on-chain checks remain authoritative. Quote mode cannot measure input consumption.
 
@@ -7749,7 +7844,7 @@ Returns
 
 > **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void`; `pollPoolCreatedNow`: () => `Promise`\<`void`\>; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2483
+Defined in: sdk/FlaunchSDK.ts:2578
 
 Watches for pool creation events
 
@@ -7779,7 +7874,7 @@ Subscription to pool creation events
 
 > **watchPoolSwap**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void`; `pollPoolSwapNow`: () => `Promise`\<`void`\>; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2755
+Defined in: sdk/FlaunchSDK.ts:2850
 
 Watches for pool swap events
 
@@ -8985,7 +9080,7 @@ Returns
 
 # Class: ReadPairedTokenAcquisition
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:41
+Defined in: clients/PairedTokenAcquisitionClient.ts:51
 
 Reads for buying a non-ETH paired token from ETH or the chain's USD hub. Route resolution comes
 from live protocol config rather than a table: the registry's `tokenConfig(token).priceCalculator`
@@ -8999,7 +9094,7 @@ is quoted and the best output wins.
 
 > **new ReadPairedTokenAcquisition**(`chainId`, `drift?`): `ReadPairedTokenAcquisition`
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:49
+Defined in: clients/PairedTokenAcquisitionClient.ts:59
 
 Parameters
 
@@ -9021,7 +9116,7 @@ Returns
 
 > `readonly` **chainId**: `number`
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:42
+Defined in: clients/PairedTokenAcquisitionClient.ts:52
 
 ***
 
@@ -9029,7 +9124,7 @@ Defined in: clients/PairedTokenAcquisitionClient.ts:42
 
 > `readonly` **dex**: `PairedTokenAcquisitionDex`
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:43
+Defined in: clients/PairedTokenAcquisitionClient.ts:53
 
 ## Methods
 
@@ -9037,7 +9132,7 @@ Defined in: clients/PairedTokenAcquisitionClient.ts:43
 
 > **quote**(`pairedToken`, `input`, `amountIn`): `Promise`\<`PairedTokenAcquisitionQuote`\>
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:174
+Defined in: clients/PairedTokenAcquisitionClient.ts:184
 
 Picks the venue and expected output for buying the paired token with an exact input. With a
 QuoterV2 every existing pool is quoted depth-aware and the best output wins; otherwise (Slipstream,
@@ -9063,11 +9158,63 @@ Returns
 
 ***
 
+### quoteDisposal()
+
+> **quoteDisposal**(`pairedToken`, `amountIn`): `Promise`\<`PairedTokenDisposalQuote`\>
+
+Defined in: clients/PairedTokenAcquisitionClient.ts:251
+
+Picks the venue and expected ETH for selling an exact paired-token input. With a QuoterV2, every
+candidate venue (all existing hub and direct WETH pools on `uniswapV3`; the calculator's pool on
+slipstream) is quoted over the sell path and the best output wins. Without one, or when every
+quote fails, the calculator's pool is priced at spot.
+
+Parameters
+
+#pairedToken
+
+`` `0x${string}` ``
+
+#amountIn
+
+`bigint`
+
+Returns
+
+`Promise`\<`PairedTokenDisposalQuote`\>
+
+***
+
+### quoteDisposalSpot()
+
+> **quoteDisposalSpot**(`route`, `amountIn`): `Promise`\<`bigint`\>
+
+Defined in: clients/PairedTokenAcquisitionClient.ts:226
+
+Spot ETH out for SELLING an exact paired-token input through a hub route: token -> hub in the
+route's pool, then hub -> WETH in the WETH:hub pool. Single-tick, like quoteSpot.
+
+Parameters
+
+#route
+
+`PairedTokenAcquisitionRoute`
+
+#amountIn
+
+`bigint`
+
+Returns
+
+`Promise`\<`bigint`\>
+
+***
+
 ### quoteSpot()
 
 > **quoteSpot**(`pairedToken`, `route`, `input`, `amountIn`): `Promise`\<`bigint`\>
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:145
+Defined in: clients/PairedTokenAcquisitionClient.ts:155
 
 Spot output through a HUB route: ETH takes the WETH:hub hop first.
 
@@ -9099,7 +9246,7 @@ Returns
 
 > **resolveRoute**(`pairedToken`): `Promise`\<`PairedTokenAcquisitionRoute`\>
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:69
+Defined in: clients/PairedTokenAcquisitionClient.ts:79
 
 The calculator-bound hub pool for a paired token. Everything resolved here is immutable on
 chain, so it caches for the session; a failed resolution is not cached.
@@ -12577,7 +12724,7 @@ Inherited from
 
 # Class: ReadWriteFlaunchSDK
 
-Defined in: sdk/FlaunchSDK.ts:4392
+Defined in: sdk/FlaunchSDK.ts:4487
 
 ## Extends
 
@@ -12589,7 +12736,7 @@ Defined in: sdk/FlaunchSDK.ts:4392
 
 > **new ReadWriteFlaunchSDK**(`chainId`, `drift?`, `publicClient?`): `ReadWriteFlaunchSDK`
 
-Defined in: sdk/FlaunchSDK.ts:4527
+Defined in: sdk/FlaunchSDK.ts:4622
 
 Parameters
 
@@ -12617,7 +12764,7 @@ Overrides
 
 > `readonly` **chainId**: `number`
 
-Defined in: sdk/FlaunchSDK.ts:753
+Defined in: sdk/FlaunchSDK.ts:788
 
 Inherited from
 
@@ -12629,7 +12776,7 @@ Inherited from
 
 > **drift**: `Drift`\<`ReadWriteAdapter`\>
 
-Defined in: sdk/FlaunchSDK.ts:4393
+Defined in: sdk/FlaunchSDK.ts:4488
 
 Overrides
 
@@ -12641,7 +12788,7 @@ Overrides
 
 > `readonly` **publicClient**: \{ \} \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:754
+Defined in: sdk/FlaunchSDK.ts:789
 
 Inherited from
 
@@ -12653,7 +12800,7 @@ Inherited from
 
 > **resolveIPFS**: (`value`) => `string`
 
-Defined in: sdk/FlaunchSDK.ts:775
+Defined in: sdk/FlaunchSDK.ts:810
 
 Parameters
 
@@ -12675,7 +12822,7 @@ Inherited from
 
 > `readonly` **TICK\_SPACING**: `60`
 
-Defined in: sdk/FlaunchSDK.ts:755
+Defined in: sdk/FlaunchSDK.ts:790
 
 Inherited from
 
@@ -12689,7 +12836,7 @@ Get Signature
 
 > **get** **readAnyBidWall**(): `AnyBidWall`
 
-Defined in: sdk/FlaunchSDK.ts:974
+Defined in: sdk/FlaunchSDK.ts:1009
 
 #Returns
 
@@ -12707,7 +12854,7 @@ Get Signature
 
 > **get** **readAnyFlaunch**(): `ReadAnyFlaunch`
 
-Defined in: sdk/FlaunchSDK.ts:993
+Defined in: sdk/FlaunchSDK.ts:1028
 
 #Returns
 
@@ -12725,7 +12872,7 @@ Get Signature
 
 > **get** **readAnyFlaunchZap**(): `ReadAnyFlaunchZap`
 
-Defined in: sdk/FlaunchSDK.ts:788
+Defined in: sdk/FlaunchSDK.ts:823
 
 The AnyFlaunchZap (vested launches). Throws on chains without one — gate with
 `doesChainSupportVestedLaunch()`.
@@ -12746,7 +12893,7 @@ Get Signature
 
 > **get** **readAnyPositionManager**(): `ReadAnyPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:934
+Defined in: sdk/FlaunchSDK.ts:969
 
 #Returns
 
@@ -12764,7 +12911,7 @@ Get Signature
 
 > **get** **readBidWall**(): `ReadBidWall`
 
-Defined in: sdk/FlaunchSDK.ts:961
+Defined in: sdk/FlaunchSDK.ts:996
 
 #Returns
 
@@ -12782,7 +12929,7 @@ Get Signature
 
 > **get** **readBidWallV1\_1**(): `ReadBidWallV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:964
+Defined in: sdk/FlaunchSDK.ts:999
 
 #Returns
 
@@ -12800,7 +12947,7 @@ Get Signature
 
 > **get** **readBidWallV1\_3**(): `ReadBidWallV1_1` \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:971
+Defined in: sdk/FlaunchSDK.ts:1006
 
 #Returns
 
@@ -12818,7 +12965,7 @@ Get Signature
 
 > **get** **readFairLaunch**(): `ReadFairLaunch`
 
-Defined in: sdk/FlaunchSDK.ts:955
+Defined in: sdk/FlaunchSDK.ts:990
 
 #Returns
 
@@ -12836,7 +12983,7 @@ Get Signature
 
 > **get** **readFairLaunchV1\_1**(): `ReadFairLaunchV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:958
+Defined in: sdk/FlaunchSDK.ts:993
 
 #Returns
 
@@ -12854,7 +13001,7 @@ Get Signature
 
 > **get** **readFeeEscrow**(): `ReadFeeEscrow`
 
-Defined in: sdk/FlaunchSDK.ts:777
+Defined in: sdk/FlaunchSDK.ts:812
 
 #Returns
 
@@ -12872,7 +13019,7 @@ Get Signature
 
 > **get** **readFeeEscrowV1\_3**(): `ReadFeeEscrowV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:811
+Defined in: sdk/FlaunchSDK.ts:846
 
 The v1.3.1 multi-token FeeEscrow. Throws on chains without one — gate with
 `doesChainSupportMultiTokenFeeEscrow()`.
@@ -12893,7 +13040,7 @@ Get Signature
 
 > **get** **readFlaunch**(): `ReadFlaunch`
 
-Defined in: sdk/FlaunchSDK.ts:977
+Defined in: sdk/FlaunchSDK.ts:1012
 
 #Returns
 
@@ -12911,7 +13058,7 @@ Get Signature
 
 > **get** **readFlaunchManagerZapV1\_3**(): `ReadFlaunchManagerZapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:824
+Defined in: sdk/FlaunchSDK.ts:859
 
 The v1.3.1 FlaunchManagerZap, which deploys managers of the multi-asset generation.
 Throws on chains without one — gate with `doesChainSupportMultiAssetManagers()`.
@@ -12932,7 +13079,7 @@ Get Signature
 
 > **get** **readFlaunchV1\_1**(): `ReadFlaunchV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:980
+Defined in: sdk/FlaunchSDK.ts:1015
 
 #Returns
 
@@ -12950,7 +13097,7 @@ Get Signature
 
 > **get** **readFlaunchV1\_2**(): `ReadFlaunchV1_2`
 
-Defined in: sdk/FlaunchSDK.ts:983
+Defined in: sdk/FlaunchSDK.ts:1018
 
 #Returns
 
@@ -12968,7 +13115,7 @@ Get Signature
 
 > **get** **readFlaunchV1\_3**(): `ReadFlaunchV1_2` \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:990
+Defined in: sdk/FlaunchSDK.ts:1025
 
 #Returns
 
@@ -12986,7 +13133,7 @@ Get Signature
 
 > **get** **readFlaunchZap**(): `ReadFlaunchZap`
 
-Defined in: sdk/FlaunchSDK.ts:943
+Defined in: sdk/FlaunchSDK.ts:978
 
 #Returns
 
@@ -13004,7 +13151,7 @@ Get Signature
 
 > **get** **readFlaunchZapMultichain**(): `ReadFlaunchZapMultichain`
 
-Defined in: sdk/FlaunchSDK.ts:1199
+Defined in: sdk/FlaunchSDK.ts:1234
 
 The legacy multichain zap's read client. Throws where that zap is absent, including Arbitrum.
 
@@ -13024,7 +13171,7 @@ Get Signature
 
 > **get** **readFlaunchZapV1\_3**(): `ReadFlaunchZapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:897
+Defined in: sdk/FlaunchSDK.ts:932
 
 #Returns
 
@@ -13042,7 +13189,7 @@ Get Signature
 
 > **get** **readMemecoinVesting**(): `ReadMemecoinVesting`
 
-Defined in: sdk/FlaunchSDK.ts:798
+Defined in: sdk/FlaunchSDK.ts:833
 
 The MemecoinVesting escrow holding vested launches' schedules. Throws on chains without one.
 
@@ -13062,7 +13209,7 @@ Get Signature
 
 > **get** **readPairedTokenAcquisition**(): `ReadPairedTokenAcquisition`
 
-Defined in: sdk/FlaunchSDK.ts:1707
+Defined in: sdk/FlaunchSDK.ts:1742
 
 Reads for buying a non-ETH paired token from ETH / the USD hub. Gate with `doesChainSupportPairedTokenAcquisition()`.
 
@@ -13082,7 +13229,7 @@ Get Signature
 
 > **get** **readPairedTokenPositionManagerV1\_3**(): `ReadPairedTokenPositionManagerV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:926
+Defined in: sdk/FlaunchSDK.ts:961
 
 The paired-token PositionManager V1.3 (pool keys, paired tokens). Same gate as `readPoolSwapV1_3`.
 
@@ -13102,7 +13249,7 @@ Get Signature
 
 > **get** **readPairedTokenRegistryV1\_3**(): `ReadPairedTokenRegistryV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:905
+Defined in: sdk/FlaunchSDK.ts:940
 
 #Returns
 
@@ -13120,7 +13267,7 @@ Get Signature
 
 > **get** **readPermit2**(): `ReadPermit2`
 
-Defined in: sdk/FlaunchSDK.ts:999
+Defined in: sdk/FlaunchSDK.ts:1034
 
 #Returns
 
@@ -13138,7 +13285,7 @@ Get Signature
 
 > **get** **readPoolManager**(): `ReadPoolManager`
 
-Defined in: sdk/FlaunchSDK.ts:946
+Defined in: sdk/FlaunchSDK.ts:981
 
 #Returns
 
@@ -13156,7 +13303,7 @@ Get Signature
 
 > **get** **readPoolSwapV1\_3**(): `ReadPoolSwapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:917
+Defined in: sdk/FlaunchSDK.ts:952
 
 The v1.3.1 PoolSwap router. Throws on chains without paired-token swap support — gate with
 `doesChainSupportPairedTokenSwap()`.
@@ -13177,7 +13324,7 @@ Get Signature
 
 > **get** **readPositionManager**(): `ReadFlaunchPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:885
+Defined in: sdk/FlaunchSDK.ts:920
 
 #Returns
 
@@ -13195,7 +13342,7 @@ Get Signature
 
 > **get** **readPositionManagerV1\_1**(): `ReadFlaunchPositionManagerV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:888
+Defined in: sdk/FlaunchSDK.ts:923
 
 #Returns
 
@@ -13213,7 +13360,7 @@ Get Signature
 
 > **get** **readPositionManagerV1\_2**(): `ReadFlaunchPositionManagerV1_2`
 
-Defined in: sdk/FlaunchSDK.ts:891
+Defined in: sdk/FlaunchSDK.ts:926
 
 #Returns
 
@@ -13231,7 +13378,7 @@ Get Signature
 
 > **get** **readPositionManagerV1\_3**(): `ReadFlaunchPositionManagerV1_2` \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:894
+Defined in: sdk/FlaunchSDK.ts:929
 
 #Returns
 
@@ -13249,7 +13396,7 @@ Get Signature
 
 > **get** **readQuoter**(): `ReadQuoter`
 
-Defined in: sdk/FlaunchSDK.ts:996
+Defined in: sdk/FlaunchSDK.ts:1031
 
 #Returns
 
@@ -13267,7 +13414,7 @@ Get Signature
 
 > **get** **readReferralEscrow**(): `ReadReferralEscrow`
 
-Defined in: sdk/FlaunchSDK.ts:940
+Defined in: sdk/FlaunchSDK.ts:975
 
 #Returns
 
@@ -13285,7 +13432,7 @@ Get Signature
 
 > **get** **readStateView**(): `ReadStateView`
 
-Defined in: sdk/FlaunchSDK.ts:949
+Defined in: sdk/FlaunchSDK.ts:984
 
 #Returns
 
@@ -13303,7 +13450,7 @@ Get Signature
 
 > **get** **readTokenImporter**(): `ReadTokenImporter`
 
-Defined in: sdk/FlaunchSDK.ts:937
+Defined in: sdk/FlaunchSDK.ts:972
 
 #Returns
 
@@ -13321,7 +13468,7 @@ Get Signature
 
 > **get** **readTreasuryManagerFactoryV1\_3**(): `ReadTreasuryManagerFactory`
 
-Defined in: sdk/FlaunchSDK.ts:838
+Defined in: sdk/FlaunchSDK.ts:873
 
 The v1.3.1 TreasuryManagerFactory (multi-asset manager generation), used to resolve
 `ManagerDeployed` events from that factory only. Throws on chains without one — gate
@@ -13343,7 +13490,7 @@ Get Signature
 
 > **get** **readWriteAnyFlaunchZap**(): `ReadWriteAnyFlaunchZap`
 
-Defined in: sdk/FlaunchSDK.ts:4448
+Defined in: sdk/FlaunchSDK.ts:4543
 
 The AnyFlaunchZap with write capabilities. Throws on chains without one — gate with `doesChainSupportVestedLaunch()`.
 
@@ -13359,7 +13506,7 @@ Get Signature
 
 > **get** **readWriteAnyPositionManager**(): `ReadWriteAnyPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:4506
+Defined in: sdk/FlaunchSDK.ts:4601
 
 #Returns
 
@@ -13373,7 +13520,7 @@ Get Signature
 
 > **get** **readWriteFeeEscrow**(): `ReadWriteFeeEscrow`
 
-Defined in: sdk/FlaunchSDK.ts:4403
+Defined in: sdk/FlaunchSDK.ts:4498
 
 #Returns
 
@@ -13387,7 +13534,7 @@ Get Signature
 
 > **get** **readWriteFeeEscrowV1\_3**(): `ReadWriteFeeEscrowV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:4415
+Defined in: sdk/FlaunchSDK.ts:4510
 
 The v1.3.1 multi-token FeeEscrow with write capabilities. Throws on chains without one —
 gate with `doesChainSupportMultiTokenFeeEscrow()`.
@@ -13404,7 +13551,7 @@ Get Signature
 
 > **get** **readWriteFlaunchManagerZapV1\_3**(): `ReadWriteFlaunchManagerZapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:4429
+Defined in: sdk/FlaunchSDK.ts:4524
 
 The v1.3.1 FlaunchManagerZap with write capabilities: deploys managers of the multi-asset
 generation through the v1.3.1 factory. Throws on chains without one — gate with
@@ -13422,7 +13569,7 @@ Get Signature
 
 > **get** **readWriteFlaunchZap**(): `ReadWriteFlaunchZap`
 
-Defined in: sdk/FlaunchSDK.ts:4515
+Defined in: sdk/FlaunchSDK.ts:4610
 
 #Returns
 
@@ -13436,7 +13583,7 @@ Get Signature
 
 > **get** **readWriteFlaunchZapV1\_3**(): `ReadWriteFlaunchZapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:4438
+Defined in: sdk/FlaunchSDK.ts:4533
 
 #Returns
 
@@ -13450,7 +13597,7 @@ Get Signature
 
 > **get** **readWriteMemecoinVesting**(): `ReadWriteMemecoinVesting`
 
-Defined in: sdk/FlaunchSDK.ts:4458
+Defined in: sdk/FlaunchSDK.ts:4553
 
 The MemecoinVesting escrow with write capabilities (claims). Throws on chains without one.
 
@@ -13466,7 +13613,7 @@ Get Signature
 
 > **get** **readWritePermit2**(): `ReadWritePermit2`
 
-Defined in: sdk/FlaunchSDK.ts:4523
+Defined in: sdk/FlaunchSDK.ts:4618
 
 #Returns
 
@@ -13480,7 +13627,7 @@ Get Signature
 
 > **get** **readWritePoolSwapV1\_3**(): `ReadWritePoolSwapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:4481
+Defined in: sdk/FlaunchSDK.ts:4576
 
 The chain's CURRENT v1.3 PoolSwap router with write capabilities — gate with `doesChainSupportPairedTokenSwap()`.
 
@@ -13496,7 +13643,7 @@ Get Signature
 
 > **get** **readWritePositionManager**(): `ReadWriteFlaunchPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:4500
+Defined in: sdk/FlaunchSDK.ts:4595
 
 #Returns
 
@@ -13510,7 +13657,7 @@ Get Signature
 
 > **get** **readWritePositionManagerV1\_1**(): `ReadWriteFlaunchPositionManagerV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:4503
+Defined in: sdk/FlaunchSDK.ts:4598
 
 #Returns
 
@@ -13524,7 +13671,7 @@ Get Signature
 
 > **get** **readWriteReferralEscrow**(): `ReadWriteReferralEscrow`
 
-Defined in: sdk/FlaunchSDK.ts:4512
+Defined in: sdk/FlaunchSDK.ts:4607
 
 #Returns
 
@@ -13538,7 +13685,7 @@ Get Signature
 
 > **get** **readWriteTokenImporter**(): `ReadWriteTokenImporter`
 
-Defined in: sdk/FlaunchSDK.ts:4509
+Defined in: sdk/FlaunchSDK.ts:4604
 
 #Returns
 
@@ -13552,7 +13699,7 @@ Get Signature
 
 > **get** **readWriteTreasuryManagerFactory**(): `ReadWriteTreasuryManagerFactory`
 
-Defined in: sdk/FlaunchSDK.ts:4518
+Defined in: sdk/FlaunchSDK.ts:4613
 
 #Returns
 
@@ -13564,7 +13711,7 @@ Defined in: sdk/FlaunchSDK.ts:4518
 
 > **addToTreasuryManager**(`treasuryManagerAddress`, `version`, `tokenId`, `creator?`, `data?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5767
+Defined in: sdk/FlaunchSDK.ts:5862
 
 Adds an existing flaunch token to a treasury manager. NFT approval must be given prior to calling this function.
 
@@ -13612,7 +13759,7 @@ Transaction response
 
 > **anyFlaunch**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5117
+Defined in: sdk/FlaunchSDK.ts:5212
 
 Creates a new Flaunch with AnyPositionManager for external coins
 
@@ -13636,7 +13783,7 @@ Transaction response
 
 > `protected` **assertBaseOnlyOperation**(`operation`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:867
+Defined in: sdk/FlaunchSDK.ts:902
 
 Parameters
 
@@ -13658,7 +13805,7 @@ Inherited from
 
 > `protected` **assertLegacyETHSwapHook**(`hook`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:1538
+Defined in: sdk/FlaunchSDK.ts:1573
 
 Parameters
 
@@ -13680,7 +13827,7 @@ Inherited from
 
 > `protected` **assertMultiAssetManagersSupported**(`operation`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:877
+Defined in: sdk/FlaunchSDK.ts:912
 
 The v1.3.1 multi-asset manager generation is Base mainnet only; the `*V1_3` manager
 methods refuse to run anywhere it is not deployed rather than sending calls that revert.
@@ -13705,7 +13852,7 @@ Inherited from
 
 > `protected` **assertPairedTokenAcquisitionSupported**(`operation`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:1698
+Defined in: sdk/FlaunchSDK.ts:1733
 
 Parameters
 
@@ -13727,7 +13874,7 @@ Inherited from
 
 > `protected` **assertPairedTokenSwapSupported**(`operation`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:1530
+Defined in: sdk/FlaunchSDK.ts:1565
 
 Parameters
 
@@ -13749,7 +13896,7 @@ Inherited from
 
 > **bidWallPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `pendingEth`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3188
+Defined in: sdk/FlaunchSDK.ts:3283
 
 Gets information about the bid wall position for a coin
 
@@ -13783,7 +13930,7 @@ Inherited from
 
 > **buyCoin**(`params`, `version?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5285
+Defined in: sdk/FlaunchSDK.ts:5380
 
 Buys a coin with ETH or custom inputToken via intermediatePoolKey
 
@@ -13813,7 +13960,7 @@ Transaction response for the buy operation
 
 > **buyCoinPairedToken**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4931
+Defined in: sdk/FlaunchSDK.ts:5026
 
 Buys a paired-token coin with an exact amount of its paired token (mUSD, native ETH, flETH, a
 B20 equity) through the v1.3.1 PoolSwap. Sends the ERC20 approve first when the allowance is
@@ -13836,7 +13983,7 @@ Returns
 
 > **calculateAddLiquidityAmounts**(`params`): `Promise`\<\{ `coinAmount`: `bigint`; `currentTick`: `number`; `ethAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:4100
+Defined in: sdk/FlaunchSDK.ts:4195
 
 Parameters
 
@@ -13858,7 +14005,7 @@ Inherited from
 
 > **calculateAddLiquidityTicks**(`__namedParameters`): `Promise`\<\{ `coinDecimals`: `number`; `coinTotalSupply`: `bigint`; `currentTick?`: `number`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3887
+Defined in: sdk/FlaunchSDK.ts:3982
 
 Parameters
 
@@ -13898,7 +14045,7 @@ Inherited from
 
 > **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `formattedTotalSupplyInDecimals`, `marketContext`): `number` \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:3858
+Defined in: sdk/FlaunchSDK.ts:3953
 
 Calculates current tick from market cap if provided
 
@@ -13944,7 +14091,7 @@ Inherited from
 
 > **calculatePairedTokenFlaunchFee**(`params`): `Promise`\<`PairedTokenFlaunchFee`\>
 
-Defined in: sdk/FlaunchSDK.ts:1304
+Defined in: sdk/FlaunchSDK.ts:1339
 
 Parameters
 
@@ -13966,7 +14113,7 @@ Inherited from
 
 > **calculateVestedFlaunchFee**(`params`, `slippageBps?`, `options?`): `Promise`\<`AnyFlaunchZapFee`\>
 
-Defined in: sdk/FlaunchSDK.ts:1317
+Defined in: sdk/FlaunchSDK.ts:1352
 
 The ETH a vested launch must send (flaunching fee plus the ETH-funded premine cost at
 `slippageBps` headroom) and the premine's paired-token cost. Quote as the launching wallet
@@ -14009,7 +14156,7 @@ Inherited from
 
 > **checkSingleSidedAddLiquidity**(`params`): `Promise`\<`SingleSidedLiquidityInfo`\>
 
-Defined in: sdk/FlaunchSDK.ts:4004
+Defined in: sdk/FlaunchSDK.ts:4099
 
 Parameters
 
@@ -14031,7 +14178,7 @@ Inherited from
 
 > **claimReferralBalance**(`coins`, `recipient`, `options?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5555
+Defined in: sdk/FlaunchSDK.ts:5650
 
 Claims the connected wallet's referral allocation to a payout recipient.
 
@@ -14067,7 +14214,7 @@ Transaction response
 
 > **claimVesting**(`coin`, `scheduleIds?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5260
+Defined in: sdk/FlaunchSDK.ts:5355
 
 Claims vested coins of `coin` for the connected wallet: the given schedule ids, or every
 schedule with something claimable when omitted (throws when there is nothing to claim).
@@ -14092,7 +14239,7 @@ Returns
 
 > **coinBalance**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:5272
+Defined in: sdk/FlaunchSDK.ts:5367
 
 Gets the balance of a specific coin for the connected wallet
 
@@ -14116,7 +14263,7 @@ Promise<bigint> - The balance of the coin
 
 > **coinMarketCapInUSD**(`__namedParameters`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2872
+Defined in: sdk/FlaunchSDK.ts:2967
 
 Parameters
 
@@ -14148,7 +14295,7 @@ Inherited from
 
 > **coinPriceInETH**(`coinAddress`, `version?`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2824
+Defined in: sdk/FlaunchSDK.ts:2919
 
 Calculates the coin price in ETH based on the current tick
 
@@ -14182,7 +14329,7 @@ Inherited from
 
 > **coinPriceInUSD**(`coinAddress`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2856
+Defined in: sdk/FlaunchSDK.ts:2951
 
 Calculates the coin price in USD based on the current ETH/USDC price
 
@@ -14220,7 +14367,7 @@ Inherited from
 
 > **convertPriceToTick**(`priceEth`, `isFlethZero`, `decimals0`, `decimals1`): `number`
 
-Defined in: sdk/FlaunchSDK.ts:3840
+Defined in: sdk/FlaunchSDK.ts:3935
 
 Converts token price in ETH to tick
 
@@ -14256,7 +14403,7 @@ Inherited from
 
 > `protected` **createPoolKey**(`coinAddress`, `version`): `object`
 
-Defined in: sdk/FlaunchSDK.ts:4355
+Defined in: sdk/FlaunchSDK.ts:4450
 
 Creates a pool key for the given coin and version
 
@@ -14310,7 +14457,7 @@ Inherited from
 
 > `protected` **createPoolKeyForCoin**(`coinAddress`, `version?`): `Promise`\<`PoolKey`\>
 
-Defined in: sdk/FlaunchSDK.ts:4371
+Defined in: sdk/FlaunchSDK.ts:4466
 
 `createPoolKey` resolved by coin rather than by version: on a multichain deployment the
 hook is probed per coin (see `getPositionManagerAddressForCoin`), so the key matches the
@@ -14340,7 +14487,7 @@ Inherited from
 
 > **creatorRevenue**(`creator`, `isV1?`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3222
+Defined in: sdk/FlaunchSDK.ts:3317
 
 Gets the ETH balance for the creator to claim
 
@@ -14374,7 +14521,7 @@ Inherited from
 
 > **creatorRevenueByToken**(`params`): `Promise`\<`EscrowTokenBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3239
+Defined in: sdk/FlaunchSDK.ts:3334
 
 Gets the creator's claimable revenue on the v1.3.1 multi-token FeeEscrow, per escrow token.
 Coins paired with anything other than flETH (native ETH, the B20 equities, …) escrow their
@@ -14413,7 +14560,7 @@ Inherited from
 
 > **currentTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:2809
+Defined in: sdk/FlaunchSDK.ts:2904
 
 Gets the current tick for a given coin's pool
 
@@ -14447,7 +14594,7 @@ Inherited from
 
 > **deployBuyBackManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4704
+Defined in: sdk/FlaunchSDK.ts:4799
 
 Deploys a new BuyBack manager
 
@@ -14471,7 +14618,7 @@ Address of the deployed BuyBack manager
 
 > **deployRevenueManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4633
+Defined in: sdk/FlaunchSDK.ts:4728
 
 Deploys a new revenue manager
 
@@ -14495,7 +14642,7 @@ Address of the deployed revenue manager
 
 > **deployRevenueManagerV1\_3**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4655
+Defined in: sdk/FlaunchSDK.ts:4750
 
 Deploys a new v1.3.1 multi-asset revenue manager through the v1.3.1 FlaunchManagerZap.
 Managers of this generation pay out per payout asset (native ETH or a coin's paired
@@ -14523,7 +14670,7 @@ Address of the deployed revenue manager
 
 > **deployStakingManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4679
+Defined in: sdk/FlaunchSDK.ts:4774
 
 Deploys a new staking manager
 
@@ -14547,7 +14694,7 @@ Address of the deployed staking manager
 
 > `protected` **determineCoinVersion**(`coinAddress`, `version?`): `Promise`\<`FlaunchVersion`\>
 
-Defined in: sdk/FlaunchSDK.ts:4331
+Defined in: sdk/FlaunchSDK.ts:4426
 
 Determines the version for a coin, using provided version or fetching it
 
@@ -14581,7 +14728,7 @@ Inherited from
 
 > **ethRequiredToFlaunch**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3560
+Defined in: sdk/FlaunchSDK.ts:3655
 
 Calculates the ETH required to flaunch a token, takes into account the ETH for premine and the flaunching fee
 
@@ -14623,7 +14770,7 @@ Inherited from
 
 > **executeLaunchPreBuy**(`plan`, `options?`): `Promise`\<`LaunchPreBuyExecution`\>
 
-Defined in: sdk/FlaunchSDK.ts:4749
+Defined in: sdk/FlaunchSDK.ts:4844
 
 Executes a pre-buy plan: revalidates chain, signer, expiry, binding, calldata and balances,
 re-quotes (and by default simulates) against live state, sends any ERC20 approval and waits
@@ -14655,7 +14802,7 @@ The launch transaction hash and the executed plan; decode the outcome with
 
 > **fairLaunchCoinOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3125
+Defined in: sdk/FlaunchSDK.ts:3220
 
 Gets information about the coin-only position in a fair launch
 
@@ -14689,7 +14836,7 @@ Inherited from
 
 > **fairLaunchDuration**(`coinAddress`, `version?`): `Promise`\<`number` \| `bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3032
+Defined in: sdk/FlaunchSDK.ts:3127
 
 Gets the duration of a fair launch for a given coin
 
@@ -14723,7 +14870,7 @@ Inherited from
 
 > **fairLaunchETHOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3062
+Defined in: sdk/FlaunchSDK.ts:3157
 
 Gets information about the ETH-only position in a fair launch
 
@@ -14757,7 +14904,7 @@ Inherited from
 
 > **fairLaunchInfo**(`coinAddress`, `version?`): `Promise`\<\{ `closed`: `boolean`; `endsAt`: `bigint`; `initialTick`: `number`; `revenue`: `bigint`; `startsAt`: `bigint`; `supply`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2940
+Defined in: sdk/FlaunchSDK.ts:3035
 
 Gets information about a fair launch for a given coin
 
@@ -14791,7 +14938,7 @@ Inherited from
 
 > **flaunch**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4719
+Defined in: sdk/FlaunchSDK.ts:4814
 
 Creates a new Flaunch on the specified version
 
@@ -14815,7 +14962,7 @@ Transaction response
 
 > **flaunchAnyWithGameDeveloperSplit**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4918
+Defined in: sdk/FlaunchSDK.ts:5013
 
 `prepareAnyGameLaunch` and send it: the Any-route twin of `flaunchPairedTokenWithGameDeveloperSplit`.
 
@@ -14835,7 +14982,7 @@ Returns
 
 > **flaunchIPFS**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4989
+Defined in: sdk/FlaunchSDK.ts:5084
 
 Creates a new Flaunch with IPFS metadata and optional version specification
 
@@ -14859,7 +15006,7 @@ Transaction response
 
 > **flaunchIPFSVested**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5185
+Defined in: sdk/FlaunchSDK.ts:5280
 
 `flaunchVested` with the token metadata stored on IPFS first.
 
@@ -14879,7 +15026,7 @@ Returns
 
 > **flaunchIPFSVestedWithDynamicSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5234
+Defined in: sdk/FlaunchSDK.ts:5329
 
 Parameters
 
@@ -14897,7 +15044,7 @@ Returns
 
 > **flaunchIPFSVestedWithRevenueManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5198
+Defined in: sdk/FlaunchSDK.ts:5293
 
 Parameters
 
@@ -14915,7 +15062,7 @@ Returns
 
 > **flaunchIPFSVestedWithSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5215
+Defined in: sdk/FlaunchSDK.ts:5310
 
 Parameters
 
@@ -14933,7 +15080,7 @@ Returns
 
 > **flaunchIPFSWithDynamicSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5099
+Defined in: sdk/FlaunchSDK.ts:5194
 
 Creates a new Flaunch with dynamic split manager configuration and IPFS metadata.
 
@@ -14957,7 +15104,7 @@ Transaction response
 
 > **flaunchIPFSWithRevenueManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5027
+Defined in: sdk/FlaunchSDK.ts:5122
 
 Creates a new Flaunch with revenue manager configuration and IPFS metadata
 
@@ -14985,7 +15132,7 @@ Error if FlaunchZap is not deployed on the current chain
 
 > **flaunchIPFSWithSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5065
+Defined in: sdk/FlaunchSDK.ts:5160
 
 Creates a new Flaunch that splits the creator fees to the creator and a list of recipients, storing the token metadata on IPFS
 
@@ -15009,7 +15156,7 @@ Transaction response
 
 > **flaunchPairedToken**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4770
+Defined in: sdk/FlaunchSDK.ts:4865
 
 Parameters
 
@@ -15027,7 +15174,7 @@ Returns
 
 > **flaunchPairedTokenWithDynamicSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4821
+Defined in: sdk/FlaunchSDK.ts:4916
 
 Launches a paired-token coin into a DynamicAddressFeeSplitManager deployed in the same
 transaction: the creator and the manager owner take their shares of every fee, the named
@@ -15059,7 +15206,7 @@ Error naming the chain when the manager is not deployed there
 
 > **flaunchPairedTokenWithGameDeveloperSplit**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4781
+Defined in: sdk/FlaunchSDK.ts:4876
 
 Launches a paired-token coin (a Game Mode launch carrying its gate in `feeCalculatorParams`)
 into a GameDeveloperFeeSplitManager: the game developer holds a protected 5% of every fee
@@ -15083,7 +15230,7 @@ Returns
 
 > **flaunchVested**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5179
+Defined in: sdk/FlaunchSDK.ts:5274
 
 Launches a coin with vesting schedules through the AnyFlaunchZap — `flaunch()` plus
 `vestingSchedules` (and optionally a `pairedToken`, defaulting to flETH). The schedules'
@@ -15111,7 +15258,7 @@ Error if vested launches are not deployed on the current chain
 
 > **flaunchVestedWithDynamicSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5226
+Defined in: sdk/FlaunchSDK.ts:5321
 
 `flaunchWithDynamicSplitManager` with vesting: deploys a DynamicAddressFeeSplitManager at launch.
 
@@ -15131,7 +15278,7 @@ Returns
 
 > **flaunchVestedWithPreBuy**(`input`, `options?`): `Promise`\<`LaunchPreBuyExecution`\>
 
-Defined in: sdk/FlaunchSDK.ts:5249
+Defined in: sdk/FlaunchSDK.ts:5344
 
 A vested launch with a pre-buy: `flaunchWithPreBuy` on the `vested` route. `params` is what
 `flaunchVested` takes minus the premine and its cap, which the planner quotes; manager
@@ -15157,7 +15304,7 @@ Returns
 
 > **flaunchVestedWithRevenueManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5194
+Defined in: sdk/FlaunchSDK.ts:5289
 
 `flaunchWithRevenueManager` with vesting: deposits the launch NFT into an existing RevenueManager.
 
@@ -15177,7 +15324,7 @@ Returns
 
 > **flaunchVestedWithSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5209
+Defined in: sdk/FlaunchSDK.ts:5304
 
 `flaunchWithSplitManager` with vesting: deploys an AddressFeeSplitManager at launch.
 
@@ -15197,7 +15344,7 @@ Returns
 
 > **flaunchWithDynamicSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5081
+Defined in: sdk/FlaunchSDK.ts:5176
 
 Creates a new Flaunch with dynamic split manager configuration.
 
@@ -15221,7 +15368,7 @@ Transaction response
 
 > **flaunchWithPreBuy**(`input`, `options?`): `Promise`\<`LaunchPreBuyExecution`\>
 
-Defined in: sdk/FlaunchSDK.ts:4761
+Defined in: sdk/FlaunchSDK.ts:4856
 
 Plan and execute in one call. Throws `LaunchPreBuyUnsupportedError` (`code: "UNSUPPORTED"`,
 `reasons`) when the planner reports the launch unsupported. Prefer the two-step flow when a
@@ -15247,7 +15394,7 @@ Returns
 
 > **flaunchWithRevenueManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5006
+Defined in: sdk/FlaunchSDK.ts:5101
 
 Creates a new Flaunch with revenue manager configuration
 
@@ -15275,7 +15422,7 @@ Error if FlaunchZap is not deployed on the current chain
 
 > **flaunchWithSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5049
+Defined in: sdk/FlaunchSDK.ts:5144
 
 Creates a new Flaunch that splits the creator fees to the creator and a list of recipients
 
@@ -15299,7 +15446,7 @@ Transaction response
 
 > **flETHIsCurrencyZero**(`coinAddress`): `boolean`
 
-Defined in: sdk/FlaunchSDK.ts:3729
+Defined in: sdk/FlaunchSDK.ts:3824
 
 Determines if flETH is currency0 in the pool
 
@@ -15327,7 +15474,7 @@ Inherited from
 
 > **getAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:5810
+Defined in: sdk/FlaunchSDK.ts:5905
 
 Gets the calls needed to add liquidity to flaunch or imported coins
 
@@ -15351,7 +15498,7 @@ Array of calls with descriptions
 
 > **getBidWall**(`version`): `ReadBidWall` \| `AnyBidWall` \| `ReadBidWallV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:2199
+Defined in: sdk/FlaunchSDK.ts:2294
 
 Gets the bid wall instance for a given version
 
@@ -15377,7 +15524,7 @@ Inherited from
 
 > **getBidWallAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2272
+Defined in: sdk/FlaunchSDK.ts:2367
 
 Parameters
 
@@ -15399,7 +15546,7 @@ Inherited from
 
 > **getBuyQuoteExactInput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3648
+Defined in: sdk/FlaunchSDK.ts:3743
 
 Gets a quote for buying tokens with an exact amount of ETH or inputToken
 
@@ -15453,7 +15600,7 @@ Inherited from
 
 > **getBuyQuoteExactOutput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3691
+Defined in: sdk/FlaunchSDK.ts:3786
 
 Gets a quote for buying an exact amount of tokens with ETH or inputToken
 
@@ -15507,7 +15654,7 @@ Inherited from
 
 > **getCoinInfo**(`coinAddress`): `Promise`\<\{ `decimals`: `number`; `formattedTotalSupplyInDecimals`: `number`; `totalSupply`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3781
+Defined in: sdk/FlaunchSDK.ts:3876
 
 Gets basic coin information (total supply and decimals)
 
@@ -15531,7 +15678,7 @@ Inherited from
 
 > **getCoinMetadata**(`coinAddress`): `Promise`\<`CoinMetadata` & `object`\>
 
-Defined in: sdk/FlaunchSDK.ts:2307
+Defined in: sdk/FlaunchSDK.ts:2402
 
 Retrieves metadata for a given Flaunch coin
 
@@ -15559,7 +15706,7 @@ Inherited from
 
 > **getCoinMetadataFromTokenId**(`flaunch`, `tokenId`): `Promise`\<`CoinMetadata` & `object`\>
 
-Defined in: sdk/FlaunchSDK.ts:2337
+Defined in: sdk/FlaunchSDK.ts:2432
 
 Retrieves metadata for a given Flaunch coin using its token ID & Flaunch contract address
 
@@ -15593,7 +15740,7 @@ Inherited from
 
 > **getCoinMetadataFromTokenIds**(`params`, `batchSize?`, `batchDelay?`): `Promise`\<`object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:2353
+Defined in: sdk/FlaunchSDK.ts:2448
 
 Retrieves metadata for multiple Flaunch coins using their token IDs & Flaunch contract addresses
 
@@ -15633,7 +15780,7 @@ Inherited from
 
 > **getCoinVersion**(`coinAddress`): `Promise`\<`FlaunchVersion`\>
 
-Defined in: sdk/FlaunchSDK.ts:2128
+Defined in: sdk/FlaunchSDK.ts:2223
 
 Determines the version of a Flaunch coin
 
@@ -15661,7 +15808,7 @@ Inherited from
 
 > **getERC20AllowanceToPermit2**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:5482
+Defined in: sdk/FlaunchSDK.ts:5577
 
 Gets the allowance of an ERC20 token to Permit2 contract. Flaunch coins automatically have infinite approval for Permit2.
 this function is for external tokens.
@@ -15686,7 +15833,7 @@ Promise<bigint> - The allowance of the coin to Permit2
 
 > **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:2895
+Defined in: sdk/FlaunchSDK.ts:2990
 
 Gets the current ETH/USDC price
 
@@ -15714,7 +15861,7 @@ Inherited from
 
 > **getFairLaunch**(`version`): `ReadFairLaunch` \| `ReadFairLaunchV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:2178
+Defined in: sdk/FlaunchSDK.ts:2273
 
 Gets the fair launch instance for a given version
 
@@ -15740,7 +15887,7 @@ Inherited from
 
 > **getFairLaunchAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2268
+Defined in: sdk/FlaunchSDK.ts:2363
 
 Parameters
 
@@ -15762,7 +15909,7 @@ Inherited from
 
 > **getFlaunch**(`version`): `ReadFlaunch` \| `ReadAnyFlaunch` \| `ReadFlaunchV1_1` \| `ReadFlaunchV1_2`
 
-Defined in: sdk/FlaunchSDK.ts:2220
+Defined in: sdk/FlaunchSDK.ts:2315
 
 Gets the flaunch contract instance for a given version
 
@@ -15788,7 +15935,7 @@ Inherited from
 
 > **getFlaunchAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2251
+Defined in: sdk/FlaunchSDK.ts:2346
 
 Gets the flaunch contract address for a given version
 
@@ -15814,7 +15961,7 @@ Inherited from
 
 > **getFlaunchingFee**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3513
+Defined in: sdk/FlaunchSDK.ts:3608
 
 Gets the flaunching fee for a given initial price and slippage percent
 
@@ -15856,7 +16003,7 @@ Inherited from
 
 > **getFlaunchTokenIdForMemecoin**(`coinAddress`): `Promise`\<\{ `flaunchAddress`: `` `0x${string}` ``; `tokenId`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2281
+Defined in: sdk/FlaunchSDK.ts:2376
 
 Gets the flaunch contract address and token ID for a memecoin
 
@@ -15884,7 +16031,7 @@ Inherited from
 
 > **getGameDeveloperPayout**(`manager`): `Promise`\<`` `0x${string}` `` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:1341
+Defined in: sdk/FlaunchSDK.ts:1376
 
 The wallet holding the protected 5% developer slot of a GameDeveloperFeeSplitManager clone,
 or null when `manager` is not one: the v1.3.1 TreasuryManagerFactory's
@@ -15914,7 +16061,7 @@ Call Signature
 
 > **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6095
+Defined in: sdk/FlaunchSDK.ts:6190
 
 Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
 
@@ -15994,7 +16141,7 @@ Call Signature
 
 > **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6119
+Defined in: sdk/FlaunchSDK.ts:6214
 
 Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
 
@@ -16074,7 +16221,7 @@ Call Signature
 
 > **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6142
+Defined in: sdk/FlaunchSDK.ts:6237
 
 Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
 
@@ -16153,7 +16300,7 @@ Call Signature
 
 > **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6429
+Defined in: sdk/FlaunchSDK.ts:6524
 
 Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
 
@@ -16209,7 +16356,7 @@ Call Signature
 
 > **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6450
+Defined in: sdk/FlaunchSDK.ts:6545
 
 Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
 
@@ -16244,7 +16391,7 @@ Call Signature
 
 > **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6472
+Defined in: sdk/FlaunchSDK.ts:6567
 
 Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
 
@@ -16300,7 +16447,7 @@ Call Signature
 
 > **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6493
+Defined in: sdk/FlaunchSDK.ts:6588
 
 Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
 
@@ -16337,7 +16484,7 @@ const calls = await sdk.getImportAndSingleSidedCoinAddLiquidityCalls({
 
 > **getLaunchPreBuyCapabilities**(`options?`): `LaunchPreBuyCapabilities`
 
-Defined in: sdk/FlaunchSDK.ts:1233
+Defined in: sdk/FlaunchSDK.ts:1268
 
 Which launch routes can include a pre-buy on this chain, in what payment asset, with what
 limit, and which launch kinds never can. Pure — no RPC — so a UI can disable options early.
@@ -16366,7 +16513,7 @@ Inherited from
 
 > **getLaunchPreBuyResultFromLogs**(`logs`, `plan`): `PoolCreatedEventData` \| `null`
 
-Defined in: sdk/FlaunchSDK.ts:1268
+Defined in: sdk/FlaunchSDK.ts:1303
 
 The launch result for a pre-buy plan from a receipt's logs: the decoded `PoolCreated`
 event, or null when the receipt holds none. Throws when the event's premine differs from
@@ -16396,7 +16543,7 @@ Inherited from
 
 > **getLaunchPreBuyResultFromTx**(`hash`, `plan`): `Promise`\<`PoolCreatedEventData` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:1288
+Defined in: sdk/FlaunchSDK.ts:1323
 
 `getLaunchPreBuyResultFromLogs` for a transaction hash (needs a public client).
 
@@ -16424,7 +16571,7 @@ Inherited from
 
 > **getMarketContext**(`coinAddress`, `coinDecimals`): `Promise`\<\{ `decimals0`: `number`; `decimals1`: `number`; `ethUsdPrice`: `number`; `isFlethZero`: `boolean`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3800
+Defined in: sdk/FlaunchSDK.ts:3895
 
 Gets market context information needed for tick calculations
 
@@ -16452,7 +16599,7 @@ Inherited from
 
 > **getMaxVestedBps**(): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:1330
+Defined in: sdk/FlaunchSDK.ts:1365
 
 The zap's cap on vested supply in bps of total supply (5000 = 50% by default).
 
@@ -16470,7 +16617,7 @@ Inherited from
 
 > **getPairedPoolQuoteExactInput**(`__namedParameters`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:1633
+Defined in: sdk/FlaunchSDK.ts:1668
 
 Expected output of an exact-input swap on a paired-token pool, via the v4 Quoter's single-hop
 quote (hook fees included). A buy spends the paired token for the coin; a sell the reverse.
@@ -16495,7 +16642,7 @@ Inherited from
 
 > **getPairedSwapFillFromLogs**(`logs`, `plan`): `PairedSwapFill` \| `null`
 
-Defined in: sdk/FlaunchSDK.ts:2048
+Defined in: sdk/FlaunchSDK.ts:2143
 
 Decode one attributable execution. Multiple matching fills are ambiguous, never silently combined.
 
@@ -16523,7 +16670,7 @@ Inherited from
 
 > **getPairedSwapFillFromTx**(`txHash`, `plan`): `Promise`\<`PairedSwapFill` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:2087
+Defined in: sdk/FlaunchSDK.ts:2182
 
 Parameters
 
@@ -16549,7 +16696,7 @@ Inherited from
 
 > **getPermit2AllowanceAndNonce**(`coinAddress`): `Promise`\<\{ `allowance`: `bigint`; `nonce`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:5463
+Defined in: sdk/FlaunchSDK.ts:5558
 
 Gets the current Permit2 allowance and nonce for a coin
 
@@ -16573,7 +16720,7 @@ Promise<{allowance: bigint, nonce: bigint}> - Current allowance and nonce
 
 > **getPermit2TypedData**(`coinAddress`, `deadline?`): `Promise`\<\{ `permitSingle`: `PermitSingle`; `typedData`: \{ `domain`: \{ `chainId`: `number`; `name`: `string`; `verifyingContract`: `` `0x${string}` ``; \}; `message`: `PermitSingle`; `primaryType`: `string`; `types`: \{ `PermitDetails`: `object`[]; `PermitSingle`: `object`[]; \}; \}; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:5442
+Defined in: sdk/FlaunchSDK.ts:5537
 
 Gets the typed data for a Permit2 signature
 
@@ -16603,7 +16750,7 @@ The typed data object for signing
 
 > **getPoolCreatedFromLogs**(`logs`): `PoolCreatedEventData` \| `null`
 
-Defined in: sdk/FlaunchSDK.ts:2519
+Defined in: sdk/FlaunchSDK.ts:2614
 
 Parses PoolCreated from logs emitted by a PositionManager on this chain. A receipt from the
 vested-launch hook (AnyPositionManager behind the AnyFlaunchZap) decodes too: its event
@@ -16632,7 +16779,7 @@ Inherited from
 
 > **getPoolCreatedFromTx**(`txHash`): `Promise`\<`PoolCreatedEventData` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:2731
+Defined in: sdk/FlaunchSDK.ts:2826
 
 Parses a transaction to extract PoolCreated event data
 
@@ -16660,7 +16807,7 @@ Inherited from
 
 > **getPositionManager**(`version`): `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:2157
+Defined in: sdk/FlaunchSDK.ts:2252
 
 Gets the position manager instance for a given version
 
@@ -16686,7 +16833,7 @@ Inherited from
 
 > **getPositionManagerAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2255
+Defined in: sdk/FlaunchSDK.ts:2350
 
 Parameters
 
@@ -16708,7 +16855,7 @@ Inherited from
 
 > **getPositionManagerAddressForCoin**(`coinAddress`, `version?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:1510
+Defined in: sdk/FlaunchSDK.ts:1545
 
 The hook (PositionManager) a coin's pool lives on. On Base this is the position manager
 for the coin's version; on a multichain deployment it is probed per coin (see
@@ -16743,7 +16890,7 @@ Inherited from
 
 > **getReferralConfig**(`params`): `Promise`\<`ReferralConfig`\>
 
-Defined in: sdk/FlaunchSDK.ts:3267
+Defined in: sdk/FlaunchSDK.ts:3362
 
 Read the actual hook's fee rate, escrow and claim capabilities at one block.
 
@@ -16769,7 +16916,7 @@ Inherited from
 
 > **getReferralEscrowCapabilities**(`escrow`): `Promise`\<`ReferralEscrowCapabilities`\>
 
-Defined in: sdk/FlaunchSDK.ts:3272
+Defined in: sdk/FlaunchSDK.ts:3367
 
 Parameters
 
@@ -16791,7 +16938,7 @@ Inherited from
 
 > **getSellQuoteExactInput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3605
+Defined in: sdk/FlaunchSDK.ts:3700
 
 Gets a quote for selling an exact amount of tokens for ETH
 
@@ -16845,7 +16992,7 @@ Inherited from
 
 > **getSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6198
+Defined in: sdk/FlaunchSDK.ts:6293
 
 Gets the calls needed to add single-sided liquidity in coin from current tick to infinity
 
@@ -16869,7 +17016,7 @@ Array of calls with descriptions
 
 > **getVestedLaunchFromLogs**(`logs`): `VestedLaunchEventData` \| `null`
 
-Defined in: sdk/FlaunchSDK.ts:1375
+Defined in: sdk/FlaunchSDK.ts:1410
 
 Decodes a vested launch from a receipt's logs: the hook's `PoolCreated`, the zap's
 `MemecoinFlaunched` (seed, total vested, schedule count, manager, end creator) and the
@@ -16895,7 +17042,7 @@ Inherited from
 
 > **getVestedLaunchFromTx**(`hash`): `Promise`\<`VestedLaunchEventData` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:1446
+Defined in: sdk/FlaunchSDK.ts:1481
 
 `getVestedLaunchFromLogs` for a transaction hash (needs a public client).
 
@@ -16919,7 +17066,7 @@ Inherited from
 
 > **getVestingPosition**(`coin`, `beneficiary`): `Promise`\<`VestingPosition`\>
 
-Defined in: sdk/FlaunchSDK.ts:1366
+Defined in: sdk/FlaunchSDK.ts:1401
 
 `beneficiary`'s schedules on `coin` with ids, cliff / end times and live vested / claimable figures.
 
@@ -16947,7 +17094,7 @@ Inherited from
 
 > **getVestingSchedules**(`coin`, `beneficiary`): `Promise`\<`VestingSchedule`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:1361
+Defined in: sdk/FlaunchSDK.ts:1396
 
 Every vesting schedule `beneficiary` holds on `coin`, in id order.
 
@@ -16975,7 +17122,7 @@ Inherited from
 
 > **importMemecoin**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5801
+Defined in: sdk/FlaunchSDK.ts:5896
 
 Imports a memecoin into the TokenImporter
 
@@ -16997,7 +17144,7 @@ Transaction response
 
 > **initialSqrtPriceX96**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:2905
+Defined in: sdk/FlaunchSDK.ts:3000
 
 Parameters
 
@@ -17025,7 +17172,7 @@ Inherited from
 
 > **initialTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:3045
+Defined in: sdk/FlaunchSDK.ts:3140
 
 Gets the initial tick for a fair launch
 
@@ -17059,7 +17206,7 @@ Inherited from
 
 > **isFairLaunchActive**(`coinAddress`, `version?`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:2953
+Defined in: sdk/FlaunchSDK.ts:3048
 
 Checks if a fair launch is currently active for a given coin
 
@@ -17093,7 +17240,7 @@ Inherited from
 
 > **isFlaunchTokenApprovedForAll**(`version`, `owner`, `operator`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:4310
+Defined in: sdk/FlaunchSDK.ts:4405
 
 Checks if an operator is approved for all flaunch tokens of an owner
 
@@ -17133,7 +17280,7 @@ Inherited from
 
 > **isMemecoinImported**(`memecoin`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:4286
+Defined in: sdk/FlaunchSDK.ts:4381
 
 Checks if an external memecoin has been imported to Flaunch
 
@@ -17161,7 +17308,7 @@ Inherited from
 
 > **isPairedTokenApproved**(`token`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:1300
+Defined in: sdk/FlaunchSDK.ts:1335
 
 Parameters
 
@@ -17183,7 +17330,7 @@ Inherited from
 
 > **isValidCoin**(`coinAddress`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:2108
+Defined in: sdk/FlaunchSDK.ts:2203
 
 Checks if a given coin address is a valid Flaunch coin (supports all versions)
 
@@ -17211,7 +17358,7 @@ Inherited from
 
 > `protected` **launchPreBuyExecutorDeps**(): `LaunchPreBuyExecutorDeps`
 
-Defined in: sdk/FlaunchSDK.ts:4728
+Defined in: sdk/FlaunchSDK.ts:4823
 
 The pre-buy executor's dependency bag: planner clients plus the zap writers.
 
@@ -17225,7 +17372,7 @@ Returns
 
 > `protected` **launchPreBuyPlannerDeps**(): `LaunchPreBuyPlannerDeps`
 
-Defined in: sdk/FlaunchSDK.ts:1211
+Defined in: sdk/FlaunchSDK.ts:1246
 
 The dependency bag the pre-buy planner runs on — the same clients the launch methods use.
 
@@ -17243,7 +17390,7 @@ Inherited from
 
 > `protected` **locatePairedPool**(`coinAddress`): `Promise`\<\{ `hook`: `` `0x${string}` ``; `poolKey`: `PoolKey`; \} \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:1572
+Defined in: sdk/FlaunchSDK.ts:1607
 
 Which v1.3 hook a coin's paired pool lives on, and its key.
 
@@ -17277,7 +17424,7 @@ Inherited from
 
 > **marketCapToTokenPriceEth**(`marketCapUsd`, `formattedTotalSupplyInDecimals`, `ethUsdPrice`): `number`
 
-Defined in: sdk/FlaunchSDK.ts:3828
+Defined in: sdk/FlaunchSDK.ts:3923
 
 Converts market cap in USD to token price in ETH
 
@@ -17309,7 +17456,7 @@ Inherited from
 
 > `protected` **pairedTokenPositionManagerAt**(`hook`): `ReadPairedTokenPositionManagerV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:1550
+Defined in: sdk/FlaunchSDK.ts:1585
 
 The paired-token PositionManager client for a given hook address, memoised per hook.
 
@@ -17333,7 +17480,7 @@ Inherited from
 
 > **parseSwapTx**\<`T`\>(`params`): `Promise`\<`T` *extends* `boolean` ? `GenericBuySwapLog` \| `GenericSellSwapLog` \| `undefined` : `GenericBaseSwapLog` \| `undefined`\>
 
-Defined in: sdk/FlaunchSDK.ts:3753
+Defined in: sdk/FlaunchSDK.ts:3848
 
 Parses a transaction hash to extract PoolSwap events and return parsed swap data
 
@@ -17385,7 +17532,7 @@ Inherited from
 
 > **planLaunchPreBuy**(`input`): `Promise`\<`LaunchPreBuyResult`\>
 
-Defined in: sdk/FlaunchSDK.ts:1247
+Defined in: sdk/FlaunchSDK.ts:1282
 
 Quotes a launch that buys `preBuyBps` of the supply for the creator, at one pinned block:
 the exact coin amount, the native flaunching fee, the expected and maximum purchase cost in
@@ -17414,7 +17561,7 @@ Inherited from
 
 > **planPairedTokenAcquisition**(`params`): `Promise`\<`PairedTokenAcquisitionPlan`\>
 
-Defined in: sdk/FlaunchSDK.ts:1732
+Defined in: sdk/FlaunchSDK.ts:1767
 
 The calls that buy exactly `target` of a paired token from ETH or the USD hub: an optional
 hub-token approve to the venue's router, then the exact-output router call (ETH rides as
@@ -17441,7 +17588,7 @@ Inherited from
 
 > **planPairedTokenAcquisitionForBudget**(`params`): `Promise`\<`PairedTokenAcquisitionPlan` & `object`\>
 
-Defined in: sdk/FlaunchSDK.ts:1780
+Defined in: sdk/FlaunchSDK.ts:1815
 
 Sizes and plans a routed buy from a BUDGET: quotes the exact input, takes `slippageBps` off, and
 plans an exact-output buy of that much with the whole budget as the price protection — the
@@ -17493,7 +17640,7 @@ Inherited from
 
 > **planPairedTokenApproval**(`params`): `Promise`\<`PairedSwapApproveCall` \| `undefined`\>
 
-Defined in: sdk/FlaunchSDK.ts:1681
+Defined in: sdk/FlaunchSDK.ts:1716
 
 Just the ERC20 approve a paired-token BUY needs, sized to `amount` — for a host that wants the
 player ready before a round starts (approve the whole wallet cap once; every in-round buy is
@@ -17516,11 +17663,39 @@ Inherited from
 
 ***
 
+### planPairedTokenDisposal()
+
+> **planPairedTokenDisposal**(`params`): `Promise`\<`PairedTokenDisposalPlan`\>
+
+Defined in: sdk/FlaunchSDK.ts:1868
+
+The calls that sell exactly `amountIn` of a paired token for native ETH: an optional
+paired-token approve to the venue's router, then one router multicall that swaps exact-input
+`token -> hub -> WETH` (or `token -> WETH` on a direct pool) into the router's custody and
+unwraps the WETH to `recipient`. The router keeps nothing: the input is spent in full and the
+unwrap sweeps all of the WETH. Pass a quote's `route` and a haircut of its `expectedOut`.
+
+Parameters
+
+#params
+
+`PairedTokenDisposalParams`
+
+Returns
+
+`Promise`\<`PairedTokenDisposalPlan`\>
+
+Inherited from
+
+`ReadFlaunchSDK`.`planPairedTokenDisposal`
+
+***
+
 ### planPairedTokenSwap()
 
 > **planPairedTokenSwap**(`params`): `Promise`\<`PairedSwapPlan`\>
 
-Defined in: sdk/FlaunchSDK.ts:1817
+Defined in: sdk/FlaunchSDK.ts:1912
 
 Builds one quote-backed exact-input plan. Its displayed output and encoded minimum share
 the same quote; slot0 and quote reads use the same block. Requires a protected router.
@@ -17547,7 +17722,7 @@ Inherited from
 
 > **pollPoolCreatedNow**(`version?`): `Promise`\<`void`\> \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:2497
+Defined in: sdk/FlaunchSDK.ts:2592
 
 Polls for current pool creation events
 
@@ -17575,7 +17750,7 @@ Inherited from
 
 > **pollPoolSwapNow**(`version?`): `Promise`\<`void`\> \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:2780
+Defined in: sdk/FlaunchSDK.ts:2875
 
 Polls for current pool swap events
 
@@ -17603,7 +17778,7 @@ Inherited from
 
 > **poolId**(`coinAddress`, `version?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:3502
+Defined in: sdk/FlaunchSDK.ts:3597
 
 Gets the pool ID for a given coin
 
@@ -17637,7 +17812,7 @@ Inherited from
 
 > `protected` **poolSwapWriterAt**(`router`): `ReadWritePoolSwapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:4470
+Defined in: sdk/FlaunchSDK.ts:4565
 
 A PoolSwap writer for a specific router — the one a plan resolved for its pool's hook generation.
 
@@ -17657,7 +17832,7 @@ Returns
 
 > **positionInfo**(`params`): `Promise`\<\{ `feeGrowthInside0LastX128`: `bigint`; `feeGrowthInside1LastX128`: `bigint`; `liquidity`: `bigint`; \} \| \{ `feeGrowthInside0LastX128`: `bigint`; `feeGrowthInside1LastX128`: `bigint`; `liquidity`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2799
+Defined in: sdk/FlaunchSDK.ts:2894
 
 Gets information about a liquidity position
 
@@ -17685,7 +17860,7 @@ Inherited from
 
 > **prepareAnyGameLaunch**(`params`): `Promise`\<`PreparedAnyGameLaunch`\>
 
-Defined in: sdk/FlaunchSDK.ts:4869
+Defined in: sdk/FlaunchSDK.ts:4964
 
 Quotes and encodes a Game Mode launch on the Any route without sending it: the AnyFlaunchZap
 launches into the vested AnyPositionManager and deposits the coin into a fresh
@@ -17718,7 +17893,7 @@ Error when the manager or the vested stack is not deployed on this chain
 
 > `protected` **probeMultichainCoinHook**(`coinAddress`): `Promise`\<\{ `hook`: `` `0x${string}` ``; `version`: `FlaunchVersion`; \} \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:1469
+Defined in: sdk/FlaunchSDK.ts:1504
 
 On a multichain deployment a chain can serve several hook generations at once (Robinhood:
 the v1.2 multichain hook, the 2026-08-21 v1.3.1 hooks and the v1.3.3 regeneration). Every
@@ -17748,7 +17923,7 @@ Inherited from
 
 > **quotePairedTokenAcquisition**(`params`): `Promise`\<`PairedTokenAcquisitionQuote`\>
 
-Defined in: sdk/FlaunchSDK.ts:1716
+Defined in: sdk/FlaunchSDK.ts:1751
 
 Expected paired-token output (and the venue) for an exact ETH / hub-token input.
 
@@ -17778,11 +17953,46 @@ Inherited from
 
 ***
 
+### quotePairedTokenDisposal()
+
+> **quotePairedTokenDisposal**(`params`): `Promise`\<`PairedTokenDisposalQuote`\>
+
+Defined in: sdk/FlaunchSDK.ts:1850
+
+Expected ETH (and the venue) for selling an exact paired-token input back to ETH. Prefers a
+depth-aware QuoterV2 quote; falls back to the calculator pool's spot price.
+
+Parameters
+
+#params
+
+##amountIn
+
+`bigint`
+
+##output
+
+`"eth"`
+
+##pairedToken
+
+`` `0x${string}` ``
+
+Returns
+
+`Promise`\<`PairedTokenDisposalQuote`\>
+
+Inherited from
+
+`ReadFlaunchSDK`.`quotePairedTokenDisposal`
+
+***
+
 ### referralBalance()
 
 > **referralBalance**(`recipient`, `coinAddress`, `options?`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3255
+Defined in: sdk/FlaunchSDK.ts:3350
 
 Gets the balance of a recipient for a given coin
 
@@ -17820,7 +18030,7 @@ Inherited from
 
 > **referralBalances**(`params`): `Promise`\<`ReferralTokenBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3278
+Defined in: sdk/FlaunchSDK.ts:3373
 
 Supply historical escrow/token keys from logs or your indexer. Never aggregate across escrows.
 
@@ -17850,7 +18060,7 @@ Inherited from
 
 > **resolvePairedPool**(`coinAddress`, `pairedToken?`): `Promise`\<`ResolvedPairedPool`\>
 
-Defined in: sdk/FlaunchSDK.ts:1602
+Defined in: sdk/FlaunchSDK.ts:1637
 
 The pool a paired-token coin trades on: its full key, id and paired side, read from the hook
 the coin was launched on (see `locatePairedPool` — one `poolKey` read per hook probed, then
@@ -17886,7 +18096,7 @@ Inherited from
 
 > **revenueManagerAllTokensByCreator**(`params`): `Promise`\<readonly `object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3348
+Defined in: sdk/FlaunchSDK.ts:3443
 
 Gets all tokens created by a specific creator address
 
@@ -17930,7 +18140,7 @@ Inherited from
 
 > **revenueManagerAllTokensInManager**(`params`): `Promise`\<`object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3371
+Defined in: sdk/FlaunchSDK.ts:3466
 
 Gets all tokens currently managed by a revenue manager
 
@@ -17968,7 +18178,7 @@ Inherited from
 
 > **revenueManagerBalance**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3299
+Defined in: sdk/FlaunchSDK.ts:3394
 
 Gets the claimable balance of ETH for the recipient from a revenue manager
 
@@ -18006,7 +18216,7 @@ Inherited from
 
 > **revenueManagerBalanceV1\_3**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3417
+Defined in: sdk/FlaunchSDK.ts:3512
 
 Gets the claimable balance of one payout asset for a recipient on a v1.3.1 multi-asset
 RevenueManager. Managers of that generation keep a balance per payout asset — native ETH
@@ -18052,7 +18262,7 @@ Inherited from
 
 > **revenueManagerCreatorClaim**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5597
+Defined in: sdk/FlaunchSDK.ts:5692
 
 Claims the total creator's share of the revenue from a revenue manager
 
@@ -18078,7 +18288,7 @@ Transaction response
 
 > **revenueManagerCreatorClaimForTokens**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5611
+Defined in: sdk/FlaunchSDK.ts:5706
 
 Claims the creator's share of the revenue from specific flaunch tokens
 
@@ -18108,7 +18318,7 @@ Transaction response
 
 > **revenueManagerCreatorClaimV1\_3**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5655
+Defined in: sdk/FlaunchSDK.ts:5750
 
 Claims a creator's share from a v1.3.1 multi-asset revenue manager. With no `assets`
 every payout asset is settled, across all the creator's tokens or the `flaunchTokens`
@@ -18149,7 +18359,7 @@ Transaction response
 
 > **revenueManagerPayoutAssets**(`revenueManagerAddress`): `Promise`\<readonly `` `0x${string}` ``[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3440
+Defined in: sdk/FlaunchSDK.ts:3535
 
 Gets every payout asset a v1.3.1 revenue manager has ever been credited in. Native ETH
 (`zeroAddress`) is always present; other entries come from the paired tokens of the coins
@@ -18179,7 +18389,7 @@ Inherited from
 
 > **revenueManagerProtocolBalance**(`revenueManagerAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3316
+Defined in: sdk/FlaunchSDK.ts:3411
 
 Gets the claimable balance of ETH for the protocol from a revenue manager
 
@@ -18207,7 +18417,7 @@ Inherited from
 
 > **revenueManagerProtocolBalanceV1\_3**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3455
+Defined in: sdk/FlaunchSDK.ts:3550
 
 Gets the claimable balance of one payout asset for the protocol on a v1.3.1 revenue manager
 
@@ -18243,7 +18453,7 @@ Inherited from
 
 > **revenueManagerProtocolClaim**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5583
+Defined in: sdk/FlaunchSDK.ts:5678
 
 Claims the protocol's share of the revenue
 
@@ -18269,7 +18479,7 @@ Transaction response
 
 > **revenueManagerProtocolClaimV1\_3**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5631
+Defined in: sdk/FlaunchSDK.ts:5726
 
 Claims the protocol's share from a v1.3.1 multi-asset revenue manager. With no `assets`
 every payout asset is settled; pass a subset when one asset would block the claim (a
@@ -18303,7 +18513,7 @@ Transaction response
 
 > **revenueManagerTokensCount**(`revenueManagerAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3331
+Defined in: sdk/FlaunchSDK.ts:3426
 
 Gets the total number of tokens managed by a revenue manager
 
@@ -18331,7 +18541,7 @@ Inherited from
 
 > `protected` **routerForPool**(`hook`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:1660
+Defined in: sdk/FlaunchSDK.ts:1695
 
 The PoolSwap a pool on `hook` must be traded through. Router approval is per spend gate and
 each hook generation ships its own gate, so a gated buy sent through the wrong generation's
@@ -18357,7 +18567,7 @@ Inherited from
 
 > **sellCoin**(`params`, `version?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5379
+Defined in: sdk/FlaunchSDK.ts:5474
 
 Sells a coin for ETH
 
@@ -18387,7 +18597,7 @@ Transaction response for the sell operation
 
 > **sellCoinPairedToken**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4936
+Defined in: sdk/FlaunchSDK.ts:5031
 
 Sells an exact amount of a paired-token coin for its paired token through PoolSwap. See `buyCoinPairedToken`.
 
@@ -18407,7 +18617,7 @@ Returns
 
 > **setERC20AllowanceToPermit2**(`coinAddress`, `amount`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5497
+Defined in: sdk/FlaunchSDK.ts:5592
 
 Sets the allowance of an ERC20 token to Permit2 contract. Flaunch coins automatically have infinite approval for Permit2.
 this function is for external tokens.
@@ -18438,7 +18648,7 @@ Promise<Hex> - The transaction hash
 
 > **setFlaunchTokenApprovalForAll**(`version`, `operator`, `approved`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5743
+Defined in: sdk/FlaunchSDK.ts:5838
 
 Sets approval for all flaunch tokens to an operator
 
@@ -18474,7 +18684,7 @@ Transaction response
 
 > **setIPFSResolver**(`resolverFn`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:3739
+Defined in: sdk/FlaunchSDK.ts:3834
 
 Sets a custom IPFS resolver function
 
@@ -18505,7 +18715,7 @@ Inherited from
 
 > **tokenImporterVerifyMemecoin**(`memecoin`): `Promise`\<\{ `isValid`: `boolean`; `verifier`: `` `0x${string}` ``; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3774
+Defined in: sdk/FlaunchSDK.ts:3869
 
 Verifies if a memecoin is valid for importing
 
@@ -18533,7 +18743,7 @@ Inherited from
 
 > **treasuryManagerBalancesV1\_3**(`params`): `Promise`\<`AssetBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3480
+Defined in: sdk/FlaunchSDK.ts:3575
 
 Gets a recipient's claimable balances across payout assets on any v1.3.1 multi-asset
 treasury manager (RevenueManager, the fee-split managers, StakingManager). Zero balances are
@@ -18577,7 +18787,7 @@ Inherited from
 
 > **treasuryManagerClaimAssetsV1\_3**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5686
+Defined in: sdk/FlaunchSDK.ts:5781
 
 Claims a subset of payout assets from any v1.3.1 multi-asset treasury manager, so a
 recipient blocked on one asset can still collect the others. Every asset must be one the
@@ -18617,7 +18827,7 @@ Transaction response
 
 > **treasuryManagerInfo**(`treasuryManagerAddress`): `Promise`\<\{ `managerOwner`: `` `0x${string}` ``; `permissions`: `` `0x${string}` ``; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3388
+Defined in: sdk/FlaunchSDK.ts:3483
 
 Gets treasury manager information including owner and permissions
 
@@ -18645,7 +18855,7 @@ Inherited from
 
 > **treasuryManagerSetPermissions**(`treasuryManagerAddress`, `permissions`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5705
+Defined in: sdk/FlaunchSDK.ts:5800
 
 Sets the permissions contract address for a treasury manager
 
@@ -18675,7 +18885,7 @@ Transaction response
 
 > **treasuryManagerTransferOwnership**(`treasuryManagerAddress`, `newManagerOwner`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5724
+Defined in: sdk/FlaunchSDK.ts:5819
 
 Transfers the ownership of a treasury manager to a new address
 
@@ -18705,7 +18915,7 @@ Transaction response
 
 > **trustedPoolKeySignerStatus**(`coinAddress`, `version?`): `Promise`\<\{ `fairLaunchEndsAt`: `number`; `fairLaunchStartsAt`: `number`; `isCurrentlyEnabled`: `boolean`; `isFairLaunchActive`: `boolean`; `signer`: `` `0x${string}` ``; `trustedSignerEnabled`: `boolean`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2960
+Defined in: sdk/FlaunchSDK.ts:3055
 
 Parameters
 
@@ -18731,7 +18941,7 @@ Inherited from
 
 > **verifyLaunchPreBuyPlan**(`plan`, `mode?`): `Promise`\<`LaunchPreBuyVerification`\>
 
-Defined in: sdk/FlaunchSDK.ts:1256
+Defined in: sdk/FlaunchSDK.ts:1291
 
 Preflight of an existing plan against live state. Throws `LaunchPreBuyRequoteRequiredError`
 (`code: "REQUOTE_REQUIRED"`) when the plan must be re-planned; see `LaunchPreBuyVerification`.
@@ -18761,7 +18971,7 @@ Inherited from
 
 > **verifyPairedTokenSwapPlan**(`plan`, `mode?`): `Promise`\<`PairedSwapVerification`\>
 
-Defined in: sdk/FlaunchSDK.ts:1978
+Defined in: sdk/FlaunchSDK.ts:2073
 
 Preflight only; on-chain checks remain authoritative. Quote mode cannot measure input consumption.
 
@@ -18789,7 +18999,7 @@ Inherited from
 
 > **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void`; `pollPoolCreatedNow`: () => `Promise`\<`void`\>; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2483
+Defined in: sdk/FlaunchSDK.ts:2578
 
 Watches for pool creation events
 
@@ -18823,7 +19033,7 @@ Inherited from
 
 > **watchPoolSwap**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void`; `pollPoolSwapNow`: () => `Promise`\<`void`\>; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2755
+Defined in: sdk/FlaunchSDK.ts:2850
 
 Watches for pool swap events
 
@@ -18857,7 +19067,7 @@ Inherited from
 
 > **withdrawCreatorRevenue**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5509
+Defined in: sdk/FlaunchSDK.ts:5604
 
 Withdraws the creator's share of the revenue
 
@@ -18891,7 +19101,7 @@ Transaction response
 
 > **withdrawCreatorRevenueByToken**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5535
+Defined in: sdk/FlaunchSDK.ts:5630
 
 Withdraws the creator's revenue from the v1.3.1 multi-token FeeEscrow across the given
 escrow tokens, in one transaction. Pass every token with a balance from
@@ -23415,7 +23625,7 @@ Defined in: types.ts:83
 
 > **acquisitionPoolAbi**(`dex`): readonly \[\{ `inputs`: readonly \[\]; `name`: `"slot0"`; `outputs`: readonly \[\{ `name`: `"sqrtPriceX96"`; `type`: `"uint160"`; \}, \{ `name`: `"tick"`; `type`: `"int24"`; \}, \{ `name`: `"observationIndex"`; `type`: `"uint16"`; \}, \{ `name`: `"observationCardinality"`; `type`: `"uint16"`; \}, \{ `name`: `"observationCardinalityNext"`; `type`: `"uint16"`; \}, \{ `name`: `"unlocked"`; `type`: `"bool"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"fee"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"uint24"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"tickSpacing"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"int24"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"token0"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"address"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}\] \| readonly \[\{ `inputs`: readonly \[\]; `name`: `"slot0"`; `outputs`: readonly \[\{ `name`: `"sqrtPriceX96"`; `type`: `"uint160"`; \}, \{ `name`: `"tick"`; `type`: `"int24"`; \}, \{ `name`: `"observationIndex"`; `type`: `"uint16"`; \}, \{ `name`: `"observationCardinality"`; `type`: `"uint16"`; \}, \{ `name`: `"observationCardinalityNext"`; `type`: `"uint16"`; \}, \{ `name`: `"feeProtocol"`; `type`: `"uint8"`; \}, \{ `name`: `"unlocked"`; `type`: `"bool"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"fee"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"uint24"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"token0"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"address"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}\]
 
-Defined in: utils/pairedTokenAcquisition.ts:208
+Defined in: utils/pairedTokenAcquisition.ts:267
 
 The pool ABI a flavour's pools speak. Both expose `slot0`/`fee`/`token0`; only `slot0` differs.
 
@@ -23744,7 +23954,7 @@ Defined in: utils/univ4.ts:184
 
 > **clSpotAmountOut**(`amountIn`, `sqrtPriceX96`, `feePips`, `zeroForOne`): `bigint`
 
-Defined in: utils/pairedTokenAcquisition.ts:235
+Defined in: utils/pairedTokenAcquisition.ts:294
 
 Spot output for an exact input against a CL pool at its current price: the fee comes off the
 input, then the price ratio (`sqrtPriceX96²/2¹⁹²`, token1 per token0) converts it. Single-tick —
@@ -24538,7 +24748,7 @@ legacy single-token escrow, so gate on this before reading or claiming.
 
 > **doesChainSupportMultichainNativeETHSwap**(`chainId`): `boolean`
 
-Defined in: addresses.ts:672
+Defined in: addresses.ts:680
 
 ## Parameters
 
@@ -24705,7 +24915,7 @@ pre-buy route and the vesting reads/claims on this.
 
 > **doesUniversalRouterUseV4HopPriceLimits**(`chainId`): `boolean`
 
-Defined in: addresses.ts:682
+Defined in: addresses.ts:690
 
 ## Parameters
 
@@ -24730,7 +24940,7 @@ Defined in: addresses.ts:682
 
 > **encodeAcquisitionEthBuy**(`dex`, `leg`): `` `0x${string}` ``
 
-Defined in: utils/pairedTokenAcquisition.ts:351
+Defined in: utils/pairedTokenAcquisition.ts:410
 
 Router calldata for an ETH buy of `amountOut` paired token: ETH wraps inside the router (path
 input is WETH9 + msg.value), multihops WETH → hub → token exact-output, and `refundETH` returns
@@ -24763,7 +24973,7 @@ whatever the leg did not need. Send with `value = amountInMaximum`.
 
 > **encodeAcquisitionEthExactOutputPath**(`dex`, `pairedToken`, `route`): `` `0x${string}` ``
 
-Defined in: utils/pairedTokenAcquisition.ts:251
+Defined in: utils/pairedTokenAcquisition.ts:310
 
 The exact-OUTPUT path for an ETH buy: output token first (`token → hub → WETH`), each hop's pool
 key packed into the 3 bytes a V3 path spends on the fee. A Slipstream tickSpacing is a small
@@ -24800,7 +25010,7 @@ positive int24, so the uint24 packing is the value that router decodes too.
 
 > **encodeAcquisitionExactInputPath**(`dex`, `pairedToken`, `route`, `input`): `` `0x${string}` ``
 
-Defined in: utils/pairedTokenAcquisition.ts:266
+Defined in: utils/pairedTokenAcquisition.ts:325
 
 The exact-INPUT path for a venue (input first), the mirror of the exact-output path.
 
@@ -24839,7 +25049,7 @@ The exact-INPUT path for a venue (input first), the mirror of the exact-output p
 
 > **encodeAcquisitionHubBuy**(`dex`, `leg`): `` `0x${string}` ``
 
-Defined in: utils/pairedTokenAcquisition.ts:300
+Defined in: utils/pairedTokenAcquisition.ts:359
 
 Router calldata for a hub-token (USDC/USDG) buy of `amountOut` paired token: a single-pool
 exact-output swap, paid by allowance pull. Flavour differences are confined here.
@@ -24907,6 +25117,76 @@ Encodes prepared AnyFlaunchZap `flaunch` arguments (any of the four overloads).
 ### prepared
 
 `AnyFlaunchZapFlaunchArgs`
+
+## Returns
+
+`` `0x${string}` ``
+
+
+---
+
+**@flaunch/sdk v0.17.1**
+
+***
+
+@flaunch/sdk / encodeDisposalEthSell
+
+# Function: encodeDisposalEthSell()
+
+> **encodeDisposalEthSell**(`dex`, `leg`): `` `0x${string}` ``
+
+Defined in: utils/pairedTokenAcquisition.ts:509
+
+Router calldata selling exactly `amountIn` paired token for ETH: `exactInput` into the router's
+own custody, then `unwrapWETH9(amountOutMinimum, recipient)`, inside one multicall. Send with
+`value = 0`; the paired token must be approved to the router first.
+
+## Parameters
+
+### dex
+
+`PairedTokenAcquisitionDex`
+
+### leg
+
+`PairedTokenDisposalLeg`
+
+## Returns
+
+`` `0x${string}` ``
+
+
+---
+
+**@flaunch/sdk v0.17.1**
+
+***
+
+@flaunch/sdk / encodeDisposalExactInputPath
+
+# Function: encodeDisposalExactInputPath()
+
+> **encodeDisposalExactInputPath**(`dex`, `pairedToken`, `route`): `` `0x${string}` ``
+
+Defined in: utils/pairedTokenAcquisition.ts:483
+
+The exact-INPUT path for a sell to ETH: input (the paired token) first, `token → hub → WETH`, or
+`token → WETH` for a direct pool. Byte-identical to the ETH buy's exact-output path, which is also
+written paired-token first; a separate name keeps each call site honest about which leg it encodes.
+
+## Parameters
+
+### dex
+
+`PairedTokenAcquisitionDex`
+
+### pairedToken
+
+`` `0x${string}` ``
+
+### route
+
+`PairedTokenAcquisitionRoute`
 
 ## Returns
 
@@ -27493,6 +27773,8 @@ Defined in: sdk/launchPreBuy.ts:317
 - PairedTokenAcquisitionLeg
 - PairedTokenAcquisitionQuote
 - PairedTokenAcquisitionRoute
+- PairedTokenDisposalLeg
+- PairedTokenDisposalQuote
 - PinataConfig
 - PoolKey
 - PoolWithHookData
@@ -27579,6 +27861,9 @@ Defined in: sdk/launchPreBuy.ts:317
 - PairedTokenAcquisitionPlan
 - PairedTokenApprovalParams
 - PairedTokenConfig
+- PairedTokenDisposalOutput
+- PairedTokenDisposalParams
+- PairedTokenDisposalPlan
 - PairedTokenFlaunchFee
 - PairedTokenFlaunchParams
 - PairedTokenPreBuyLaunchParams
@@ -27703,6 +27988,7 @@ Defined in: sdk/launchPreBuy.ts:317
 - ReferralEscrowV1\_3Address
 - RevenueManagerAddress
 - RevenueManagerV1\_3Address
+- ROUTER\_CUSTODY\_RECIPIENT
 - SlipstreamPoolAbi
 - SlipstreamSwapRouterAbi
 - SolanaVerifierAddress
@@ -27774,6 +28060,8 @@ Defined in: sdk/launchPreBuy.ts:317
 - encodeAcquisitionHubBuy
 - encodeAnyFlaunchZapFlaunch
 - encodeAnyVestedFlaunch
+- encodeDisposalEthSell
+- encodeDisposalExactInputPath
 - encodeDynamicSplitInitializeData
 - encodeGameDeveloperSplitInitializeData
 - encodeInitialPriceParams
@@ -32376,6 +32664,17 @@ The USD hub every equity pool quotes in: USDC on Base, USDG on Robinhood.
 
 ***
 
+### quoterV2?
+
+> `optional` **quoterV2?**: `` `0x${string}` ``
+
+Defined in: addresses.ts:190
+
+A QuoterV2 on the venue's own factory for a flavour without venue discovery (slipstream). Disposal
+quotes price the calculator's pool through it depth-aware; `uniswapV3` uses `venues.quoterV2`.
+
+***
+
 ### swapRouter
 
 > **swapRouter**: `` `0x${string}` ``
@@ -32445,7 +32744,7 @@ That pool's key in the path's 3-byte slot: `tickSpacing` (slipstream) or `fee` (
 
 # Interface: PairedTokenAcquisitionLeg
 
-Defined in: utils/pairedTokenAcquisition.ts:284
+Defined in: utils/pairedTokenAcquisition.ts:343
 
 ## Properties
 
@@ -32453,7 +32752,7 @@ Defined in: utils/pairedTokenAcquisition.ts:284
 
 > **amountInMaximum**: `bigint`
 
-Defined in: utils/pairedTokenAcquisition.ts:293
+Defined in: utils/pairedTokenAcquisition.ts:352
 
 The whole input — the price protection; the leg reverts rather than spend more.
 
@@ -32463,7 +32762,7 @@ The whole input — the price protection; the leg reverts rather than spend more
 
 > **amountOut**: `bigint`
 
-Defined in: utils/pairedTokenAcquisition.ts:291
+Defined in: utils/pairedTokenAcquisition.ts:350
 
 The exact paired-token amount the leg must deliver.
 
@@ -32473,7 +32772,7 @@ The exact paired-token amount the leg must deliver.
 
 > **deadline**: `bigint`
 
-Defined in: utils/pairedTokenAcquisition.ts:289
+Defined in: utils/pairedTokenAcquisition.ts:348
 
 Unix seconds after which the router refuses to execute.
 
@@ -32483,7 +32782,7 @@ Unix seconds after which the router refuses to execute.
 
 > **pairedToken**: `` `0x${string}` ``
 
-Defined in: utils/pairedTokenAcquisition.ts:285
+Defined in: utils/pairedTokenAcquisition.ts:344
 
 ***
 
@@ -32491,7 +32790,7 @@ Defined in: utils/pairedTokenAcquisition.ts:285
 
 > **recipient**: `` `0x${string}` ``
 
-Defined in: utils/pairedTokenAcquisition.ts:287
+Defined in: utils/pairedTokenAcquisition.ts:346
 
 ***
 
@@ -32499,7 +32798,7 @@ Defined in: utils/pairedTokenAcquisition.ts:287
 
 > **route**: `PairedTokenAcquisitionRoute`
 
-Defined in: utils/pairedTokenAcquisition.ts:286
+Defined in: utils/pairedTokenAcquisition.ts:345
 
 
 ---
@@ -32512,7 +32811,7 @@ Defined in: utils/pairedTokenAcquisition.ts:286
 
 # Interface: PairedTokenAcquisitionQuote
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:20
+Defined in: clients/PairedTokenAcquisitionClient.ts:21
 
 ## Properties
 
@@ -32520,7 +32819,7 @@ Defined in: clients/PairedTokenAcquisitionClient.ts:20
 
 > **expectedOut**: `bigint`
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:23
+Defined in: clients/PairedTokenAcquisitionClient.ts:24
 
 Expected paired-token output for the exact input, before any slippage haircut.
 
@@ -32530,7 +32829,7 @@ Expected paired-token output for the exact input, before any slippage haircut.
 
 > **route**: `PairedTokenAcquisitionRoute`
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:21
+Defined in: clients/PairedTokenAcquisitionClient.ts:22
 
 ***
 
@@ -32538,7 +32837,7 @@ Defined in: clients/PairedTokenAcquisitionClient.ts:21
 
 > **source**: `"quoter"` \| `"spot"`
 
-Defined in: clients/PairedTokenAcquisitionClient.ts:25
+Defined in: clients/PairedTokenAcquisitionClient.ts:26
 
 How the number was produced — a depth-aware quoter, or the calculator pool's single-tick spot.
 
@@ -32553,7 +32852,7 @@ How the number was produced — a depth-aware quoter, or the calculator pool's s
 
 # Interface: PairedTokenAcquisitionRoute
 
-Defined in: utils/pairedTokenAcquisition.ts:215
+Defined in: utils/pairedTokenAcquisition.ts:274
 
 ## Properties
 
@@ -32561,7 +32860,7 @@ Defined in: utils/pairedTokenAcquisition.ts:215
 
 > `optional` **direct?**: `boolean`
 
-Defined in: utils/pairedTokenAcquisition.ts:223
+Defined in: utils/pairedTokenAcquisition.ts:282
 
 A WETH:token pool reached in one hop from ETH, skipping the hub. Only chosen for an ETH input.
 
@@ -32571,7 +32870,7 @@ A WETH:token pool reached in one hop from ETH, skipping the hub. Only chosen for
 
 > **payingIsToken0**: `boolean`
 
-Defined in: utils/pairedTokenAcquisition.ts:221
+Defined in: utils/pairedTokenAcquisition.ts:280
 
 Whether the paying side (hub, or WETH when `direct`) is the pool's token0.
 
@@ -32581,7 +32880,7 @@ Whether the paying side (hub, or WETH when `direct`) is the pool's token0.
 
 > **pool**: `` `0x${string}` ``
 
-Defined in: utils/pairedTokenAcquisition.ts:217
+Defined in: utils/pairedTokenAcquisition.ts:276
 
 The pool the paired-token leg trades in: hub:token, or WETH:token when `direct`.
 
@@ -32591,9 +32890,121 @@ The pool the paired-token leg trades in: hub:token, or WETH:token when `direct`.
 
 > **poolKey**: `number`
 
-Defined in: utils/pairedTokenAcquisition.ts:219
+Defined in: utils/pairedTokenAcquisition.ts:278
 
 The pool's key for the path / router params: `tickSpacing` (slipstream) or `fee` (uniswapV3).
+
+
+---
+
+**@flaunch/sdk v0.17.1**
+
+***
+
+@flaunch/sdk / PairedTokenDisposalLeg
+
+# Interface: PairedTokenDisposalLeg
+
+Defined in: utils/pairedTokenAcquisition.ts:491
+
+## Properties
+
+### amountIn
+
+> **amountIn**: `bigint`
+
+Defined in: utils/pairedTokenAcquisition.ts:499
+
+The exact paired-token amount sold; pulled from the sender by allowance.
+
+***
+
+### amountOutMinimum
+
+> **amountOutMinimum**: `bigint`
+
+Defined in: utils/pairedTokenAcquisition.ts:501
+
+The least WETH the swap may produce, and the least ETH the unwrap may pay: the price protection.
+
+***
+
+### deadline
+
+> **deadline**: `bigint`
+
+Defined in: utils/pairedTokenAcquisition.ts:497
+
+Unix seconds after which the router refuses to execute.
+
+***
+
+### pairedToken
+
+> **pairedToken**: `` `0x${string}` ``
+
+Defined in: utils/pairedTokenAcquisition.ts:492
+
+***
+
+### recipient
+
+> **recipient**: `` `0x${string}` ``
+
+Defined in: utils/pairedTokenAcquisition.ts:495
+
+Receives the native ETH.
+
+***
+
+### route
+
+> **route**: `PairedTokenAcquisitionRoute`
+
+Defined in: utils/pairedTokenAcquisition.ts:493
+
+
+---
+
+**@flaunch/sdk v0.17.1**
+
+***
+
+@flaunch/sdk / PairedTokenDisposalQuote
+
+# Interface: PairedTokenDisposalQuote
+
+Defined in: clients/PairedTokenAcquisitionClient.ts:29
+
+## Properties
+
+### expectedOut
+
+> **expectedOut**: `bigint`
+
+Defined in: clients/PairedTokenAcquisitionClient.ts:33
+
+Expected ETH (wei) for selling the exact paired-token input, before any slippage haircut.
+
+***
+
+### route
+
+> **route**: `PairedTokenAcquisitionRoute`
+
+Defined in: clients/PairedTokenAcquisitionClient.ts:31
+
+The venue the sell trades on: the paired-token leg's pool (hub:token, or WETH:token when `direct`).
+
+***
+
+### source
+
+> **source**: `"quoter"` \| `"spot"`
+
+Defined in: clients/PairedTokenAcquisitionClient.ts:35
+
+A depth-aware QuoterV2 quote, or the calculator pool's single-tick spot.
 
 
 ---
@@ -33943,7 +34354,7 @@ Defined in: clients/DynamicAddressFeeSplitManagerV1\_3Client.ts:23
 
 > **FlaunchAnyWithGameDeveloperSplitParams** = `Omit`\<`FlaunchVestedParams`, `"treasuryManagerParams"` \| `"trustedSignerSettings"`\> & `GameDeveloperSplitInitializeParams` & `object`
 
-Defined in: sdk/FlaunchSDK.ts:728
+Defined in: sdk/FlaunchSDK.ts:763
 
 A Game Mode launch on the Any route (AnyFlaunchZap → the vested AnyPositionManager) into a
 GameDeveloperFeeSplitManager: the vested launch params (schedules may be empty — no vesting)
@@ -34045,7 +34456,7 @@ Defined in: clients/FlaunchZapV1\_3Client.ts:48
 
 > **FlaunchPairedTokenWithDynamicSplitManagerParams** = `Omit`\<`FlaunchPairedTokenParams`, `"treasuryManagerParams"`\> & `object`
 
-Defined in: sdk/FlaunchSDK.ts:701
+Defined in: sdk/FlaunchSDK.ts:736
 
 `flaunchPairedToken` plus a DynamicAddressFeeSplitManager deployed at launch: the creator and
 the manager owner take their shares first, the named receivers divide the remainder. Shares
@@ -34098,7 +34509,7 @@ The receivers dividing what is left after the creator and owner shares.
 
 > **FlaunchPairedTokenWithGameDeveloperSplitParams** = `Omit`\<`FlaunchPairedTokenParams`, `"treasuryManagerParams"`\> & `GameDeveloperSplitInitializeParams` & `object`
 
-Defined in: sdk/FlaunchSDK.ts:687
+Defined in: sdk/FlaunchSDK.ts:722
 
 `flaunchPairedToken` plus the developer's slot and the recipients sharing the other 95%.
 
@@ -35355,7 +35766,7 @@ The exact argument object the multichain zap `flaunch` overloads take; the key s
 
 > **PairedPoolQuoteParams** = `object`
 
-Defined in: sdk/FlaunchSDK.ts:607
+Defined in: sdk/FlaunchSDK.ts:642
 
 ## Properties
 
@@ -35363,7 +35774,7 @@ Defined in: sdk/FlaunchSDK.ts:607
 
 > **amountIn**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:610
+Defined in: sdk/FlaunchSDK.ts:645
 
 ***
 
@@ -35371,7 +35782,7 @@ Defined in: sdk/FlaunchSDK.ts:610
 
 > **coinAddress**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:608
+Defined in: sdk/FlaunchSDK.ts:643
 
 ***
 
@@ -35379,7 +35790,7 @@ Defined in: sdk/FlaunchSDK.ts:608
 
 > `optional` **direction?**: `PairedSwapDirection`
 
-Defined in: sdk/FlaunchSDK.ts:611
+Defined in: sdk/FlaunchSDK.ts:646
 
 ***
 
@@ -35387,7 +35798,7 @@ Defined in: sdk/FlaunchSDK.ts:611
 
 > `optional` **hookData?**: `Hex`
 
-Defined in: sdk/FlaunchSDK.ts:612
+Defined in: sdk/FlaunchSDK.ts:647
 
 ***
 
@@ -35395,7 +35806,7 @@ Defined in: sdk/FlaunchSDK.ts:612
 
 > `optional` **pairedToken?**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:609
+Defined in: sdk/FlaunchSDK.ts:644
 
 ***
 
@@ -35403,7 +35814,7 @@ Defined in: sdk/FlaunchSDK.ts:609
 
 > `optional` **userWallet?**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:614
+Defined in: sdk/FlaunchSDK.ts:649
 
 Simulate as this wallet — required when the hook binds `hookData` to a buyer.
 
@@ -35420,7 +35831,7 @@ Simulate as this wallet — required when the hook binds `hookData` to a buyer.
 
 > **PairedSwapApproveCall** = `PairedSwapCall` & `object`
 
-Defined in: sdk/FlaunchSDK.ts:625
+Defined in: sdk/FlaunchSDK.ts:660
 
 ## Type Declaration
 
@@ -35449,7 +35860,7 @@ Defined in: sdk/FlaunchSDK.ts:625
 
 > **PairedSwapCall** = `object`
 
-Defined in: sdk/FlaunchSDK.ts:624
+Defined in: sdk/FlaunchSDK.ts:659
 
 ## Properties
 
@@ -35457,7 +35868,7 @@ Defined in: sdk/FlaunchSDK.ts:624
 
 > **data**: `Hex`
 
-Defined in: sdk/FlaunchSDK.ts:624
+Defined in: sdk/FlaunchSDK.ts:659
 
 ***
 
@@ -35465,7 +35876,7 @@ Defined in: sdk/FlaunchSDK.ts:624
 
 > **to**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:624
+Defined in: sdk/FlaunchSDK.ts:659
 
 ***
 
@@ -35473,7 +35884,7 @@ Defined in: sdk/FlaunchSDK.ts:624
 
 > **value**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:624
+Defined in: sdk/FlaunchSDK.ts:659
 
 
 ---
@@ -35488,7 +35899,7 @@ Defined in: sdk/FlaunchSDK.ts:624
 
 > **PairedSwapDirection** = `"buy"` \| `"sell"`
 
-Defined in: sdk/FlaunchSDK.ts:521
+Defined in: sdk/FlaunchSDK.ts:524
 
 
 ---
@@ -35503,7 +35914,7 @@ Defined in: sdk/FlaunchSDK.ts:521
 
 > **PairedSwapFill** = `object`
 
-Defined in: sdk/FlaunchSDK.ts:639
+Defined in: sdk/FlaunchSDK.ts:674
 
 ## Properties
 
@@ -35511,7 +35922,7 @@ Defined in: sdk/FlaunchSDK.ts:639
 
 > **amountIn**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:642
+Defined in: sdk/FlaunchSDK.ts:677
 
 ***
 
@@ -35519,7 +35930,7 @@ Defined in: sdk/FlaunchSDK.ts:642
 
 > **amountOut**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:643
+Defined in: sdk/FlaunchSDK.ts:678
 
 ***
 
@@ -35527,7 +35938,7 @@ Defined in: sdk/FlaunchSDK.ts:643
 
 > **direction**: `PairedSwapDirection`
 
-Defined in: sdk/FlaunchSDK.ts:640
+Defined in: sdk/FlaunchSDK.ts:675
 
 ***
 
@@ -35535,7 +35946,7 @@ Defined in: sdk/FlaunchSDK.ts:640
 
 > **poolId**: `Hex`
 
-Defined in: sdk/FlaunchSDK.ts:641
+Defined in: sdk/FlaunchSDK.ts:676
 
 
 ---
@@ -35550,7 +35961,7 @@ Defined in: sdk/FlaunchSDK.ts:641
 
 > **PairedSwapPlan** = `ResolvedPairedPool` & `object`
 
-Defined in: sdk/FlaunchSDK.ts:646
+Defined in: sdk/FlaunchSDK.ts:681
 
 ## Type Declaration
 
@@ -35649,7 +36060,7 @@ Fee-inclusive output shortfall versus AMM spot, not pure price impact.
 
 > **PairedSwapPlanParams** = `PairedTokenSwapParams` & `object`
 
-Defined in: sdk/FlaunchSDK.ts:571
+Defined in: sdk/FlaunchSDK.ts:574
 
 planPairedTokenSwap's input: the swap params plus which way the swap goes.
 
@@ -35672,7 +36083,7 @@ planPairedTokenSwap's input: the swap params plus which way the swap goes.
 
 > **PairedSwapVerification** = \{ `amountOut`: `bigint`; `mode`: `"quote"`; \} \| \{ `amountOut`: `bigint`; `consumedIn`: `bigint`; `mode`: `"simulate"`; \}
 
-Defined in: sdk/FlaunchSDK.ts:636
+Defined in: sdk/FlaunchSDK.ts:671
 
 Everything a host needs to execute a paired-token swap itself — as one batched
 `wallet_sendCalls` or two sequential transactions: the optional ERC20 approve, then the PoolSwap
@@ -35715,7 +36126,7 @@ A buy that starts from ETH/USDC(/USDG) routes through it before the coin's own p
 
 > **PairedTokenAcquisitionInput** = `"eth"` \| `"hub"`
 
-Defined in: utils/pairedTokenAcquisition.ts:213
+Defined in: utils/pairedTokenAcquisition.ts:272
 
 What a routed buy pays with: native ETH, or the chain's USD hub token (USDC / USDG).
 
@@ -35732,7 +36143,7 @@ What a routed buy pays with: native ETH, or the chain's USD hub token (USDC / US
 
 > **PairedTokenAcquisitionParams** = `object`
 
-Defined in: sdk/FlaunchSDK.ts:575
+Defined in: sdk/FlaunchSDK.ts:578
 
 ## Properties
 
@@ -35740,7 +36151,7 @@ Defined in: sdk/FlaunchSDK.ts:575
 
 > `optional` **deadline?**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:584
+Defined in: sdk/FlaunchSDK.ts:587
 
 Unix seconds; defaults to now + 10 minutes.
 
@@ -35750,7 +36161,7 @@ Unix seconds; defaults to now + 10 minutes.
 
 > **input**: `PairedTokenAcquisitionInput`
 
-Defined in: sdk/FlaunchSDK.ts:577
+Defined in: sdk/FlaunchSDK.ts:580
 
 ***
 
@@ -35758,7 +36169,7 @@ Defined in: sdk/FlaunchSDK.ts:577
 
 > **maxIn**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:581
+Defined in: sdk/FlaunchSDK.ts:584
 
 The most the router may spend — the price protection; native ETH travels as `value`.
 
@@ -35768,7 +36179,7 @@ The most the router may spend — the price protection; native ETH travels as `v
 
 > **pairedToken**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:576
+Defined in: sdk/FlaunchSDK.ts:579
 
 ***
 
@@ -35776,7 +36187,7 @@ Defined in: sdk/FlaunchSDK.ts:576
 
 > **recipient**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:582
+Defined in: sdk/FlaunchSDK.ts:585
 
 ***
 
@@ -35784,7 +36195,7 @@ Defined in: sdk/FlaunchSDK.ts:582
 
 > `optional` **route?**: `PairedTokenAcquisitionRoute`
 
-Defined in: sdk/FlaunchSDK.ts:593
+Defined in: sdk/FlaunchSDK.ts:596
 
 The venue to execute on. Defaults to the registry calculator's route — but a caller that
 QUOTED first must pass the quote's route through, or the plan may execute on a different
@@ -35797,7 +36208,7 @@ the calculator pool delivers within `maxIn`, reverting the buy).
 
 > `optional` **sender?**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:586
+Defined in: sdk/FlaunchSDK.ts:589
 
 For the hub-token allowance check; defaults to the drift signer, else the approve is always planned.
 
@@ -35807,7 +36218,7 @@ For the hub-token allowance check; defaults to the drift signer, else the approv
 
 > **target**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:579
+Defined in: sdk/FlaunchSDK.ts:582
 
 Exactly this much paired token is delivered (exact-output).
 
@@ -35824,7 +36235,7 @@ Exactly this much paired token is delivered (exact-output).
 
 > **PairedTokenAcquisitionPlan** = `object`
 
-Defined in: sdk/FlaunchSDK.ts:596
+Defined in: sdk/FlaunchSDK.ts:599
 
 ## Properties
 
@@ -35832,7 +36243,7 @@ Defined in: sdk/FlaunchSDK.ts:596
 
 > `optional` **approve?**: `PairedSwapApproveCall`
 
-Defined in: sdk/FlaunchSDK.ts:602
+Defined in: sdk/FlaunchSDK.ts:605
 
 Present for a hub-token input whose router allowance is short of `maxIn`.
 
@@ -35842,7 +36253,7 @@ Present for a hub-token input whose router allowance is short of `maxIn`.
 
 > **input**: `PairedTokenAcquisitionInput`
 
-Defined in: sdk/FlaunchSDK.ts:598
+Defined in: sdk/FlaunchSDK.ts:601
 
 ***
 
@@ -35850,7 +36261,7 @@ Defined in: sdk/FlaunchSDK.ts:598
 
 > **maxIn**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:600
+Defined in: sdk/FlaunchSDK.ts:603
 
 ***
 
@@ -35858,7 +36269,7 @@ Defined in: sdk/FlaunchSDK.ts:600
 
 > **route**: `PairedTokenAcquisitionRoute`
 
-Defined in: sdk/FlaunchSDK.ts:597
+Defined in: sdk/FlaunchSDK.ts:600
 
 ***
 
@@ -35866,7 +36277,7 @@ Defined in: sdk/FlaunchSDK.ts:597
 
 > **swap**: `PairedSwapCall`
 
-Defined in: sdk/FlaunchSDK.ts:604
+Defined in: sdk/FlaunchSDK.ts:607
 
 The router call; `value` is `maxIn` for an ETH input (the router refunds the unspent part).
 
@@ -35876,7 +36287,7 @@ The router call; `value` is `maxIn` for an ETH input (the router refunds the uns
 
 > **target**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:599
+Defined in: sdk/FlaunchSDK.ts:602
 
 
 ---
@@ -35891,7 +36302,7 @@ Defined in: sdk/FlaunchSDK.ts:599
 
 > **PairedTokenApprovalParams** = `object`
 
-Defined in: sdk/FlaunchSDK.ts:560
+Defined in: sdk/FlaunchSDK.ts:563
 
 ## Properties
 
@@ -35899,7 +36310,7 @@ Defined in: sdk/FlaunchSDK.ts:560
 
 > **amount**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:564
+Defined in: sdk/FlaunchSDK.ts:567
 
 The allowance to set when the current one is short of it.
 
@@ -35909,7 +36320,7 @@ The allowance to set when the current one is short of it.
 
 > **coinAddress**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:561
+Defined in: sdk/FlaunchSDK.ts:564
 
 ***
 
@@ -35917,7 +36328,7 @@ Defined in: sdk/FlaunchSDK.ts:561
 
 > `optional` **pairedToken?**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:562
+Defined in: sdk/FlaunchSDK.ts:565
 
 ***
 
@@ -35925,7 +36336,7 @@ Defined in: sdk/FlaunchSDK.ts:562
 
 > `optional` **router?**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:566
+Defined in: sdk/FlaunchSDK.ts:569
 
 ***
 
@@ -35933,7 +36344,7 @@ Defined in: sdk/FlaunchSDK.ts:566
 
 > `optional` **sender?**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:565
+Defined in: sdk/FlaunchSDK.ts:568
 
 
 ---
@@ -36017,6 +36428,188 @@ Defined in: clients/PairedTokenRegistryV1\_3Client.ts:13
 > **underlying**: `Address`
 
 Defined in: clients/PairedTokenRegistryV1\_3Client.ts:16
+
+
+---
+
+**@flaunch/sdk v0.17.1**
+
+***
+
+@flaunch/sdk / PairedTokenDisposalOutput
+
+# Type Alias: PairedTokenDisposalOutput
+
+> **PairedTokenDisposalOutput** = `"eth"`
+
+Defined in: utils/pairedTokenAcquisition.ts:461
+
+Selling leftover paired token back to ETH (disposal): the exact-INPUT mirror of the ETH buy.
+The whole balance goes in, the path walks `token → hub → WETH` (or `token → WETH` for a direct
+pool), the router keeps the WETH in its own custody, and `unwrapWETH9` pays native ETH to the
+recipient. Nothing is left on the router: an exact-input leg spends `amountIn` in full and the
+unwrap sweeps the router's whole WETH balance.
+
+
+---
+
+**@flaunch/sdk v0.17.1**
+
+***
+
+@flaunch/sdk / PairedTokenDisposalParams
+
+# Type Alias: PairedTokenDisposalParams
+
+> **PairedTokenDisposalParams** = `object`
+
+Defined in: sdk/FlaunchSDK.ts:611
+
+A sell of leftover non-ETH paired token (a B20 equity) back to native ETH.
+
+## Properties
+
+### amountIn
+
+> **amountIn**: `bigint`
+
+Defined in: sdk/FlaunchSDK.ts:615
+
+Exactly this much paired token is sold (exact-input).
+
+***
+
+### amountOutMinimum
+
+> **amountOutMinimum**: `bigint`
+
+Defined in: sdk/FlaunchSDK.ts:617
+
+The least ETH the recipient may receive: the price protection. Must be positive.
+
+***
+
+### deadline?
+
+> `optional` **deadline?**: `bigint`
+
+Defined in: sdk/FlaunchSDK.ts:628
+
+Unix seconds; defaults to now + 10 minutes.
+
+***
+
+### output
+
+> **output**: `PairedTokenDisposalOutput`
+
+Defined in: sdk/FlaunchSDK.ts:613
+
+***
+
+### pairedToken
+
+> **pairedToken**: `Address`
+
+Defined in: sdk/FlaunchSDK.ts:612
+
+***
+
+### recipient
+
+> **recipient**: `Address`
+
+Defined in: sdk/FlaunchSDK.ts:619
+
+Receives the native ETH.
+
+***
+
+### route?
+
+> `optional` **route?**: `PairedTokenAcquisitionRoute`
+
+Defined in: sdk/FlaunchSDK.ts:626
+
+The venue to execute on. Defaults to the registry calculator's route; a caller that QUOTED first
+must pass the quote's route through so the sell trades on the pool that priced `amountOutMinimum`.
+
+***
+
+### sender?
+
+> `optional` **sender?**: `Address`
+
+Defined in: sdk/FlaunchSDK.ts:621
+
+For the paired-token allowance check; defaults to the drift signer, else the approve is always planned.
+
+
+---
+
+**@flaunch/sdk v0.17.1**
+
+***
+
+@flaunch/sdk / PairedTokenDisposalPlan
+
+# Type Alias: PairedTokenDisposalPlan
+
+> **PairedTokenDisposalPlan** = `object`
+
+Defined in: sdk/FlaunchSDK.ts:631
+
+## Properties
+
+### amountIn
+
+> **amountIn**: `bigint`
+
+Defined in: sdk/FlaunchSDK.ts:634
+
+***
+
+### amountOutMinimum
+
+> **amountOutMinimum**: `bigint`
+
+Defined in: sdk/FlaunchSDK.ts:635
+
+***
+
+### approve?
+
+> `optional` **approve?**: `PairedSwapApproveCall`
+
+Defined in: sdk/FlaunchSDK.ts:637
+
+Present when the sender's paired-token allowance to the venue router is short of `amountIn`.
+
+***
+
+### output
+
+> **output**: `PairedTokenDisposalOutput`
+
+Defined in: sdk/FlaunchSDK.ts:633
+
+***
+
+### route
+
+> **route**: `PairedTokenAcquisitionRoute`
+
+Defined in: sdk/FlaunchSDK.ts:632
+
+***
+
+### swap
+
+> **swap**: `PairedSwapCall`
+
+Defined in: sdk/FlaunchSDK.ts:639
+
+The router multicall (exactInput, then unwrapWETH9 to the recipient); `value` is always 0.
 
 
 ---
@@ -36216,7 +36809,7 @@ on a spend-gated calculator, so a trusted-signer launch cannot also pre-buy
 
 > **PairedTokenSwapParams** = `object`
 
-Defined in: sdk/FlaunchSDK.ts:528
+Defined in: sdk/FlaunchSDK.ts:531
 
 An exact-input swap on a paired-token pool (a coin launched through `flaunchPairedToken`,
 paired with mUSD, native ETH, flETH or a B20 equity). Exact-output is deliberately absent — the
@@ -36228,7 +36821,7 @@ spend gate rejects it. Requires a router with on-chain minimum output, deadline 
 
 > **amountIn**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:533
+Defined in: sdk/FlaunchSDK.ts:536
 
 Exact input, in the input currency's own decimals (a buy spends the paired token, a sell spends the coin).
 
@@ -36238,7 +36831,7 @@ Exact input, in the input currency's own decimals (a buy spends the paired token
 
 > `optional` **approvalAllowance?**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:551
+Defined in: sdk/FlaunchSDK.ts:554
 
 When an approve is needed, approve this much instead of `amountIn` (must be ≥ `amountIn`). A
 standing allowance — a round's wallet cap, say — turns every later buy into a single swap call.
@@ -36249,7 +36842,7 @@ standing allowance — a round's wallet cap, say — turns every later buy into 
 
 > **coinAddress**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:529
+Defined in: sdk/FlaunchSDK.ts:532
 
 ***
 
@@ -36257,7 +36850,7 @@ Defined in: sdk/FlaunchSDK.ts:529
 
 > `optional` **deadline?**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:537
+Defined in: sdk/FlaunchSDK.ts:540
 
 Unix seconds; defaults to now + 10 minutes. Preserved in calldata.
 
@@ -36267,7 +36860,7 @@ Unix seconds; defaults to now + 10 minutes. Preserved in calldata.
 
 > `optional` **hookData?**: `Hex`
 
-Defined in: sdk/FlaunchSDK.ts:539
+Defined in: sdk/FlaunchSDK.ts:542
 
 Bytes for the pool's hook — a spend-gated pool's signed authorisation.
 
@@ -36277,7 +36870,7 @@ Bytes for the pool's hook — a spend-gated pool's signed authorisation.
 
 > `optional` **pairedToken?**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:531
+Defined in: sdk/FlaunchSDK.ts:534
 
 The pool's paired side; resolved on chain from the PositionManager when omitted. `zeroAddress` = native ETH.
 
@@ -36287,7 +36880,7 @@ The pool's paired side; resolved on chain from the PositionManager when omitted.
 
 > `optional` **referrer?**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:541
+Defined in: sdk/FlaunchSDK.ts:544
 
 Referral attribution; must match the leading address when `hookData` is also supplied.
 
@@ -36297,7 +36890,7 @@ Referral attribution; must match the leading address when `hookData` is also sup
 
 > `optional` **router?**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:557
+Defined in: sdk/FlaunchSDK.ts:560
 
 The PoolSwap to route through. Defaults to the router approved on the spend gate of the hook
 the coin's pool lives on (`poolSwapForHook`); a host that learned the router from the gate's
@@ -36309,7 +36902,7 @@ own `/config` passes it here.
 
 > `optional` **sender?**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:546
+Defined in: sdk/FlaunchSDK.ts:549
 
 The wallet that will send the swap. Used for the ERC20 allowance check; defaults to the
 drift signer. A quote-backed swap requires a sender; approval-only planning can omit it.
@@ -36320,7 +36913,7 @@ drift signer. A quote-backed swap requires a sender; approval-only planning can 
 
 > **slippageBps**: `number`
 
-Defined in: sdk/FlaunchSDK.ts:535
+Defined in: sdk/FlaunchSDK.ts:538
 
 Haircut below quoted net output, 0..9999 basis points (50 = 0.5%). Enforced on chain.
 
@@ -36847,7 +37440,7 @@ Defined in: sdk/launchPreBuy.ts:191
 
 > **PreparedAnyGameLaunch** = `object`
 
-Defined in: sdk/FlaunchSDK.ts:738
+Defined in: sdk/FlaunchSDK.ts:773
 
 A quoted, fully encoded Any-route game launch: send it yourself or call `execute()`.
 
@@ -36857,7 +37450,7 @@ A quoted, fully encoded Any-route game launch: send it yourself or call `execute
 
 > **args**: `AnyFlaunchZapFlaunchArgs`
 
-Defined in: sdk/FlaunchSDK.ts:740
+Defined in: sdk/FlaunchSDK.ts:775
 
 The zap `flaunch` overload and its exact arguments (`managerMaxPremineCost`).
 
@@ -36867,7 +37460,7 @@ The zap `flaunch` overload and its exact arguments (`managerMaxPremineCost`).
 
 > **data**: `HexString`
 
-Defined in: sdk/FlaunchSDK.ts:746
+Defined in: sdk/FlaunchSDK.ts:781
 
 ABI-encoded `args`, for wallets and batchers that take raw calldata.
 
@@ -36877,7 +37470,7 @@ ABI-encoded `args`, for wallets and batchers that take raw calldata.
 
 > **execute**: () => `Promise`\<`HexString`\>
 
-Defined in: sdk/FlaunchSDK.ts:748
+Defined in: sdk/FlaunchSDK.ts:783
 
 Sends the launch through the SDK's signer and resolves to the transaction hash.
 
@@ -36891,7 +37484,7 @@ Returns
 
 > **to**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:744
+Defined in: sdk/FlaunchSDK.ts:779
 
 The AnyFlaunchZap on this chain.
 
@@ -36901,7 +37494,7 @@ The AnyFlaunchZap on this chain.
 
 > **value**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:742
+Defined in: sdk/FlaunchSDK.ts:777
 
 ETH to send: the flaunching fee plus the ETH-funded premine cap, quoted as the signer.
 
@@ -37288,7 +37881,7 @@ Defined in: clients/ReferralClient.ts:29
 
 > **ResolvedPairedPool** = `object`
 
-Defined in: sdk/FlaunchSDK.ts:617
+Defined in: sdk/FlaunchSDK.ts:652
 
 ## Properties
 
@@ -37296,7 +37889,7 @@ Defined in: sdk/FlaunchSDK.ts:617
 
 > **pairedToken**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:621
+Defined in: sdk/FlaunchSDK.ts:656
 
 The non-coin side of the key; `zeroAddress` is native ETH.
 
@@ -37306,7 +37899,7 @@ The non-coin side of the key; `zeroAddress` is native ETH.
 
 > **poolId**: `Hex`
 
-Defined in: sdk/FlaunchSDK.ts:619
+Defined in: sdk/FlaunchSDK.ts:654
 
 ***
 
@@ -37314,7 +37907,7 @@ Defined in: sdk/FlaunchSDK.ts:619
 
 > **poolKey**: `PoolKey`
 
-Defined in: sdk/FlaunchSDK.ts:618
+Defined in: sdk/FlaunchSDK.ts:653
 
 
 ---
@@ -37560,7 +38153,7 @@ Defined in: utils/referrals.ts:98
 
 > **VestedLaunchEventData** = `PoolCreatedEventData` & `object`
 
-Defined in: sdk/FlaunchSDK.ts:382
+Defined in: sdk/FlaunchSDK.ts:385
 
 A vested launch decoded from a receipt: the hook's `PoolCreated` (as `getPoolCreatedFromLogs`
 returns it — the AnyPositionManager event carries only the six-field params, so name /
@@ -37620,7 +38213,7 @@ vesting.treasuryManager
 
 > **VestedLaunchSchedule** = `object`
 
-Defined in: sdk/FlaunchSDK.ts:367
+Defined in: sdk/FlaunchSDK.ts:370
 
 One `MemecoinVesting.ScheduleCreated` of a vested launch.
 
@@ -37630,7 +38223,7 @@ One `MemecoinVesting.ScheduleCreated` of a vested launch.
 
 > **amount**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:370
+Defined in: sdk/FlaunchSDK.ts:373
 
 ***
 
@@ -37638,7 +38231,7 @@ Defined in: sdk/FlaunchSDK.ts:370
 
 > **beneficiary**: `Address`
 
-Defined in: sdk/FlaunchSDK.ts:368
+Defined in: sdk/FlaunchSDK.ts:371
 
 ***
 
@@ -37646,7 +38239,7 @@ Defined in: sdk/FlaunchSDK.ts:368
 
 > **cliffDuration**: `number`
 
-Defined in: sdk/FlaunchSDK.ts:372
+Defined in: sdk/FlaunchSDK.ts:375
 
 ***
 
@@ -37654,7 +38247,7 @@ Defined in: sdk/FlaunchSDK.ts:372
 
 > **scheduleId**: `bigint`
 
-Defined in: sdk/FlaunchSDK.ts:369
+Defined in: sdk/FlaunchSDK.ts:372
 
 ***
 
@@ -37662,7 +38255,7 @@ Defined in: sdk/FlaunchSDK.ts:369
 
 > **start**: `number`
 
-Defined in: sdk/FlaunchSDK.ts:371
+Defined in: sdk/FlaunchSDK.ts:374
 
 ***
 
@@ -37670,7 +38263,7 @@ Defined in: sdk/FlaunchSDK.ts:371
 
 > **vestDuration**: `number`
 
-Defined in: sdk/FlaunchSDK.ts:373
+Defined in: sdk/FlaunchSDK.ts:376
 
 
 ---
@@ -38011,7 +38604,7 @@ A launch (vested or not) with a manager adapter's fields swapped for `treasuryMa
 
 > `const` **AddressFeeSplitManagerAddress**: `Addresses`
 
-Defined in: addresses.ts:378
+Defined in: addresses.ts:386
 
 
 ---
@@ -38026,7 +38619,7 @@ Defined in: addresses.ts:378
 
 > `const` **AddressFeeSplitManagerV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:425
+Defined in: addresses.ts:433
 
 
 ---
@@ -38041,7 +38634,7 @@ Defined in: addresses.ts:425
 
 > `const` **AnyBidWallAddress**: `Addresses`
 
-Defined in: addresses.ts:348
+Defined in: addresses.ts:356
 
 
 ---
@@ -38056,7 +38649,7 @@ Defined in: addresses.ts:348
 
 > `const` **AnyBidWallV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:354
+Defined in: addresses.ts:362
 
 
 ---
@@ -38071,7 +38664,7 @@ Defined in: addresses.ts:354
 
 > `const` **AnyFlaunchAddress**: `Addresses`
 
-Defined in: addresses.ts:253
+Defined in: addresses.ts:261
 
 
 ---
@@ -38086,7 +38679,7 @@ Defined in: addresses.ts:253
 
 > `const` **AnyFlaunchV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:259
+Defined in: addresses.ts:267
 
 
 ---
@@ -38101,7 +38694,7 @@ Defined in: addresses.ts:259
 
 > `const` **AnyFlaunchZapAddress**: `Addresses`
 
-Defined in: addresses.ts:280
+Defined in: addresses.ts:288
 
 
 ---
@@ -38116,7 +38709,7 @@ Defined in: addresses.ts:280
 
 > `const` **AnyFlaunchZapFlaunchAddress**: `Addresses`
 
-Defined in: addresses.ts:309
+Defined in: addresses.ts:317
 
 The AnyFlaunch ERC721 of `AnyFlaunchZapPositionManagerAddress` (launch NFTs of vested coins).
 
@@ -38133,7 +38726,7 @@ The AnyFlaunch ERC721 of `AnyFlaunchZapPositionManagerAddress` (launch NFTs of v
 
 > `const` **AnyFlaunchZapPositionManagerAddress**: `Addresses`
 
-Defined in: addresses.ts:300
+Defined in: addresses.ts:308
 
 The AnyPositionManager hook `AnyFlaunchZapAddress` launches through; emits the vested coins'
 `PoolCreated`. The mainnets reuse the salt Base Sepolia mined, so the hook shares its address there.
@@ -38151,7 +38744,7 @@ The AnyPositionManager hook `AnyFlaunchZapAddress` launches through; emits the v
 
 > `const` **AnyPositionManagerAddress**: `Addresses`
 
-Defined in: addresses.ts:215
+Defined in: addresses.ts:223
 
 
 ---
@@ -38166,7 +38759,7 @@ Defined in: addresses.ts:215
 
 > `const` **AnyPositionManagerV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:221
+Defined in: addresses.ts:229
 
 
 ---
@@ -38196,7 +38789,7 @@ Defined in: sdk/launchPreBuy.ts:44
 
 > `const` **BidWallAddress**: `Addresses`
 
-Defined in: addresses.ts:328
+Defined in: addresses.ts:336
 
 
 ---
@@ -38211,7 +38804,7 @@ Defined in: addresses.ts:328
 
 > `const` **BidWallV1\_1Address**: `Addresses`
 
-Defined in: addresses.ts:334
+Defined in: addresses.ts:342
 
 
 ---
@@ -38226,7 +38819,7 @@ Defined in: addresses.ts:334
 
 > `const` **BidWallV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:340
+Defined in: addresses.ts:348
 
 
 ---
@@ -38241,7 +38834,7 @@ Defined in: addresses.ts:340
 
 > `const` **BuyBackManagerAddress**: `Addresses`
 
-Defined in: addresses.ts:399
+Defined in: addresses.ts:407
 
 
 ---
@@ -38271,7 +38864,7 @@ Defined in: sdk/launchPreBuy.ts:43
 
 > `const` **ClankerWorldVerifierAddress**: `Addresses`
 
-Defined in: addresses.ts:513
+Defined in: addresses.ts:521
 
 
 ---
@@ -38286,7 +38879,7 @@ Defined in: addresses.ts:513
 
 > `const` **ClosedPermissionsAddress**: `Addresses`
 
-Defined in: addresses.ts:546
+Defined in: addresses.ts:554
 
 Permissions
 
@@ -38303,7 +38896,7 @@ Permissions
 
 > `const` **ClosedPermissionsV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:573
+Defined in: addresses.ts:581
 
 
 ---
@@ -38352,7 +38945,7 @@ How long a plan stays executable without a fresh quote.
 
 > `const` **DefaultPairedTokenAddress**: `Addresses`
 
-Defined in: addresses.ts:623
+Defined in: addresses.ts:631
 
 Default pairing for new launches. FLETHAddress remains available for legacy pools.
 
@@ -38369,7 +38962,7 @@ Default pairing for new launches. FLETHAddress remains available for legacy pool
 
 > `const` **DopplerVerifierAddress**: `Addresses`
 
-Defined in: addresses.ts:518
+Defined in: addresses.ts:526
 
 
 ---
@@ -38384,7 +38977,7 @@ Defined in: addresses.ts:518
 
 > `const` **DynamicAddressFeeSplitManagerAddress**: `Addresses`
 
-Defined in: addresses.ts:386
+Defined in: addresses.ts:394
 
 
 ---
@@ -38399,7 +38992,7 @@ Defined in: addresses.ts:386
 
 > `const` **DynamicAddressFeeSplitManagerV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:454
+Defined in: addresses.ts:462
 
 
 ---
@@ -38414,7 +39007,7 @@ Defined in: addresses.ts:454
 
 > `const` **ERC721OwnerFeeSplitManagerV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:462
+Defined in: addresses.ts:470
 
 
 ---
@@ -38446,7 +39039,7 @@ Defined in: clients/FlaunchZapClient.ts:150
 
 > `const` **FLETHAddress**: `Addresses`
 
-Defined in: addresses.ts:614
+Defined in: addresses.ts:622
 
 
 ---
@@ -38461,7 +39054,7 @@ Defined in: addresses.ts:614
 
 > `const` **FLETHHooksAddress**: `Addresses`
 
-Defined in: addresses.ts:690
+Defined in: addresses.ts:698
 
 
 ---
@@ -38476,7 +39069,7 @@ Defined in: addresses.ts:690
 
 > `const` **FairLaunchAddress**: `Addresses`
 
-Defined in: addresses.ts:317
+Defined in: addresses.ts:325
 
 
 ---
@@ -38491,7 +39084,7 @@ Defined in: addresses.ts:317
 
 > `const` **FairLaunchV1\_1Address**: `Addresses`
 
-Defined in: addresses.ts:323
+Defined in: addresses.ts:331
 
 
 ---
@@ -38506,7 +39099,7 @@ Defined in: addresses.ts:323
 
 > `const` **FastFlaunchZapAddress**: `Addresses`
 
-Defined in: addresses.ts:697
+Defined in: addresses.ts:705
 
 
 ---
@@ -38521,7 +39114,7 @@ Defined in: addresses.ts:697
 
 > `const` **FeeEscrowAddress**: `Addresses`
 
-Defined in: addresses.ts:580
+Defined in: addresses.ts:588
 
 ===========
 
@@ -38538,7 +39131,7 @@ Defined in: addresses.ts:580
 
 > `const` **FeeEscrowV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:592
+Defined in: addresses.ts:600
 
 
 ---
@@ -38553,7 +39146,7 @@ Defined in: addresses.ts:592
 
 > `const` **FlaunchAddress**: `Addresses`
 
-Defined in: addresses.ts:229
+Defined in: addresses.ts:237
 
 
 ---
@@ -38568,7 +39161,7 @@ Defined in: addresses.ts:229
 
 > `const` **FlaunchManagerZapV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:488
+Defined in: addresses.ts:496
 
 
 ---
@@ -38673,7 +39266,7 @@ Defined in: addresses.ts:68
 
 > `const` **FlaunchSDK**: `object`
 
-Defined in: index.ts:248
+Defined in: index.ts:250
 
 ## Type Declaration
 
@@ -38698,7 +39291,7 @@ Defined in: index.ts:248
 
 > `const` **FlaunchV1\_1Address**: `Addresses`
 
-Defined in: addresses.ts:234
+Defined in: addresses.ts:242
 
 
 ---
@@ -38713,7 +39306,7 @@ Defined in: addresses.ts:234
 
 > `const` **FlaunchV1\_2Address**: `Addresses`
 
-Defined in: addresses.ts:239
+Defined in: addresses.ts:247
 
 
 ---
@@ -38728,7 +39321,7 @@ Defined in: addresses.ts:239
 
 > `const` **FlaunchV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:245
+Defined in: addresses.ts:253
 
 
 ---
@@ -38822,7 +39415,7 @@ Every active share weight on a GameDeveloperFeeSplitManager sums to this (5 dp: 
 
 > `const` **GameDeveloperFeeSplitManagerAddress**: `Addresses`
 
-Defined in: addresses.ts:439
+Defined in: addresses.ts:447
 
 GameDeveloperFeeSplitManager: the Game Mode manager whose game developer holds a protected 5%
 slot (flaunch-managers `feat/game-developer-fee-split-manager`). Approved on each chain's
@@ -38842,7 +39435,7 @@ once `Managers.s.sol` has broadcast it there and the factory owner has approved 
 
 > `const` **GroupMapperV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:478
+Defined in: addresses.ts:486
 
 
 ---
@@ -38970,7 +39563,7 @@ or minimum output; protected PoolSwap execution enforces both from the final del
 
 > `const` **MemecoinVestingAddress**: `Addresses`
 
-Defined in: addresses.ts:288
+Defined in: addresses.ts:296
 
 
 ---
@@ -39075,7 +39668,7 @@ Defined in: utils/universalRouter.ts:675
 
 > `const` **PairedTokenAcquisitionDexAddress**: `Record`\<`number`, `PairedTokenAcquisitionDex`\>
 
-Defined in: addresses.ts:187
+Defined in: addresses.ts:192
 
 
 ---
@@ -39120,7 +39713,7 @@ Defined in: addresses.ts:104
 
 > `const` **Permit2Address**: `Addresses`
 
-Defined in: addresses.ts:735
+Defined in: addresses.ts:743
 
 
 ---
@@ -39135,7 +39728,7 @@ Defined in: addresses.ts:735
 
 > `const` **PoolManagerAddress**: `Addresses`
 
-Defined in: addresses.ts:702
+Defined in: addresses.ts:710
 
 
 ---
@@ -39212,7 +39805,31 @@ Defined in: utils/univ4.ts:10
 
 > `const` **QuoterAddress**: `Addresses`
 
-Defined in: addresses.ts:718
+Defined in: addresses.ts:726
+
+
+---
+
+**@flaunch/sdk v0.17.1**
+
+***
+
+@flaunch/sdk / ROUTER\_CUSTODY\_RECIPIENT
+
+# Variable: ROUTER\_CUSTODY\_RECIPIENT
+
+> `const` **ROUTER\_CUSTODY\_RECIPIENT**: `Record`\<`PairedTokenAcquisitionDex`\[`"flavor"`\], `Address`\>
+
+Defined in: utils/pairedTokenAcquisition.ts:473
+
+The recipient that makes each flavour's router keep a swap's output in its own custody, so a
+following `unwrapWETH9` in the same multicall can pay it out as ETH. Both are read from the
+deployed routers' verified source:
+
+- Slipstream `SwapRouter` (Base, 0x698Cb2b6…): `exactInputInternal` maps `address(0)` to
+  `address(this)` (the v3-periphery convention).
+- Uniswap `SwapRouter02` (Robinhood, 0xCaf681a6…): `Constants.ADDRESS_THIS = address(2)` maps to
+  `address(this)`; `address(0)` there would burn-send to the zero address.
 
 
 ---
@@ -39227,7 +39844,7 @@ Defined in: addresses.ts:718
 
 > `const` **ReferralEscrowAddress**: `Addresses`
 
-Defined in: addresses.ts:600
+Defined in: addresses.ts:608
 
 
 ---
@@ -39242,7 +39859,7 @@ Defined in: addresses.ts:600
 
 > `const` **ReferralEscrowV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:606
+Defined in: addresses.ts:614
 
 
 ---
@@ -39257,7 +39874,7 @@ Defined in: addresses.ts:606
 
 > `const` **RevenueManagerAddress**: `Addresses`
 
-Defined in: addresses.ts:370
+Defined in: addresses.ts:378
 
 
 ---
@@ -39272,7 +39889,7 @@ Defined in: addresses.ts:370
 
 > `const` **RevenueManagerV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:417
+Defined in: addresses.ts:425
 
 
 ---
@@ -39287,7 +39904,7 @@ Defined in: addresses.ts:417
 
 > `const` **SlipstreamPoolAbi**: readonly \[\{ `inputs`: readonly \[\]; `name`: `"slot0"`; `outputs`: readonly \[\{ `name`: `"sqrtPriceX96"`; `type`: `"uint160"`; \}, \{ `name`: `"tick"`; `type`: `"int24"`; \}, \{ `name`: `"observationIndex"`; `type`: `"uint16"`; \}, \{ `name`: `"observationCardinality"`; `type`: `"uint16"`; \}, \{ `name`: `"observationCardinalityNext"`; `type`: `"uint16"`; \}, \{ `name`: `"unlocked"`; `type`: `"bool"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"fee"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"uint24"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"tickSpacing"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"int24"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"token0"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"address"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}\]
 
-Defined in: utils/pairedTokenAcquisition.ts:126
+Defined in: utils/pairedTokenAcquisition.ts:185
 
 Slipstream-shaped CL pool reads. `slot0` is six fields — V3's `feeProtocol` is dropped.
 
@@ -39302,7 +39919,7 @@ Slipstream-shaped CL pool reads. `slot0` is six fields — V3's `feeProtocol` is
 
 # Variable: SlipstreamSwapRouterAbi
 
-> `const` **SlipstreamSwapRouterAbi**: readonly \[\{ `inputs`: readonly \[\{ `components`: readonly \[\{ `name`: `"tokenIn"`; `type`: `"address"`; \}, \{ `name`: `"tokenOut"`; `type`: `"address"`; \}, \{ `name`: `"tickSpacing"`; `type`: `"int24"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}, \{ `name`: `"deadline"`; `type`: `"uint256"`; \}, \{ `name`: `"amountOut"`; `type`: `"uint256"`; \}, \{ `name`: `"amountInMaximum"`; `type`: `"uint256"`; \}, \{ `name`: `"sqrtPriceLimitX96"`; `type`: `"uint160"`; \}\]; `name`: `"params"`; `type`: `"tuple"`; \}\]; `name`: `"exactOutputSingle"`; `outputs`: readonly \[\{ `name`: `"amountIn"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `components`: readonly \[\{ `name`: `"path"`; `type`: `"bytes"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}, \{ `name`: `"deadline"`; `type`: `"uint256"`; \}, \{ `name`: `"amountOut"`; `type`: `"uint256"`; \}, \{ `name`: `"amountInMaximum"`; `type`: `"uint256"`; \}\]; `name`: `"params"`; `type`: `"tuple"`; \}\]; `name`: `"exactOutput"`; `outputs`: readonly \[\{ `name`: `"amountIn"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `name`: `"data"`; `type`: `"bytes[]"`; \}\]; `name`: `"multicall"`; `outputs`: readonly \[\{ `name`: `"results"`; `type`: `"bytes[]"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"refundETH"`; `outputs`: readonly \[\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}\]
+> `const` **SlipstreamSwapRouterAbi**: readonly \[\{ `inputs`: readonly \[\{ `components`: readonly \[\{ `name`: `"tokenIn"`; `type`: `"address"`; \}, \{ `name`: `"tokenOut"`; `type`: `"address"`; \}, \{ `name`: `"tickSpacing"`; `type`: `"int24"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}, \{ `name`: `"deadline"`; `type`: `"uint256"`; \}, \{ `name`: `"amountOut"`; `type`: `"uint256"`; \}, \{ `name`: `"amountInMaximum"`; `type`: `"uint256"`; \}, \{ `name`: `"sqrtPriceLimitX96"`; `type`: `"uint160"`; \}\]; `name`: `"params"`; `type`: `"tuple"`; \}\]; `name`: `"exactOutputSingle"`; `outputs`: readonly \[\{ `name`: `"amountIn"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `components`: readonly \[\{ `name`: `"path"`; `type`: `"bytes"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}, \{ `name`: `"deadline"`; `type`: `"uint256"`; \}, \{ `name`: `"amountOut"`; `type`: `"uint256"`; \}, \{ `name`: `"amountInMaximum"`; `type`: `"uint256"`; \}\]; `name`: `"params"`; `type`: `"tuple"`; \}\]; `name`: `"exactOutput"`; `outputs`: readonly \[\{ `name`: `"amountIn"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `components`: readonly \[\{ `name`: `"path"`; `type`: `"bytes"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}, \{ `name`: `"deadline"`; `type`: `"uint256"`; \}, \{ `name`: `"amountIn"`; `type`: `"uint256"`; \}, \{ `name`: `"amountOutMinimum"`; `type`: `"uint256"`; \}\]; `name`: `"params"`; `type`: `"tuple"`; \}\]; `name`: `"exactInput"`; `outputs`: readonly \[\{ `name`: `"amountOut"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `name`: `"data"`; `type`: `"bytes[]"`; \}\]; `name`: `"multicall"`; `outputs`: readonly \[\{ `name`: `"results"`; `type`: `"bytes[]"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"refundETH"`; `outputs`: readonly \[\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `name`: `"amountMinimum"`; `type`: `"uint256"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}\]; `name`: `"unwrapWETH9"`; `outputs`: readonly \[\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}\]
 
 Defined in: utils/pairedTokenAcquisition.ts:16
 
@@ -39321,7 +39938,7 @@ The Slipstream SwapRouter write surface — `tickSpacing`-keyed, `deadline` insi
 
 > `const` **SolanaVerifierAddress**: `Addresses`
 
-Defined in: addresses.ts:523
+Defined in: addresses.ts:531
 
 
 ---
@@ -39336,7 +39953,7 @@ Defined in: addresses.ts:523
 
 > `const` **StakingManagerAddress**: `Addresses`
 
-Defined in: addresses.ts:394
+Defined in: addresses.ts:402
 
 
 ---
@@ -39351,7 +39968,7 @@ Defined in: addresses.ts:394
 
 > `const` **StakingManagerV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:470
+Defined in: addresses.ts:478
 
 
 ---
@@ -39366,7 +39983,7 @@ Defined in: addresses.ts:470
 
 > `const` **StateViewAddress**: `Addresses`
 
-Defined in: addresses.ts:726
+Defined in: addresses.ts:734
 
 
 ---
@@ -39458,7 +40075,7 @@ Defined in: utils/univ4.ts:5
 
 > `const` **TokenImporterAddress**: `Addresses`
 
-Defined in: addresses.ts:497
+Defined in: addresses.ts:505
 
 Verifiers
 
@@ -39475,7 +40092,7 @@ Verifiers
 
 > `const` **TokenImporterV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:505
+Defined in: addresses.ts:513
 
 
 ---
@@ -39490,7 +40107,7 @@ Defined in: addresses.ts:505
 
 > `const` **TreasuryManagerFactoryAddress**: `Addresses`
 
-Defined in: addresses.ts:362
+Defined in: addresses.ts:370
 
 
 ---
@@ -39505,7 +40122,7 @@ Defined in: addresses.ts:362
 
 > `const` **TreasuryManagerFactoryV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:409
+Defined in: addresses.ts:417
 
 
 ---
@@ -39520,7 +40137,7 @@ Defined in: addresses.ts:409
 
 > `const` **TwoHopPriceCalculatorAbi**: readonly \[\{ `inputs`: readonly \[\]; `name`: `"hubPairedPool"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"address"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"hubToken"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"address"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}\]
 
-Defined in: utils/pairedTokenAcquisition.ts:168
+Defined in: utils/pairedTokenAcquisition.ts:227
 
 The two getters read off a paired token's registered two-hop price calculator.
 
@@ -39537,7 +40154,7 @@ The two getters read off a paired token's registered two-hop price calculator.
 
 > `const` **USDCETHPoolKeys**: `object`
 
-Defined in: addresses.ts:749
+Defined in: addresses.ts:757
 
 ## Index Signature
 
@@ -39556,7 +40173,7 @@ Defined in: addresses.ts:749
 
 > `const` **UniV4PositionManagerAddress**: `Addresses`
 
-Defined in: addresses.ts:743
+Defined in: addresses.ts:751
 
 
 ---
@@ -39571,7 +40188,7 @@ Defined in: addresses.ts:743
 
 > `const` **UniswapV3FactoryAbi**: readonly \[\{ `inputs`: readonly \[\{ `name`: `"tokenA"`; `type`: `"address"`; \}, \{ `name`: `"tokenB"`; `type`: `"address"`; \}, \{ `name`: `"fee"`; `type`: `"uint24"`; \}\]; `name`: `"getPool"`; `outputs`: readonly \[\{ `name`: `"pool"`; `type`: `"address"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}\]
 
-Defined in: utils/pairedTokenAcquisition.ts:174
+Defined in: utils/pairedTokenAcquisition.ts:233
 
 `getPool` on a canonical Uniswap V3 factory.
 
@@ -39588,7 +40205,7 @@ Defined in: utils/pairedTokenAcquisition.ts:174
 
 > `const` **UniswapV3PoolAbi**: readonly \[\{ `inputs`: readonly \[\]; `name`: `"slot0"`; `outputs`: readonly \[\{ `name`: `"sqrtPriceX96"`; `type`: `"uint160"`; \}, \{ `name`: `"tick"`; `type`: `"int24"`; \}, \{ `name`: `"observationIndex"`; `type`: `"uint16"`; \}, \{ `name`: `"observationCardinality"`; `type`: `"uint16"`; \}, \{ `name`: `"observationCardinalityNext"`; `type`: `"uint16"`; \}, \{ `name`: `"feeProtocol"`; `type`: `"uint8"`; \}, \{ `name`: `"unlocked"`; `type`: `"bool"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"fee"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"uint24"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"token0"`; `outputs`: readonly \[\{ `name`: `""`; `type`: `"address"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}\]
 
-Defined in: utils/pairedTokenAcquisition.ts:147
+Defined in: utils/pairedTokenAcquisition.ts:206
 
 Canonical Uniswap V3 pool reads. `slot0` carries the seventh `feeProtocol` field.
 
@@ -39605,7 +40222,7 @@ Canonical Uniswap V3 pool reads. `slot0` carries the seventh `feeProtocol` field
 
 > `const` **UniswapV3QuoterV2Abi**: readonly \[\{ `inputs`: readonly \[\{ `name`: `"path"`; `type`: `"bytes"`; \}, \{ `name`: `"amountIn"`; `type`: `"uint256"`; \}\]; `name`: `"quoteExactInput"`; `outputs`: readonly \[\{ `name`: `"amountOut"`; `type`: `"uint256"`; \}, \{ `name`: `"sqrtPriceX96AfterList"`; `type`: `"uint160[]"`; \}, \{ `name`: `"initializedTicksCrossedList"`; `type`: `"uint32[]"`; \}, \{ `name`: `"gasEstimate"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"nonpayable"`; `type`: `"function"`; \}\]
 
-Defined in: utils/pairedTokenAcquisition.ts:189
+Defined in: utils/pairedTokenAcquisition.ts:248
 
 Uniswap `QuoterV2`'s depth-aware exact-input quote.
 
@@ -39620,9 +40237,9 @@ Uniswap `QuoterV2`'s depth-aware exact-input quote.
 
 # Variable: UniswapV3SwapRouter02Abi
 
-> `const` **UniswapV3SwapRouter02Abi**: readonly \[\{ `inputs`: readonly \[\{ `components`: readonly \[\{ `name`: `"tokenIn"`; `type`: `"address"`; \}, \{ `name`: `"tokenOut"`; `type`: `"address"`; \}, \{ `name`: `"fee"`; `type`: `"uint24"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}, \{ `name`: `"amountOut"`; `type`: `"uint256"`; \}, \{ `name`: `"amountInMaximum"`; `type`: `"uint256"`; \}, \{ `name`: `"sqrtPriceLimitX96"`; `type`: `"uint160"`; \}\]; `name`: `"params"`; `type`: `"tuple"`; \}\]; `name`: `"exactOutputSingle"`; `outputs`: readonly \[\{ `name`: `"amountIn"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `components`: readonly \[\{ `name`: `"path"`; `type`: `"bytes"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}, \{ `name`: `"amountOut"`; `type`: `"uint256"`; \}, \{ `name`: `"amountInMaximum"`; `type`: `"uint256"`; \}\]; `name`: `"params"`; `type`: `"tuple"`; \}\]; `name`: `"exactOutput"`; `outputs`: readonly \[\{ `name`: `"amountIn"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `name`: `"deadline"`; `type`: `"uint256"`; \}, \{ `name`: `"data"`; `type`: `"bytes[]"`; \}\]; `name`: `"multicall"`; `outputs`: readonly \[\{ `name`: `"results"`; `type`: `"bytes[]"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"refundETH"`; `outputs`: readonly \[\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}\]
+> `const` **UniswapV3SwapRouter02Abi**: readonly \[\{ `inputs`: readonly \[\{ `components`: readonly \[\{ `name`: `"tokenIn"`; `type`: `"address"`; \}, \{ `name`: `"tokenOut"`; `type`: `"address"`; \}, \{ `name`: `"fee"`; `type`: `"uint24"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}, \{ `name`: `"amountOut"`; `type`: `"uint256"`; \}, \{ `name`: `"amountInMaximum"`; `type`: `"uint256"`; \}, \{ `name`: `"sqrtPriceLimitX96"`; `type`: `"uint160"`; \}\]; `name`: `"params"`; `type`: `"tuple"`; \}\]; `name`: `"exactOutputSingle"`; `outputs`: readonly \[\{ `name`: `"amountIn"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `components`: readonly \[\{ `name`: `"path"`; `type`: `"bytes"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}, \{ `name`: `"amountOut"`; `type`: `"uint256"`; \}, \{ `name`: `"amountInMaximum"`; `type`: `"uint256"`; \}\]; `name`: `"params"`; `type`: `"tuple"`; \}\]; `name`: `"exactOutput"`; `outputs`: readonly \[\{ `name`: `"amountIn"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `components`: readonly \[\{ `name`: `"path"`; `type`: `"bytes"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}, \{ `name`: `"amountIn"`; `type`: `"uint256"`; \}, \{ `name`: `"amountOutMinimum"`; `type`: `"uint256"`; \}\]; `name`: `"params"`; `type`: `"tuple"`; \}\]; `name`: `"exactInput"`; `outputs`: readonly \[\{ `name`: `"amountOut"`; `type`: `"uint256"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `name`: `"deadline"`; `type`: `"uint256"`; \}, \{ `name`: `"data"`; `type`: `"bytes[]"`; \}\]; `name`: `"multicall"`; `outputs`: readonly \[\{ `name`: `"results"`; `type`: `"bytes[]"`; \}\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\]; `name`: `"refundETH"`; `outputs`: readonly \[\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `name`: `"amountMinimum"`; `type`: `"uint256"`; \}, \{ `name`: `"recipient"`; `type`: `"address"`; \}\]; `name`: `"unwrapWETH9"`; `outputs`: readonly \[\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}\]
 
-Defined in: utils/pairedTokenAcquisition.ts:72
+Defined in: utils/pairedTokenAcquisition.ts:101
 
 The Uniswap `SwapRouter02` write surface — `fee`-keyed, no `deadline` in the params. The deadline
 is enforced by the `multicall(uint256 deadline, bytes[])` overload every routed call is wrapped in.
@@ -39640,7 +40257,7 @@ is enforced by the `multicall(uint256 deadline, bytes[])` overload every routed 
 
 > `const` **UniversalRouterAddress**: `Addresses`
 
-Defined in: addresses.ts:711
+Defined in: addresses.ts:719
 
 
 ---
@@ -39655,7 +40272,7 @@ Defined in: addresses.ts:711
 
 > `const` **VirtualsVerifierAddress**: `Addresses`
 
-Defined in: addresses.ts:528
+Defined in: addresses.ts:536
 
 
 ---
@@ -39670,7 +40287,7 @@ Defined in: addresses.ts:528
 
 > `const` **WhitelistVerifierAddress**: `Addresses`
 
-Defined in: addresses.ts:533
+Defined in: addresses.ts:541
 
 
 ---
@@ -39685,7 +40302,7 @@ Defined in: addresses.ts:533
 
 > `const` **WhitelistedPermissionsAddress**: `Addresses`
 
-Defined in: addresses.ts:554
+Defined in: addresses.ts:562
 
 
 ---
@@ -39700,7 +40317,7 @@ Defined in: addresses.ts:554
 
 > `const` **WhitelistedPermissionsV1\_3Address**: `Addresses`
 
-Defined in: addresses.ts:565
+Defined in: addresses.ts:573
 
 
 ---
@@ -39715,7 +40332,7 @@ Defined in: addresses.ts:565
 
 > `const` **ZoraVerifierAddress**: `Addresses`
 
-Defined in: addresses.ts:538
+Defined in: addresses.ts:546
 
 
 ---

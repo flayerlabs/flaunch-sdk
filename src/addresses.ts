@@ -183,6 +183,11 @@ export interface PairedTokenAcquisitionDex {
   wethHubPoolKey: number;
   /** Venue discovery (`uniswapV3` only): factory, fee tiers to probe, and a QuoterV2 for depth-aware quotes. */
   venues?: { factory: Address; feeTiers: readonly number[]; quoterV2?: Address };
+  /**
+   * A QuoterV2 on the venue's own factory for a flavour without venue discovery (slipstream). Disposal
+   * quotes price the calculator's pool through it depth-aware; `uniswapV3` uses `venues.quoterV2`.
+   */
+  quoterV2?: Address;
 }
 export const PairedTokenAcquisitionDexAddress: Record<number, PairedTokenAcquisitionDex> = {
   [base.id]: {
@@ -194,6 +199,9 @@ export const PairedTokenAcquisitionDexAddress: Record<number, PairedTokenAcquisi
     // tickSpacing 50 holds the depth (ts 1 and 10 exist but are shallow / dust)
     wethHubPool: "0x3FE04A59Ebd38cF06080a6F60a98D124eb59392A",
     wethHubPoolKey: 50,
+    // The B20 DEX's own QuoterV2 (Sourcify exact match), deployed by the router's deployer one nonce
+    // before it; factory() and WETH9() equal the router's (0xf8f2eB49… / 0x4200…0006). Paths key by tickSpacing.
+    quoterV2: "0x514c8B5f54112481E28028F1166Bd78501089259",
   },
   [robinhood.id]: {
     flavor: "uniswapV3",
