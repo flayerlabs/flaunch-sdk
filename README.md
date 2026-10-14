@@ -52,6 +52,7 @@ Static-split recipients independently divide 100% of the pool remaining after cr
   - [Buying a Flaunch coin](#buying-a-flaunch-coin)
   - [Selling with Permit2](#selling-with-permit2)
   - [Swap using USDC or other tokens by passing `intermediatePoolKey`](#swap-using-usdc-or-other-tokens-by-passing-intermediatepoolkey)
+  - [Buying and selling B20 paired tokens (acquisition and disposal)](#buying-and-selling-b20-paired-tokens-acquisition-and-disposal)
   - [Claiming creator revenue](#claiming-creator-revenue)
   - [Advanced Integration: Revenue Sharing with RevenueManager](#advanced-integration-revenue-sharing-with-revenuemanager)
     - [v1.3.1 multi-asset RevenueManager (Base)](#v131-multi-asset-revenuemanager-base)
@@ -891,6 +892,45 @@ if (allowance < parseEther(coinAmount)) {
 ```
 
 3. The quote functions `getSellQuoteExactInput`, `getBuyQuoteExactInput` and `getBuyQuoteExactOutput` also support passing optional `intermediatePoolKey`.
+
+### Buying and selling B20 paired tokens (acquisition and disposal)
+
+On Base and Robinhood a coin can be paired with a tokenised equity (a B20 token such as SPCXc or RDDT) whose only liquidity sits on a concentrated-liquidity DEX: the B20 Slipstream fork on Base and Uniswap V3 on Robinhood. Gate both flows with `doesChainSupportPairedTokenAcquisition(chainId)`; Base Sepolia has no venue.
+
+Acquisition buys an exact amount of the paired token from ETH (or the USD hub token) so it can be spent on the coin's pool:
+
+```ts
+const plan = await flaunchRead.planPairedTokenAcquisitionForBudget({
+  pairedToken,
+  input: "eth",
+  amountIn: parseEther("0.01"),
+  slippageBps: 300,
+  recipient: wallet,
+});
+// plan.approve (hub input only), then plan.swap ({ to, data, value })
+```
+
+Disposal sells leftover paired token back to native ETH. Quote first, take your slippage off `expectedOut`, and pass the quote's `route` so the sell executes on the pool that priced it:
+
+```ts
+const quote = await flaunchRead.quotePairedTokenDisposal({
+  pairedToken,
+  output: "eth",
+  amountIn: leftover,
+});
+const plan = await flaunchRead.planPairedTokenDisposal({
+  pairedToken,
+  output: "eth",
+  amountIn: leftover,
+  amountOutMinimum: (quote.expectedOut * 9_800n) / 10_000n, // 2% slippage
+  recipient: wallet,
+  sender: wallet, // for the allowance check
+  route: quote.route,
+});
+// Send plan.approve if present (paired token -> venue router), then plan.swap (value 0)
+```
+
+The sell is one router multicall: an exact-input swap `token -> hub -> WETH` (or `token -> WETH` through a direct pool on Robinhood) into the router's own custody, then `unwrapWETH9(amountOutMinimum, recipient)`. The whole input is spent and the unwrap sweeps all of the WETH, so the router keeps no dust. Quotes come from each venue's QuoterV2 (depth-aware; `source: "quoter"`), falling back to the registry calculator pool's spot price (`source: "spot"`).
 
 ### Claiming creator revenue
 

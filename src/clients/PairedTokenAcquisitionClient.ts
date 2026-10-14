@@ -10,6 +10,7 @@ import {
   acquisitionPoolAbi,
   clSpotAmountOut,
   encodeAcquisitionExactInputPath,
+  encodeDisposalExactInputPath,
   TwoHopPriceCalculatorAbi,
   UniswapV3FactoryAbi,
   UniswapV3QuoterV2Abi,
@@ -22,6 +23,15 @@ export interface PairedTokenAcquisitionQuote {
   /** Expected paired-token output for the exact input, before any slippage haircut. */
   expectedOut: bigint;
   /** How the number was produced — a depth-aware quoter, or the calculator pool's single-tick spot. */
+  source: "quoter" | "spot";
+}
+
+export interface PairedTokenDisposalQuote {
+  /** The venue the sell trades on: the paired-token leg's pool (hub:token, or WETH:token when `direct`). */
+  route: PairedTokenAcquisitionRoute;
+  /** Expected ETH (wei) for selling the exact paired-token input, before any slippage haircut. */
+  expectedOut: bigint;
+  /** A depth-aware QuoterV2 quote, or the calculator pool's single-tick spot. */
   source: "quoter" | "spot";
 }
 
@@ -206,6 +216,72 @@ export class ReadPairedTokenAcquisition {
     }
     const route = await this.resolveRoute(pairedToken);
     const expectedOut = await this.quoteSpot(pairedToken, route, input, amountIn);
+    return { route, expectedOut, source: "spot" };
+  }
+
+  /**
+   * Spot ETH out for SELLING an exact paired-token input through a hub route: token -> hub in the
+   * route's pool, then hub -> WETH in the WETH:hub pool. Single-tick, like {@link quoteSpot}.
+   */
+  async quoteDisposalSpot(route: PairedTokenAcquisitionRoute, amountIn: bigint): Promise<bigint> {
+    if (route.direct) {
+      throw new Error("quoteDisposalSpot prices hub routes only; quote a direct route through the venue quoter");
+    }
+    const [paired, wethHub, wethHubToken0] = await Promise.all([
+      this.poolPrice(route.pool),
+      this.poolPrice(this.dex.wethHubPool),
+      this.pool(this.dex.wethHubPool).read("token0", {}),
+    ]);
+    // payingIsToken0 names the hub's side; selling the paired token is zeroForOne when the hub is token1
+    const hubAmount = clSpotAmountOut(amountIn, paired.sqrtPriceX96, paired.fee, !route.payingIsToken0);
+    return clSpotAmountOut(
+      hubAmount,
+      wethHub.sqrtPriceX96,
+      wethHub.fee,
+      wethHubToken0.toLowerCase() === this.dex.hubToken.toLowerCase()
+    );
+  }
+
+  /**
+   * Picks the venue and expected ETH for selling an exact paired-token input. With a QuoterV2, every
+   * candidate venue (all existing hub and direct WETH pools on `uniswapV3`; the calculator's pool on
+   * slipstream) is quoted over the sell path and the best output wins. Without one, or when every
+   * quote fails, the calculator's pool is priced at spot.
+   */
+  async quoteDisposal(pairedToken: Address, amountIn: bigint): Promise<PairedTokenDisposalQuote> {
+    const quoter = this.dex.quoterV2 ?? this.dex.venues?.quoterV2;
+    if (quoter) {
+      try {
+        // Direct WETH:token pools are reachable from a token input too, so discovery probes them
+        // the same way it does for an ETH buy.
+        const candidates = this.dex.venues
+          ? await this.enumerateVenues(pairedToken, "eth")
+          : [await this.resolveRoute(pairedToken)];
+        const quotes = await Promise.all(
+          candidates.map(async (route) => {
+            try {
+              const res = await this.drift
+                .contract({ abi: UniswapV3QuoterV2Abi, address: quoter })
+                .simulateWrite("quoteExactInput", {
+                  path: encodeDisposalExactInputPath(this.dex, pairedToken, route),
+                  amountIn,
+                });
+              return { route, amountOut: res.amountOut };
+            } catch {
+              return null;
+            }
+          })
+        );
+        const best = quotes
+          .filter((q): q is { route: PairedTokenAcquisitionRoute; amountOut: bigint } => !!q && q.amountOut > 0n)
+          .sort((a, b) => (a.amountOut > b.amountOut ? -1 : a.amountOut < b.amountOut ? 1 : 0))[0];
+        if (best) return { route: best.route, expectedOut: best.amountOut, source: "quoter" };
+      } catch {
+        // Discovery or route resolution failed (RPC): fall through to the calculator pool at spot
+      }
+    }
+    const route = await this.resolveRoute(pairedToken);
+    const expectedOut = await this.quoteDisposalSpot(route, amountIn);
     return { route, expectedOut, source: "spot" };
   }
 }

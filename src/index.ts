@@ -164,14 +164,16 @@ export type {
   PoolSwapV1_3SwapParams,
 } from "./clients/PoolSwapV1_3Client";
 export { ReadPairedTokenPositionManagerV1_3 } from "./clients/PairedTokenPositionManagerV1_3Client";
-// Buying a non-ETH paired token (a B20 equity) from ETH or the USD hub, before it is spent on a coin's pool
+// Buying a non-ETH paired token (a B20 equity) from ETH or the USD hub, before it is spent on a coin's pool, and selling leftovers back to ETH
 export { ReadPairedTokenAcquisition } from "./clients/PairedTokenAcquisitionClient";
-export type { PairedTokenAcquisitionQuote } from "./clients/PairedTokenAcquisitionClient";
+export type { PairedTokenAcquisitionQuote, PairedTokenDisposalQuote } from "./clients/PairedTokenAcquisitionClient";
 export * from "./utils/pairedTokenAcquisition";
 export type {
   PairedTokenApprovalParams,
   PairedTokenAcquisitionParams,
   PairedTokenAcquisitionPlan,
+  PairedTokenDisposalParams,
+  PairedTokenDisposalPlan,
   PairedSwapDirection,
   PairedTokenSwapParams,
   PairedSwapPlanParams,

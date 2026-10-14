@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **Paired-token disposal: sell leftover B20 paired tokens back to ETH** (Base, Robinhood). The mirror of the buy-only acquisition route.
+  - `quotePairedTokenDisposal({ pairedToken, output: "eth", amountIn })` on `ReadFlaunchSDK` returns `{ route, expectedOut, source }` (`PairedTokenDisposalQuote`). On Robinhood every existing USDG and direct WETH pool for the token is quoted through the canonical QuoterV2 over the sell path and the best wins; on Base the registry calculator's pool is quoted through the B20 DEX's own QuoterV2. Either falls back to a two-hop spot price on the calculator pool
+  - `planPairedTokenDisposal({ pairedToken, output: "eth", amountIn, amountOutMinimum, recipient, sender?, route?, deadline? })` returns `{ route, output, amountIn, amountOutMinimum, approve?, swap }` (`PairedTokenDisposalPlan`): the paired-token approve to the venue router when the sender's allowance is short, then one router multicall with `value: 0n` that runs an exact-input `token -> hub -> WETH` (or `token -> WETH`) swap into the router's own custody and `unwrapWETH9(amountOutMinimum, recipient)`
+  - Router custody follows each deployed router's verified source and is exported as `ROUTER_CUSTODY_RECIPIENT`: `address(0)` on the Base Slipstream `SwapRouter` (`exactInputInternal` maps it to `address(this)`), `address(2)` (`Constants.ADDRESS_THIS`) on Robinhood's `SwapRouter02`
+  - `SlipstreamSwapRouterAbi` and `UniswapV3SwapRouter02Abi` gain `exactInput` (deadline in the params on Slipstream, not on SwapRouter02) and `unwrapWETH9(uint256 amountMinimum, address recipient)`; new pure encoders `encodeDisposalExactInputPath` and `encodeDisposalEthSell`; `ReadPairedTokenAcquisition.quoteDisposal` / `quoteDisposalSpot`
+  - `PairedTokenAcquisitionDexAddress[8453].quoterV2`: the B20 DEX QuoterV2 `0x514c8B5f54112481E28028F1166Bd78501089259` (Sourcify exact match; deployed by the router's deployer at the nonce before the router; `factory()` and `WETH9()` match the router's). Acquisition quotes on Base are unchanged (still spot)
+  - `scripts/test-paired-token-disposal-fork.cjs` (`PAIRED_DISPOSAL_FORK=1 pnpm test:disposal:fork`): buys each default equity with a fresh key, sells it back, and asserts the recipient's ETH rises by at least `amountOutMinimum`, the sender holds no paired token, the router's ETH/WETH/hub/paired balances are unchanged, and a minimum of twice the quote reverts. Robinhood runs on a spawned Anvil fork (`FORK_RPC_ROBINHOOD`). Base runs as one `eth_simulateV1` block on live state (`FORK_RPC_BASE`): its B20 equities are node-native tokens (account code `0xef`) that Anvil cannot execute, so an Anvil fork reverts every transfer. Nothing is broadcast in either mode
+
 ## [0.17.1] - 2026-09-22
 
 ### Fixed
