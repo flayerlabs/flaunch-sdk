@@ -89,7 +89,11 @@ test("Ethereum maps match the verified deployment and keep legacy/default pairin
     assert.equal(DefaultPairedTokenAddress[chain.id], FLETHAddress[chain.id]);
   }
   // the vested AnyPositionManager (CREATE3 parity) joined on 2026-09-21 (FLA2-417)
-  assert.deepEqual(getV1_3PositionManagers(mainnet.id), [HOOK, ANY_HOOK, "0xE753a351FB498051a09Dc130fcC29aEBc76525DC"]);
+  assert.deepEqual(getV1_3PositionManagers(mainnet.id), [
+    HOOK, ANY_HOOK, "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
+    // v1.6.0 hooks, appended last (additive)
+    "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC", "0x0a68F68D0C5C4c7c32BCDF0a64670D8cEe5565DC",
+  ]);
   assert.equal(getPermissionsAddressV1_3(Permissions.CLOSED, mainnet.id), RELEASE_ADDRESSES.ClosedPermissionsV1_3Address);
   assert.equal(getPermissionsAddressV1_3(Permissions.WHITELISTED, mainnet.id), RELEASE_ADDRESSES.WhitelistedPermissionsV1_3Address);
   assert.equal(sdkExports.QuoterAddress[mainnet.id], "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203");
