@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **v1.6.0 hook addresses** (flaunch-contracts PRs #323 / #326, live 2026-10-21 on Ethereum, Base, Arbitrum, Robinhood and Base Sepolia): `FlaunchPositionManagerV1_6Address` (`0x54bE…a5DC`) and `AnyPositionManagerV1_6Address` (`0x0a68…65DC`), one CREATE3 address on every chain, plus the per-chain `FlaunchV1_6Address`, `AnyFlaunchV1_6Address`, `FlaunchZapV1_6Address` and `FeeCalculatorDispatcherV1_6Address`. Purely additive: no launch, swap or read default changes, and the v1.3 / v1.4 hooks stay current. `getV1_3PositionManagers` lists the two v1.6 hooks last (same paired-token ABI), so coins launched on them can be located and swapped, and `PoolSwapForHookV1_3Address` maps them to each chain's current protected PoolSwap. On Robinhood and Base Sepolia the v1.6 spend gate does not yet approve that PoolSwap, so a spend-gated v1.6 buy there needs a `setApprovedRouter` call first; ungated swaps are unaffected.
+
 ## [0.17.1] - 2026-09-22
 
 ### Fixed

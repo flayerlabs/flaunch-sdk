@@ -133,15 +133,21 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
     "0xcab62e007ab6656877ab556cea330de27ae025dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A",
     "0xbbe1b9831117e829fe80be97fce82f2b49c1a5dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A",
     "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A", // vested AnyPM (CREATE3 parity, deployed 2026-09-17): the v2 gate approves this PoolSwap
+    "0x54bedd41afdf57722518cf6dd826a70d81e9a5dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A", // v1.6.0 PM (2026-10-21): the v1.6 gate 0xC859… approves this PoolSwap
+    "0x0a68f68d0c5c4c7c32bcdf0a64670d8cee5565dc": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A", // v1.6.0 AnyPM, same gate as the v1.6.0 PM
   },
   [mainnet.id]: {
     "0xb741a710e456fc6d7f76c88f5c56b27d05e8a5dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
     "0x0215c3ef94ef3e86c32e847c662ad649000965dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56",
     "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56", // vested AnyPM (CREATE3 parity, deployed 2026-09-21): the v1 and v2 gates both approve this PoolSwap
+    "0x54bedd41afdf57722518cf6dd826a70d81e9a5dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56", // v1.6.0 PM (2026-10-21): the v1.6 gate 0xf806… approves this PoolSwap
+    "0x0a68f68d0c5c4c7c32bcdf0a64670d8cee5565dc": "0x05c6C717B2a985809a83D27F779044c2da27fd56", // v1.6.0 AnyPM, same gate as the v1.6.0 PM
   },
   [base.id]: {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // v1.3.1 PM, gate 0xBdbF…
     "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // vested AnyPM (CREATE3 parity, deployed 2026-09-17): the v2 gate approves this PoolSwap
+    "0x54bedd41afdf57722518cf6dd826a70d81e9a5dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // v1.6.0 PM (2026-10-21): the v1.6 gate 0x8ebF… approves this PoolSwap
+    "0x0a68f68d0c5c4c7c32bcdf0a64670d8cee5565dc": "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a", // v1.6.0 AnyPM, same gate as the v1.6.0 PM
   },
   [baseSepolia.id]: {
     // Keys stay LOWERCASE — `poolSwapForHook` lowercases its lookup.
@@ -149,12 +155,16 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
     "0x28118f40eca9b884beb42b0196409a73269525dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // `.vpt2` AnyPM, same gate
     "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.3.3 PM, gate 0x54cd…
     "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // vested AnyPM (AnyFlaunchZap generation, 2026-09-11): same dispatcher + gate 0x54cd… as the v1.3.3 PM. Gate 0x54cd… approves BOTH the legacy 0xF0f3… and the protected 0xb32a… routers; the SDK swaps via swapExactInput, which only the protected one has
+    "0x54bedd41afdf57722518cf6dd826a70d81e9a5dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.6.0 PM (2026-10-21): NOTE: as of 2026-10-21 the v1.6 gate 0x5018… approves only the legacy 0xF0f3… router + UR, not this one, so a SPEND-GATED v1.6 buy needs `setApprovedRouter(0xb32a…, true)` first; ungated swaps are unaffected
+    "0x0a68f68d0c5c4c7c32bcdf0a64670d8cee5565dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.6.0 AnyPM, same gate as the v1.6.0 PM
   },
   [robinhood.id]: {
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 PM, gate 0xB246…
     "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.3 PM, gate 0x120a…
     "0x6ea0edee449a287504990df8d87951b9436825dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 AnyPM, same gate as the v1.3.1 PM
     "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // vested AnyPM (CREATE3 parity, deployed 2026-09-17)
+    "0x54bedd41afdf57722518cf6dd826a70d81e9a5dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.6.0 PM (2026-10-21): NOTE: as of 2026-10-21 the v1.6 gate 0xb5ec… approves only the ReferralEscrow's older PoolSwap 0x92D2… + UR, not this one, so a SPEND-GATED v1.6 buy needs `setApprovedRouter(0xD33d…, true)` first; ungated swaps are unaffected
+    "0x0a68f68d0c5c4c7c32bcdf0a64670d8cee5565dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.6.0 AnyPM, same gate as the v1.6.0 PM
   },
 };
 
@@ -262,6 +272,65 @@ export const AnyFlaunchV1_3Address: Addresses = {
   [base.id]: "0x299c7e6992a4630d77a8cbd60aa78e17189e53f7",
   [baseSepolia.id]: "0x2154c604df568a5285284d1c4918dc98c39240df", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
   [robinhood.id]: "0x1bbbD15A6D5176edc7B42f2cc6cA800D9d74015D",
+};
+
+// v1.6.0 hooks (flaunch-contracts PRs #323 / #326, LIVE 2026-10-21): a hooks-only release adding a
+// hard 10% swap fee cap and fee calculator calls that cannot revert a swap. Same CREATE3 hook
+// addresses on every chain (salt `.v1.6.0`); each chain's PoolSwap, registry, escrow, BidWall and
+// TreasuryManagerFactory are reused unchanged. Record: flaunch-contracts `deployments/v1.6.0.md`.
+//
+// ADDITIVE ONLY: no launch, swap or read default points here yet. The v1.3 / v1.4 maps above stay
+// the defaults, and their hooks keep serving their pools (they are not superseded).
+export const FlaunchPositionManagerV1_6Address: Addresses = {
+  [arbitrum.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
+  [mainnet.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
+  [base.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
+  [baseSepolia.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
+  [robinhood.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
+};
+
+export const AnyPositionManagerV1_6Address: Addresses = {
+  [arbitrum.id]: "0x0a68F68D0C5C4c7c32BCDF0a64670D8cEe5565DC",
+  [mainnet.id]: "0x0a68F68D0C5C4c7c32BCDF0a64670D8cEe5565DC",
+  [base.id]: "0x0a68F68D0C5C4c7c32BCDF0a64670D8cEe5565DC",
+  [baseSepolia.id]: "0x0a68F68D0C5C4c7c32BCDF0a64670D8cEe5565DC",
+  [robinhood.id]: "0x0a68F68D0C5C4c7c32BCDF0a64670D8cEe5565DC",
+};
+
+/** The Flaunch ERC721 of `FlaunchPositionManagerV1_6Address`. */
+export const FlaunchV1_6Address: Addresses = {
+  [arbitrum.id]: "0x093238E0DdECAdFf1F30Cb98362d94fc1A44C33F",
+  [mainnet.id]: "0x1B8065a099AdcD7aa7c5e241e3596B56ec98bA5a",
+  [base.id]: "0x19Ce29668201Ef002b59BC3f623352512dCab8E0",
+  [baseSepolia.id]: "0x29b37dfe763a3Bb4CaCf0f98F537844Be72A6BB8",
+  [robinhood.id]: "0x4743F5E148B9d4BF2968218abc09E94Ff53e8425",
+};
+
+/** The AnyFlaunch ERC721 of `AnyPositionManagerV1_6Address`. */
+export const AnyFlaunchV1_6Address: Addresses = {
+  [arbitrum.id]: "0x5c51953b01958586e7c61F28102B7faD95604d60",
+  [mainnet.id]: "0x5cf92e050347d9E6C8EdB36A1ccd49555696b9a8",
+  [base.id]: "0x6E62D5F4d107D463889448F64407b421149F4255",
+  [baseSepolia.id]: "0x41Bc355AE6D9A5AC57B088356f4206be408E48E1",
+  [robinhood.id]: "0x01E10423e3d3790aa83F1604B8d6082063a5351A",
+};
+
+/** FlaunchZap launching through `FlaunchPositionManagerV1_6Address`, bound to each chain's live TreasuryManagerFactory. */
+export const FlaunchZapV1_6Address: Addresses = {
+  [arbitrum.id]: "0x0E3ACf44D030Cc632Fa006b56778E009bC9564d8",
+  [mainnet.id]: "0x37C71d412eeB80dce4eB098F2F93F8270911C2D8",
+  [base.id]: "0x07d077b37223882472AC6C88D187b860250dDB8d",
+  [baseSepolia.id]: "0x479B750A524D3cA9Fdd6974EE54222235fCFbFf8",
+  [robinhood.id]: "0xB03Be6c735ef90189D6a22bBC8F6A45a33348fDe",
+};
+
+/** The FeeCalculatorDispatcher both v1.6 hooks read their fee calculator from. */
+export const FeeCalculatorDispatcherV1_6Address: Addresses = {
+  [arbitrum.id]: "0x2154c604df568A5285284D1c4918DC98C39240df",
+  [mainnet.id]: "0x8D4C4c90679Cb7025d1bD54599121a37Daf62586",
+  [base.id]: "0xf6b82110063fE258b615B2C347744070ade7119e",
+  [baseSepolia.id]: "0x8B492E78017E601A21d60265488D9b70F9502F9A",
+  [robinhood.id]: "0xa6184C5Cc5D0c3e1C10B9D5361f3Df5D2aCaEF59",
 };
 
 // Vested launches (AnyFlaunchZap + MemecoinVesting). Base Sepolia: deployed 2026-09-11 (blocks

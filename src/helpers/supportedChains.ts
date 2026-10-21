@@ -24,6 +24,8 @@ import {
   PairedTokenPositionManagerV1_3Address,
   PairedTokenRegistryV1_3Address,
   SupersededPositionManagerV1_3Address,
+  FlaunchPositionManagerV1_6Address,
+  AnyPositionManagerV1_6Address,
   PoolSwapV1_3Address,
   PoolSwapForHookV1_3Address,
   PairedTokenAcquisitionDexAddress,
@@ -124,8 +126,9 @@ export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
 /**
  * Every v1.3 hook that has ever served paired-token pools on a chain: the current
  * PositionManager, the import-generation AnyPositionManager, any superseded generations that
- * still serve their pools, and the vested-launch hook (the AnyPositionManager behind the
- * AnyFlaunchZap - same pool shape and registry, its own address). Use this when deciding whether
+ * still serve their pools, the vested-launch hook (the AnyPositionManager behind the
+ * AnyFlaunchZap - same pool shape and registry, its own address), and the v1.6.0 PositionManager /
+ * AnyPositionManager (same paired-token ABI, launched 2026-10-21). Use this when deciding whether
  * an arbitrary hook address (e.g. from an indexer `Pool.positionManager`) is a v1.3 hook; the
  * paired-pool locator, `PoolCreated` decoding and the liquidity helpers all iterate it.
  */
@@ -133,11 +136,18 @@ export function getV1_3PositionManagers(chainId: number): Address[] {
   const current = PairedTokenPositionManagerV1_3Address[chainId];
   const any = AnyPositionManagerV1_3Address[chainId];
   const vested = AnyFlaunchZapPositionManagerAddress[chainId];
+  // v1.6.0 hooks share the v1.3 paired-token ABI (poolKey, PoolCreated) and pool shape. Listed
+  // LAST so a coin on an older generation still resolves on the first matching probe; this only
+  // lets coins launched on v1.6 be located, and changes no default.
+  const v1_6 = FlaunchPositionManagerV1_6Address[chainId];
+  const anyV1_6 = AnyPositionManagerV1_6Address[chainId];
   return [
     ...(current ? [current] : []),
     ...(any ? [any] : []),
     ...(SupersededPositionManagerV1_3Address[chainId] ?? []),
     ...(vested ? [vested] : []),
+    ...(v1_6 ? [v1_6] : []),
+    ...(anyV1_6 ? [anyV1_6] : []),
   ];
 }
 
