@@ -2163,7 +2163,6 @@ export class ReadFlaunchSDK {
     throw new Error(`Unknown coin version for address: ${coinAddress}`);
   }
 
-  // @note update FlaunchBackend as well when new version is added
   /**
    * Gets the position manager instance for a given version
    * @param version - The version to get the position manager instance for

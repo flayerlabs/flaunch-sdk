@@ -1089,25 +1089,8 @@ const hash = await flaunchWrite.flaunchIPFS({
 });
 ```
 
-2. Backend SDK to sign & generate hookData
-   As the signing happens via your secure privateKey, we have a separate `FlaunchBackend` exported from our SDK package that's intended to be run on your nodejs backend or API. The API can verify if the request is legit (post captcha verification), and then return the signed hookData to be used for the `buyCoin` transaction.
-
-```ts
-import { FlaunchBackend } from "@flaunch/sdk";
-
-const flaunchBackend = new FlaunchBackend(privateKeyHex, chain.id);
-
-const { hookData, deadline, signature } =
-  await flaunchBackend.generateHookDataWithSignature({
-    userWallet,
-    coinAddress,
-    referrer: referrer || undefined, // Optional parameter
-    deadlineFromNowInSeconds: 10 * 60, // 10 minutes in seconds
-  });
-
-// hookData would be passed to buyQuote and buyCoin functions
-// signature and deadline useful for passing to the flaunch call with premine, via `trustedSignerSettings.premineSignedMessage` parameter
-```
+2. Sign buys on your backend
+   The signature is produced with your private key, so it belongs on your server. Sign an EIP-712 `FairLaunchAuthorization(address buyer, bytes32 poolId, uint256 deadline)` under the TrustedSignerFeeCalculator's domain (`eip712Domain()` on the calculator), and pass `abi.encode(referrer, SignedMessage{buyer, poolId, deadline, signature})` as the `hookData` to `buyQuote` / `buyCoin`. The SDK no longer ships a `FlaunchBackend` helper: the one it had signed a plain keccak digest with the wrong struct and a flETH pool id, so it never matched the deployed calculator. See `hashFairLaunchAuthorization` in flaunch-contracts for the reference implementation.
 
 3. Check TrustedSigner status for a coin
 
@@ -2511,124 +2494,6 @@ pairings), and the plan's binding includes `vestingSchedulesHash` — the keccak
 ABI-encoded schedules — so executing a plan with different schedules is a `BINDING_MISMATCH` /
 `CALLDATA_MISMATCH`. Manager launches are allowed on this route. Reason codes specific to it:
 `INVALID_VESTING_SCHEDULE`, `VESTED_SUPPLY_EXCEEDS_CAP`.
-
-
----
-
-**@flaunch/sdk v0.18.0**
-
-***
-
-@flaunch/sdk / FlaunchBackend
-
-# Class: FlaunchBackend
-
-Defined in: sdk/FlaunchBackend.ts:24
-
-Backend class for interacting with Flaunch protocol for generating hookData with signature for swaps.
-Doesn't require any publicClient or walletClient to be initialized.
-
-## Constructors
-
-### Constructor
-
-> **new FlaunchBackend**(`signerPrivateKey`, `chainId`): `FlaunchBackend`
-
-Defined in: sdk/FlaunchBackend.ts:28
-
-Parameters
-
-#signerPrivateKey
-
-`` `0x${string}` ``
-
-#chainId
-
-`number`
-
-Returns
-
-`FlaunchBackend`
-
-## Properties
-
-### chainId
-
-> `readonly` **chainId**: `number`
-
-Defined in: sdk/FlaunchBackend.ts:26
-
-***
-
-### signerPrivateKey
-
-> **signerPrivateKey**: `` `0x${string}` ``
-
-Defined in: sdk/FlaunchBackend.ts:25
-
-## Methods
-
-### generateHookDataWithSignature()
-
-> **generateHookDataWithSignature**(`userWallet`): `Promise`\<\{ `deadline`: `number`; `hookData`: `` `0x${string}` ``; `signature`: `` `0x${string}` ``; \}\>
-
-Defined in: sdk/FlaunchBackend.ts:43
-
-Generates the hookData for swaps when TrustedSigner is enabled for a coin during fair launch
-
-Parameters
-
-#userWallet
-
-The wallet address to generate a signature for
-
-##coinAddress
-
-`` `0x${string}` ``
-
-##deadlineFromNowInSeconds
-
-`number`
-
-##referrer?
-
-`` `0x${string}` ``
-
-##userWallet
-
-`` `0x${string}` ``
-
-##version?
-
-`FlaunchVersion`
-
-Returns
-
-`Promise`\<\{ `deadline`: `number`; `hookData`: `` `0x${string}` ``; `signature`: `` `0x${string}` ``; \}\>
-
-The hookData, deadline and signature
-
-***
-
-### getPositionManagerAddress()
-
-> **getPositionManagerAddress**(`version?`): `` `0x${string}` ``
-
-Defined in: sdk/FlaunchBackend.ts:119
-
-Gets the position manager address for a given version
-
-Parameters
-
-#version?
-
-`FlaunchVersion`
-
-The version to get the position manager address for, defaults to the latest version if undefined
-
-Returns
-
-`` `0x${string}` ``
 
 
 ---
@@ -4910,7 +4775,7 @@ Returns
 
 > **bidWallPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `pendingEth`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3202
+Defined in: sdk/FlaunchSDK.ts:3201
 
 Gets information about the bid wall position for a coin
 
@@ -4940,7 +4805,7 @@ Promise<{flETHAmount: bigint, coinAmount: bigint, pendingEth: bigint, tickLower:
 
 > **calculateAddLiquidityAmounts**(`params`): `Promise`\<\{ `coinAmount`: `bigint`; `currentTick`: `number`; `ethAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:4115
+Defined in: sdk/FlaunchSDK.ts:4114
 
 Parameters
 
@@ -4958,7 +4823,7 @@ Returns
 
 > **calculateAddLiquidityTicks**(`__namedParameters`): `Promise`\<\{ `coinDecimals`: `number`; `coinTotalSupply`: `bigint`; `currentTick?`: `number`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3902
+Defined in: sdk/FlaunchSDK.ts:3901
 
 Parameters
 
@@ -4994,7 +4859,7 @@ Returns
 
 > **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `formattedTotalSupplyInDecimals`, `marketContext`): `number` \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:3873
+Defined in: sdk/FlaunchSDK.ts:3872
 
 Calculates current tick from market cap if provided
 
@@ -5093,7 +4958,7 @@ Returns
 
 > **checkSingleSidedAddLiquidity**(`params`): `Promise`\<`SingleSidedLiquidityInfo`\>
 
-Defined in: sdk/FlaunchSDK.ts:4019
+Defined in: sdk/FlaunchSDK.ts:4018
 
 Parameters
 
@@ -5111,7 +4976,7 @@ Returns
 
 > **coinMarketCapInUSD**(`__namedParameters`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2886
+Defined in: sdk/FlaunchSDK.ts:2885
 
 Parameters
 
@@ -5139,7 +5004,7 @@ Returns
 
 > **coinPriceInETH**(`coinAddress`, `version?`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2838
+Defined in: sdk/FlaunchSDK.ts:2837
 
 Calculates the coin price in ETH based on the current tick
 
@@ -5169,7 +5034,7 @@ Promise<string> - The price of the coin in ETH with 18 decimals precision
 
 > **coinPriceInUSD**(`coinAddress`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2870
+Defined in: sdk/FlaunchSDK.ts:2869
 
 Calculates the coin price in USD based on the current ETH/USDC price
 
@@ -5203,7 +5068,7 @@ Promise<string> - The price of the coin in USD with 18 decimal precision
 
 > **convertPriceToTick**(`priceEth`, `isFlethZero`, `decimals0`, `decimals1`): `number`
 
-Defined in: sdk/FlaunchSDK.ts:3855
+Defined in: sdk/FlaunchSDK.ts:3854
 
 Converts token price in ETH to tick
 
@@ -5235,7 +5100,7 @@ Returns
 
 > `protected` **createPoolKey**(`coinAddress`, `version`): `object`
 
-Defined in: sdk/FlaunchSDK.ts:4370
+Defined in: sdk/FlaunchSDK.ts:4369
 
 Creates a pool key for the given coin and version
 
@@ -5285,7 +5150,7 @@ The ordered pool key
 
 > `protected` **createPoolKeyForCoin**(`coinAddress`, `version?`): `Promise`\<`PoolKey`\>
 
-Defined in: sdk/FlaunchSDK.ts:4386
+Defined in: sdk/FlaunchSDK.ts:4385
 
 `createPoolKey` resolved by coin rather than by version: on a multichain deployment the
 hook is probed per coin (see `getPositionManagerAddressForCoin`), so the key matches the
@@ -5311,7 +5176,7 @@ Returns
 
 > **creatorRevenue**(`creator`, `isV1?`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3236
+Defined in: sdk/FlaunchSDK.ts:3235
 
 Gets the ETH balance for the creator to claim
 
@@ -5341,7 +5206,7 @@ The balance of the creator
 
 > **creatorRevenueByToken**(`params`): `Promise`\<`EscrowTokenBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3253
+Defined in: sdk/FlaunchSDK.ts:3252
 
 Gets the creator's claimable revenue on the v1.3.1 multi-token FeeEscrow, per escrow token.
 Coins paired with anything other than flETH (native ETH, the B20 equities, …) escrow their
@@ -5376,7 +5241,7 @@ The claimable amount per token, in that token's raw units (zero balances include
 
 > **currentTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:2823
+Defined in: sdk/FlaunchSDK.ts:2822
 
 Gets the current tick for a given coin's pool
 
@@ -5406,7 +5271,7 @@ Promise<number> - The current tick of the pool
 
 > `protected` **determineCoinVersion**(`coinAddress`, `version?`): `Promise`\<`FlaunchVersion`\>
 
-Defined in: sdk/FlaunchSDK.ts:4346
+Defined in: sdk/FlaunchSDK.ts:4345
 
 Determines the version for a coin, using provided version or fetching it
 
@@ -5436,7 +5301,7 @@ The determined version
 
 > **ethRequiredToFlaunch**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3575
+Defined in: sdk/FlaunchSDK.ts:3574
 
 Calculates the ETH required to flaunch a token, takes into account the ETH for premine and the flaunching fee
 
@@ -5474,7 +5339,7 @@ Promise<bigint> - The ETH required to flaunch
 
 > **fairLaunchCoinOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3139
+Defined in: sdk/FlaunchSDK.ts:3138
 
 Gets information about the coin-only position in a fair launch
 
@@ -5504,7 +5369,7 @@ Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: 
 
 > **fairLaunchDuration**(`coinAddress`, `version?`): `Promise`\<`number` \| `bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3046
+Defined in: sdk/FlaunchSDK.ts:3045
 
 Gets the duration of a fair launch for a given coin
 
@@ -5534,7 +5399,7 @@ Promise<number> - The duration in seconds (30 minutes for V1, variable for V1.1)
 
 > **fairLaunchETHOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3076
+Defined in: sdk/FlaunchSDK.ts:3075
 
 Gets information about the ETH-only position in a fair launch
 
@@ -5564,7 +5429,7 @@ Promise<{flETHAmount: bigint, coinAmount: bigint, tickLower: number, tickUpper: 
 
 > **fairLaunchInfo**(`coinAddress`, `version?`): `Promise`\<\{ `closed`: `boolean`; `endsAt`: `bigint`; `initialTick`: `number`; `revenue`: `bigint`; `startsAt`: `bigint`; `supply`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2954
+Defined in: sdk/FlaunchSDK.ts:2953
 
 Gets information about a fair launch for a given coin
 
@@ -5594,7 +5459,7 @@ Fair launch information from the appropriate contract version
 
 > **flETHIsCurrencyZero**(`coinAddress`): `boolean`
 
-Defined in: sdk/FlaunchSDK.ts:3744
+Defined in: sdk/FlaunchSDK.ts:3743
 
 Determines if flETH is currency0 in the pool
 
@@ -5618,7 +5483,7 @@ boolean - True if flETH is currency0, false otherwise
 
 > **getBidWall**(`version`): `ReadBidWall` \| `AnyBidWall` \| `ReadBidWallV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:2213
+Defined in: sdk/FlaunchSDK.ts:2212
 
 Gets the bid wall instance for a given version
 
@@ -5640,7 +5505,7 @@ Returns
 
 > **getBidWallAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2286
+Defined in: sdk/FlaunchSDK.ts:2285
 
 Parameters
 
@@ -5658,7 +5523,7 @@ Returns
 
 > **getBuyQuoteExactInput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3663
+Defined in: sdk/FlaunchSDK.ts:3662
 
 Gets a quote for buying tokens with an exact amount of ETH or inputToken
 
@@ -5708,7 +5573,7 @@ Promise<bigint> - The expected amount of coins to receive
 
 > **getBuyQuoteExactOutput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3706
+Defined in: sdk/FlaunchSDK.ts:3705
 
 Gets a quote for buying an exact amount of tokens with ETH or inputToken
 
@@ -5758,7 +5623,7 @@ Promise<bigint> - The required amount of ETH or inputToken to spend
 
 > **getCoinInfo**(`coinAddress`): `Promise`\<\{ `decimals`: `number`; `formattedTotalSupplyInDecimals`: `number`; `totalSupply`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3796
+Defined in: sdk/FlaunchSDK.ts:3795
 
 Gets basic coin information (total supply and decimals)
 
@@ -5778,7 +5643,7 @@ Returns
 
 > **getCoinMetadata**(`coinAddress`): `Promise`\<`CoinMetadata` & `object`\>
 
-Defined in: sdk/FlaunchSDK.ts:2321
+Defined in: sdk/FlaunchSDK.ts:2320
 
 Retrieves metadata for a given Flaunch coin
 
@@ -5802,7 +5667,7 @@ Promise<CoinMetadata & { symbol: string }> - The coin's metadata including name,
 
 > **getCoinMetadataFromTokenId**(`flaunch`, `tokenId`): `Promise`\<`CoinMetadata` & `object`\>
 
-Defined in: sdk/FlaunchSDK.ts:2351
+Defined in: sdk/FlaunchSDK.ts:2350
 
 Retrieves metadata for a given Flaunch coin using its token ID & Flaunch contract address
 
@@ -5832,7 +5697,7 @@ The coin's metadata including name, symbol, description, and social links
 
 > **getCoinMetadataFromTokenIds**(`params`, `batchSize?`, `batchDelay?`): `Promise`\<`object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:2367
+Defined in: sdk/FlaunchSDK.ts:2366
 
 Retrieves metadata for multiple Flaunch coins using their token IDs & Flaunch contract addresses
 
@@ -5892,7 +5757,7 @@ Promise<FlaunchVersion> - The version of the coin
 
 > **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:2909
+Defined in: sdk/FlaunchSDK.ts:2908
 
 Gets the current ETH/USDC price
 
@@ -5916,7 +5781,7 @@ Promise<number> - The current ETH/USDC price
 
 > **getFairLaunch**(`version`): `ReadFairLaunch` \| `ReadFairLaunchV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:2192
+Defined in: sdk/FlaunchSDK.ts:2191
 
 Gets the fair launch instance for a given version
 
@@ -5938,7 +5803,7 @@ Returns
 
 > **getFairLaunchAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2282
+Defined in: sdk/FlaunchSDK.ts:2281
 
 Parameters
 
@@ -5956,7 +5821,7 @@ Returns
 
 > **getFlaunch**(`version`): `ReadFlaunch` \| `ReadAnyFlaunch` \| `ReadFlaunchV1_1` \| `ReadFlaunchV1_2`
 
-Defined in: sdk/FlaunchSDK.ts:2234
+Defined in: sdk/FlaunchSDK.ts:2233
 
 Gets the flaunch contract instance for a given version
 
@@ -5978,7 +5843,7 @@ Returns
 
 > **getFlaunchAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2265
+Defined in: sdk/FlaunchSDK.ts:2264
 
 Gets the flaunch contract address for a given version
 
@@ -6000,7 +5865,7 @@ Returns
 
 > **getFlaunchingFee**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3527
+Defined in: sdk/FlaunchSDK.ts:3526
 
 Gets the flaunching fee for a given initial price and slippage percent
 
@@ -6038,7 +5903,7 @@ Promise<bigint> - The flaunching fee
 
 > **getFlaunchTokenIdForMemecoin**(`coinAddress`): `Promise`\<\{ `flaunchAddress`: `` `0x${string}` ``; `tokenId`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2295
+Defined in: sdk/FlaunchSDK.ts:2294
 
 Gets the flaunch contract address and token ID for a memecoin
 
@@ -6161,7 +6026,7 @@ Returns
 
 > **getMarketContext**(`coinAddress`, `coinDecimals`): `Promise`\<\{ `decimals0`: `number`; `decimals1`: `number`; `ethUsdPrice`: `number`; `isFlethZero`: `boolean`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3815
+Defined in: sdk/FlaunchSDK.ts:3814
 
 Gets market context information needed for tick calculations
 
@@ -6266,7 +6131,7 @@ Returns
 
 > **getPoolCreatedFromLogs**(`logs`): `PoolCreatedEventData` \| `null`
 
-Defined in: sdk/FlaunchSDK.ts:2533
+Defined in: sdk/FlaunchSDK.ts:2532
 
 Parses PoolCreated from logs emitted by a PositionManager on this chain. A receipt from the
 vested-launch hook (AnyPositionManager behind the AnyFlaunchZap) decodes too: its event
@@ -6291,7 +6156,7 @@ Returns
 
 > **getPoolCreatedFromTx**(`txHash`): `Promise`\<`PoolCreatedEventData` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:2745
+Defined in: sdk/FlaunchSDK.ts:2744
 
 Parses a transaction to extract PoolCreated event data
 
@@ -6315,7 +6180,7 @@ PoolCreated event parameters or null if not found
 
 > **getPositionManager**(`version`): `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:2171
+Defined in: sdk/FlaunchSDK.ts:2170
 
 Gets the position manager instance for a given version
 
@@ -6337,7 +6202,7 @@ Returns
 
 > **getPositionManagerAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2269
+Defined in: sdk/FlaunchSDK.ts:2268
 
 Parameters
 
@@ -6386,7 +6251,7 @@ Returns
 
 > **getReferralConfig**(`params`): `Promise`\<`ReferralConfig`\>
 
-Defined in: sdk/FlaunchSDK.ts:3281
+Defined in: sdk/FlaunchSDK.ts:3280
 
 Read the actual hook's fee rate, escrow and claim capabilities at one block.
 
@@ -6408,7 +6273,7 @@ Returns
 
 > **getReferralEscrowCapabilities**(`escrow`): `Promise`\<`ReferralEscrowCapabilities`\>
 
-Defined in: sdk/FlaunchSDK.ts:3286
+Defined in: sdk/FlaunchSDK.ts:3285
 
 Parameters
 
@@ -6426,7 +6291,7 @@ Returns
 
 > **getSellQuoteExactInput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3620
+Defined in: sdk/FlaunchSDK.ts:3619
 
 Gets a quote for selling an exact amount of tokens for ETH
 
@@ -6566,7 +6431,7 @@ Returns
 
 > **initialSqrtPriceX96**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:2919
+Defined in: sdk/FlaunchSDK.ts:2918
 
 Parameters
 
@@ -6590,7 +6455,7 @@ Returns
 
 > **initialTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:3059
+Defined in: sdk/FlaunchSDK.ts:3058
 
 Gets the initial tick for a fair launch
 
@@ -6620,7 +6485,7 @@ Promise<number> - The initial tick value
 
 > **isFairLaunchActive**(`coinAddress`, `version?`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:2967
+Defined in: sdk/FlaunchSDK.ts:2966
 
 Checks if a fair launch is currently active for a given coin
 
@@ -6650,7 +6515,7 @@ Promise<boolean> - True if fair launch is active, false otherwise
 
 > **isFlaunchTokenApprovedForAll**(`version`, `owner`, `operator`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:4325
+Defined in: sdk/FlaunchSDK.ts:4324
 
 Checks if an operator is approved for all flaunch tokens of an owner
 
@@ -6686,7 +6551,7 @@ Promise<boolean> - True if operator is approved for all tokens
 
 > **isMemecoinImported**(`memecoin`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:4301
+Defined in: sdk/FlaunchSDK.ts:4300
 
 Checks if an external memecoin has been imported to Flaunch
 
@@ -6796,7 +6661,7 @@ The hook and pool key, or null when no v1.3 hook on this chain knows the coin.
 
 > **marketCapToTokenPriceEth**(`marketCapUsd`, `formattedTotalSupplyInDecimals`, `ethUsdPrice`): `number`
 
-Defined in: sdk/FlaunchSDK.ts:3843
+Defined in: sdk/FlaunchSDK.ts:3842
 
 Converts market cap in USD to token price in ETH
 
@@ -6844,7 +6709,7 @@ Returns
 
 > **parseSwapTx**\<`T`\>(`params`): `Promise`\<`T` *extends* `boolean` ? `GenericBuySwapLog` \| `GenericSellSwapLog` \| `undefined` : `GenericBaseSwapLog` \| `undefined`\>
 
-Defined in: sdk/FlaunchSDK.ts:3768
+Defined in: sdk/FlaunchSDK.ts:3767
 
 Parses a transaction hash to extract PoolSwap events and return parsed swap data
 
@@ -7034,7 +6899,7 @@ Returns
 
 > **pollPoolCreatedNow**(`version?`): `Promise`\<`void`\> \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:2511
+Defined in: sdk/FlaunchSDK.ts:2510
 
 Polls for current pool creation events
 
@@ -7058,7 +6923,7 @@ Current pool creation events or undefined if polling is not available
 
 > **pollPoolSwapNow**(`version?`): `Promise`\<`void`\> \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:2794
+Defined in: sdk/FlaunchSDK.ts:2793
 
 Polls for current pool swap events
 
@@ -7082,7 +6947,7 @@ Current pool swap events or undefined if polling is not available
 
 > **poolId**(`coinAddress`, `version?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:3516
+Defined in: sdk/FlaunchSDK.ts:3515
 
 Gets the pool ID for a given coin
 
@@ -7112,7 +6977,7 @@ Promise<string> - The pool ID
 
 > **positionInfo**(`params`): `Promise`\<\{ `feeGrowthInside0LastX128`: `bigint`; `feeGrowthInside1LastX128`: `bigint`; `liquidity`: `bigint`; \} \| \{ `feeGrowthInside0LastX128`: `bigint`; `feeGrowthInside1LastX128`: `bigint`; `liquidity`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2813
+Defined in: sdk/FlaunchSDK.ts:2812
 
 Gets information about a liquidity position
 
@@ -7192,7 +7057,7 @@ Returns
 
 > **referralBalance**(`recipient`, `coinAddress`, `options?`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3269
+Defined in: sdk/FlaunchSDK.ts:3268
 
 Gets the balance of a recipient for a given coin
 
@@ -7226,7 +7091,7 @@ Promise<bigint> - The balance of the recipient
 
 > **referralBalances**(`params`): `Promise`\<`ReferralTokenBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3292
+Defined in: sdk/FlaunchSDK.ts:3291
 
 Supply historical escrow/token keys from logs or your indexer. Never aggregate across escrows.
 
@@ -7284,7 +7149,7 @@ when no v1.3 hook on this chain launched the coin, or `pairedToken` disagrees wi
 
 > **revenueManagerAllTokensByCreator**(`params`): `Promise`\<readonly `object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3362
+Defined in: sdk/FlaunchSDK.ts:3361
 
 Gets all tokens created by a specific creator address
 
@@ -7324,7 +7189,7 @@ Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects con
 
 > **revenueManagerAllTokensInManager**(`params`): `Promise`\<`object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3385
+Defined in: sdk/FlaunchSDK.ts:3384
 
 Gets all tokens currently managed by a revenue manager
 
@@ -7358,7 +7223,7 @@ Promise<Array<{flaunch: Address, tokenId: bigint}>> - Array of token objects con
 
 > **revenueManagerBalance**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3313
+Defined in: sdk/FlaunchSDK.ts:3312
 
 Gets the claimable balance of ETH for the recipient from a revenue manager
 
@@ -7392,7 +7257,7 @@ Promise<bigint> - The claimable balance of ETH
 
 > **revenueManagerBalanceV1\_3**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3431
+Defined in: sdk/FlaunchSDK.ts:3430
 
 Gets the claimable balance of one payout asset for a recipient on a v1.3.1 multi-asset
 RevenueManager. Managers of that generation keep a balance per payout asset — native ETH
@@ -7434,7 +7299,7 @@ Promise<bigint> - The claimable balance in the asset's raw units
 
 > **revenueManagerPayoutAssets**(`revenueManagerAddress`): `Promise`\<readonly `` `0x${string}` ``[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3454
+Defined in: sdk/FlaunchSDK.ts:3453
 
 Gets every payout asset a v1.3.1 revenue manager has ever been credited in. Native ETH
 (`zeroAddress`) is always present; other entries come from the paired tokens of the coins
@@ -7460,7 +7325,7 @@ Promise<readonly Address[]> - The payout assets
 
 > **revenueManagerProtocolBalance**(`revenueManagerAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3330
+Defined in: sdk/FlaunchSDK.ts:3329
 
 Gets the claimable balance of ETH for the protocol from a revenue manager
 
@@ -7484,7 +7349,7 @@ Promise<bigint> - The claimable balance of ETH
 
 > **revenueManagerProtocolBalanceV1\_3**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3469
+Defined in: sdk/FlaunchSDK.ts:3468
 
 Gets the claimable balance of one payout asset for the protocol on a v1.3.1 revenue manager
 
@@ -7516,7 +7381,7 @@ Promise<bigint> - The claimable balance in the asset's raw units
 
 > **revenueManagerTokensCount**(`revenueManagerAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3345
+Defined in: sdk/FlaunchSDK.ts:3344
 
 Gets the total number of tokens managed by a revenue manager
 
@@ -7562,7 +7427,7 @@ Returns
 
 > **setIPFSResolver**(`resolverFn`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:3754
+Defined in: sdk/FlaunchSDK.ts:3753
 
 Sets a custom IPFS resolver function
 
@@ -7589,7 +7454,7 @@ eg: input: Qabc, output: https://ipfs.io/ipfs/Qabc
 
 > **tokenImporterVerifyMemecoin**(`memecoin`): `Promise`\<\{ `isValid`: `boolean`; `verifier`: `` `0x${string}` ``; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3789
+Defined in: sdk/FlaunchSDK.ts:3788
 
 Verifies if a memecoin is valid for importing
 
@@ -7613,7 +7478,7 @@ Promise<{ isValid: boolean; verifier: Address }> - The result of the verificatio
 
 > **treasuryManagerBalancesV1\_3**(`params`): `Promise`\<`AssetBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3494
+Defined in: sdk/FlaunchSDK.ts:3493
 
 Gets a recipient's claimable balances across payout assets on any v1.3.1 multi-asset
 treasury manager (RevenueManager, the fee-split managers, StakingManager). Zero balances are
@@ -7653,7 +7518,7 @@ Promise<AssetBalance[]> - One entry per asset, in the order given
 
 > **treasuryManagerInfo**(`treasuryManagerAddress`): `Promise`\<\{ `managerOwner`: `` `0x${string}` ``; `permissions`: `` `0x${string}` ``; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3402
+Defined in: sdk/FlaunchSDK.ts:3401
 
 Gets treasury manager information including owner and permissions
 
@@ -7677,7 +7542,7 @@ Promise<{managerOwner: Address, permissions: Address}> - Treasury manager owner 
 
 > **trustedPoolKeySignerStatus**(`coinAddress`, `version?`): `Promise`\<\{ `fairLaunchEndsAt`: `number`; `fairLaunchStartsAt`: `number`; `isCurrentlyEnabled`: `boolean`; `isFairLaunchActive`: `boolean`; `signer`: `` `0x${string}` ``; `trustedSignerEnabled`: `boolean`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2974
+Defined in: sdk/FlaunchSDK.ts:2973
 
 Parameters
 
@@ -7749,7 +7614,7 @@ Returns
 
 > **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void`; `pollPoolCreatedNow`: () => `Promise`\<`void`\>; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2497
+Defined in: sdk/FlaunchSDK.ts:2496
 
 Watches for pool creation events
 
@@ -7779,7 +7644,7 @@ Subscription to pool creation events
 
 > **watchPoolSwap**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void`; `pollPoolSwapNow`: () => `Promise`\<`void`\>; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2769
+Defined in: sdk/FlaunchSDK.ts:2768
 
 Watches for pool swap events
 
@@ -12577,7 +12442,7 @@ Inherited from
 
 # Class: ReadWriteFlaunchSDK
 
-Defined in: sdk/FlaunchSDK.ts:4407
+Defined in: sdk/FlaunchSDK.ts:4406
 
 ## Extends
 
@@ -12589,7 +12454,7 @@ Defined in: sdk/FlaunchSDK.ts:4407
 
 > **new ReadWriteFlaunchSDK**(`chainId`, `drift?`, `publicClient?`): `ReadWriteFlaunchSDK`
 
-Defined in: sdk/FlaunchSDK.ts:4542
+Defined in: sdk/FlaunchSDK.ts:4541
 
 Parameters
 
@@ -12629,7 +12494,7 @@ Inherited from
 
 > **drift**: `Drift`\<`ReadWriteAdapter`\>
 
-Defined in: sdk/FlaunchSDK.ts:4408
+Defined in: sdk/FlaunchSDK.ts:4407
 
 Overrides
 
@@ -13343,7 +13208,7 @@ Get Signature
 
 > **get** **readWriteAnyFlaunchZap**(): `ReadWriteAnyFlaunchZap`
 
-Defined in: sdk/FlaunchSDK.ts:4463
+Defined in: sdk/FlaunchSDK.ts:4462
 
 The AnyFlaunchZap with write capabilities. Throws on chains without one — gate with `doesChainSupportVestedLaunch()`.
 
@@ -13359,7 +13224,7 @@ Get Signature
 
 > **get** **readWriteAnyPositionManager**(): `ReadWriteAnyPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:4521
+Defined in: sdk/FlaunchSDK.ts:4520
 
 #Returns
 
@@ -13373,7 +13238,7 @@ Get Signature
 
 > **get** **readWriteFeeEscrow**(): `ReadWriteFeeEscrow`
 
-Defined in: sdk/FlaunchSDK.ts:4418
+Defined in: sdk/FlaunchSDK.ts:4417
 
 #Returns
 
@@ -13387,7 +13252,7 @@ Get Signature
 
 > **get** **readWriteFeeEscrowV1\_3**(): `ReadWriteFeeEscrowV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:4430
+Defined in: sdk/FlaunchSDK.ts:4429
 
 The v1.3.1 multi-token FeeEscrow with write capabilities. Throws on chains without one —
 gate with `doesChainSupportMultiTokenFeeEscrow()`.
@@ -13404,7 +13269,7 @@ Get Signature
 
 > **get** **readWriteFlaunchManagerZapV1\_3**(): `ReadWriteFlaunchManagerZapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:4444
+Defined in: sdk/FlaunchSDK.ts:4443
 
 The v1.3.1 FlaunchManagerZap with write capabilities: deploys managers of the multi-asset
 generation through the v1.3.1 factory. Throws on chains without one — gate with
@@ -13422,7 +13287,7 @@ Get Signature
 
 > **get** **readWriteFlaunchZap**(): `ReadWriteFlaunchZap`
 
-Defined in: sdk/FlaunchSDK.ts:4530
+Defined in: sdk/FlaunchSDK.ts:4529
 
 #Returns
 
@@ -13436,7 +13301,7 @@ Get Signature
 
 > **get** **readWriteFlaunchZapV1\_3**(): `ReadWriteFlaunchZapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:4453
+Defined in: sdk/FlaunchSDK.ts:4452
 
 #Returns
 
@@ -13450,7 +13315,7 @@ Get Signature
 
 > **get** **readWriteMemecoinVesting**(): `ReadWriteMemecoinVesting`
 
-Defined in: sdk/FlaunchSDK.ts:4473
+Defined in: sdk/FlaunchSDK.ts:4472
 
 The MemecoinVesting escrow with write capabilities (claims). Throws on chains without one.
 
@@ -13466,7 +13331,7 @@ Get Signature
 
 > **get** **readWritePermit2**(): `ReadWritePermit2`
 
-Defined in: sdk/FlaunchSDK.ts:4538
+Defined in: sdk/FlaunchSDK.ts:4537
 
 #Returns
 
@@ -13480,7 +13345,7 @@ Get Signature
 
 > **get** **readWritePoolSwapV1\_3**(): `ReadWritePoolSwapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:4496
+Defined in: sdk/FlaunchSDK.ts:4495
 
 The chain's CURRENT v1.3 PoolSwap router with write capabilities — gate with `doesChainSupportPairedTokenSwap()`.
 
@@ -13496,7 +13361,7 @@ Get Signature
 
 > **get** **readWritePositionManager**(): `ReadWriteFlaunchPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:4515
+Defined in: sdk/FlaunchSDK.ts:4514
 
 #Returns
 
@@ -13510,7 +13375,7 @@ Get Signature
 
 > **get** **readWritePositionManagerV1\_1**(): `ReadWriteFlaunchPositionManagerV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:4518
+Defined in: sdk/FlaunchSDK.ts:4517
 
 #Returns
 
@@ -13524,7 +13389,7 @@ Get Signature
 
 > **get** **readWriteReferralEscrow**(): `ReadWriteReferralEscrow`
 
-Defined in: sdk/FlaunchSDK.ts:4527
+Defined in: sdk/FlaunchSDK.ts:4526
 
 #Returns
 
@@ -13538,7 +13403,7 @@ Get Signature
 
 > **get** **readWriteTokenImporter**(): `ReadWriteTokenImporter`
 
-Defined in: sdk/FlaunchSDK.ts:4524
+Defined in: sdk/FlaunchSDK.ts:4523
 
 #Returns
 
@@ -13552,7 +13417,7 @@ Get Signature
 
 > **get** **readWriteTreasuryManagerFactory**(): `ReadWriteTreasuryManagerFactory`
 
-Defined in: sdk/FlaunchSDK.ts:4533
+Defined in: sdk/FlaunchSDK.ts:4532
 
 #Returns
 
@@ -13564,7 +13429,7 @@ Defined in: sdk/FlaunchSDK.ts:4533
 
 > **addToTreasuryManager**(`treasuryManagerAddress`, `version`, `tokenId`, `creator?`, `data?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5782
+Defined in: sdk/FlaunchSDK.ts:5781
 
 Adds an existing flaunch token to a treasury manager. NFT approval must be given prior to calling this function.
 
@@ -13612,7 +13477,7 @@ Transaction response
 
 > **anyFlaunch**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5132
+Defined in: sdk/FlaunchSDK.ts:5131
 
 Creates a new Flaunch with AnyPositionManager for external coins
 
@@ -13749,7 +13614,7 @@ Inherited from
 
 > **bidWallPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `pendingEth`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3202
+Defined in: sdk/FlaunchSDK.ts:3201
 
 Gets information about the bid wall position for a coin
 
@@ -13783,7 +13648,7 @@ Inherited from
 
 > **buyCoin**(`params`, `version?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5300
+Defined in: sdk/FlaunchSDK.ts:5299
 
 Buys a coin with ETH or custom inputToken via intermediatePoolKey
 
@@ -13813,7 +13678,7 @@ Transaction response for the buy operation
 
 > **buyCoinPairedToken**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4946
+Defined in: sdk/FlaunchSDK.ts:4945
 
 Buys a paired-token coin with an exact amount of its paired token (mUSD, native ETH, flETH, a
 B20 equity) through the v1.3.1 PoolSwap. Sends the ERC20 approve first when the allowance is
@@ -13836,7 +13701,7 @@ Returns
 
 > **calculateAddLiquidityAmounts**(`params`): `Promise`\<\{ `coinAmount`: `bigint`; `currentTick`: `number`; `ethAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:4115
+Defined in: sdk/FlaunchSDK.ts:4114
 
 Parameters
 
@@ -13858,7 +13723,7 @@ Inherited from
 
 > **calculateAddLiquidityTicks**(`__namedParameters`): `Promise`\<\{ `coinDecimals`: `number`; `coinTotalSupply`: `bigint`; `currentTick?`: `number`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3902
+Defined in: sdk/FlaunchSDK.ts:3901
 
 Parameters
 
@@ -13898,7 +13763,7 @@ Inherited from
 
 > **calculateCurrentTickFromMarketCap**(`currentMarketCap`, `formattedTotalSupplyInDecimals`, `marketContext`): `number` \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:3873
+Defined in: sdk/FlaunchSDK.ts:3872
 
 Calculates current tick from market cap if provided
 
@@ -14009,7 +13874,7 @@ Inherited from
 
 > **checkSingleSidedAddLiquidity**(`params`): `Promise`\<`SingleSidedLiquidityInfo`\>
 
-Defined in: sdk/FlaunchSDK.ts:4019
+Defined in: sdk/FlaunchSDK.ts:4018
 
 Parameters
 
@@ -14031,7 +13896,7 @@ Inherited from
 
 > **claimReferralBalance**(`coins`, `recipient`, `options?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5570
+Defined in: sdk/FlaunchSDK.ts:5569
 
 Claims the connected wallet's referral allocation to a payout recipient.
 
@@ -14067,7 +13932,7 @@ Transaction response
 
 > **claimVesting**(`coin`, `scheduleIds?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5275
+Defined in: sdk/FlaunchSDK.ts:5274
 
 Claims vested coins of `coin` for the connected wallet: the given schedule ids, or every
 schedule with something claimable when omitted (throws when there is nothing to claim).
@@ -14092,7 +13957,7 @@ Returns
 
 > **coinBalance**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:5287
+Defined in: sdk/FlaunchSDK.ts:5286
 
 Gets the balance of a specific coin for the connected wallet
 
@@ -14116,7 +13981,7 @@ Promise<bigint> - The balance of the coin
 
 > **coinMarketCapInUSD**(`__namedParameters`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2886
+Defined in: sdk/FlaunchSDK.ts:2885
 
 Parameters
 
@@ -14148,7 +14013,7 @@ Inherited from
 
 > **coinPriceInETH**(`coinAddress`, `version?`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2838
+Defined in: sdk/FlaunchSDK.ts:2837
 
 Calculates the coin price in ETH based on the current tick
 
@@ -14182,7 +14047,7 @@ Inherited from
 
 > **coinPriceInUSD**(`coinAddress`): `Promise`\<`string`\>
 
-Defined in: sdk/FlaunchSDK.ts:2870
+Defined in: sdk/FlaunchSDK.ts:2869
 
 Calculates the coin price in USD based on the current ETH/USDC price
 
@@ -14220,7 +14085,7 @@ Inherited from
 
 > **convertPriceToTick**(`priceEth`, `isFlethZero`, `decimals0`, `decimals1`): `number`
 
-Defined in: sdk/FlaunchSDK.ts:3855
+Defined in: sdk/FlaunchSDK.ts:3854
 
 Converts token price in ETH to tick
 
@@ -14256,7 +14121,7 @@ Inherited from
 
 > `protected` **createPoolKey**(`coinAddress`, `version`): `object`
 
-Defined in: sdk/FlaunchSDK.ts:4370
+Defined in: sdk/FlaunchSDK.ts:4369
 
 Creates a pool key for the given coin and version
 
@@ -14310,7 +14175,7 @@ Inherited from
 
 > `protected` **createPoolKeyForCoin**(`coinAddress`, `version?`): `Promise`\<`PoolKey`\>
 
-Defined in: sdk/FlaunchSDK.ts:4386
+Defined in: sdk/FlaunchSDK.ts:4385
 
 `createPoolKey` resolved by coin rather than by version: on a multichain deployment the
 hook is probed per coin (see `getPositionManagerAddressForCoin`), so the key matches the
@@ -14340,7 +14205,7 @@ Inherited from
 
 > **creatorRevenue**(`creator`, `isV1?`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3236
+Defined in: sdk/FlaunchSDK.ts:3235
 
 Gets the ETH balance for the creator to claim
 
@@ -14374,7 +14239,7 @@ Inherited from
 
 > **creatorRevenueByToken**(`params`): `Promise`\<`EscrowTokenBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3253
+Defined in: sdk/FlaunchSDK.ts:3252
 
 Gets the creator's claimable revenue on the v1.3.1 multi-token FeeEscrow, per escrow token.
 Coins paired with anything other than flETH (native ETH, the B20 equities, …) escrow their
@@ -14413,7 +14278,7 @@ Inherited from
 
 > **currentTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:2823
+Defined in: sdk/FlaunchSDK.ts:2822
 
 Gets the current tick for a given coin's pool
 
@@ -14447,7 +14312,7 @@ Inherited from
 
 > **deployBuyBackManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4719
+Defined in: sdk/FlaunchSDK.ts:4718
 
 Deploys a new BuyBack manager
 
@@ -14471,7 +14336,7 @@ Address of the deployed BuyBack manager
 
 > **deployRevenueManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4648
+Defined in: sdk/FlaunchSDK.ts:4647
 
 Deploys a new revenue manager
 
@@ -14495,7 +14360,7 @@ Address of the deployed revenue manager
 
 > **deployRevenueManagerV1\_3**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4670
+Defined in: sdk/FlaunchSDK.ts:4669
 
 Deploys a new v1.3.1 multi-asset revenue manager through the v1.3.1 FlaunchManagerZap.
 Managers of this generation pay out per payout asset (native ETH or a coin's paired
@@ -14523,7 +14388,7 @@ Address of the deployed revenue manager
 
 > **deployStakingManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4694
+Defined in: sdk/FlaunchSDK.ts:4693
 
 Deploys a new staking manager
 
@@ -14547,7 +14412,7 @@ Address of the deployed staking manager
 
 > `protected` **determineCoinVersion**(`coinAddress`, `version?`): `Promise`\<`FlaunchVersion`\>
 
-Defined in: sdk/FlaunchSDK.ts:4346
+Defined in: sdk/FlaunchSDK.ts:4345
 
 Determines the version for a coin, using provided version or fetching it
 
@@ -14581,7 +14446,7 @@ Inherited from
 
 > **ethRequiredToFlaunch**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3575
+Defined in: sdk/FlaunchSDK.ts:3574
 
 Calculates the ETH required to flaunch a token, takes into account the ETH for premine and the flaunching fee
 
@@ -14623,7 +14488,7 @@ Inherited from
 
 > **executeLaunchPreBuy**(`plan`, `options?`): `Promise`\<`LaunchPreBuyExecution`\>
 
-Defined in: sdk/FlaunchSDK.ts:4764
+Defined in: sdk/FlaunchSDK.ts:4763
 
 Executes a pre-buy plan: revalidates chain, signer, expiry, binding, calldata and balances,
 re-quotes (and by default simulates) against live state, sends any ERC20 approval and waits
@@ -14655,7 +14520,7 @@ The launch transaction hash and the executed plan; decode the outcome with
 
 > **fairLaunchCoinOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3139
+Defined in: sdk/FlaunchSDK.ts:3138
 
 Gets information about the coin-only position in a fair launch
 
@@ -14689,7 +14554,7 @@ Inherited from
 
 > **fairLaunchDuration**(`coinAddress`, `version?`): `Promise`\<`number` \| `bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3046
+Defined in: sdk/FlaunchSDK.ts:3045
 
 Gets the duration of a fair launch for a given coin
 
@@ -14723,7 +14588,7 @@ Inherited from
 
 > **fairLaunchETHOnlyPosition**(`coinAddress`, `version?`): `Promise`\<\{ `coinAmount`: `bigint`; `flETHAmount`: `bigint`; `tickLower`: `number`; `tickUpper`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3076
+Defined in: sdk/FlaunchSDK.ts:3075
 
 Gets information about the ETH-only position in a fair launch
 
@@ -14757,7 +14622,7 @@ Inherited from
 
 > **fairLaunchInfo**(`coinAddress`, `version?`): `Promise`\<\{ `closed`: `boolean`; `endsAt`: `bigint`; `initialTick`: `number`; `revenue`: `bigint`; `startsAt`: `bigint`; `supply`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2954
+Defined in: sdk/FlaunchSDK.ts:2953
 
 Gets information about a fair launch for a given coin
 
@@ -14791,7 +14656,7 @@ Inherited from
 
 > **flaunch**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4734
+Defined in: sdk/FlaunchSDK.ts:4733
 
 Creates a new Flaunch on the specified version
 
@@ -14815,7 +14680,7 @@ Transaction response
 
 > **flaunchAnyWithGameDeveloperSplit**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4933
+Defined in: sdk/FlaunchSDK.ts:4932
 
 `prepareAnyGameLaunch` and send it: the Any-route twin of `flaunchPairedTokenWithGameDeveloperSplit`.
 
@@ -14835,7 +14700,7 @@ Returns
 
 > **flaunchIPFS**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5004
+Defined in: sdk/FlaunchSDK.ts:5003
 
 Creates a new Flaunch with IPFS metadata and optional version specification
 
@@ -14859,7 +14724,7 @@ Transaction response
 
 > **flaunchIPFSVested**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5200
+Defined in: sdk/FlaunchSDK.ts:5199
 
 `flaunchVested` with the token metadata stored on IPFS first.
 
@@ -14879,7 +14744,7 @@ Returns
 
 > **flaunchIPFSVestedWithDynamicSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5249
+Defined in: sdk/FlaunchSDK.ts:5248
 
 Parameters
 
@@ -14897,7 +14762,7 @@ Returns
 
 > **flaunchIPFSVestedWithRevenueManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5213
+Defined in: sdk/FlaunchSDK.ts:5212
 
 Parameters
 
@@ -14915,7 +14780,7 @@ Returns
 
 > **flaunchIPFSVestedWithSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5230
+Defined in: sdk/FlaunchSDK.ts:5229
 
 Parameters
 
@@ -14933,7 +14798,7 @@ Returns
 
 > **flaunchIPFSWithDynamicSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5114
+Defined in: sdk/FlaunchSDK.ts:5113
 
 Creates a new Flaunch with dynamic split manager configuration and IPFS metadata.
 
@@ -14957,7 +14822,7 @@ Transaction response
 
 > **flaunchIPFSWithRevenueManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5042
+Defined in: sdk/FlaunchSDK.ts:5041
 
 Creates a new Flaunch with revenue manager configuration and IPFS metadata
 
@@ -14985,7 +14850,7 @@ Error if FlaunchZap is not deployed on the current chain
 
 > **flaunchIPFSWithSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5080
+Defined in: sdk/FlaunchSDK.ts:5079
 
 Creates a new Flaunch that splits the creator fees to the creator and a list of recipients, storing the token metadata on IPFS
 
@@ -15009,7 +14874,7 @@ Transaction response
 
 > **flaunchPairedToken**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4785
+Defined in: sdk/FlaunchSDK.ts:4784
 
 Parameters
 
@@ -15027,7 +14892,7 @@ Returns
 
 > **flaunchPairedTokenWithDynamicSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4836
+Defined in: sdk/FlaunchSDK.ts:4835
 
 Launches a paired-token coin into a DynamicAddressFeeSplitManager deployed in the same
 transaction: the creator and the manager owner take their shares of every fee, the named
@@ -15059,7 +14924,7 @@ Error naming the chain when the manager is not deployed there
 
 > **flaunchPairedTokenWithGameDeveloperSplit**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4796
+Defined in: sdk/FlaunchSDK.ts:4795
 
 Launches a paired-token coin (a Game Mode launch carrying its gate in `feeCalculatorParams`)
 into a GameDeveloperFeeSplitManager: the game developer holds a protected 5% of every fee
@@ -15083,7 +14948,7 @@ Returns
 
 > **flaunchVested**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5194
+Defined in: sdk/FlaunchSDK.ts:5193
 
 Launches a coin with vesting schedules through the AnyFlaunchZap — `flaunch()` plus
 `vestingSchedules` (and optionally a `pairedToken`, defaulting to flETH). The schedules'
@@ -15111,7 +14976,7 @@ Error if vested launches are not deployed on the current chain
 
 > **flaunchVestedWithDynamicSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5241
+Defined in: sdk/FlaunchSDK.ts:5240
 
 `flaunchWithDynamicSplitManager` with vesting: deploys a DynamicAddressFeeSplitManager at launch.
 
@@ -15131,7 +14996,7 @@ Returns
 
 > **flaunchVestedWithPreBuy**(`input`, `options?`): `Promise`\<`LaunchPreBuyExecution`\>
 
-Defined in: sdk/FlaunchSDK.ts:5264
+Defined in: sdk/FlaunchSDK.ts:5263
 
 A vested launch with a pre-buy: `flaunchWithPreBuy` on the `vested` route. `params` is what
 `flaunchVested` takes minus the premine and its cap, which the planner quotes; manager
@@ -15157,7 +15022,7 @@ Returns
 
 > **flaunchVestedWithRevenueManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5209
+Defined in: sdk/FlaunchSDK.ts:5208
 
 `flaunchWithRevenueManager` with vesting: deposits the launch NFT into an existing RevenueManager.
 
@@ -15177,7 +15042,7 @@ Returns
 
 > **flaunchVestedWithSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5224
+Defined in: sdk/FlaunchSDK.ts:5223
 
 `flaunchWithSplitManager` with vesting: deploys an AddressFeeSplitManager at launch.
 
@@ -15197,7 +15062,7 @@ Returns
 
 > **flaunchWithDynamicSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5096
+Defined in: sdk/FlaunchSDK.ts:5095
 
 Creates a new Flaunch with dynamic split manager configuration.
 
@@ -15221,7 +15086,7 @@ Transaction response
 
 > **flaunchWithPreBuy**(`input`, `options?`): `Promise`\<`LaunchPreBuyExecution`\>
 
-Defined in: sdk/FlaunchSDK.ts:4776
+Defined in: sdk/FlaunchSDK.ts:4775
 
 Plan and execute in one call. Throws `LaunchPreBuyUnsupportedError` (`code: "UNSUPPORTED"`,
 `reasons`) when the planner reports the launch unsupported. Prefer the two-step flow when a
@@ -15247,7 +15112,7 @@ Returns
 
 > **flaunchWithRevenueManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5021
+Defined in: sdk/FlaunchSDK.ts:5020
 
 Creates a new Flaunch with revenue manager configuration
 
@@ -15275,7 +15140,7 @@ Error if FlaunchZap is not deployed on the current chain
 
 > **flaunchWithSplitManager**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5064
+Defined in: sdk/FlaunchSDK.ts:5063
 
 Creates a new Flaunch that splits the creator fees to the creator and a list of recipients
 
@@ -15299,7 +15164,7 @@ Transaction response
 
 > **flETHIsCurrencyZero**(`coinAddress`): `boolean`
 
-Defined in: sdk/FlaunchSDK.ts:3744
+Defined in: sdk/FlaunchSDK.ts:3743
 
 Determines if flETH is currency0 in the pool
 
@@ -15327,7 +15192,7 @@ Inherited from
 
 > **getAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:5825
+Defined in: sdk/FlaunchSDK.ts:5824
 
 Gets the calls needed to add liquidity to flaunch or imported coins
 
@@ -15351,7 +15216,7 @@ Array of calls with descriptions
 
 > **getBidWall**(`version`): `ReadBidWall` \| `AnyBidWall` \| `ReadBidWallV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:2213
+Defined in: sdk/FlaunchSDK.ts:2212
 
 Gets the bid wall instance for a given version
 
@@ -15377,7 +15242,7 @@ Inherited from
 
 > **getBidWallAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2286
+Defined in: sdk/FlaunchSDK.ts:2285
 
 Parameters
 
@@ -15399,7 +15264,7 @@ Inherited from
 
 > **getBuyQuoteExactInput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3663
+Defined in: sdk/FlaunchSDK.ts:3662
 
 Gets a quote for buying tokens with an exact amount of ETH or inputToken
 
@@ -15453,7 +15318,7 @@ Inherited from
 
 > **getBuyQuoteExactOutput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3706
+Defined in: sdk/FlaunchSDK.ts:3705
 
 Gets a quote for buying an exact amount of tokens with ETH or inputToken
 
@@ -15507,7 +15372,7 @@ Inherited from
 
 > **getCoinInfo**(`coinAddress`): `Promise`\<\{ `decimals`: `number`; `formattedTotalSupplyInDecimals`: `number`; `totalSupply`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3796
+Defined in: sdk/FlaunchSDK.ts:3795
 
 Gets basic coin information (total supply and decimals)
 
@@ -15531,7 +15396,7 @@ Inherited from
 
 > **getCoinMetadata**(`coinAddress`): `Promise`\<`CoinMetadata` & `object`\>
 
-Defined in: sdk/FlaunchSDK.ts:2321
+Defined in: sdk/FlaunchSDK.ts:2320
 
 Retrieves metadata for a given Flaunch coin
 
@@ -15559,7 +15424,7 @@ Inherited from
 
 > **getCoinMetadataFromTokenId**(`flaunch`, `tokenId`): `Promise`\<`CoinMetadata` & `object`\>
 
-Defined in: sdk/FlaunchSDK.ts:2351
+Defined in: sdk/FlaunchSDK.ts:2350
 
 Retrieves metadata for a given Flaunch coin using its token ID & Flaunch contract address
 
@@ -15593,7 +15458,7 @@ Inherited from
 
 > **getCoinMetadataFromTokenIds**(`params`, `batchSize?`, `batchDelay?`): `Promise`\<`object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:2367
+Defined in: sdk/FlaunchSDK.ts:2366
 
 Retrieves metadata for multiple Flaunch coins using their token IDs & Flaunch contract addresses
 
@@ -15661,7 +15526,7 @@ Inherited from
 
 > **getERC20AllowanceToPermit2**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:5497
+Defined in: sdk/FlaunchSDK.ts:5496
 
 Gets the allowance of an ERC20 token to Permit2 contract. Flaunch coins automatically have infinite approval for Permit2.
 this function is for external tokens.
@@ -15686,7 +15551,7 @@ Promise<bigint> - The allowance of the coin to Permit2
 
 > **getETHUSDCPrice**(`drift?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:2909
+Defined in: sdk/FlaunchSDK.ts:2908
 
 Gets the current ETH/USDC price
 
@@ -15714,7 +15579,7 @@ Inherited from
 
 > **getFairLaunch**(`version`): `ReadFairLaunch` \| `ReadFairLaunchV1_1`
 
-Defined in: sdk/FlaunchSDK.ts:2192
+Defined in: sdk/FlaunchSDK.ts:2191
 
 Gets the fair launch instance for a given version
 
@@ -15740,7 +15605,7 @@ Inherited from
 
 > **getFairLaunchAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2282
+Defined in: sdk/FlaunchSDK.ts:2281
 
 Parameters
 
@@ -15762,7 +15627,7 @@ Inherited from
 
 > **getFlaunch**(`version`): `ReadFlaunch` \| `ReadAnyFlaunch` \| `ReadFlaunchV1_1` \| `ReadFlaunchV1_2`
 
-Defined in: sdk/FlaunchSDK.ts:2234
+Defined in: sdk/FlaunchSDK.ts:2233
 
 Gets the flaunch contract instance for a given version
 
@@ -15788,7 +15653,7 @@ Inherited from
 
 > **getFlaunchAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2265
+Defined in: sdk/FlaunchSDK.ts:2264
 
 Gets the flaunch contract address for a given version
 
@@ -15814,7 +15679,7 @@ Inherited from
 
 > **getFlaunchingFee**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3527
+Defined in: sdk/FlaunchSDK.ts:3526
 
 Gets the flaunching fee for a given initial price and slippage percent
 
@@ -15856,7 +15721,7 @@ Inherited from
 
 > **getFlaunchTokenIdForMemecoin**(`coinAddress`): `Promise`\<\{ `flaunchAddress`: `` `0x${string}` ``; `tokenId`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2295
+Defined in: sdk/FlaunchSDK.ts:2294
 
 Gets the flaunch contract address and token ID for a memecoin
 
@@ -15914,7 +15779,7 @@ Call Signature
 
 > **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6110
+Defined in: sdk/FlaunchSDK.ts:6109
 
 Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
 
@@ -15994,7 +15859,7 @@ Call Signature
 
 > **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6134
+Defined in: sdk/FlaunchSDK.ts:6133
 
 Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
 
@@ -16074,7 +15939,7 @@ Call Signature
 
 > **getImportAndAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6157
+Defined in: sdk/FlaunchSDK.ts:6156
 
 Gets the calls needed to import a memecoin to Flaunch and add liquidity to AnyPositionManager as a batch
 
@@ -16153,7 +16018,7 @@ Call Signature
 
 > **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6444
+Defined in: sdk/FlaunchSDK.ts:6443
 
 Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
 
@@ -16209,7 +16074,7 @@ Call Signature
 
 > **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6465
+Defined in: sdk/FlaunchSDK.ts:6464
 
 Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
 
@@ -16244,7 +16109,7 @@ Call Signature
 
 > **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6487
+Defined in: sdk/FlaunchSDK.ts:6486
 
 Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
 
@@ -16300,7 +16165,7 @@ Call Signature
 
 > **getImportAndSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6508
+Defined in: sdk/FlaunchSDK.ts:6507
 
 Gets the calls needed to import a memecoin to Flaunch and single-sided liquidity in coin (from current tick to infinity) to AnyPositionManager as a batch
 
@@ -16424,7 +16289,7 @@ Inherited from
 
 > **getMarketContext**(`coinAddress`, `coinDecimals`): `Promise`\<\{ `decimals0`: `number`; `decimals1`: `number`; `ethUsdPrice`: `number`; `isFlethZero`: `boolean`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3815
+Defined in: sdk/FlaunchSDK.ts:3814
 
 Gets market context information needed for tick calculations
 
@@ -16549,7 +16414,7 @@ Inherited from
 
 > **getPermit2AllowanceAndNonce**(`coinAddress`): `Promise`\<\{ `allowance`: `bigint`; `nonce`: `number`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:5478
+Defined in: sdk/FlaunchSDK.ts:5477
 
 Gets the current Permit2 allowance and nonce for a coin
 
@@ -16573,7 +16438,7 @@ Promise<{allowance: bigint, nonce: bigint}> - Current allowance and nonce
 
 > **getPermit2TypedData**(`coinAddress`, `deadline?`): `Promise`\<\{ `permitSingle`: `PermitSingle`; `typedData`: \{ `domain`: \{ `chainId`: `number`; `name`: `string`; `verifyingContract`: `` `0x${string}` ``; \}; `message`: `PermitSingle`; `primaryType`: `string`; `types`: \{ `PermitDetails`: `object`[]; `PermitSingle`: `object`[]; \}; \}; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:5457
+Defined in: sdk/FlaunchSDK.ts:5456
 
 Gets the typed data for a Permit2 signature
 
@@ -16603,7 +16468,7 @@ The typed data object for signing
 
 > **getPoolCreatedFromLogs**(`logs`): `PoolCreatedEventData` \| `null`
 
-Defined in: sdk/FlaunchSDK.ts:2533
+Defined in: sdk/FlaunchSDK.ts:2532
 
 Parses PoolCreated from logs emitted by a PositionManager on this chain. A receipt from the
 vested-launch hook (AnyPositionManager behind the AnyFlaunchZap) decodes too: its event
@@ -16632,7 +16497,7 @@ Inherited from
 
 > **getPoolCreatedFromTx**(`txHash`): `Promise`\<`PoolCreatedEventData` \| `null`\>
 
-Defined in: sdk/FlaunchSDK.ts:2745
+Defined in: sdk/FlaunchSDK.ts:2744
 
 Parses a transaction to extract PoolCreated event data
 
@@ -16660,7 +16525,7 @@ Inherited from
 
 > **getPositionManager**(`version`): `ReadFlaunchPositionManagerV1_1` \| `ReadFlaunchPositionManager` \| `ReadFlaunchPositionManagerV1_2` \| `ReadAnyPositionManager`
 
-Defined in: sdk/FlaunchSDK.ts:2171
+Defined in: sdk/FlaunchSDK.ts:2170
 
 Gets the position manager instance for a given version
 
@@ -16686,7 +16551,7 @@ Inherited from
 
 > **getPositionManagerAddress**(`version`): `` `0x${string}` ``
 
-Defined in: sdk/FlaunchSDK.ts:2269
+Defined in: sdk/FlaunchSDK.ts:2268
 
 Parameters
 
@@ -16743,7 +16608,7 @@ Inherited from
 
 > **getReferralConfig**(`params`): `Promise`\<`ReferralConfig`\>
 
-Defined in: sdk/FlaunchSDK.ts:3281
+Defined in: sdk/FlaunchSDK.ts:3280
 
 Read the actual hook's fee rate, escrow and claim capabilities at one block.
 
@@ -16769,7 +16634,7 @@ Inherited from
 
 > **getReferralEscrowCapabilities**(`escrow`): `Promise`\<`ReferralEscrowCapabilities`\>
 
-Defined in: sdk/FlaunchSDK.ts:3286
+Defined in: sdk/FlaunchSDK.ts:3285
 
 Parameters
 
@@ -16791,7 +16656,7 @@ Inherited from
 
 > **getSellQuoteExactInput**(`coinAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3620
+Defined in: sdk/FlaunchSDK.ts:3619
 
 Gets a quote for selling an exact amount of tokens for ETH
 
@@ -16845,7 +16710,7 @@ Inherited from
 
 > **getSingleSidedCoinAddLiquidityCalls**(`params`): `Promise`\<`CallWithDescription`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:6213
+Defined in: sdk/FlaunchSDK.ts:6212
 
 Gets the calls needed to add single-sided liquidity in coin from current tick to infinity
 
@@ -16975,7 +16840,7 @@ Inherited from
 
 > **importMemecoin**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5816
+Defined in: sdk/FlaunchSDK.ts:5815
 
 Imports a memecoin into the TokenImporter
 
@@ -16997,7 +16862,7 @@ Transaction response
 
 > **initialSqrtPriceX96**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:2919
+Defined in: sdk/FlaunchSDK.ts:2918
 
 Parameters
 
@@ -17025,7 +16890,7 @@ Inherited from
 
 > **initialTick**(`coinAddress`, `version?`): `Promise`\<`number`\>
 
-Defined in: sdk/FlaunchSDK.ts:3059
+Defined in: sdk/FlaunchSDK.ts:3058
 
 Gets the initial tick for a fair launch
 
@@ -17059,7 +16924,7 @@ Inherited from
 
 > **isFairLaunchActive**(`coinAddress`, `version?`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:2967
+Defined in: sdk/FlaunchSDK.ts:2966
 
 Checks if a fair launch is currently active for a given coin
 
@@ -17093,7 +16958,7 @@ Inherited from
 
 > **isFlaunchTokenApprovedForAll**(`version`, `owner`, `operator`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:4325
+Defined in: sdk/FlaunchSDK.ts:4324
 
 Checks if an operator is approved for all flaunch tokens of an owner
 
@@ -17133,7 +16998,7 @@ Inherited from
 
 > **isMemecoinImported**(`memecoin`): `Promise`\<`boolean`\>
 
-Defined in: sdk/FlaunchSDK.ts:4301
+Defined in: sdk/FlaunchSDK.ts:4300
 
 Checks if an external memecoin has been imported to Flaunch
 
@@ -17211,7 +17076,7 @@ Inherited from
 
 > `protected` **launchPreBuyExecutorDeps**(): `LaunchPreBuyExecutorDeps`
 
-Defined in: sdk/FlaunchSDK.ts:4743
+Defined in: sdk/FlaunchSDK.ts:4742
 
 The pre-buy executor's dependency bag: planner clients plus the zap writers.
 
@@ -17277,7 +17142,7 @@ Inherited from
 
 > **marketCapToTokenPriceEth**(`marketCapUsd`, `formattedTotalSupplyInDecimals`, `ethUsdPrice`): `number`
 
-Defined in: sdk/FlaunchSDK.ts:3843
+Defined in: sdk/FlaunchSDK.ts:3842
 
 Converts market cap in USD to token price in ETH
 
@@ -17333,7 +17198,7 @@ Inherited from
 
 > **parseSwapTx**\<`T`\>(`params`): `Promise`\<`T` *extends* `boolean` ? `GenericBuySwapLog` \| `GenericSellSwapLog` \| `undefined` : `GenericBaseSwapLog` \| `undefined`\>
 
-Defined in: sdk/FlaunchSDK.ts:3768
+Defined in: sdk/FlaunchSDK.ts:3767
 
 Parses a transaction hash to extract PoolSwap events and return parsed swap data
 
@@ -17547,7 +17412,7 @@ Inherited from
 
 > **pollPoolCreatedNow**(`version?`): `Promise`\<`void`\> \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:2511
+Defined in: sdk/FlaunchSDK.ts:2510
 
 Polls for current pool creation events
 
@@ -17575,7 +17440,7 @@ Inherited from
 
 > **pollPoolSwapNow**(`version?`): `Promise`\<`void`\> \| `undefined`
 
-Defined in: sdk/FlaunchSDK.ts:2794
+Defined in: sdk/FlaunchSDK.ts:2793
 
 Polls for current pool swap events
 
@@ -17603,7 +17468,7 @@ Inherited from
 
 > **poolId**(`coinAddress`, `version?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:3516
+Defined in: sdk/FlaunchSDK.ts:3515
 
 Gets the pool ID for a given coin
 
@@ -17637,7 +17502,7 @@ Inherited from
 
 > `protected` **poolSwapWriterAt**(`router`): `ReadWritePoolSwapV1_3`
 
-Defined in: sdk/FlaunchSDK.ts:4485
+Defined in: sdk/FlaunchSDK.ts:4484
 
 A PoolSwap writer for a specific router — the one a plan resolved for its pool's hook generation.
 
@@ -17657,7 +17522,7 @@ Returns
 
 > **positionInfo**(`params`): `Promise`\<\{ `feeGrowthInside0LastX128`: `bigint`; `feeGrowthInside1LastX128`: `bigint`; `liquidity`: `bigint`; \} \| \{ `feeGrowthInside0LastX128`: `bigint`; `feeGrowthInside1LastX128`: `bigint`; `liquidity`: `bigint`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2813
+Defined in: sdk/FlaunchSDK.ts:2812
 
 Gets information about a liquidity position
 
@@ -17685,7 +17550,7 @@ Inherited from
 
 > **prepareAnyGameLaunch**(`params`): `Promise`\<`PreparedAnyGameLaunch`\>
 
-Defined in: sdk/FlaunchSDK.ts:4884
+Defined in: sdk/FlaunchSDK.ts:4883
 
 Quotes and encodes a Game Mode launch on the Any route without sending it: the AnyFlaunchZap
 launches into the vested AnyPositionManager and deposits the coin into a fresh
@@ -17782,7 +17647,7 @@ Inherited from
 
 > **referralBalance**(`recipient`, `coinAddress`, `options?`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3269
+Defined in: sdk/FlaunchSDK.ts:3268
 
 Gets the balance of a recipient for a given coin
 
@@ -17820,7 +17685,7 @@ Inherited from
 
 > **referralBalances**(`params`): `Promise`\<`ReferralTokenBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3292
+Defined in: sdk/FlaunchSDK.ts:3291
 
 Supply historical escrow/token keys from logs or your indexer. Never aggregate across escrows.
 
@@ -17886,7 +17751,7 @@ Inherited from
 
 > **revenueManagerAllTokensByCreator**(`params`): `Promise`\<readonly `object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3362
+Defined in: sdk/FlaunchSDK.ts:3361
 
 Gets all tokens created by a specific creator address
 
@@ -17930,7 +17795,7 @@ Inherited from
 
 > **revenueManagerAllTokensInManager**(`params`): `Promise`\<`object`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3385
+Defined in: sdk/FlaunchSDK.ts:3384
 
 Gets all tokens currently managed by a revenue manager
 
@@ -17968,7 +17833,7 @@ Inherited from
 
 > **revenueManagerBalance**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3313
+Defined in: sdk/FlaunchSDK.ts:3312
 
 Gets the claimable balance of ETH for the recipient from a revenue manager
 
@@ -18006,7 +17871,7 @@ Inherited from
 
 > **revenueManagerBalanceV1\_3**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3431
+Defined in: sdk/FlaunchSDK.ts:3430
 
 Gets the claimable balance of one payout asset for a recipient on a v1.3.1 multi-asset
 RevenueManager. Managers of that generation keep a balance per payout asset — native ETH
@@ -18052,7 +17917,7 @@ Inherited from
 
 > **revenueManagerCreatorClaim**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5612
+Defined in: sdk/FlaunchSDK.ts:5611
 
 Claims the total creator's share of the revenue from a revenue manager
 
@@ -18078,7 +17943,7 @@ Transaction response
 
 > **revenueManagerCreatorClaimForTokens**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5626
+Defined in: sdk/FlaunchSDK.ts:5625
 
 Claims the creator's share of the revenue from specific flaunch tokens
 
@@ -18108,7 +17973,7 @@ Transaction response
 
 > **revenueManagerCreatorClaimV1\_3**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5670
+Defined in: sdk/FlaunchSDK.ts:5669
 
 Claims a creator's share from a v1.3.1 multi-asset revenue manager. With no `assets`
 every payout asset is settled, across all the creator's tokens or the `flaunchTokens`
@@ -18149,7 +18014,7 @@ Transaction response
 
 > **revenueManagerPayoutAssets**(`revenueManagerAddress`): `Promise`\<readonly `` `0x${string}` ``[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3454
+Defined in: sdk/FlaunchSDK.ts:3453
 
 Gets every payout asset a v1.3.1 revenue manager has ever been credited in. Native ETH
 (`zeroAddress`) is always present; other entries come from the paired tokens of the coins
@@ -18179,7 +18044,7 @@ Inherited from
 
 > **revenueManagerProtocolBalance**(`revenueManagerAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3330
+Defined in: sdk/FlaunchSDK.ts:3329
 
 Gets the claimable balance of ETH for the protocol from a revenue manager
 
@@ -18207,7 +18072,7 @@ Inherited from
 
 > **revenueManagerProtocolBalanceV1\_3**(`params`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3469
+Defined in: sdk/FlaunchSDK.ts:3468
 
 Gets the claimable balance of one payout asset for the protocol on a v1.3.1 revenue manager
 
@@ -18243,7 +18108,7 @@ Inherited from
 
 > **revenueManagerProtocolClaim**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5598
+Defined in: sdk/FlaunchSDK.ts:5597
 
 Claims the protocol's share of the revenue
 
@@ -18269,7 +18134,7 @@ Transaction response
 
 > **revenueManagerProtocolClaimV1\_3**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5646
+Defined in: sdk/FlaunchSDK.ts:5645
 
 Claims the protocol's share from a v1.3.1 multi-asset revenue manager. With no `assets`
 every payout asset is settled; pass a subset when one asset would block the claim (a
@@ -18303,7 +18168,7 @@ Transaction response
 
 > **revenueManagerTokensCount**(`revenueManagerAddress`): `Promise`\<`bigint`\>
 
-Defined in: sdk/FlaunchSDK.ts:3345
+Defined in: sdk/FlaunchSDK.ts:3344
 
 Gets the total number of tokens managed by a revenue manager
 
@@ -18357,7 +18222,7 @@ Inherited from
 
 > **sellCoin**(`params`, `version?`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5394
+Defined in: sdk/FlaunchSDK.ts:5393
 
 Sells a coin for ETH
 
@@ -18387,7 +18252,7 @@ Transaction response for the sell operation
 
 > **sellCoinPairedToken**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:4951
+Defined in: sdk/FlaunchSDK.ts:4950
 
 Sells an exact amount of a paired-token coin for its paired token through PoolSwap. See `buyCoinPairedToken`.
 
@@ -18407,7 +18272,7 @@ Returns
 
 > **setERC20AllowanceToPermit2**(`coinAddress`, `amount`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5512
+Defined in: sdk/FlaunchSDK.ts:5511
 
 Sets the allowance of an ERC20 token to Permit2 contract. Flaunch coins automatically have infinite approval for Permit2.
 this function is for external tokens.
@@ -18438,7 +18303,7 @@ Promise<Hex> - The transaction hash
 
 > **setFlaunchTokenApprovalForAll**(`version`, `operator`, `approved`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5758
+Defined in: sdk/FlaunchSDK.ts:5757
 
 Sets approval for all flaunch tokens to an operator
 
@@ -18474,7 +18339,7 @@ Transaction response
 
 > **setIPFSResolver**(`resolverFn`): `void`
 
-Defined in: sdk/FlaunchSDK.ts:3754
+Defined in: sdk/FlaunchSDK.ts:3753
 
 Sets a custom IPFS resolver function
 
@@ -18505,7 +18370,7 @@ Inherited from
 
 > **tokenImporterVerifyMemecoin**(`memecoin`): `Promise`\<\{ `isValid`: `boolean`; `verifier`: `` `0x${string}` ``; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3789
+Defined in: sdk/FlaunchSDK.ts:3788
 
 Verifies if a memecoin is valid for importing
 
@@ -18533,7 +18398,7 @@ Inherited from
 
 > **treasuryManagerBalancesV1\_3**(`params`): `Promise`\<`AssetBalance`[]\>
 
-Defined in: sdk/FlaunchSDK.ts:3494
+Defined in: sdk/FlaunchSDK.ts:3493
 
 Gets a recipient's claimable balances across payout assets on any v1.3.1 multi-asset
 treasury manager (RevenueManager, the fee-split managers, StakingManager). Zero balances are
@@ -18577,7 +18442,7 @@ Inherited from
 
 > **treasuryManagerClaimAssetsV1\_3**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5701
+Defined in: sdk/FlaunchSDK.ts:5700
 
 Claims a subset of payout assets from any v1.3.1 multi-asset treasury manager, so a
 recipient blocked on one asset can still collect the others. Every asset must be one the
@@ -18617,7 +18482,7 @@ Transaction response
 
 > **treasuryManagerInfo**(`treasuryManagerAddress`): `Promise`\<\{ `managerOwner`: `` `0x${string}` ``; `permissions`: `` `0x${string}` ``; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:3402
+Defined in: sdk/FlaunchSDK.ts:3401
 
 Gets treasury manager information including owner and permissions
 
@@ -18645,7 +18510,7 @@ Inherited from
 
 > **treasuryManagerSetPermissions**(`treasuryManagerAddress`, `permissions`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5720
+Defined in: sdk/FlaunchSDK.ts:5719
 
 Sets the permissions contract address for a treasury manager
 
@@ -18675,7 +18540,7 @@ Transaction response
 
 > **treasuryManagerTransferOwnership**(`treasuryManagerAddress`, `newManagerOwner`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5739
+Defined in: sdk/FlaunchSDK.ts:5738
 
 Transfers the ownership of a treasury manager to a new address
 
@@ -18705,7 +18570,7 @@ Transaction response
 
 > **trustedPoolKeySignerStatus**(`coinAddress`, `version?`): `Promise`\<\{ `fairLaunchEndsAt`: `number`; `fairLaunchStartsAt`: `number`; `isCurrentlyEnabled`: `boolean`; `isFairLaunchActive`: `boolean`; `signer`: `` `0x${string}` ``; `trustedSignerEnabled`: `boolean`; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2974
+Defined in: sdk/FlaunchSDK.ts:2973
 
 Parameters
 
@@ -18789,7 +18654,7 @@ Inherited from
 
 > **watchPoolCreated**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void`; `pollPoolCreatedNow`: () => `Promise`\<`void`\>; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2497
+Defined in: sdk/FlaunchSDK.ts:2496
 
 Watches for pool creation events
 
@@ -18823,7 +18688,7 @@ Inherited from
 
 > **watchPoolSwap**(`params`, `version?`): `Promise`\<\{ `cleanup`: () => `void`; `pollPoolSwapNow`: () => `Promise`\<`void`\>; \}\>
 
-Defined in: sdk/FlaunchSDK.ts:2769
+Defined in: sdk/FlaunchSDK.ts:2768
 
 Watches for pool swap events
 
@@ -18857,7 +18722,7 @@ Inherited from
 
 > **withdrawCreatorRevenue**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5524
+Defined in: sdk/FlaunchSDK.ts:5523
 
 Withdraws the creator's share of the revenue
 
@@ -18891,7 +18756,7 @@ Transaction response
 
 > **withdrawCreatorRevenueByToken**(`params`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: sdk/FlaunchSDK.ts:5550
+Defined in: sdk/FlaunchSDK.ts:5549
 
 Withdraws the creator's revenue from the v1.3.1 multi-token FeeEscrow across the given
 escrow tokens, in one transaction. Pass every token with a balance from
@@ -27423,7 +27288,6 @@ Defined in: sdk/launchPreBuy.ts:317
 
 ## Classes
 
-- FlaunchBackend
 - LaunchPreBuyInsufficientBalanceError
 - LaunchPreBuyRequoteRequiredError
 - LaunchPreBuyUnsupportedError
@@ -38747,7 +38611,7 @@ Defined in: addresses.ts:326
 
 > `const` **FlaunchSDK**: `object`
 
-Defined in: index.ts:248
+Defined in: index.ts:246
 
 ## Type Declaration
 

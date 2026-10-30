@@ -9,6 +9,10 @@
 - The stale notes on the Robinhood and Base Sepolia v1.6.0 entries of `PoolSwapForHookV1_3Address` are gone: both v1.6 spend gates approve the mapped protected PoolSwap (verified onchain 2026-10-30), so spend-gated v1.6 buys need no `setApprovedRouter` first.
 - Launch golden fixtures: the fourteen `multichain:1:*` and `paired:*:pairedToken:*` cases were regenerated for the new zap targets; calldata and value are byte-identical.
 
+### Removed
+
+- **`FlaunchBackend`.** The server-side TrustedSigner helper never matched the deployed `TrustedSignerFeeCalculator`: it signed `keccak256(wallet ‖ poolId ‖ deadline)` with an EIP-191 prefix instead of the calculator's EIP-712 `FairLaunchAuthorization`, encoded `SignedMessage` without the `buyer` field, and derived the pool id from a flETH pairing on the v1.2 / v1.3 hooks, so every buy it signed reverted with `InvalidSigner` or failed to decode. Nothing in the Flayer stack used it (Game Mode signs through the gate). The README now documents the contract's EIP-712 message instead.
+
 ### Added
 
 - **v1.6.0 hook addresses** (flaunch-contracts PRs #323 / #326, live 2026-10-21 on Ethereum, Base, Arbitrum, Robinhood and Base Sepolia): `FlaunchPositionManagerV1_6Address` (`0x54bE…a5DC`) and `AnyPositionManagerV1_6Address` (`0x0a68…65DC`), one CREATE3 address on every chain, plus the per-chain `FlaunchV1_6Address`, `AnyFlaunchV1_6Address`, `FlaunchZapV1_6Address` and `FeeCalculatorDispatcherV1_6Address`. Purely additive: no launch, swap or read default changes, and the v1.3 / v1.4 hooks stay current. `getV1_3PositionManagers` lists the two v1.6 hooks last (same paired-token ABI), so coins launched on them can be located and swapped, and `PoolSwapForHookV1_3Address` maps them to each chain's current protected PoolSwap. (The "additive only" status and the Robinhood / Base Sepolia spend-gate caveat recorded for PR #52 are both resolved by this release, see Changed.)
