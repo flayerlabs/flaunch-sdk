@@ -243,8 +243,6 @@ export type {
   CallDataResult,
 } from "./sdk/calldata";
 
-export { FlaunchBackend } from "./sdk/FlaunchBackend";
-
 export const FlaunchSDK = {
   ReadFlaunchSDK,
   ReadWriteFlaunchSDK,

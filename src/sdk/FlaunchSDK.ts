@@ -1512,9 +1512,15 @@ export class ReadFlaunchSDK {
     version?: FlaunchVersion
   ): Promise<Address> {
     if (!isMultichainDeployment(this.chainId)) {
-      return this.getPositionManagerAddress(
-        await this.determineCoinVersion(coinAddress, version)
-      );
+      const resolved = await this.determineCoinVersion(coinAddress, version);
+      if (resolved === FlaunchVersion.V1_3) {
+        // A chain carries several v1.3-family hooks (Base: the v1.3.1 hook and, since 2026-10-30,
+        // the v1.6.0 launch hook). A coin `getCoinVersion` placed on one by probing `poolKey` is
+        // memoised there; answer that hook rather than the version's default client.
+        const located = this.pairedPoolsByCoin.get(coinAddress.toLowerCase());
+        if (located) return located.hook;
+      }
+      return this.getPositionManagerAddress(resolved);
     }
     if (
       version !== undefined &&
@@ -2116,7 +2122,9 @@ export class ReadFlaunchSDK {
       (await this.readPositionManagerV1_2.isValidCoin(coinAddress)) ||
       (await this.readPositionManagerV1_1.isValidCoin(coinAddress)) ||
       (await this.readPositionManager.isValidCoin(coinAddress)) ||
-      (await this.readAnyPositionManager.isValidCoin(coinAddress))
+      (await this.readAnyPositionManager.isValidCoin(coinAddress)) ||
+      // a coin on a v1.3-family hook the version clients do not cover (the v1.6.0 launch hooks)
+      (await this.locatePairedPool(coinAddress)) !== null
     );
   }
 
@@ -2144,12 +2152,17 @@ export class ReadFlaunchSDK {
       return FlaunchVersion.V1;
     } else if (await this.readAnyPositionManager.isValidCoin(coinAddress)) {
       return FlaunchVersion.ANY;
+    } else if (await this.locatePairedPool(coinAddress)) {
+      // Launched on a v1.3-family hook none of the version clients name — the v1.6.0 launch
+      // hooks (the paired-token launch default since 2026-10-30). Probed last so coins on the
+      // older generations keep their exact read sequence. `getPositionManagerAddressForCoin`
+      // reads the located hook back from the memo.
+      return FlaunchVersion.V1_3;
     }
 
     throw new Error(`Unknown coin version for address: ${coinAddress}`);
   }
 
-  // @note update FlaunchBackend as well when new version is added
   /**
    * Gets the position manager instance for a given version
    * @param version - The version to get the position manager instance for
@@ -3529,8 +3542,9 @@ export class ReadFlaunchSDK {
     );
 
     if (DefaultPairedTokenAddress[this.chainId] === zeroAddress) {
+      // The launch oracle of the hook a launch goes to (the v1.6.0 PositionManager)
       const positionManager = new ReadFlaunchPositionManagerV1_2(
-        FlaunchPositionManagerV1_3Address[this.chainId], this.drift
+        PairedTokenPositionManagerV1_3Address[this.chainId], this.drift
       );
       const initialPrice = new ReadInitialPrice(
         await positionManager.contract.read("initialPrice"), this.drift

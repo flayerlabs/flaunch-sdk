@@ -330,6 +330,7 @@ export function zapAddressForRoute(
 ): Address | undefined {
   switch (zapFamilyForRoute(chainId, route)) {
     case "pairedToken":
+      // the paired-token launch default: the v1.6.0 zap since 2026-10-30
       return FlaunchZapV1_3Address[chainId];
     case "anyVested":
       return AnyFlaunchZapAddress[chainId];

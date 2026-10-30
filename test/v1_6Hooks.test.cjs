@@ -26,18 +26,73 @@ test("v1.6.0 maps match the deployment record on all five chains", () => {
   }
 });
 
-test("v1.6.0 is additive: defaults stay on the v1.3 / v1.4 generation", () => {
+test("v1.6.0 is the paired-token launch default; the v1.3 / v1.4 hooks stay the version anchors", () => {
   for (const chainId of Object.keys(PER_CHAIN)) {
-    for (const map of [sdk.FlaunchPositionManagerV1_3Address, sdk.PairedTokenPositionManagerV1_3Address, sdk.AnyPositionManagerV1_3Address]) {
-      assert.notEqual(getAddress(map[chainId]), PM);
-      assert.notEqual(getAddress(map[chainId]), ANY_PM);
-    }
-    assert.notEqual(getAddress(sdk.FlaunchZapV1_3Address[chainId]), getAddress(PER_CHAIN[chainId][2]));
-    // listed last, after every older hook, and never superseded
+    // launch maps: the v1.6.0 zap and PositionManager
+    assert.equal(getAddress(sdk.FlaunchZapV1_3Address[chainId]), getAddress(PER_CHAIN[chainId][2]));
+    assert.equal(getAddress(sdk.PairedTokenPositionManagerV1_3Address[chainId]), PM);
+    assert.equal(sdk.zapAddressForRoute(Number(chainId), "pairedToken"), sdk.FlaunchZapV1_3Address[chainId]);
+    assert.notEqual(getAddress(sdk.FlaunchZapSupersededV1_3Address[chainId]), getAddress(PER_CHAIN[chainId][2]));
+    // version-routing anchors stay on the previous generation (their pools never migrate)
+    const previous = sdk.FlaunchPositionManagerV1_3Address[chainId];
+    assert.notEqual(getAddress(previous), PM);
+    assert.notEqual(getAddress(sdk.AnyPositionManagerV1_3Address[chainId]), ANY_PM);
+    // the previous launch hook is superseded for launches, the v1.6.0 hooks never are
+    const superseded = (sdk.SupersededPositionManagerV1_3Address[chainId] ?? []).map((a) => getAddress(a));
+    assert.ok(superseded.includes(getAddress(previous)), `${chainId} superseded ${superseded}`);
+    assert.ok(!superseded.includes(PM) && !superseded.includes(ANY_PM));
+    // probe order: the launch hook first, every generation present once
     const hooks = sdk.getV1_3PositionManagers(Number(chainId)).map((a) => getAddress(a));
-    assert.deepEqual(hooks.slice(-2), [PM, ANY_PM]);
-    assert.ok(!(sdk.SupersededPositionManagerV1_3Address[chainId] ?? []).map((a) => getAddress(a)).includes(PM));
+    assert.equal(hooks[0], PM);
+    for (const hook of [ANY_PM, getAddress(previous), getAddress(sdk.AnyPositionManagerV1_3Address[chainId])]) {
+      assert.ok(hooks.includes(hook), `${chainId} missing ${hook}`);
+    }
+    assert.equal(new Set(hooks).size, hooks.length, `${chainId} duplicates in ${hooks}`);
   }
+});
+
+test("Base resolves a coin on the v1.6.0 hook as V1_3 without changing the v1.3.1 read sequence", async () => {
+  const V13_COIN = "0x1111111111111111111111111111111111111111";
+  const V16_COIN = "0x2222222222222222222222222222222222222222";
+  const V131_PM = getAddress(sdk.FlaunchPositionManagerV1_3Address[base.id]);
+  const lower = (a) => a.toLowerCase();
+  const reads = [];
+  const drift = {
+    contract({ address }) {
+      return {
+        address,
+        cache: { clear: async () => {} },
+        async read(fn, args) {
+          reads.push({ address: lower(address), fn });
+          // every version client's isValidCoin is a poolKey read (tickSpacing != 0)
+          if (fn === "poolKey") {
+            const known =
+              (lower(address) === lower(V131_PM) && lower(args._token) === V13_COIN) ||
+              (lower(address) === lower(PM) && lower(args._token) === V16_COIN);
+            return { currency0: "0x0000000000000000000000000000000000000000", currency1: args._token, fee: 0, tickSpacing: known ? 60 : 0, hooks: address };
+          }
+          throw new Error(`unexpected read ${fn} on ${address}`);
+        },
+      };
+    },
+  };
+  const client = new sdk.ReadFlaunchSDK(base.id, drift);
+  // a v1.3.1 coin: answered by the V1_3 client's first probe; the v1.6.0 hook is never asked
+  assert.equal(await client.getCoinVersion(V13_COIN), sdk.FlaunchVersion.V1_3);
+  assert.equal(getAddress(await client.getPositionManagerAddressForCoin(V13_COIN)), V131_PM);
+  assert.ok(reads.length > 0);
+  assert.ok(reads.every((r) => r.fn === "poolKey" && r.address === lower(V131_PM)), JSON.stringify(reads));
+  reads.length = 0;
+  // a v1.6.0 coin: every version client says no, then the paired-pool locator finds the hook
+  assert.equal(await client.getCoinVersion(V16_COIN), sdk.FlaunchVersion.V1_3);
+  assert.equal(getAddress(await client.getPositionManagerAddressForCoin(V16_COIN)), PM);
+  assert.ok(reads.some((r) => r.fn === "poolKey" && r.address === lower(PM)));
+  assert.equal(await client.isValidCoin(V16_COIN), true);
+  // version-based reads build the key on the located hook, not the V1_3 default client
+  assert.equal(
+    await client.poolId(V16_COIN),
+    sdk.getPoolId({ currency0: "0x0000000000000000000000000000000000000000", currency1: V16_COIN, fee: 0, tickSpacing: 60, hooks: PM })
+  );
 });
 
 test("v1.6.0 hooks swap through the chain's current protected PoolSwap", () => {

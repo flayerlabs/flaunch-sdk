@@ -14,17 +14,32 @@ export const FlaunchZapAddress: Addresses = {
   [baseSepolia.id]: "0x25b747aeca2612b9804b5c3bb272a3daefdc6eaa",
 };
 
-// v1.3.x paired-token FlaunchZap deployments, each bound to its chain's v1.3.1
-// TreasuryManagerFactory. Base: redeployed 2026-08-27 (replaces the factory-less 0x29b37dfe…).
-// Robinhood: the v1.3.3 regeneration's zap, deployed bound in-run 2026-09-03 (supersedes the
-// 09-02 rebind 0xFCd1eB4B… and the factory-less 0x2e744436…). Factory-less zaps route a manager
-// launch into the manager IMPLEMENTATION, stranding the launch NFT — never point a manager launch
-// at one. Base Sepolia's zap is still factory-less.
+// The paired-token FlaunchZap a launch goes through: the v1.6.0 zaps since 2026-10-30, each bound
+// to its chain's live TreasuryManagerFactory and launching into `FlaunchPositionManagerV1_6Address`
+// (flaunch-contracts `deployments/v1.6.0.md`). The previous v1.3.x / v1.4.0 zaps are kept in
+// `FlaunchZapSupersededV1_3Address` for reference only; their hooks keep serving their pools (see
+// `SupersededPositionManagerV1_3Address`). Factory-less zaps route a manager launch into the manager
+// IMPLEMENTATION, stranding the launch NFT — never point a manager launch at one.
 export const FlaunchZapV1_3Address: Addresses = {
+  [arbitrum.id]: "0x0E3ACf44D030Cc632Fa006b56778E009bC9564d8", // v1.6.0, 2026-10-21
+  [mainnet.id]: "0x37C71d412eeB80dce4eB098F2F93F8270911C2D8", // v1.6.0, 2026-10-21
+  [base.id]: "0x07d077b37223882472AC6C88D187b860250dDB8d", // v1.6.0, 2026-10-21
+  [baseSepolia.id]: "0x479B750A524D3cA9Fdd6974EE54222235fCFbFf8", // v1.6.0, 2026-10-21
+  [robinhood.id]: "0xB03Be6c735ef90189D6a22bBC8F6A45a33348fDe", // v1.6.0, 2026-10-21
+};
+
+/**
+ * The zaps `FlaunchZapV1_3Address` pointed at before the v1.6.0 generation became the launch
+ * default (2026-10-30). Not used by any SDK path; kept so a historical launch transaction can be
+ * attributed. Base: redeployed 2026-08-27 (replaced the factory-less 0x29b37dfe…). Robinhood: the
+ * v1.3.3 regeneration's zap, deployed bound in-run 2026-09-03. Ethereum: v1.4.0, factory-bound,
+ * 2026-09-11. Base Sepolia: the v1.3.3 regeneration, 2026-09-03, bound to factory 0x98dfdd0A….
+ */
+export const FlaunchZapSupersededV1_3Address: Addresses = {
   [arbitrum.id]: "0xBd5ae825DDC67834002A6b586CfF5802971e3A7F",
-  [mainnet.id]: "0x11666704fcd96e1CAFF9b99501FA1e79D64900fC", // v1.4.0, factory-bound, 2026-09-11
+  [mainnet.id]: "0x11666704fcd96e1CAFF9b99501FA1e79D64900fC",
   [base.id]: "0xf787d757674b21efd713fb636b16ed994bfa82a8",
-  [baseSepolia.id]: "0x0c560537301396683c150eade42277a04b96e6d8", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202); bound to factory 0x98dfdd0A…
+  [baseSepolia.id]: "0x0c560537301396683c150eade42277a04b96e6d8",
   [robinhood.id]: "0x740f8278Fd9C548fF50b64805337eA8Ad24b2553",
 };
 
@@ -65,6 +80,13 @@ export const FlaunchPositionManagerV1_2Address: Addresses = {
 // v1.3.x paired-token hooks. Base: v1.3.1 (2026-08-20). Robinhood: the v1.3.3 regeneration
 // (fresh post-#285 InternalSwapPool; same registry / escrow / factory as v1.3.1). Robinhood's
 // superseded v1.3.1 hooks still serve their pools — see SupersededPositionManagerV1_3Address.
+//
+// Since 2026-10-30 this is NOT the hook a launch goes to (that is
+// `PairedTokenPositionManagerV1_3Address`, the v1.6.0 PositionManager). It stays on the v1.3 / v1.4
+// generation because it anchors `FlaunchVersion.V1_3` routing — Base's `readPositionManagerV1_3`
+// client, `getPositionManagerAddress(V1_3)` on multichain chains, the TrustedSigner backend and the
+// launch oracle reads — and every coin launched before the switch lives on these hooks. Per-coin
+// resolution (`getV1_3PositionManagers`) covers both generations.
 export const FlaunchPositionManagerV1_3Address: Addresses = {
   [arbitrum.id]: "0xCAb62e007AB6656877Ab556cEa330De27AE025DC",
   [mainnet.id]: "0xb741a710E456FC6d7f76c88F5C56B27D05e8A5DC", // v1.4.0 (same paired-token ABI family)
@@ -77,28 +99,45 @@ export const FlaunchPositionManagerV1_3Address: Addresses = {
  * Hooks that a chain's v1.3 generation has moved OFF but that still serve the pools launched on
  * them (coins never migrate). Consumers resolving "which hook is this coin on" must consult
  * these alongside the current maps. Robinhood 2026-08-21 -> 2026-09-xx: the v1.3.1 hooks were
- * regenerated onto a fixed InternalSwapPool (v1.3.3).
+ * regenerated onto a fixed InternalSwapPool (v1.3.3). 2026-10-30: the v1.6.0 PositionManager became
+ * the launch default on every chain, so each chain's previous launch hook (the v1.3.1 / v1.3.3 /
+ * v1.4.0 PositionManager, still `FlaunchPositionManagerV1_3Address`) is listed here too. The
+ * import-generation AnyPositionManagers are not superseded: `AnyPositionManagerV1_3Address` still
+ * serves imports.
  */
 export const SupersededPositionManagerV1_3Address: Record<number, Address[]> = {
+  [arbitrum.id]: [
+    "0xCAb62e007AB6656877Ab556cEa330De27AE025DC", // v1.4.1 PositionManager, launch default until 2026-10-30
+  ],
+  [mainnet.id]: [
+    "0xb741a710E456FC6d7f76c88F5C56B27D05e8A5DC", // v1.4.0 PositionManager, launch default until 2026-10-30
+  ],
+  [base.id]: [
+    "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // v1.3.1 PositionManager, launch default until 2026-10-30
+  ],
   [robinhood.id]: [
     "0x588c683ecc450f8b2aadb13d7f63792b840425dc", // v1.3.1 PositionManager (CREATE3, shared with Base)
     "0x6ea0edee449a287504990df8d87951b9436825dc", // v1.3.1 AnyPositionManager
+    "0x8D346f24278C5CD786309161aAC0fC2bbe4c25dc", // v1.3.3 PositionManager, launch default until 2026-10-30
   ],
   // Base Sepolia `.vpt2` hooks (2026-08-06), superseded by the v1.3.3 regeneration on 2026-09-03
   [baseSepolia.id]: [
     "0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc", // `.vpt2` PositionManager
     "0x28118f40eca9b884beb42b0196409a73269525dc", // `.vpt2` AnyPositionManager
+    "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc", // v1.3.3 PositionManager, launch default until 2026-10-30
   ],
 };
 
-// PositionManagers used by the paired-token launch path. This is separate from
-// FlaunchPositionManagerV1_3Address because that map also drives version routing.
+// The PositionManager the paired-token launch path (`FlaunchZapV1_3Address`) launches into: the
+// v1.6.0 PositionManager on every chain since 2026-10-30 (one CREATE3 address, see
+// `FlaunchPositionManagerV1_6Address`). Separate from `FlaunchPositionManagerV1_3Address` because
+// that map also drives version routing for the pools launched before the switch.
 export const PairedTokenPositionManagerV1_3Address: Addresses = {
-  [arbitrum.id]: "0xCAb62e007AB6656877Ab556cEa330De27AE025DC",
-  [mainnet.id]: "0xb741a710E456FC6d7f76c88F5C56B27D05e8A5DC",
-  [base.id]: "0x588c683ecc450f8b2aadb13d7f63792b840425dc",
-  [baseSepolia.id]: "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc", // Base Sepolia v1.3.3 regeneration, 2026-09-03 (blocks 46349133–46349202)
-  [robinhood.id]: "0x8D346f24278C5CD786309161aAC0fC2bbe4c25dc",
+  [arbitrum.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
+  [mainnet.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
+  [base.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
+  [baseSepolia.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
+  [robinhood.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
 };
 
 export const PairedTokenRegistryV1_3Address: Addresses = {
@@ -155,7 +194,7 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
     "0x28118f40eca9b884beb42b0196409a73269525dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // `.vpt2` AnyPM, same gate
     "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.3.3 PM, gate 0x54cd…
     "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // vested AnyPM (AnyFlaunchZap generation, 2026-09-11): same dispatcher + gate 0x54cd… as the v1.3.3 PM. Gate 0x54cd… approves BOTH the legacy 0xF0f3… and the protected 0xb32a… routers; the SDK swaps via swapExactInput, which only the protected one has
-    "0x54bedd41afdf57722518cf6dd826a70d81e9a5dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.6.0 PM (2026-10-21): NOTE: as of 2026-10-21 the v1.6 gate 0x5018… approves only the legacy 0xF0f3… router + UR, not this one, so a SPEND-GATED v1.6 buy needs `setApprovedRouter(0xb32a…, true)` first; ungated swaps are unaffected
+    "0x54bedd41afdf57722518cf6dd826a70d81e9a5dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.6.0 PM (2026-10-21): the v1.6 gate 0x5018… approves this PoolSwap (verified onchain 2026-10-30)
     "0x0a68f68d0c5c4c7c32bcdf0a64670d8cee5565dc": "0xb32a99502f433f78454a4d20304e654cdda75c5c", // v1.6.0 AnyPM, same gate as the v1.6.0 PM
   },
   [robinhood.id]: {
@@ -163,7 +202,7 @@ export const PoolSwapForHookV1_3Address: Record<number, Record<string, Address>>
     "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.3 PM, gate 0x120a…
     "0x6ea0edee449a287504990df8d87951b9436825dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.3.1 AnyPM, same gate as the v1.3.1 PM
     "0xe753a351fb498051a09dc130fcc29aebc76525dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // vested AnyPM (CREATE3 parity, deployed 2026-09-17)
-    "0x54bedd41afdf57722518cf6dd826a70d81e9a5dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.6.0 PM (2026-10-21): NOTE: as of 2026-10-21 the v1.6 gate 0xb5ec… approves only the ReferralEscrow's older PoolSwap 0x92D2… + UR, not this one, so a SPEND-GATED v1.6 buy needs `setApprovedRouter(0xD33d…, true)` first; ungated swaps are unaffected
+    "0x54bedd41afdf57722518cf6dd826a70d81e9a5dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.6.0 PM (2026-10-21): the v1.6 gate 0xb5ec… approves this PoolSwap (verified onchain 2026-10-30)
     "0x0a68f68d0c5c4c7c32bcdf0a64670d8cee5565dc": "0xD33dD3B3Aea607F2cC38cdd154eF5d48847Aa764", // v1.6.0 AnyPM, same gate as the v1.6.0 PM
   },
 };
@@ -279,8 +318,11 @@ export const AnyFlaunchV1_3Address: Addresses = {
 // addresses on every chain (salt `.v1.6.0`); each chain's PoolSwap, registry, escrow, BidWall and
 // TreasuryManagerFactory are reused unchanged. Record: flaunch-contracts `deployments/v1.6.0.md`.
 //
-// ADDITIVE ONLY: no launch, swap or read default points here yet. The v1.3 / v1.4 maps above stay
-// the defaults, and their hooks keep serving their pools (they are not superseded).
+// Since 2026-10-30 (SDK 0.18.0) the paired-token launch path points here: `FlaunchZapV1_3Address`
+// is the v1.6.0 zap and `PairedTokenPositionManagerV1_3Address` is the v1.6.0 PositionManager. The
+// v1.3 / v1.4 hooks are superseded for launches only (`SupersededPositionManagerV1_3Address`) and
+// keep serving their pools; `FlaunchPositionManagerV1_3Address` / `AnyPositionManagerV1_3Address`
+// stay on that generation as the `FlaunchVersion.V1_3` / `ANY` routing anchors.
 export const FlaunchPositionManagerV1_6Address: Addresses = {
   [arbitrum.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",
   [mainnet.id]: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC",

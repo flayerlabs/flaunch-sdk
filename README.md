@@ -1089,25 +1089,8 @@ const hash = await flaunchWrite.flaunchIPFS({
 });
 ```
 
-2. Backend SDK to sign & generate hookData
-   As the signing happens via your secure privateKey, we have a separate `FlaunchBackend` exported from our SDK package that's intended to be run on your nodejs backend or API. The API can verify if the request is legit (post captcha verification), and then return the signed hookData to be used for the `buyCoin` transaction.
-
-```ts
-import { FlaunchBackend } from "@flaunch/sdk";
-
-const flaunchBackend = new FlaunchBackend(privateKeyHex, chain.id);
-
-const { hookData, deadline, signature } =
-  await flaunchBackend.generateHookDataWithSignature({
-    userWallet,
-    coinAddress,
-    referrer: referrer || undefined, // Optional parameter
-    deadlineFromNowInSeconds: 10 * 60, // 10 minutes in seconds
-  });
-
-// hookData would be passed to buyQuote and buyCoin functions
-// signature and deadline useful for passing to the flaunch call with premine, via `trustedSignerSettings.premineSignedMessage` parameter
-```
+2. Sign buys on your backend
+   The signature is produced with your private key, so it belongs on your server. Sign an EIP-712 `FairLaunchAuthorization(address buyer, bytes32 poolId, uint256 deadline)` under the TrustedSignerFeeCalculator's domain (`eip712Domain()` on the calculator), and pass `abi.encode(referrer, SignedMessage{buyer, poolId, deadline, signature})` as the `hookData` to `buyQuote` / `buyCoin`. The SDK no longer ships a `FlaunchBackend` helper: the one it had signed a plain keccak digest with the wrong struct and a flETH pool id, so it never matched the deployed calculator. See `hashFairLaunchAuthorization` in flaunch-contracts for the reference implementation.
 
 3. Check TrustedSigner status for a coin
 

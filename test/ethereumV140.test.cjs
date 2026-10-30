@@ -18,11 +18,12 @@ const {
 // deployed core 62c95ca2, managers 17e018f3. Legacy maps must remain separate.
 const RELEASE_ADDRESSES = {
   FlaunchPositionManagerV1_3Address: "0xb741a710E456FC6d7f76c88F5C56B27D05e8A5DC",
-  PairedTokenPositionManagerV1_3Address: "0xb741a710E456FC6d7f76c88F5C56B27D05e8A5DC",
+  PairedTokenPositionManagerV1_3Address: "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC", // v1.6.0 PositionManager, the launch default since 2026-10-30
   AnyPositionManagerV1_3Address: "0x0215C3ef94ef3e86c32e847c662ad649000965Dc",
   FlaunchV1_3Address: "0x393a09033Bf60cF67809d6D8b77C1254f39d2FF9",
   AnyFlaunchV1_3Address: "0x154f2E2ef6fAdFFe6bCF4d86a2639A6Ef4981c5C",
-  FlaunchZapV1_3Address: "0x11666704fcd96e1CAFF9b99501FA1e79D64900fC",
+  FlaunchZapV1_3Address: "0x37C71d412eeB80dce4eB098F2F93F8270911C2D8", // v1.6.0 zap, the launch default since 2026-10-30
+  FlaunchZapSupersededV1_3Address: "0x11666704fcd96e1CAFF9b99501FA1e79D64900fC", // v1.4.0 zap, launch default until 2026-10-30
   PoolSwapV1_3Address: "0x05c6C717B2a985809a83D27F779044c2da27fd56",
   PairedTokenRegistryV1_3Address: "0xFc28B339376018727eFcD45fdb257D0A0861A391",
   FeeEscrowV1_3Address: "0xd992F465d55B005E8D2Aff9fcE977Cb78f5652e0",
@@ -88,11 +89,11 @@ test("Ethereum maps match the verified deployment and keep legacy/default pairin
   for (const chain of [base, baseSepolia, robinhood, unichain]) {
     assert.equal(DefaultPairedTokenAddress[chain.id], FLETHAddress[chain.id]);
   }
-  // the vested AnyPositionManager (CREATE3 parity) joined on 2026-09-21 (FLA2-417)
+  // the v1.6.0 launch hook first (2026-10-30), the import AnyPM, the superseded v1.4.0 PM, the
+  // vested AnyPositionManager (CREATE3 parity, 2026-09-21, FLA2-417), then the v1.6.0 AnyPM
   assert.deepEqual(getV1_3PositionManagers(mainnet.id), [
-    HOOK, ANY_HOOK, "0xE753a351FB498051a09Dc130fcC29aEBc76525DC",
-    // v1.6.0 hooks, appended last (additive)
-    "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC", "0x0a68F68D0C5C4c7c32BCDF0a64670D8cEe5565DC",
+    HOOK, ANY_HOOK, RELEASE_ADDRESSES.FlaunchPositionManagerV1_3Address,
+    "0xE753a351FB498051a09Dc130fcC29aEBc76525DC", "0x0a68F68D0C5C4c7c32BCDF0a64670D8cEe5565DC",
   ]);
   assert.equal(getPermissionsAddressV1_3(Permissions.CLOSED, mainnet.id), RELEASE_ADDRESSES.ClosedPermissionsV1_3Address);
   assert.equal(getPermissionsAddressV1_3(Permissions.WHITELISTED, mainnet.id), RELEASE_ADDRESSES.WhitelistedPermissionsV1_3Address);

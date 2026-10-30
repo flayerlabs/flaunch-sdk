@@ -10,7 +10,7 @@ import {
 } from "@delvtech/drift";
 import { QuoterAbi } from "../abi/Quoter";
 import { encodeAbiParameters, encodeFunctionData, decodeFunctionResult, formatUnits, parseEther, zeroAddress } from "viem";
-import { DefaultPairedTokenAddress, FLETHAddress, FLETHHooksAddress, FlaunchPositionManagerV1_3Address, USDCETHPoolKeys } from "addresses";
+import { DefaultPairedTokenAddress, FLETHAddress, FLETHHooksAddress, PairedTokenPositionManagerV1_3Address, USDCETHPoolKeys } from "addresses";
 import { ReadFlaunchPositionManagerV1_2 } from "./FlaunchPositionManagerV1_2Client";
 import { PoolKey, PoolWithHookData } from "types";
 
@@ -438,9 +438,10 @@ export class ReadQuoter {
   async getETHUSDCPrice() {
     if (DefaultPairedTokenAddress[this.chainId] === zeroAddress) {
       // The mainnet launch oracle converts a 6-decimal USD market cap into ETH wei
-      // using its 30-minute WETH/USDC V3 TWAP. Invert that conversion for USD per ETH.
+      // using its 30-minute WETH/USDC V3 TWAP. Invert that conversion for USD per ETH. Read from
+      // the hook a launch goes to (the v1.6.0 PositionManager) so the price matches the launch quote.
       const marketCapInETH = await new ReadFlaunchPositionManagerV1_2(
-        FlaunchPositionManagerV1_3Address[this.chainId], this.quoteDrift
+        PairedTokenPositionManagerV1_3Address[this.chainId], this.quoteDrift
       ).getFlaunchingMarketCap(encodeAbiParameters([{ type: "uint256" }], [10_000_000_000n]));
       return Number((10_000 / Number(formatUnits(marketCapInETH, 18))).toFixed(2));
     }
