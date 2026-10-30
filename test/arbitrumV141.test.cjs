@@ -7,9 +7,10 @@ const sdk = require("../dist/index.cjs.js");
 // v1.4.1 updated arbitrum-mainnet.json, including the 2026-09-14 manager/zap addendum.
 // Uniswap periphery: https://developers.uniswap.org/docs/protocols/v4/deployments#arbitrum-one-42161
 const DEPLOYMENTS = {
-  "FlaunchZapV1_3Address": "0xBd5ae825DDC67834002A6b586CfF5802971e3A7F",
+  "FlaunchZapV1_3Address": "0x0E3ACf44D030Cc632Fa006b56778E009bC9564d8", // v1.6.0, the launch default since 2026-10-30
+  "FlaunchZapSupersededV1_3Address": "0xBd5ae825DDC67834002A6b586CfF5802971e3A7F", // v1.4.1 zap, launch default until 2026-10-30
   "FlaunchPositionManagerV1_3Address": "0xCAb62e007AB6656877Ab556cEa330De27AE025DC",
-  "PairedTokenPositionManagerV1_3Address": "0xCAb62e007AB6656877Ab556cEa330De27AE025DC",
+  "PairedTokenPositionManagerV1_3Address": "0x54bEDD41AfDf57722518cF6Dd826a70d81e9a5DC", // v1.6.0 PositionManager
   "PairedTokenRegistryV1_3Address": "0x16EF4F8e1d41cE4727d98ae0E9EC4e9cDDd14Ac4",
   "PoolSwapV1_3Address": "0x206cD26d8567Ea76Ffa719995251a3878073Fb8A",
   "AnyPositionManagerV1_3Address": "0xbbE1b9831117E829Fe80Be97fCe82F2b49C1a5DC",

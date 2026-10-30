@@ -16,6 +16,11 @@
 // zap would have handed the coin's ownership NFT to, raw). Only `_treasuryManagerParams.manager`
 // changes in those two cases.
 //
+// The eight `multichain:1:*` and six `paired:*:pairedToken:*` cases were regenerated for 0.18.0:
+// the paired-token launch default moved from the v1.3.x / v1.4.0 zaps to the v1.6.0 zaps
+// (`FlaunchZapV1_3Address`), so only the transaction `to` and the fee quote's `to` change in those
+// fourteen cases; every `data` and `value` is byte-identical to the previous fixture.
+//
 //   node test/fixtures/generateLaunchGolden.cjs
 const { writeFileSync } = require("node:fs");
 const path = require("node:path");

@@ -1,10 +1,17 @@
 # Changelog
 
-## [Unreleased]
+## [0.18.0] - 2026-10-30
+
+### Changed
+
+- **The v1.6.0 hooks are the paired-token launch default; the v1.3 / v1.4 hooks are superseded for launches.** `FlaunchZapV1_3Address` now names each chain's v1.6.0 FlaunchZap and `PairedTokenPositionManagerV1_3Address` the v1.6.0 PositionManager (`0x54bE…a5DC`) on Ethereum, Base, Arbitrum, Robinhood and Base Sepolia, so `flaunchPairedToken*`, the `pairedToken` pre-buy route (`zapAddressForRoute`), Ethereum's and Arbitrum's native-ETH `flaunch` and the launch-fee / USD-price oracle reads all go to the v1.6.0 generation. The previous launch hooks keep serving their pools: each is listed in `SupersededPositionManagerV1_3Address`, `getV1_3PositionManagers` probes the v1.6.0 hook first and every older generation after it (deduplicated), and the per-coin paired-pool locator, `PoolCreated` decoding and swap planning are unchanged. `FlaunchPositionManagerV1_3Address` and `AnyPositionManagerV1_3Address` stay on the v1.3 / v1.4 generation: they anchor `FlaunchVersion.V1_3` / `ANY` routing (Base's `readPositionManagerV1_3`, `getPositionManagerAddress`, the TrustedSigner backend), and every coin launched before this release lives there. The previous zaps are kept in the new `FlaunchZapSupersededV1_3Address` for attribution only.
+- On Base and Base Sepolia, `getCoinVersion` / `isValidCoin` fall back to the paired-pool locator after the version clients, so a coin on the v1.6.0 hook resolves as `V1_3`, and `getPositionManagerAddressForCoin` (hence `poolId`, `createPoolKeyForCoin` and the liquidity helpers) answers the hook the coin was located on. Coins on the older hooks keep their exact read sequence.
+- The stale notes on the Robinhood and Base Sepolia v1.6.0 entries of `PoolSwapForHookV1_3Address` are gone: both v1.6 spend gates approve the mapped protected PoolSwap (verified onchain 2026-10-30), so spend-gated v1.6 buys need no `setApprovedRouter` first.
+- Launch golden fixtures: the fourteen `multichain:1:*` and `paired:*:pairedToken:*` cases were regenerated for the new zap targets; calldata and value are byte-identical.
 
 ### Added
 
-- **v1.6.0 hook addresses** (flaunch-contracts PRs #323 / #326, live 2026-10-21 on Ethereum, Base, Arbitrum, Robinhood and Base Sepolia): `FlaunchPositionManagerV1_6Address` (`0x54bE…a5DC`) and `AnyPositionManagerV1_6Address` (`0x0a68…65DC`), one CREATE3 address on every chain, plus the per-chain `FlaunchV1_6Address`, `AnyFlaunchV1_6Address`, `FlaunchZapV1_6Address` and `FeeCalculatorDispatcherV1_6Address`. Purely additive: no launch, swap or read default changes, and the v1.3 / v1.4 hooks stay current. `getV1_3PositionManagers` lists the two v1.6 hooks last (same paired-token ABI), so coins launched on them can be located and swapped, and `PoolSwapForHookV1_3Address` maps them to each chain's current protected PoolSwap. On Robinhood and Base Sepolia the v1.6 spend gate does not yet approve that PoolSwap, so a spend-gated v1.6 buy there needs a `setApprovedRouter` call first; ungated swaps are unaffected.
+- **v1.6.0 hook addresses** (flaunch-contracts PRs #323 / #326, live 2026-10-21 on Ethereum, Base, Arbitrum, Robinhood and Base Sepolia): `FlaunchPositionManagerV1_6Address` (`0x54bE…a5DC`) and `AnyPositionManagerV1_6Address` (`0x0a68…65DC`), one CREATE3 address on every chain, plus the per-chain `FlaunchV1_6Address`, `AnyFlaunchV1_6Address`, `FlaunchZapV1_6Address` and `FeeCalculatorDispatcherV1_6Address`. Purely additive: no launch, swap or read default changes, and the v1.3 / v1.4 hooks stay current. `getV1_3PositionManagers` lists the two v1.6 hooks last (same paired-token ABI), so coins launched on them can be located and swapped, and `PoolSwapForHookV1_3Address` maps them to each chain's current protected PoolSwap. (The "additive only" status and the Robinhood / Base Sepolia spend-gate caveat recorded for PR #52 are both resolved by this release, see Changed.)
 
 ## [0.17.1] - 2026-09-22
 

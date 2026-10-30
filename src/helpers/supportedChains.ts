@@ -124,31 +124,39 @@ export function doesChainSupportPairedTokenLaunch(chainId: number): boolean {
 }
 
 /**
- * Every v1.3 hook that has ever served paired-token pools on a chain: the current
- * PositionManager, the import-generation AnyPositionManager, any superseded generations that
- * still serve their pools, the vested-launch hook (the AnyPositionManager behind the
- * AnyFlaunchZap - same pool shape and registry, its own address), and the v1.6.0 PositionManager /
- * AnyPositionManager (same paired-token ABI, launched 2026-10-21). Use this when deciding whether
- * an arbitrary hook address (e.g. from an indexer `Pool.positionManager`) is a v1.3 hook; the
- * paired-pool locator, `PoolCreated` decoding and the liquidity helpers all iterate it.
+ * Every v1.3-family hook that has ever served paired-token pools on a chain: the current launch
+ * PositionManager (the v1.6.0 hook since 2026-10-30), the import-generation AnyPositionManager,
+ * the superseded generations that still serve their pools (including each chain's previous launch
+ * hook, `FlaunchPositionManagerV1_3Address`), the vested-launch hook (the AnyPositionManager behind
+ * the AnyFlaunchZap - same pool shape and registry, its own address), and the v1.6.0
+ * AnyPositionManager (same paired-token ABI). Use this when deciding whether an arbitrary hook
+ * address (e.g. from an indexer `Pool.positionManager`) is a v1.3-family hook; the paired-pool
+ * locator, `PoolCreated` decoding and the liquidity helpers all iterate it. Deduplicated, in
+ * probe order: the current launch hook first.
  */
 export function getV1_3PositionManagers(chainId: number): Address[] {
   const current = PairedTokenPositionManagerV1_3Address[chainId];
   const any = AnyPositionManagerV1_3Address[chainId];
   const vested = AnyFlaunchZapPositionManagerAddress[chainId];
-  // v1.6.0 hooks share the v1.3 paired-token ABI (poolKey, PoolCreated) and pool shape. Listed
-  // LAST so a coin on an older generation still resolves on the first matching probe; this only
-  // lets coins launched on v1.6 be located, and changes no default.
   const v1_6 = FlaunchPositionManagerV1_6Address[chainId];
   const anyV1_6 = AnyPositionManagerV1_6Address[chainId];
-  return [
-    ...(current ? [current] : []),
-    ...(any ? [any] : []),
+  const seen = new Set<string>();
+  const hooks: Address[] = [];
+  for (const hook of [
+    current,
+    any,
     ...(SupersededPositionManagerV1_3Address[chainId] ?? []),
-    ...(vested ? [vested] : []),
-    ...(v1_6 ? [v1_6] : []),
-    ...(anyV1_6 ? [anyV1_6] : []),
-  ];
+    vested,
+    v1_6,
+    anyV1_6,
+  ]) {
+    if (!hook) continue;
+    const key = hook.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    hooks.push(hook);
+  }
+  return hooks;
 }
 
 /**

@@ -36,6 +36,7 @@ const {
   FlaunchManagerZapV1_3Address,
   WhitelistedPermissionsV1_3Address,
   SupersededPositionManagerV1_3Address,
+  FlaunchZapSupersededV1_3Address,
   FlaunchPositionManagerV1_3Address,
   getV1_3PositionManagers,
   FlaunchManagerZapV1_3Abi,
@@ -161,28 +162,36 @@ test("the multi-asset manager generation retains the Base, Robinhood and Base Se
     assert.equal(getAddress(map[baseSepolia.id]), getAddress(SEPOLIA_RELEASE_ADDRESSES[name]), `${name} (Base Sepolia)`);
   }
   assert.equal(doesChainSupportMultiAssetManagers(baseSepolia.id), true);
-  // Base Sepolia's `.vpt2` hooks were superseded by the v1.3.3 regeneration on 2026-09-03
+  // Base Sepolia's `.vpt2` hooks were superseded by the v1.3.3 regeneration on 2026-09-03, and the
+  // v1.3.3 PM by the v1.6.0 launch default on 2026-10-30
   assert.deepEqual(
     SupersededPositionManagerV1_3Address[baseSepolia.id].map((a) => a.toLowerCase()),
-    ["0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc", "0x28118f40eca9b884beb42b0196409a73269525dc"]
+    ["0x5558e7271ec2e8b2faaf05f0eedab1cd986be5dc", "0x28118f40eca9b884beb42b0196409a73269525dc", "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc"]
   );
   // ClosedPermissions is factory-agnostic and reused by the new generation
   assert.equal(getAddress(ClosedPermissionsAddress[base.id]), "0x4dfc76A31A2a0110739611683a8b6C5201480fa1");
   assert.equal(getAddress(ClosedPermissionsAddress[robinhood.id]), "0xF0469beF728c498f3621008C65B95EDa56C82Ae3");
-  // the core zaps bound to each chain's v1.3.1 factory: Base's 08-27 rebind, Robinhood's v1.3.3
-  // regeneration zap (deployed bound in-run; supersedes the 09-02 rebind 0xFCd1eB4B… and the
-  // factory-less 0x2e744436…). Live on 4663 since 2026-09-03.
-  assert.equal(getAddress(FlaunchZapV1_3Address[base.id]), "0xf787d757674b21efD713fB636B16ed994bfa82A8");
-  assert.equal(getAddress(FlaunchZapV1_3Address[robinhood.id]), "0x740f8278Fd9C548fF50b64805337eA8Ad24b2553");
-  // Robinhood's superseded v1.3.1 hooks stay resolvable for the coins that live on them.
+  // the launch zaps are the v1.6.0 generation since 2026-10-30, each bound to its chain's live
+  // v1.3.1 TreasuryManagerFactory. The previous core zaps (Base's 08-27 rebind, Robinhood's v1.3.3
+  // regeneration zap, deployed bound in-run) are kept for attribution only.
+  assert.equal(getAddress(FlaunchZapV1_3Address[base.id]), "0x07d077b37223882472AC6C88D187b860250dDB8d");
+  assert.equal(getAddress(FlaunchZapV1_3Address[robinhood.id]), "0xB03Be6c735ef90189D6a22bBC8F6A45a33348fDe");
+  assert.equal(getAddress(FlaunchZapSupersededV1_3Address[base.id]), "0xf787d757674b21efD713fB636B16ed994bfa82A8");
+  assert.equal(getAddress(FlaunchZapSupersededV1_3Address[robinhood.id]), "0x740f8278Fd9C548fF50b64805337eA8Ad24b2553");
+  // Robinhood's superseded v1.3.1 hooks, and since 2026-10-30 its v1.3.3 PM, stay resolvable for
+  // the coins that live on them.
   assert.deepEqual(
     SupersededPositionManagerV1_3Address[robinhood.id].map((a) => a.toLowerCase()),
-    ["0x588c683ecc450f8b2aadb13d7f63792b840425dc", "0x6ea0edee449a287504990df8d87951b9436825dc"]
+    ["0x588c683ecc450f8b2aadb13d7f63792b840425dc", "0x6ea0edee449a287504990df8d87951b9436825dc", "0x8d346f24278c5cd786309161aac0fc2bbe4c25dc"]
   );
-  assert.equal(SupersededPositionManagerV1_3Address[base.id], undefined);
+  // Base's v1.3.1 PM is superseded for launches only; it stays the V1_3 routing anchor
+  assert.deepEqual(
+    SupersededPositionManagerV1_3Address[base.id].map((a) => a.toLowerCase()),
+    [FlaunchPositionManagerV1_3Address[base.id].toLowerCase()]
+  );
   assert.deepEqual(
     getV1_3PositionManagers(robinhood.id).map((a) => a.toLowerCase()),
-    [FlaunchPositionManagerV1_3Address[robinhood.id].toLowerCase(), "0x9abfbdc34a294de5210c0889f21d5af54c4965dc", "0x588c683ecc450f8b2aadb13d7f63792b840425dc", "0x6ea0edee449a287504990df8d87951b9436825dc", "0xe753a351fb498051a09dc130fcc29aebc76525dc" /* vested AnyPM, CREATE3 parity */, "0x54bedd41afdf57722518cf6dd826a70d81e9a5dc", "0x0a68f68d0c5c4c7c32bcdf0a64670d8cee5565dc" /* v1.6.0, appended last */]
+    ["0x54bedd41afdf57722518cf6dd826a70d81e9a5dc" /* v1.6.0 PM, the launch default */, "0x9abfbdc34a294de5210c0889f21d5af54c4965dc", "0x588c683ecc450f8b2aadb13d7f63792b840425dc", "0x6ea0edee449a287504990df8d87951b9436825dc", FlaunchPositionManagerV1_3Address[robinhood.id].toLowerCase() /* v1.3.3 PM, superseded for launches */, "0xe753a351fb498051a09dc130fcc29aebc76525dc" /* vested AnyPM, CREATE3 parity */, "0x0a68f68d0c5c4c7c32bcdf0a64670d8cee5565dc" /* v1.6.0 AnyPM */]
   );
   assert.equal(doesChainSupportMultiAssetManagers(robinhood.id), true);
 
