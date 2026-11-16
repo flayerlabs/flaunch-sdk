@@ -1,15 +1,14 @@
 name: SDK release checks
 
+# The Release workflow runs the same checks on master before it publishes
 on:
   pull_request:
-  push:
-    branches: [master]
 
 permissions:
   contents: read
 
 concurrency:
-  group: sdk-typecheck-${{ github.event.pull_request.number || github.ref }}
+  group: sdk-typecheck-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:

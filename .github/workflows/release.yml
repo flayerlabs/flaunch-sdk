@@ -1,0 +1,45 @@
+name: Release
+
+# Every push to master publishes a prerelease on the `next` tag; a `v*` tag publishes that version as `latest`.
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: sdk-release-${{ github.ref }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm test:package
+      - name: Version the prerelease
+        if: github.ref_type == 'branch'
+        # npm versions are immutable, so each master build gets its own prerelease number
+        run: npm version --no-git-tag-version "$(node -p 'require("./package.json").version.split("-")[0]')-next.${{ github.run_number }}"
+      - name: Check the tag matches a stable package.json version
+        if: github.ref_type == 'tag'
+        # A tag publishes on `latest`, which must never point at a prerelease
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+          case "$version" in *-*) echo "v* tags publish on latest, but $version is a prerelease"; exit 1 ;; esac
+          test "v$version" = "${{ github.ref_name }}"
+      - run: pnpm publish --provenance --no-git-checks --tag ${{ github.ref_type == 'tag' && 'latest' || 'next' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

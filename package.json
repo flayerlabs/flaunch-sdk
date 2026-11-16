@@ -1,8 +1,9 @@
 {
   "name": "@flaunch/sdk",
-  "version": "0.17.1",
-  "description": "Flaunch SDK to easily interact with the Flaunch protocol",
+  "version": "1.0.0-next.0",
+  "description": "Flaunch V3 SDK: launch, swap, claim and stake on Flaunch V3 with viem",
   "license": "MIT",
+  "type": "module",
   "author": "Apoorv Lathey <apoorv@flayer.io>",
   "homepage": "https://github.com/flayerlabs/flaunch-sdk#readme",
   "repository": {
@@ -17,86 +18,40 @@
   },
   "keywords": [
     "flaunch",
-    "memecoin",
     "launchpad",
     "uniswap",
     "uniswap v4",
+    "viem",
     "sdk"
   ],
-  "main": "dist/index.cjs.js",
-  "module": "dist/index.mjs",
-  "unpkg": "dist/index.umd.js",
-  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs.js"
-    },
-    "./abi": {
-      "types": "./dist/abi/index.d.ts",
-      "import": "./dist/abi/index.mjs",
-      "require": "./dist/abi/index.cjs"
-    },
-    "./addresses": {
-      "types": "./dist/addresses.d.ts",
-      "import": "./dist/addresses/index.mjs",
-      "require": "./dist/addresses/index.cjs"
-    },
-    "./helpers": {
-      "types": "./dist/helpers/index.d.ts",
-      "import": "./dist/helpers/index.mjs",
-      "require": "./dist/helpers/index.cjs"
-    },
-    "./hooks": {
-      "types": "./dist/hooks/index.d.ts",
-      "import": "./dist/hooks/index.mjs",
-      "require": "./dist/hooks/index.cjs"
-    },
-    "./utils": {
-      "types": "./dist/utils/index.d.ts",
-      "import": "./dist/utils/index.mjs",
-      "require": "./dist/utils/index.cjs"
+      "default": "./dist/index.mjs"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "rimraf dist && tsc --emitDeclarationOnly --declarationMap false && rollup -c",
-    "dev": "rollup -c -w",
+    "build": "rimraf dist && rollup -c",
     "clean": "rimraf dist",
-    "prepublishOnly": "npm run build",
-    "test": "pnpm build && node --test test/*.test.cjs",
+    "prepublishOnly": "pnpm build",
+    "test": "pnpm build && node --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
     "test:package": "node scripts/test-package.mjs",
-    "docs:generate": "typedoc --plugin typedoc-plugin-markdown --out docs src/index.ts --excludeExternals --exclude '**/abi/**' --includeVersion",
-    "docs:llms": "node scripts/generate-llms-doc.js",
-    "validate:multichain": "pnpm build && node scripts/validate-multichain-deployments.mjs",
-    "test:prebuy:fork": "node scripts/test-launch-prebuy-fork.cjs",
-    "test:vested:fork": "node scripts/test-vested-launch-fork.cjs",
-    "test:referrals:fork": "node scripts/test-referrals-fork.cjs"
+    "generate:abis": "node scripts/generate-abis.mjs",
+    "smoke": "node scripts/testnet-smoke.mjs"
   },
   "packageManager": "pnpm@10.34.3",
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^29.0.3",
-    "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-node-resolve": "^16.0.3",
-    "@rollup/plugin-terser": "^1.0.0",
     "@rollup/plugin-typescript": "^12.3.0",
-    "@types/react": "^19.0.10",
     "rimraf": "^6.0.1",
     "rollup": "^2.75.6",
     "tslib": "^2.4.0",
-    "typedoc": "^0.28.20",
-    "typedoc-plugin-markdown": "^4.13.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@delvtech/drift": "^0.11.0",
-    "@delvtech/drift-viem": "^0.11.0",
-    "axios": "^1.18.0",
-    "react": "^19.0.0",
     "viem": "^2.55.2"
   }
 }

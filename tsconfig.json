@@ -4,23 +4,18 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "declaration": true,
-    "declarationMap": true,
+    "declarationMap": false,
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
     "isolatedModules": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
-    "strict": true,
-    "baseUrl": "src",
-    "paths": {
-      "*": ["*"]
-    }
+    "strict": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  "exclude": ["node_modules", "dist"]
 }
